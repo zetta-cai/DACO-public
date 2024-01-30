@@ -922,7 +922,7 @@ namespace covered
             // Issue metadata update request if necessary, update victim dirinfo, assert NO local uncached popularity, and perform selective popularity aggregation after local directory eviction
             Edgeset best_placement_edgeset; // Used for non-blocking placement notification if need hybrid data fetching for COVERED
             bool need_hybrid_fetching = false;
-            is_finish = edge_wrapper_ptr_->afterDirectoryEvictionHelper_(key, current_edge_idx, metadata_update_requirement, directory_info, tmp_param.getCollectedPopularity(), is_global_cached, best_placement_edgeset, need_hybrid_fetching, recvrsp_socket_server_ptr, source_addr, total_bandwidth_usage, event_list, skip_propagation_latency, is_background);
+            is_finish = edge_wrapper_ptr_->afterDirectoryEvictionHelper_(key, current_edge_idx, metadata_update_requirement, directory_info, tmp_param.getCollectedPopularityConstRef(), is_global_cached, best_placement_edgeset, need_hybrid_fetching, recvrsp_socket_server_ptr, source_addr, total_bandwidth_usage, event_list, skip_propagation_latency, is_background);
             if (is_finish) // Edge node is NOT running
             {
                 return is_finish;
@@ -968,12 +968,12 @@ namespace covered
             // Need BOTH popularity collection and victim synchronization
             if (!is_background) // Foreground remote directory eviction (triggered by invalid/valid value update by local get/put and independent admission)
             {
-                directory_update_request_ptr = new CoveredDirectoryUpdateRequest(key, is_admit, directory_info, tmp_param.getCollectedPopularity(), victim_syncset, edge_idx, source_addr, skip_propagation_latency);
+                directory_update_request_ptr = new CoveredDirectoryUpdateRequest(key, is_admit, directory_info, tmp_param.getCollectedPopularityConstRef(), victim_syncset, edge_idx, source_addr, skip_propagation_latency);
             }
             else // Background remote directory eviction (triggered by remote placement nofication and local placement notification at local/remote beacon edge node)
             {
                 // NOTE: use background event names and DISABLE recursive cache placement by sending CoveredPlacementDirectoryUpdateRequest
-                directory_update_request_ptr = new CoveredPlacementDirectoryUpdateRequest(key, is_admit, directory_info, tmp_param.getCollectedPopularity(), victim_syncset, edge_idx, source_addr, skip_propagation_latency);
+                directory_update_request_ptr = new CoveredPlacementDirectoryUpdateRequest(key, is_admit, directory_info, tmp_param.getCollectedPopularityConstRef(), victim_syncset, edge_idx, source_addr, skip_propagation_latency);
             }
 
             // NOTE: key MUST NOT have any cached directory, as key is local cached before eviction (even if key may be local uncached and tracked by local uncached metadata due to metadata preservation after eviction, we have NOT lookuped remote directory yet from beacon node)

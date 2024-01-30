@@ -73,13 +73,13 @@ namespace covered
         // (4) Other functions
 
         virtual void invokeCustomFunctionInternal_(const std::string& func_name, CacheCustomFuncParamBase* func_param_ptr) override; // Invoke some method-specific function for local edge cache
-        void updateIsNeighborCachedInternal_(UpdateIsNeighborCachedFlagFuncParam* func_param_ptr); // Update is_neighbor_cached flag in local cached metadata (for beacon-based local cache metadata udpate)
+        void updateIsNeighborCachedInternal_(const Key& key, const bool& is_neighbor_cached); // Update is_neighbor_cached flag in local cached metadata (for beacon-based local cache metadata udpate)
 
         virtual void invokeConstCustomFunctionInternal_(const std::string& func_name, CacheCustomFuncParamBase* func_param_ptr) const override; // Invoke some method-specific function for local edge cache
-        void getLocalSyncedVictimCacheinfosFromLocalCacheInternal_(GetLocalSyncedVictimCacheinfosParam* func_param_ptr) const; // Get up to peredge_synced_victimcnt local synced victims with the least local rewards (for victim synchronization)
+        void getLocalSyncedVictimCacheinfosFromLocalCacheInternal_(std::list<VictimCacheinfo>& victim_cacheinfos) const; // Get up to peredge_synced_victimcnt local synced victims with the least local rewards (for victim synchronization)
         // Set collected_popularity.is_tracked_ as true if the local uncached key is tracked; set collected_popularity.is_tracked_ as false if key is either local cached or local uncached yet untracked by local uncached metadata
         // NOTE: for directory lookup req, directory eviction req, acquire writelock req, and release writelock req, is_key_tracked flag could still be false for returned collected popularity -> reason: under local uncached metadata capacity limitation, newly-tracked or preserved-after-eviciton local uncached popularity could be immediately detracked from local uncached metadata and hence NO need for popularity collection/aggregation
-        void getCollectedPopularityFromLocalCacheInternal_(GetCollectedPopularityParam* func_param_ptr) const; // Get collected popularity of local uncached objects (for piggybacking-based popularity colleciton)
+        void getCollectedPopularityFromLocalCacheInternal_(const Key& key, CollectedPopularity& collected_popularity) const; // Get collected popularity of local uncached objects (for piggybacking-based popularity colleciton)
 
         // In units of bytes
         virtual uint64_t getSizeForCapacityInternal_() const override;

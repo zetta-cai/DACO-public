@@ -27,8 +27,7 @@ namespace covered
         GetLocalVictimVtimeFuncParam();
         virtual ~GetLocalVictimVtimeFuncParam();
 
-        uint64_t getLocalVictimVtime() const;
-        void setLocalVictimVtime(const uint64_t& local_victim_vtime);
+        uint64_t& getLocalVictimVtimeRef();
     private:
         static const std::string kClassName;
 
@@ -64,8 +63,8 @@ namespace covered
         GetPlacementEdgeIdxParam();
         virtual ~GetPlacementEdgeIdxParam();
 
-        uint32_t getPlacementEdgeIdx() const;
-        void setPlacementEdgeIdx(const uint32_t& placement_edge_idx);
+        uint32_t& getPlacementEdgeIdxRef();
+        const uint32_t& getPlacementEdgeIdxConstRef() const;
     private:
         static const std::string kClassName;
 

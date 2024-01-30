@@ -70,13 +70,13 @@ namespace covered
     {
     }
 
-    CollectedPopularity GetCollectedPopularityParam::getCollectedPopularity() const
+    CollectedPopularity& GetCollectedPopularityParam::getCollectedPopularityRef()
     {
         return collected_popularity_;
     }
 
-    void GetCollectedPopularityParam::setCollectedPopularity(const CollectedPopularity& other)
+    const CollectedPopularity& GetCollectedPopularityParam::getCollectedPopularityConstRef() const
     {
-        collected_popularity_ = other;
+        return collected_popularity_;
     }
 }

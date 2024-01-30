@@ -17,15 +17,9 @@ namespace covered
     {
     }
 
-    uint64_t GetLocalVictimVtimeFuncParam::getLocalVictimVtime() const
+    uint64_t& GetLocalVictimVtimeFuncParam::getLocalVictimVtimeRef()
     {
         return local_victim_vtime_;
-    }
-
-    void GetLocalVictimVtimeFuncParam::setLocalVictimVtime(const uint64_t& local_victim_vtime)
-    {
-        local_victim_vtime_ = local_victim_vtime;
-        return;
     }
 
     // UpdateNeighborVictimVtimeParam for BestGuess
@@ -69,14 +63,13 @@ namespace covered
     {
     }
 
-    uint32_t GetPlacementEdgeIdxParam::getPlacementEdgeIdx() const
+    uint32_t& GetPlacementEdgeIdxParam::getPlacementEdgeIdxRef()
     {
         return placement_edge_idx_;
     }
 
-    void GetPlacementEdgeIdxParam::setPlacementEdgeIdx(const uint32_t& placement_edge_idx)
+    const uint32_t& GetPlacementEdgeIdxParam::getPlacementEdgeIdxConstRef() const
     {
-        placement_edge_idx_ = placement_edge_idx;
-        return;
+        return placement_edge_idx_;
     }
 }

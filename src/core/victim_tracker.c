@@ -101,7 +101,7 @@ namespace covered
         // Replace VictimDirinfo::dirinfoset for each local beaconed local synced victim of current edge node
         GetLocalBeaconedVictimsFromCacheinfosParam tmp_param(local_synced_victim_cacheinfos);
         cooperation_wrapper_ptr->constCustomFunc(GetLocalBeaconedVictimsFromCacheinfosParam::FUNCNAME, &tmp_param); // Get directory info sets for local synced victimed beaconed by the current edge node (NOTE: dirinfo sets from local directory table MUST be complete)
-        const std::list<std::pair<Key, DirinfoSet>>& local_beaconed_local_synced_victim_dirinfosets_const_ref = tmp_param.getLocalBeaconedVictimDirinfosetsRef();
+        const std::list<std::pair<Key, DirinfoSet>>& local_beaconed_local_synced_victim_dirinfosets_const_ref = tmp_param.getLocalBeaconedVictimDirinfosetsConstRef();
         assert(local_beaconed_local_synced_victim_dirinfosets_const_ref.size() <= local_synced_victim_cacheinfos.size());
         replaceVictimDirinfoSets_(local_beaconed_local_synced_victim_dirinfosets_const_ref, true);
 
@@ -337,7 +337,7 @@ namespace covered
             // NOTE: local_beaconed_neighbor_synced_victim_dirinfosets MUST be complete due to from local directory table
             GetLocalBeaconedVictimsFromCacheinfosParam tmp_param(*neighbor_synced_victim_cacheinfos_ptr);
             cooperation_wrapper_ptr->constCustomFunc(GetLocalBeaconedVictimsFromCacheinfosParam::FUNCNAME, &tmp_param);
-            const std::list<std::pair<Key, DirinfoSet>>& local_beaconed_neighbor_synced_victim_dirinfosets_const_ref = tmp_param.getLocalBeaconedVictimDirinfosetsRef();
+            const std::list<std::pair<Key, DirinfoSet>>& local_beaconed_neighbor_synced_victim_dirinfosets_const_ref = tmp_param.getLocalBeaconedVictimDirinfosetsConstRef();
             assert(local_beaconed_neighbor_synced_victim_dirinfosets_const_ref.size() <= neighbor_synced_victim_cacheinfos_ptr->size());
             replaceVictimDirinfoSets_(local_beaconed_neighbor_synced_victim_dirinfosets_const_ref, true);
         }
@@ -408,7 +408,7 @@ namespace covered
 
                 CalcLocalCachedRewardFuncParam tmp_param(tmp_local_cached_popularity, tmp_redirected_cached_popularity, is_last_copies);
                 edge_wrapper_ptr->constCustomFunc(CalcLocalCachedRewardFuncParam::FUNCNAME, &tmp_param);
-                Reward tmp_eviction_cost = tmp_param.getReward();
+                Reward tmp_eviction_cost = tmp_param.getRewardConstRef();
                 eviction_cost += tmp_eviction_cost;
             }
         }
@@ -497,7 +497,7 @@ namespace covered
             // Calculate eviction cost based on is_last_copies and the victim cacheinfo
             CalcLocalCachedRewardFuncParam tmp_param(tmp_local_cached_popularity, tmp_redirected_cached_popularity, is_last_copies);
             edge_wrapper_ptr->constCustomFunc(CalcLocalCachedRewardFuncParam::FUNCNAME, &tmp_param);
-            Reward tmp_eviction_cost = tmp_param.getReward();
+            Reward tmp_eviction_cost = tmp_param.getRewardConstRef();
             local_eviction_cost += tmp_eviction_cost;
         }
 

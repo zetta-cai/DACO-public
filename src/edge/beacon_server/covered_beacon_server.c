@@ -58,15 +58,11 @@ namespace covered
         edge_wrapper_ptr_->constCustomFunc(UpdateCacheManagerForNeighborVictimSyncsetFuncParam::FUNCNAME, &tmp_param_for_victim_sync);
 
         // Selective popularity aggregation after remote directory lookup
-        const CollectedPopularity& collected_popularity = covered_directory_lookup_request_ptr->getCollectedPopularityRef();
+        const CollectedPopularity& collected_popularity = covered_directory_lookup_request_ptr->getCollectedPopularityConstRef();
         const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
-        AfterDirectoryLookupHelperFuncParam tmp_param_after_dirlookup(tmp_key, source_edge_idx, collected_popularity, is_global_cached, is_source_cached, &fast_path_hint, edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        AfterDirectoryLookupHelperFuncParam tmp_param_after_dirlookup(tmp_key, source_edge_idx, collected_popularity, is_global_cached, is_source_cached, best_placement_edgeset, need_hybrid_fetching, &fast_path_hint, edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         edge_wrapper_ptr_->constCustomFunc(AfterDirectoryLookupHelperFuncParam::FUNCNAME, &tmp_param_after_dirlookup);
-        is_finish = tmp_param_after_dirlookup.isFinish();
-        best_placement_edgeset = tmp_param_after_dirlookup.getBestPlacementEdgesetConstRef();
-        need_hybrid_fetching = tmp_param_after_dirlookup.isNeedHybridFetching();
-        total_bandwidth_usage = tmp_param_after_dirlookup.getTotalBandwidthUsage();
-        event_list = tmp_param_after_dirlookup.getEventListConstRef();
+        is_finish = tmp_param_after_dirlookup.isFinishConstRef();
 
         return is_finish;
     }
@@ -244,13 +240,9 @@ namespace covered
                 const bool is_background = control_request_ptr->isBackgroundRequest();
 
                 // Issue metadata update request if necessary, update victim dirinfo, assert NO local uncached popularity, and perform selective popularity aggregation after remote directory eviction
-                AfterDirectoryEvictionHelperFuncParam tmp_param(tmp_key, source_edge_idx, metadata_update_requirement, directory_info, collected_popularity, is_global_cached, edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency, is_background);
+                AfterDirectoryEvictionHelperFuncParam tmp_param(tmp_key, source_edge_idx, metadata_update_requirement, directory_info, collected_popularity, is_global_cached, best_placement_edgeset, need_hybrid_fetching, edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency, is_background);
                 edge_wrapper_ptr_->constCustomFunc(AfterDirectoryEvictionHelperFuncParam::FUNCNAME, &tmp_param);
-                best_placement_edgeset = tmp_param.getBestPlacementEdgesetConstRef();
-                need_hybrid_fetching = tmp_param.isNeedHybridFetching();
-                total_bandwidth_usage = tmp_param.getTotalBandwidthUsage();
-                event_list = tmp_param.getEventListConstRef();
-                is_finish = tmp_param.isFinish();
+                is_finish = tmp_param.isFinishConstRef();
                 if (is_finish)
                 {
                     return is_finish; // Edge node is finished
@@ -377,13 +369,15 @@ namespace covered
 
         // Victim synchronization
         const VictimSyncset& neighbor_victim_syncset = covered_acquire_writelock_request_ptr->getVictimSyncsetRef();
-        UpdateCacheManagerForNeighborVictimSyncsetFuncParam tmp_param(source_edge_idx, neighbor_victim_syncset);
-        edge_wrapper_ptr_->constCustomFunc(UpdateCacheManagerForNeighborVictimSyncsetFuncParam::FUNCNAME, &tmp_param);
+        UpdateCacheManagerForNeighborVictimSyncsetFuncParam tmp_param_for_victimsync(source_edge_idx, neighbor_victim_syncset);
+        edge_wrapper_ptr_->constCustomFunc(UpdateCacheManagerForNeighborVictimSyncsetFuncParam::FUNCNAME, &tmp_param_for_victimsync);
 
         // Selective popularity aggregation after remote acquire writelock
         const CollectedPopularity& collected_popularity = covered_acquire_writelock_request_ptr->getCollectedPopularityRef();
         const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
-        is_finish = edge_wrapper_ptr_->afterWritelockAcquireHelper_(tmp_key, source_edge_idx, collected_popularity, is_global_cached, is_source_cached, edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        AfterWritelockAcquireHelperFuncParam tmp_param_after_acquirelock(tmp_key, source_edge_idx, collected_popularity, is_global_cached, is_source_cached, edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        edge_wrapper_ptr_->constCustomFunc(AfterWritelockAcquireHelperFuncParam::FUNCNAME, &tmp_param_after_acquirelock);
+        is_finish = tmp_param_after_acquirelock.isFinishConstRef();
 
         return is_finish;
     }
@@ -432,13 +426,15 @@ namespace covered
 
         // Victim synchronization
         const VictimSyncset& neighbor_victim_syncset = covered_release_writelock_request_ptr->getVictimSyncsetRef();
-        UpdateCacheManagerForNeighborVictimSyncsetFuncParam tmp_param(sender_edge_idx, neighbor_victim_syncset);
-        edge_wrapper_ptr_->constCustomFunc(UpdateCacheManagerForNeighborVictimSyncsetFuncParam::FUNCNAME, &tmp_param);
+        UpdateCacheManagerForNeighborVictimSyncsetFuncParam tmp_param_for_victimsync(sender_edge_idx, neighbor_victim_syncset);
+        edge_wrapper_ptr_->constCustomFunc(UpdateCacheManagerForNeighborVictimSyncsetFuncParam::FUNCNAME, &tmp_param_for_victimsync);
 
         // Selective popularity aggregation after remote release writelock
         const CollectedPopularity& collected_popularity = covered_release_writelock_request_ptr->getCollectedPopularityRef();
         const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
-        is_finish = edge_wrapper_ptr_->afterWritelockReleaseHelper_(tmp_key, sender_edge_idx, collected_popularity, is_source_cached, best_placement_edgeset, need_hybrid_fetching, edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        AfterWritelockReleaseHelperFuncParam tmp_param_after_releaselock(tmp_key, sender_edge_idx, collected_popularity, is_source_cached, best_placement_edgeset, need_hybrid_fetching, edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        edge_wrapper_ptr_->constCustomFunc(AfterWritelockReleaseHelperFuncParam::FUNCNAME, &tmp_param_after_releaselock);
+        is_finish = tmp_param_after_releaselock.isFinishConstRef();
         if (is_finish)
         {
             return is_finish; // Edge node is finished

@@ -30,6 +30,7 @@ namespace covered
 
         const VictimSyncset& getVictimSyncsetConstRef() const;
         std::list<std::pair<Key, DirinfoSet>>& getLocalBeaconedVictimDirinfosetsRef();
+        const std::list<std::pair<Key, DirinfoSet>>& getLocalBeaconedVictimDirinfosetsConstRef() const;
     private:
         static const std::string kClassName;
 
@@ -49,6 +50,7 @@ namespace covered
 
         const std::list<VictimCacheinfo>& getVictimCacheinfosConstRef() const;
         std::list<std::pair<Key, DirinfoSet>>& getLocalBeaconedVictimDirinfosetsRef();
+        const std::list<std::pair<Key, DirinfoSet>>& getLocalBeaconedVictimDirinfosetsConstRef() const;
     private:
         static const std::string kClassName;
 

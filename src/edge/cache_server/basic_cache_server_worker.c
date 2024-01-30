@@ -340,7 +340,7 @@ namespace covered
         // Get placement edge idx with the approximate global LRU victim
         GetPlacementEdgeIdxParam tmp_param;
         tmp_edge_cache_ptr->constCustomFunc(GetPlacementEdgeIdxParam::FUNCNAME, &tmp_param);
-        uint32_t placement_edge_idx = tmp_param.getPlacementEdgeIdx();
+        const uint32_t& placement_edge_idx = tmp_param.getPlacementEdgeIdxConstRef();
         assert(placement_edge_idx < tmp_edge_wrapper_ptr->getNodeCnt());
 
         // TODO: END HERE

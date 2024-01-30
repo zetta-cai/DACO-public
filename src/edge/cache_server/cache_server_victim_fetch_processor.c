@@ -125,7 +125,7 @@ namespace covered
         // NOTE: victim dirinfo sets from local directory table MUST be complete
         GetLocalBeaconedVictimsFromCacheinfosParam tmp_param(tmp_victim_cacheinfos);
         tmp_cooperation_wrapper_ptr->constCustomFunc(GetLocalBeaconedVictimsFromCacheinfosParam::FUNCNAME, &tmp_param);
-        const std::list<std::pair<Key, DirinfoSet>>& tmp_perkey_dirinfoset_const_ref = tmp_param.getLocalBeaconedVictimDirinfosetsRef();
+        const std::list<std::pair<Key, DirinfoSet>>& tmp_perkey_dirinfoset_const_ref = tmp_param.getLocalBeaconedVictimDirinfosetsConstRef();
 
         struct timespec victim_fetch_end_timestamp = Util::getCurrentTimespec();
         uint32_t victim_fetch_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(victim_fetch_end_timestamp, victim_fetch_start_timestamp));

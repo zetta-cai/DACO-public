@@ -98,15 +98,14 @@ namespace covered
         return skip_propagation_latency_;
     }
 
-    bool TryToTriggerCachePlacementForGetrspFuncParam::isFinish() const
+    bool& TryToTriggerCachePlacementForGetrspFuncParam::isFinishRef()
     {
         return is_finish_;
     }
 
-    void TryToTriggerCachePlacementForGetrspFuncParam::setIsFinish(const bool& is_finish)
+    const bool& TryToTriggerCachePlacementForGetrspFuncParam::isFinishConstRef() const
     {
-        is_finish_ = is_finish;
-        return;
+        return is_finish_;
     }
 
     // TryToTriggerPlacementNotificationAfterHybridFetchFuncParam
@@ -153,15 +152,14 @@ namespace covered
         return skip_propagation_latency_;
     }
 
-    bool TryToTriggerPlacementNotificationAfterHybridFetchFuncParam::isFinish() const
+    bool& TryToTriggerPlacementNotificationAfterHybridFetchFuncParam::isFinishRef()
     {
         return is_finish_;
     }
 
-    void TryToTriggerPlacementNotificationAfterHybridFetchFuncParam::setIsFinish(const bool& is_finish)
+    const bool& TryToTriggerPlacementNotificationAfterHybridFetchFuncParam::isFinishConstRef() const
     {
-        is_finish_ = is_finish;
-        return;
+        return is_finish_;
     }
 
     // (3) For edge wrapper
@@ -210,9 +208,8 @@ namespace covered
 
     const std::string NonblockDataFetchForPlacementFuncParam::FUNCNAME("nonblock_data_fetch_for_placement");
 
-    NonblockDataFetchForPlacementFuncParam::NonblockDataFetchForPlacementFuncParam(const Key& key, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency, const bool& sender_is_beacon) : EdgeCustomFuncParamBase(), key_const_ref_(key), best_placement_edgeset_const_ref_(best_placement_edgeset), skip_propagation_latency_(skip_propagation_latency), sender_is_beacon_(sender_is_beacon)
+    NonblockDataFetchForPlacementFuncParam::NonblockDataFetchForPlacementFuncParam(const Key& key, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency, const bool& sender_is_beacon, bool& need_hybrid_fetching) : EdgeCustomFuncParamBase(), key_const_ref_(key), best_placement_edgeset_const_ref_(best_placement_edgeset), skip_propagation_latency_(skip_propagation_latency), sender_is_beacon_(sender_is_beacon), need_hybrid_fetching_ref_(need_hybrid_fetching)
     {
-        need_hybrid_fetching_ = false;
     }
 
     const Key& NonblockDataFetchForPlacementFuncParam::getKeyConstRef() const
@@ -235,15 +232,9 @@ namespace covered
         return sender_is_beacon_;
     }
 
-    bool NonblockDataFetchForPlacementFuncParam::isNeedHybridFetching() const
+    bool& NonblockDataFetchForPlacementFuncParam::needHybridFetchingRef()
     {
-        return need_hybrid_fetching_;
-    }
-
-    void NonblockDataFetchForPlacementFuncParam::setNeedHybridFetching(const bool& need_hybrid_fetching)
-    {
-        need_hybrid_fetching_ = need_hybrid_fetching;
-        return;
+        return need_hybrid_fetching_ref_;
     }
 
     // NonblockDataFetchFromCloudForPlacement
@@ -364,15 +355,14 @@ namespace covered
         return is_last_copies_;
     }
 
-    Reward CalcLocalCachedRewardFuncParam::getReward() const
+    Reward& CalcLocalCachedRewardFuncParam::getRewardRef()
     {
         return reward_;
     }
 
-    void CalcLocalCachedRewardFuncParam::setReward(const Reward& reward)
+    const Reward& CalcLocalCachedRewardFuncParam::getRewardConstRef() const
     {
-        reward_ = reward;
-        return;
+        return reward_;
     }
 
     // CalcLocalUncachedRewardFuncParam
@@ -404,15 +394,14 @@ namespace covered
         return redirected_uncached_popularity_const_ref_;
     }
 
-    Reward CalcLocalUncachedRewardFuncParam::getReward() const
+    Reward& CalcLocalUncachedRewardFuncParam::getRewardRef()
     {
         return reward_;
     }
 
-    void CalcLocalUncachedRewardFuncParam::setReward(const Reward& reward)
+    const Reward& CalcLocalUncachedRewardFuncParam::getRewardConstRef() const
     {
-        reward_ = reward;
-        return;
+        return reward_;
     }
 
     // AfterDirectoryLookupHelperFuncParam
@@ -421,8 +410,9 @@ namespace covered
 
     const std::string AfterDirectoryLookupHelperFuncParam::FUNCNAME("after_directory_lookup_helper");
 
-    AfterDirectoryLookupHelperFuncParam::AfterDirectoryLookupHelperFuncParam(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, FastPathHint* fast_path_hint_ptr, UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency) : EdgeCustomFuncParamBase(), key_const_ref_(key), source_edge_idx_(source_edge_idx), collected_popularity_const_ref_(collected_popularity), is_global_cached_(is_global_cached), is_source_cached_(is_source_cached), fast_path_hint_ptr_(fast_path_hint_ptr), recvrsp_socket_server_ptr_(recvrsp_socket_server_ptr), recvrsp_source_addr_(recvrsp_source_addr), skip_propagation_latency_(skip_propagation_latency), best_placement_edgeset_(), need_hybrid_fetching_(false), total_bandwidth_usage_(total_bandwidth_usage), event_list_(event_list)
+    AfterDirectoryLookupHelperFuncParam::AfterDirectoryLookupHelperFuncParam(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, FastPathHint* fast_path_hint_ptr, UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) : EdgeCustomFuncParamBase(), key_const_ref_(key), source_edge_idx_(source_edge_idx), collected_popularity_const_ref_(collected_popularity), is_global_cached_(is_global_cached), is_source_cached_(is_source_cached), best_placement_edgeset_ref_(best_placement_edgeset), need_hybrid_fetching_ref_(need_hybrid_fetching), fast_path_hint_ptr_(fast_path_hint_ptr), recvrsp_socket_server_ptr_(recvrsp_socket_server_ptr), recvrsp_source_addr_(recvrsp_source_addr), total_bandwidth_usage_ref_(total_bandwidth_usage), event_list_ref_(event_list), skip_propagation_latency_(skip_propagation_latency)
     {
+        is_finish_ = false;
     }
 
     AfterDirectoryLookupHelperFuncParam::~AfterDirectoryLookupHelperFuncParam()
@@ -453,6 +443,16 @@ namespace covered
         return is_source_cached_;
     }
 
+    Edgeset& AfterDirectoryLookupHelperFuncParam::getBestPlacementEdgesetRef()
+    {
+        return best_placement_edgeset_ref_;
+    }
+
+    bool& AfterDirectoryLookupHelperFuncParam::needHybridFetchingRef()
+    {
+        return need_hybrid_fetching_ref_;
+    }
+
     FastPathHint* AfterDirectoryLookupHelperFuncParam::getFastPathHintPtr() const
     {
         return fast_path_hint_ptr_;
@@ -468,64 +468,29 @@ namespace covered
         return recvrsp_source_addr_;
     }
 
+    BandwidthUsage& AfterDirectoryLookupHelperFuncParam::getTotalBandwidthUsageRef()
+    {
+        return total_bandwidth_usage_ref_;
+    }
+
+    EventList& AfterDirectoryLookupHelperFuncParam::getEventListRef()
+    {
+        return event_list_ref_;
+    }
+
     bool AfterDirectoryLookupHelperFuncParam::isSkipPropagationLatency() const
     {
         return skip_propagation_latency_;
     }
 
-    const Edgeset& AfterDirectoryLookupHelperFuncParam::getBestPlacementEdgesetConstRef() const
-    {
-        return best_placement_edgeset_;
-    }
-
-    void AfterDirectoryLookupHelperFuncParam::setBestPlacementEdgeset(const Edgeset& best_placement_edgeset)
-    {
-        best_placement_edgeset_ = best_placement_edgeset;
-        return;
-    }
-
-    bool AfterDirectoryLookupHelperFuncParam::isNeedHybridFetching() const
-    {
-        return need_hybrid_fetching_;
-    }
-
-    void AfterDirectoryLookupHelperFuncParam::setNeedHybridFetching(const bool& need_hybrid_fetching)
-    {
-        need_hybrid_fetching_ = need_hybrid_fetching;
-        return;
-    }
-
-    BandwidthUsage AfterDirectoryLookupHelperFuncParam::getTotalBandwidthUsage() const
-    {
-        return total_bandwidth_usage_;
-    }
-
-    void AfterDirectoryLookupHelperFuncParam::setTotalBandwidthUsage(const BandwidthUsage& total_bandwidth_usage)
-    {
-        total_bandwidth_usage_ = total_bandwidth_usage;
-        return;
-    }
-
-    const EventList& AfterDirectoryLookupHelperFuncParam::getEventListConstRef() const
-    {
-        return event_list_;
-    }
-
-    void AfterDirectoryLookupHelperFuncParam::setEventList(const EventList& event_list)
-    {
-        event_list_ = event_list;
-        return;
-    }
-
-    bool AfterDirectoryLookupHelperFuncParam::isFinish() const
+    bool& AfterDirectoryLookupHelperFuncParam::isFinishRef()
     {
         return is_finish_;
     }
 
-    void AfterDirectoryLookupHelperFuncParam::setIsFinish(const bool& is_finish)
+    const bool& AfterDirectoryLookupHelperFuncParam::isFinishConstRef() const
     {
-        is_finish_ = is_finish;
-        return;
+        return is_finish_;
     }
 
     // AfterDirectoryAdmissionHelperFuncParam
@@ -572,8 +537,9 @@ namespace covered
 
     const std::string AfterDirectoryEvictionHelperFuncParam::FUNCNAME("after_directory_eviction_helper");
 
-    AfterDirectoryEvictionHelperFuncParam::AfterDirectoryEvictionHelperFuncParam(const Key& key, const uint32_t& source_edge_idx, const MetadataUpdateRequirement& metadata_update_requirement, const DirectoryInfo& directory_info, const CollectedPopularity& collected_popularity, const bool& is_global_cached, UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency, const bool& is_background) : EdgeCustomFuncParamBase(), key_const_ref_(key), source_edge_idx_(source_edge_idx), metadata_update_requirement_const_ref_(metadata_update_requirement), directory_info_const_ref_(directory_info), collected_popularity_const_ref_(collected_popularity), is_global_cached_(is_global_cached), recvrsp_socket_server_ptr_(recvrsp_socket_server_ptr), recvrsp_source_addr_(recvrsp_source_addr), skip_propagation_latency_(skip_propagation_latency), is_background_(is_background), best_placement_edgeset_(), need_hybrid_fetching_(false), total_bandwidth_usage_(total_bandwidth_usage), event_list_(event_list)
+    AfterDirectoryEvictionHelperFuncParam::AfterDirectoryEvictionHelperFuncParam(const Key& key, const uint32_t& source_edge_idx, const MetadataUpdateRequirement& metadata_update_requirement, const DirectoryInfo& directory_info, const CollectedPopularity& collected_popularity, const bool& is_global_cached, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, const bool& is_background) : EdgeCustomFuncParamBase(), key_const_ref_(key), source_edge_idx_(source_edge_idx), metadata_update_requirement_const_ref_(metadata_update_requirement), directory_info_const_ref_(directory_info), collected_popularity_const_ref_(collected_popularity), is_global_cached_(is_global_cached), best_placement_edgeset_ref_(best_placement_edgeset), need_hybrid_fetching_ref_(need_hybrid_fetching), recvrsp_socket_server_ptr_(recvrsp_socket_server_ptr), recvrsp_source_addr_(recvrsp_source_addr), skip_propagation_latency_(skip_propagation_latency), is_background_(is_background), total_bandwidth_usage_ref_(total_bandwidth_usage), event_list_ref_(event_list)
     {
+        is_finish_ = false;
     }
 
     AfterDirectoryEvictionHelperFuncParam::~AfterDirectoryEvictionHelperFuncParam()
@@ -609,6 +575,16 @@ namespace covered
         return is_global_cached_;
     }
 
+    Edgeset& AfterDirectoryEvictionHelperFuncParam::getBestPlacementEdgesetRef()
+    {
+        return best_placement_edgeset_ref_;
+    }
+
+    bool& AfterDirectoryEvictionHelperFuncParam::needHybridFetchingRef()
+    {
+        return need_hybrid_fetching_ref_;
+    }
+
     UdpMsgSocketServer* AfterDirectoryEvictionHelperFuncParam::getRecvrspSocketServerPtr() const
     {
         return recvrsp_socket_server_ptr_;
@@ -617,6 +593,16 @@ namespace covered
     const NetworkAddr& AfterDirectoryEvictionHelperFuncParam::getRecvrspSourceAddrConstRef() const
     {
         return recvrsp_source_addr_;
+    }
+
+    BandwidthUsage& AfterDirectoryEvictionHelperFuncParam::getTotalBandwidthUsageRef()
+    {
+        return total_bandwidth_usage_ref_;
+    }
+
+    EventList& AfterDirectoryEvictionHelperFuncParam::getEventListRef()
+    {
+        return event_list_ref_;
     }
 
     bool AfterDirectoryEvictionHelperFuncParam::isSkipPropagationLatency() const
@@ -629,58 +615,166 @@ namespace covered
         return is_background_;
     }
 
-    const Edgeset& AfterDirectoryEvictionHelperFuncParam::getBestPlacementEdgesetConstRef() const
-    {
-        return best_placement_edgeset_;
-    }
-
-    void AfterDirectoryEvictionHelperFuncParam::setBestPlacementEdgeset(const Edgeset& best_placement_edgeset)
-    {
-        best_placement_edgeset_ = best_placement_edgeset;
-        return;
-    }
-
-    bool AfterDirectoryEvictionHelperFuncParam::isNeedHybridFetching() const
-    {
-        return need_hybrid_fetching_;
-    }
-
-    void AfterDirectoryEvictionHelperFuncParam::setNeedHybridFetching(const bool& need_hybrid_fetching)
-    {
-        need_hybrid_fetching_ = need_hybrid_fetching;
-        return;
-    }
-
-    BandwidthUsage AfterDirectoryEvictionHelperFuncParam::getTotalBandwidthUsage() const
-    {
-        return total_bandwidth_usage_;
-    }
-
-    void AfterDirectoryEvictionHelperFuncParam::setTotalBandwidthUsage(const BandwidthUsage& total_bandwidth_usage)
-    {
-        total_bandwidth_usage_ = total_bandwidth_usage;
-        return;
-    }
-
-    const EventList& AfterDirectoryEvictionHelperFuncParam::getEventListConstRef() const
-    {
-        return event_list_;
-    }
-
-    void AfterDirectoryEvictionHelperFuncParam::setEventList(const EventList& event_list)
-    {
-        event_list_ = event_list;
-        return;
-    }
-
-    bool AfterDirectoryEvictionHelperFuncParam::isFinish() const
+    bool& AfterDirectoryEvictionHelperFuncParam::isFinishRef()
     {
         return is_finish_;
     }
 
-    void AfterDirectoryEvictionHelperFuncParam::setIsFinish(const bool& is_finish)
+    const bool& AfterDirectoryEvictionHelperFuncParam::isFinishConstRef() const
     {
-        is_finish_ = is_finish;
-        return;
+        return is_finish_;
+    }
+
+    // AfterWritelockAcquireHelperFuncParam
+
+    const std::string AfterWritelockAcquireHelperFuncParam::kClassName("AfterWritelockAcquireHelperFuncParam");
+
+    const std::string AfterWritelockAcquireHelperFuncParam::FUNCNAME("after_writelock_acquire_helper");
+
+    AfterWritelockAcquireHelperFuncParam::AfterWritelockAcquireHelperFuncParam(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) : EdgeCustomFuncParamBase(), key_const_ref_(key), source_edge_idx_(source_edge_idx), collected_popularity_const_ref_(collected_popularity), is_global_cached_(is_global_cached), is_source_cached_(is_source_cached), recvrsp_socket_server_ptr_(recvrsp_socket_server_ptr), recvrsp_source_addr_(recvrsp_source_addr), total_bandwidth_usage_ref_(total_bandwidth_usage), event_list_ref_(event_list), skip_propagation_latency_(skip_propagation_latency)
+    {
+        is_finish_ = false;
+    }
+
+    AfterWritelockAcquireHelperFuncParam::~AfterWritelockAcquireHelperFuncParam()
+    {}
+
+    const Key& AfterWritelockAcquireHelperFuncParam::getKeyConstRef() const
+    {
+        return key_const_ref_;
+    }
+
+    uint32_t AfterWritelockAcquireHelperFuncParam::getSourceEdgeIdx() const
+    {
+        return source_edge_idx_;
+    }
+
+    const CollectedPopularity& AfterWritelockAcquireHelperFuncParam::getCollectedPopularityConstRef() const
+    {
+        return collected_popularity_const_ref_;
+    }
+
+    bool AfterWritelockAcquireHelperFuncParam::isGlobalCached() const
+    {
+        return is_global_cached_;
+    }
+
+    bool AfterWritelockAcquireHelperFuncParam::isSourceCached() const
+    {
+        return is_source_cached_;
+    }
+
+    UdpMsgSocketServer* AfterWritelockAcquireHelperFuncParam::getRecvrspSocketServerPtr() const
+    {
+        return recvrsp_socket_server_ptr_;
+    }
+
+    const NetworkAddr& AfterWritelockAcquireHelperFuncParam::getRecvrspSourceAddrConstRef() const
+    {
+        return recvrsp_source_addr_;
+    }
+
+    BandwidthUsage& AfterWritelockAcquireHelperFuncParam::getTotalBandwidthUsageRef()
+    {
+        return total_bandwidth_usage_ref_;
+    }
+
+    EventList& AfterWritelockAcquireHelperFuncParam::getEventListRef()
+    {
+        return event_list_ref_;
+    }
+
+    bool AfterWritelockAcquireHelperFuncParam::isSkipPropagationLatency() const
+    {
+        return skip_propagation_latency_;
+    }
+
+    bool& AfterWritelockAcquireHelperFuncParam::isFinishRef()
+    {
+        return is_finish_;
+    }
+
+    const bool& AfterWritelockAcquireHelperFuncParam::isFinishConstRef() const
+    {
+        return is_finish_;
+    }
+
+    // AfterWritelockReleaseHelperFuncParam
+
+    const std::string AfterWritelockReleaseHelperFuncParam::kClassName("AfterWritelockReleaseHelperFuncParam");
+
+    const std::string AfterWritelockReleaseHelperFuncParam::FUNCNAME("after_writelock_release_helper");
+
+    AfterWritelockReleaseHelperFuncParam::AfterWritelockReleaseHelperFuncParam(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_source_cached, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) : EdgeCustomFuncParamBase(), key_const_ref_(key), source_edge_idx_(source_edge_idx), collected_popularity_const_ref_(collected_popularity), is_source_cached_(is_source_cached), best_placement_edgeset_ref_(best_placement_edgeset), need_hybrid_fetching_ref_(need_hybrid_fetching), recvrsp_socket_server_ptr_(recvrsp_socket_server_ptr), recvrsp_source_addr_(recvrsp_source_addr), total_bandwidth_usage_ref_(total_bandwidth_usage), event_list_ref_(event_list), skip_propagation_latency_(skip_propagation_latency)
+    {
+        is_finish_ = false;
+    }
+
+    AfterWritelockReleaseHelperFuncParam::~AfterWritelockReleaseHelperFuncParam()
+    {}
+
+    const Key& AfterWritelockReleaseHelperFuncParam::getKeyConstRef() const
+    {
+        return key_const_ref_;
+    }
+
+    uint32_t AfterWritelockReleaseHelperFuncParam::getSourceEdgeIdx() const
+    {
+        return source_edge_idx_;
+    }
+
+    const CollectedPopularity& AfterWritelockReleaseHelperFuncParam::getCollectedPopularityConstRef() const
+    {
+        return collected_popularity_const_ref_;
+    }
+
+    bool AfterWritelockReleaseHelperFuncParam::isSourceCached() const
+    {
+        return is_source_cached_;
+    }
+
+    Edgeset& AfterWritelockReleaseHelperFuncParam::getBestPlacementEdgesetRef()
+    {
+        return best_placement_edgeset_ref_;
+    }
+
+    bool& AfterWritelockReleaseHelperFuncParam::needHybridFetchingRef()
+    {
+        return need_hybrid_fetching_ref_;
+    }
+
+    UdpMsgSocketServer* AfterWritelockReleaseHelperFuncParam::getRecvrspSocketServerPtr() const
+    {
+        return recvrsp_socket_server_ptr_;
+    }
+
+    const NetworkAddr& AfterWritelockReleaseHelperFuncParam::getRecvrspSourceAddrConstRef() const
+    {
+        return recvrsp_source_addr_;
+    }
+
+    BandwidthUsage& AfterWritelockReleaseHelperFuncParam::getTotalBandwidthUsageRef()
+    {
+        return total_bandwidth_usage_ref_;
+    }
+
+    EventList& AfterWritelockReleaseHelperFuncParam::getEventListRef()
+    {
+        return event_list_ref_;
+    }
+
+    bool AfterWritelockReleaseHelperFuncParam::isSkipPropagationLatency() const
+    {
+        return skip_propagation_latency_;
+    }
+
+    bool& AfterWritelockReleaseHelperFuncParam::isFinishRef()
+    {
+        return is_finish_;
+    }
+
+    const bool& AfterWritelockReleaseHelperFuncParam::isFinishConstRef() const
+    {
+        return is_finish_;
     }
 }

@@ -160,7 +160,7 @@ namespace covered
         Popularity sum_minus_topi = Util::popularityNonegMinus(sum_local_uncached_popularity_, topi_local_uncached_popularity_);
         CalcLocalUncachedRewardFuncParam tmp_param(topi_local_uncached_popularity_, is_global_cached, sum_minus_topi);
         edge_wrapper_ptr->constCustomFunc(CalcLocalUncachedRewardFuncParam::FUNCNAME, &tmp_param);
-        DeltaReward admission_benefit = tmp_param.getReward();
+        DeltaReward admission_benefit = tmp_param.getRewardConstRef();
 
         return admission_benefit;
     }

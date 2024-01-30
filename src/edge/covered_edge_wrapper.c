@@ -222,9 +222,7 @@ namespace covered
         else if (funcname == NonblockDataFetchForPlacementFuncParam::FUNCNAME)
         {
             NonblockDataFetchForPlacementFuncParam* tmp_param_ptr = static_cast<NonblockDataFetchForPlacementFuncParam*>(func_param_ptr);
-            bool tmp_need_hybrid_fetching = false;
-            nonblockDataFetchForPlacementInternal_(tmp_param_ptr->getKeyConstRef(), tmp_param_ptr->getBestPlacementEdgesetConstRef(), tmp_param_ptr->isSkipPropagationLatency(), tmp_param_ptr->isSenderBeacon(), tmp_need_hybrid_fetching);
-            tmp_param_ptr->setNeedHybridFetching(tmp_need_hybrid_fetching);
+            nonblockDataFetchForPlacementInternal_(tmp_param_ptr->getKeyConstRef(), tmp_param_ptr->getBestPlacementEdgesetConstRef(), tmp_param_ptr->isSkipPropagationLatency(), tmp_param_ptr->isSenderBeacon(), tmp_param_ptr->needHybridFetchingRef());
         }
         else if (funcname == NonblockDataFetchFromCloudForPlacementFuncParam::FUNCNAME)
         {
@@ -244,30 +242,23 @@ namespace covered
         else if (funcname == CalcLocalCachedRewardFuncParam::FUNCNAME)
         {
             CalcLocalCachedRewardFuncParam* tmp_param_ptr = static_cast<CalcLocalCachedRewardFuncParam*>(func_param_ptr);
-            Reward tmp_local_cached_reward = calcLocalCachedRewardInternal_(tmp_param_ptr->getLocalCachedPopularityConstRef(), tmp_param_ptr->getRedirectedCachedPopularityConstRef(), tmp_param_ptr->isLastCopies());
-            tmp_param_ptr->setReward(tmp_local_cached_reward);
+
+            Reward& tmp_local_cached_reward_ref = tmp_param_ptr->getRewardRef();
+            tmp_local_cached_reward_ref = calcLocalCachedRewardInternal_(tmp_param_ptr->getLocalCachedPopularityConstRef(), tmp_param_ptr->getRedirectedCachedPopularityConstRef(), tmp_param_ptr->isLastCopies());
         }
         else if (funcname == CalcLocalUncachedRewardFuncParam::FUNCNAME)
         {
             CalcLocalUncachedRewardFuncParam* tmp_param_ptr = static_cast<CalcLocalUncachedRewardFuncParam*>(func_param_ptr);
-            Reward tmp_local_uncached_reward = calcLocalUncachedRewardInternal_(tmp_param_ptr->getLocalUncachedPopularityConstRef(), tmp_param_ptr->isGlobalCached(), tmp_param_ptr->getRedirectedUncachedPopularityConstRef());
-            tmp_param_ptr->setReward(tmp_local_uncached_reward);
+
+            Reward& tmp_local_uncached_reward_ref = tmp_param_ptr->getRewardRef();
+            tmp_local_uncached_reward_ref = calcLocalUncachedRewardInternal_(tmp_param_ptr->getLocalUncachedPopularityConstRef(), tmp_param_ptr->isGlobalCached(), tmp_param_ptr->getRedirectedUncachedPopularityConstRef());
         }
         else if (funcname == AfterDirectoryLookupHelperFuncParam::FUNCNAME)
         {
             AfterDirectoryLookupHelperFuncParam* tmp_param_ptr = static_cast<AfterDirectoryLookupHelperFuncParam*>(func_param_ptr);
 
-            Edgeset tmp_best_placement_edgeset;
-            bool tmp_need_hybrid_fetching = false;
-            BandwidthUsage tmp_total_bandwidth_usage = tmp_param_ptr->getTotalBandwidthUsage();
-            EventList tmp_event_list = tmp_param_ptr->getEventListConstRef();
-            bool tmp_is_finish = afterDirectoryLookupHelperInternal_(tmp_param_ptr->getKeyConstRef(), tmp_param_ptr->getSourceEdgeIdx(), tmp_param_ptr->getCollectedPopularityConstRef(), tmp_param_ptr->isGlobalCached(), tmp_param_ptr->isSourceCached(), tmp_best_placement_edgeset, tmp_need_hybrid_fetching, tmp_param_ptr->getFastPathHintPtr(), tmp_param_ptr->getRecvrspSocketServerPtr(), tmp_param_ptr->getRecvrspSourceAddrConstRef(), tmp_total_bandwidth_usage, tmp_event_list, tmp_param_ptr->isSkipPropagationLatency());
-
-            tmp_param_ptr->setBestPlacementEdgeset(tmp_best_placement_edgeset);
-            tmp_param_ptr->setNeedHybridFetching(tmp_need_hybrid_fetching);
-            tmp_param_ptr->setTotalBandwidthUsage(tmp_total_bandwidth_usage);
-            tmp_param_ptr->setEventList(tmp_event_list);
-            tmp_param_ptr->setIsFinish(tmp_is_finish);
+            bool& tmp_is_finish_ref = tmp_param_ptr->isFinishRef();
+            tmp_is_finish_ref = afterDirectoryLookupHelperInternal_(tmp_param_ptr->getKeyConstRef(), tmp_param_ptr->getSourceEdgeIdx(), tmp_param_ptr->getCollectedPopularityConstRef(), tmp_param_ptr->isGlobalCached(), tmp_param_ptr->isSourceCached(), tmp_param_ptr->getBestPlacementEdgesetRef(), tmp_param_ptr->needHybridFetchingRef(), tmp_param_ptr->getFastPathHintPtr(), tmp_param_ptr->getRecvrspSocketServerPtr(), tmp_param_ptr->getRecvrspSourceAddrConstRef(), tmp_param_ptr->getTotalBandwidthUsageRef(), tmp_param_ptr->getEventListRef(), tmp_param_ptr->isSkipPropagationLatency());
         }
         else if (funcname == AfterDirectoryAdmissionHelperFuncParam::FUNCNAME)
         {
@@ -278,21 +269,22 @@ namespace covered
         {
             AfterDirectoryEvictionHelperFuncParam* tmp_param_ptr = static_cast<AfterDirectoryEvictionHelperFuncParam*>(func_param_ptr);
 
-            Edgeset tmp_best_placement_edgeset;
-            bool tmp_need_hybrid_fetching = false;
-            BandwidthUsage tmp_total_bandwidth_usage = tmp_param_ptr->getTotalBandwidthUsage();
-            EventList tmp_event_list = tmp_param_ptr->getEventListConstRef();
-            bool tmp_is_finish = afterDirectoryEvictionHelperInternal_(tmp_param_ptr->getKeyConstRef(), tmp_param_ptr->getSourceEdgeIdx(), tmp_param_ptr->getMetadataUpdateRequirementConstRef(), tmp_param_ptr->getDirectoryInfoConstRef(), tmp_param_ptr->getCollectedPopularityConstRef(), tmp_param_ptr->isGlobalCached(), tmp_best_placement_edgeset, tmp_need_hybrid_fetching, tmp_param_ptr->getRecvrspSocketServerPtr(), tmp_param_ptr->getRecvrspSourceAddrConstRef(), tmp_total_bandwidth_usage, tmp_event_list, tmp_param_ptr->isSkipPropagationLatency(), tmp_param_ptr->isBackground());
-
-            tmp_param_ptr->setBestPlacementEdgeset(tmp_best_placement_edgeset);
-            tmp_param_ptr->setNeedHybridFetching(tmp_need_hybrid_fetching);
-            tmp_param_ptr->setTotalBandwidthUsage(tmp_total_bandwidth_usage);
-            tmp_param_ptr->setEventList(tmp_event_list);
-            tmp_param_ptr->setIsFinish(tmp_is_finish);
+            bool& tmp_is_finish_ref = tmp_param_ptr->isFinishRef();
+            tmp_is_finish_ref = afterDirectoryEvictionHelperInternal_(tmp_param_ptr->getKeyConstRef(), tmp_param_ptr->getSourceEdgeIdx(), tmp_param_ptr->getMetadataUpdateRequirementConstRef(), tmp_param_ptr->getDirectoryInfoConstRef(), tmp_param_ptr->getCollectedPopularityConstRef(), tmp_param_ptr->isGlobalCached(), tmp_param_ptr->getBestPlacementEdgesetRef(), tmp_param_ptr->needHybridFetchingRef(), tmp_param_ptr->getRecvrspSocketServerPtr(), tmp_param_ptr->getRecvrspSourceAddrConstRef(), tmp_param_ptr->getTotalBandwidthUsageRef(), tmp_param_ptr->getEventListRef(), tmp_param_ptr->isSkipPropagationLatency(), tmp_param_ptr->isBackground());
         }
         else if (funcname == AfterWritelockAcquireHelperFuncParam::FUNCNAME)
         {
-            // TODO: END HERE
+            AfterWritelockAcquireHelperFuncParam* tmp_param_ptr = static_cast<AfterWritelockAcquireHelperFuncParam*>(func_param_ptr);
+
+            bool& tmp_is_finish_ref = tmp_param_ptr->isFinishRef();
+            tmp_is_finish_ref = afterWritelockAcquireHelperInternal_(tmp_param_ptr->getKeyConstRef(), tmp_param_ptr->getSourceEdgeIdx(), tmp_param_ptr->getCollectedPopularityConstRef(), tmp_param_ptr->isGlobalCached(), tmp_param_ptr->isSourceCached(), tmp_param_ptr->getRecvrspSocketServerPtr(), tmp_param_ptr->getRecvrspSourceAddrConstRef(), tmp_param_ptr->getTotalBandwidthUsageRef(), tmp_param_ptr->getEventListRef(), tmp_param_ptr->isSkipPropagationLatency());
+        }
+        else if (funcname == AfterWritelockReleaseHelperFuncParam::FUNCNAME)
+        {
+            AfterWritelockReleaseHelperFuncParam* tmp_param_ptr = static_cast<AfterWritelockReleaseHelperFuncParam*>(func_param_ptr);
+
+            bool& tmp_is_finish_ref = tmp_param_ptr->isFinishRef();
+            tmp_is_finish_ref = afterWritelockReleaseHelperInternal_(tmp_param_ptr->getKeyConstRef(), tmp_param_ptr->getSourceEdgeIdx(), tmp_param_ptr->getCollectedPopularityConstRef(), tmp_param_ptr->isSourceCached(), tmp_param_ptr->getBestPlacementEdgesetRef(), tmp_param_ptr->needHybridFetchingRef(), tmp_param_ptr->getRecvrspSocketServerPtr(), tmp_param_ptr->getRecvrspSourceAddrConstRef(), tmp_param_ptr->getTotalBandwidthUsageRef(), tmp_param_ptr->getEventListRef(), tmp_param_ptr->isSkipPropagationLatency());
         }
         else
         {
@@ -743,7 +735,7 @@ namespace covered
         return is_finish;
     }
 
-    bool EdgeWrapper::afterWritelockReleaseHelper_(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_source_cached, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
+    bool CoveredEdgeWrapper::afterWritelockReleaseHelperInternal_(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_source_cached, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         bool is_finish = false;
 

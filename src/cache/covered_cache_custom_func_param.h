@@ -62,8 +62,8 @@ namespace covered
         GetCollectedPopularityParam(const Key& key);
         virtual ~GetCollectedPopularityParam();
 
-        CollectedPopularity getCollectedPopularity() const;
-        void setCollectedPopularity(const CollectedPopularity& other);
+        CollectedPopularity& getCollectedPopularityRef();
+        const CollectedPopularity& getCollectedPopularityConstRef() const;
     private:
         static const std::string kClassName;
 

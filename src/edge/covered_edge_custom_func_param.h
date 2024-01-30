@@ -78,8 +78,8 @@ namespace covered
         EventList& getEventListRef() const;
         bool isSkipPropagationLatency() const;
 
-        bool isFinish() const;
-        void setIsFinish(const bool& is_finish);
+        bool& isFinishRef();
+        const bool& isFinishConstRef() const;
     private:
         static const std::string kClassName;
 
@@ -112,8 +112,8 @@ namespace covered
         EventList& getEventListRef() const;
         bool isSkipPropagationLatency() const;
 
-        bool isFinish() const;
-        void setIsFinish(const bool& is_finish);
+        bool& isFinishRef();
+        const bool& isFinishConstRef() const;
     private:
         static const std::string kClassName;
 
@@ -172,16 +172,14 @@ namespace covered
     public:
         static const std::string FUNCNAME; // Non-blocking data fetching from local (beacon) or neighbor for non-blocking placement deployment
 
-        NonblockDataFetchForPlacementFuncParam(const Key& key, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency, const bool& sender_is_beacon);
+        NonblockDataFetchForPlacementFuncParam(const Key& key, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency, const bool& sender_is_beacon, bool& need_hybrid_fetching);
         ~NonblockDataFetchForPlacementFuncParam();
 
         const Key& getKeyConstRef() const;
         const Edgeset& getBestPlacementEdgesetConstRef() const;
         bool isSkipPropagationLatency() const;
         bool isSenderBeacon() const;
-
-        bool isNeedHybridFetching() const;
-        void setNeedHybridFetching(const bool& need_hybrid_fetching);
+        bool& needHybridFetchingRef();
     private:
         static const std::string kClassName;
 
@@ -189,8 +187,7 @@ namespace covered
         const Edgeset& best_placement_edgeset_const_ref_;
         const bool skip_propagation_latency_;
         const bool sender_is_beacon_;
-        
-        bool need_hybrid_fetching_;
+        bool& need_hybrid_fetching_ref_;
     };
 
     // NonblockDataFetchFromCloudForPlacementFuncParam
@@ -272,8 +269,8 @@ namespace covered
         const Popularity& getRedirectedCachedPopularityConstRef() const;
         bool isLastCopies() const;
 
-        Reward getReward() const;
-        void setReward(const Reward& reward);
+        Reward& getRewardRef();
+        const Reward& getRewardConstRef() const;
     private:
         static const std::string kClassName;
 
@@ -298,8 +295,8 @@ namespace covered
         bool isGlobalCached() const;
         const Popularity& getRedirectedUncachedPopularityConstRef() const;
 
-        Reward getReward() const;
-        void setReward(const Reward& reward);
+        Reward& getRewardRef();
+        const Reward& getRewardConstRef() const;
     private:
         static const std::string kClassName;
 
@@ -317,7 +314,7 @@ namespace covered
     public:
         static const std::string FUNCNAME; // Helper function after directory lookup
 
-        AfterDirectoryLookupHelperFuncParam(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, FastPathHint* fast_path_hint_ptr, UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency);
+        AfterDirectoryLookupHelperFuncParam(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, FastPathHint* fast_path_hint_ptr, UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency);
         ~AfterDirectoryLookupHelperFuncParam();
 
         const Key& getKeyConstRef() const;
@@ -325,22 +322,17 @@ namespace covered
         const CollectedPopularity& getCollectedPopularityConstRef() const;
         bool isGlobalCached() const;
         bool isSourceCached() const;
+        Edgeset& getBestPlacementEdgesetRef();
+        bool& needHybridFetchingRef();
         FastPathHint* getFastPathHintPtr() const;
         UdpMsgSocketServer* getRecvrspSocketServerPtr() const;
         const NetworkAddr& getRecvrspSourceAddrConstRef() const;
+        BandwidthUsage& getTotalBandwidthUsageRef();
+        EventList& getEventListRef();
         bool isSkipPropagationLatency() const;
 
-        const Edgeset& getBestPlacementEdgesetConstRef() const;
-        void setBestPlacementEdgeset(const Edgeset& best_placement_edgeset);
-        bool isNeedHybridFetching() const;
-        void setNeedHybridFetching(const bool& need_hybrid_fetching);
-        BandwidthUsage getTotalBandwidthUsage() const;
-        void setTotalBandwidthUsage(const BandwidthUsage& total_bandwidth_usage);
-        const EventList& getEventListConstRef() const;
-        void setEventList(const EventList& event_list);
-
-        bool isFinish() const;
-        void setIsFinish(const bool& is_finish);
+        bool& isFinishRef();
+        const bool& isFinishConstRef() const;
     private:
         static const std::string kClassName;
 
@@ -349,15 +341,14 @@ namespace covered
         const CollectedPopularity& collected_popularity_const_ref_;
         const bool is_global_cached_;
         const bool is_source_cached_;
+        Edgeset& best_placement_edgeset_ref_;
+        bool& need_hybrid_fetching_ref_;
         FastPathHint* fast_path_hint_ptr_;
         UdpMsgSocketServer* recvrsp_socket_server_ptr_;
         const NetworkAddr& recvrsp_source_addr_;
+        BandwidthUsage& total_bandwidth_usage_ref_;
+        EventList& event_list_ref_;
         const bool skip_propagation_latency_;
-
-        Edgeset best_placement_edgeset_;
-        bool need_hybrid_fetching_;
-        BandwidthUsage total_bandwidth_usage_;
-        EventList event_list_;
 
         bool is_finish_;
     };
@@ -394,7 +385,7 @@ namespace covered
     public:
         static const std::string FUNCNAME; // Helper function after directory eviction
 
-        AfterDirectoryEvictionHelperFuncParam(const Key& key, const uint32_t& source_edge_idx, const MetadataUpdateRequirement& metadata_update_requirement, const DirectoryInfo& directory_info, const CollectedPopularity& collected_popularity, const bool& is_global_cached, UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency, const bool& is_background);
+        AfterDirectoryEvictionHelperFuncParam(const Key& key, const uint32_t& source_edge_idx, const MetadataUpdateRequirement& metadata_update_requirement, const DirectoryInfo& directory_info, const CollectedPopularity& collected_popularity, const bool& is_global_cached, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, const bool& is_background);
         ~AfterDirectoryEvictionHelperFuncParam();
 
         const Key& getKeyConstRef() const;
@@ -403,22 +394,17 @@ namespace covered
         const DirectoryInfo& getDirectoryInfoConstRef() const;
         const CollectedPopularity& getCollectedPopularityConstRef() const;
         bool isGlobalCached() const;
+        Edgeset& getBestPlacementEdgesetRef();
+        bool& needHybridFetchingRef();
         UdpMsgSocketServer* getRecvrspSocketServerPtr() const;
         const NetworkAddr& getRecvrspSourceAddrConstRef() const;
+        BandwidthUsage& getTotalBandwidthUsageRef();
+        EventList& getEventListRef();
         bool isSkipPropagationLatency() const;
         bool isBackground() const;
 
-        const Edgeset& getBestPlacementEdgesetConstRef() const;
-        void setBestPlacementEdgeset(const Edgeset& best_placement_edgeset);
-        bool isNeedHybridFetching() const;
-        void setNeedHybridFetching(const bool& need_hybrid_fetching);
-        BandwidthUsage getTotalBandwidthUsage() const;
-        void setTotalBandwidthUsage(const BandwidthUsage& total_bandwidth_usage);
-        const EventList& getEventListConstRef() const;
-        void setEventList(const EventList& event_list);
-
-        bool isFinish() const;
-        void setIsFinish(const bool& is_finish);
+        bool& isFinishRef();
+        const bool& isFinishConstRef() const;
     private:
         static const std::string kClassName;
 
@@ -428,22 +414,99 @@ namespace covered
         const DirectoryInfo& directory_info_const_ref_;
         const CollectedPopularity& collected_popularity_const_ref_;
         const bool is_global_cached_;
+        Edgeset& best_placement_edgeset_ref_;
+        bool& need_hybrid_fetching_ref_;
         UdpMsgSocketServer* recvrsp_socket_server_ptr_;
         const NetworkAddr& recvrsp_source_addr_;
+        BandwidthUsage& total_bandwidth_usage_ref_;
+        EventList& event_list_ref_;
         const bool skip_propagation_latency_;
         const bool is_background_;
-
-        Edgeset best_placement_edgeset_;
-        bool need_hybrid_fetching_;
-        BandwidthUsage total_bandwidth_usage_;
-        EventList event_list_;
 
         bool is_finish_;
     };
 
     // AfterWritelockAcquireHelperFuncParam
 
-    // TODO: END HERE
+    class AfterWritelockAcquireHelperFuncParam : public EdgeCustomFuncParamBase
+    {
+    public:
+        static const std::string FUNCNAME; // Helper function after acquiring writelock
+
+        AfterWritelockAcquireHelperFuncParam(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency);
+        ~AfterWritelockAcquireHelperFuncParam();
+
+        const Key& getKeyConstRef() const;
+        uint32_t getSourceEdgeIdx() const;
+        const CollectedPopularity& getCollectedPopularityConstRef() const;
+        bool isGlobalCached() const;
+        bool isSourceCached() const;
+        UdpMsgSocketServer* getRecvrspSocketServerPtr() const;
+        const NetworkAddr& getRecvrspSourceAddrConstRef() const;
+        BandwidthUsage& getTotalBandwidthUsageRef();
+        EventList& getEventListRef();
+        bool isSkipPropagationLatency() const;
+
+        bool& isFinishRef();
+        const bool& isFinishConstRef() const;
+    private:
+        static const std::string kClassName;
+
+        const Key& key_const_ref_;
+        const uint32_t source_edge_idx_;
+        const CollectedPopularity& collected_popularity_const_ref_;
+        const bool is_global_cached_;
+        const bool is_source_cached_;
+        UdpMsgSocketServer* recvrsp_socket_server_ptr_;
+        const NetworkAddr& recvrsp_source_addr_;
+        BandwidthUsage& total_bandwidth_usage_ref_;
+        EventList& event_list_ref_;
+        const bool skip_propagation_latency_;
+
+        bool is_finish_;
+    };
+
+    // AfterWritelockReleaseHelperFuncParam
+
+    class AfterWritelockReleaseHelperFuncParam : public EdgeCustomFuncParamBase
+    {
+    public:
+        static const std::string FUNCNAME; // Helper function after releasing writelock
+
+        AfterWritelockReleaseHelperFuncParam(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_source_cached, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency);
+        ~AfterWritelockReleaseHelperFuncParam();
+
+        const Key& getKeyConstRef() const;
+        uint32_t getSourceEdgeIdx() const;
+        const CollectedPopularity& getCollectedPopularityConstRef() const;
+        bool isSourceCached() const;
+        Edgeset& getBestPlacementEdgesetRef();
+        bool& needHybridFetchingRef();
+        UdpMsgSocketServer* getRecvrspSocketServerPtr() const;
+        const NetworkAddr& getRecvrspSourceAddrConstRef() const;
+        BandwidthUsage& getTotalBandwidthUsageRef();
+        EventList& getEventListRef();
+        bool isSkipPropagationLatency() const;
+
+        bool& isFinishRef();
+        const bool& isFinishConstRef() const;
+    private:
+        static const std::string kClassName;
+
+        const Key& key_const_ref_;
+        const uint32_t source_edge_idx_;
+        const CollectedPopularity& collected_popularity_const_ref_;
+        const bool is_source_cached_;
+        Edgeset& best_placement_edgeset_ref_;
+        bool& need_hybrid_fetching_ref_;
+        UdpMsgSocketServer* recvrsp_socket_server_ptr_;
+        const NetworkAddr& recvrsp_source_addr_;
+        BandwidthUsage& total_bandwidth_usage_ref_;
+        EventList& event_list_ref_;
+        const bool skip_propagation_latency_;
+
+        bool is_finish_;
+    };
 }
 
 #endif

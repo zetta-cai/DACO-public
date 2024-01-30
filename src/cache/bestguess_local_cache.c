@@ -259,7 +259,7 @@ namespace covered
         if (func_name == UpdateNeighborVictimVtimeParam::FUNCNAME)
         {
             UpdateNeighborVictimVtimeParam* tmp_param_ptr = static_cast<UpdateNeighborVictimVtimeParam*>(func_param_ptr);
-            updateNeighborVictimVtimeInternal_(tmp_param_ptr);
+            updateNeighborVictimVtimeInternal_(tmp_param_ptr->getNeighborEdgeIdx(), tmp_param_ptr->getNeighborVictimVtime());
         }
         else
         {
@@ -271,14 +271,10 @@ namespace covered
         return;
     }
 
-    void BestGuessLocalCache::updateNeighborVictimVtimeInternal_(UpdateNeighborVictimVtimeParam* func_param_ptr)
+    void BestGuessLocalCache::updateNeighborVictimVtimeInternal_(const uint32_t& neighbor_edge_idx, const uint64_t& neighbor_victim_vtime)
     {
-        assert(func_param_ptr != NULL);
-
         // Update neighbor victim vtime
-        uint32_t neighbor_edge_idx = func_param_ptr->getNeighborEdgeIdx();
         assert(neighbor_edge_idx != edge_idx_);
-        uint64_t neighbor_victim_vtime = func_param_ptr->getNeighborVictimVtime();
         std::unordered_map<uint32_t, uint64_t>::iterator peredge_victim_vtime_iter = peredge_victim_vtime_.find(neighbor_edge_idx);
         if (peredge_victim_vtime_iter == peredge_victim_vtime_.end())
         {
@@ -299,12 +295,12 @@ namespace covered
         if (func_name == GetLocalVictimVtimeFuncParam::FUNCNAME)
         {
             GetLocalVictimVtimeFuncParam* tmp_param_ptr = static_cast<GetLocalVictimVtimeFuncParam*>(func_param_ptr);
-            getLocalVictimVtimeInternal_(tmp_param_ptr);            
+            getLocalVictimVtimeInternal_(tmp_param_ptr->getLocalVictimVtimeRef());
         }
         else if (func_name == GetPlacementEdgeIdxParam::FUNCNAME)
         {
             GetPlacementEdgeIdxParam* tmp_param_ptr = static_cast<GetPlacementEdgeIdxParam*>(func_param_ptr);
-            getPlacementEdgeIdxInternal_(tmp_param_ptr);
+            getPlacementEdgeIdxInternal_(tmp_param_ptr->getPlacementEdgeIdxRef());
         }
         else
         {
@@ -316,32 +312,25 @@ namespace covered
         return;
     }
 
-    void BestGuessLocalCache::getLocalVictimVtimeInternal_(GetLocalVictimVtimeFuncParam* func_param_ptr) const
+    void BestGuessLocalCache::getLocalVictimVtimeInternal_(uint64_t& local_victim_vtime) const
     {
-        assert(func_param_ptr != NULL);
+        local_victim_vtime = 0; // NOTE: keep victim as 0 if BestGuess cache is empty, which has the largest priority for admission placement
 
         // Get local victim vtime
-        uint64_t local_victim_vtime = 0; // NOTE: keep victim as 0 if BestGuess cache is empty, which has the largest priority for admission placement
         if (bestguess_cache_.size() > 0)
         {
             local_victim_vtime = bestguess_cache_.back().getVtime();
         }
 
-        // Update function param
-        func_param_ptr->setLocalVictimVtime(local_victim_vtime);
-
         return;
     }
 
-    void BestGuessLocalCache::getPlacementEdgeIdxInternal_(GetPlacementEdgeIdxParam* func_param_ptr) const
+    void BestGuessLocalCache::getPlacementEdgeIdxInternal_(uint32_t& placement_edge_idx) const
     {
-        assert(func_param_ptr != NULL);
-
         // Choose current edge node as the placement edge node by default
-        uint32_t placement_edge_idx = edge_idx_; // Current edge index
-        GetLocalVictimVtimeFuncParam tmp_param;
-        getLocalVictimVtimeInternal_(&tmp_param);
-        uint64_t min_victim_vtime = tmp_param.getLocalVictimVtime(); // Local victim vtime in current edge node
+        placement_edge_idx = edge_idx_; // Current edge index
+        uint64_t min_victim_vtime = 0; // Local victim vtime in current edge node
+        getLocalVictimVtimeInternal_(min_victim_vtime);
 
         // Get placement edge idx under best-guess replacement policy (i.e., approximate global LRU)
         for (std::unordered_map<uint32_t, uint64_t>::const_iterator peredge_victim_vtime_const_iter = peredge_victim_vtime_.begin(); peredge_victim_vtime_const_iter != peredge_victim_vtime_.end(); peredge_victim_vtime_const_iter++)
@@ -363,7 +352,6 @@ namespace covered
         }
 
         // Update function param
-        func_param_ptr->setPlacementEdgeIdx(placement_edge_idx);
         UNUSED(min_victim_vtime);
 
         return;

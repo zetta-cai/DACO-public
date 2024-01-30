@@ -28,6 +28,11 @@ namespace covered
         return local_beaconed_victim_dirinfosets_;
     }
 
+    const std::list<std::pair<Key, DirinfoSet>>& GetLocalBeaconedVictimsFromVictimSyncsetFuncParam::getLocalBeaconedVictimDirinfosetsConstRef() const
+    {
+        return local_beaconed_victim_dirinfosets_;
+    }
+
     // GetLocalBeaconedVictimsFromCacheinfosParam
 
     const std::string GetLocalBeaconedVictimsFromCacheinfosParam::kClassName("GetLocalBeaconedVictimsFromCacheinfosParam");
@@ -50,6 +55,11 @@ namespace covered
     }
 
     std::list<std::pair<Key, DirinfoSet>>& GetLocalBeaconedVictimsFromCacheinfosParam::getLocalBeaconedVictimDirinfosetsRef()
+    {
+        return local_beaconed_victim_dirinfosets_;
+    }
+
+    const std::list<std::pair<Key, DirinfoSet>>& GetLocalBeaconedVictimsFromCacheinfosParam::getLocalBeaconedVictimDirinfosetsConstRef() const
     {
         return local_beaconed_victim_dirinfosets_;
     }

@@ -110,7 +110,7 @@ namespace covered
         const bool is_last_copies = !is_neighbor_cached;
         CalcLocalCachedRewardFuncParam tmp_param(local_cached_popularity, redirected_cached_popularity, is_last_copies);
         edge_wrapper_ptr->constCustomFunc(CalcLocalCachedRewardFuncParam::FUNCNAME, &tmp_param);
-        Reward local_reward = tmp_param.getReward();
+        Reward local_reward = tmp_param.getRewardConstRef();
 
         return local_reward;
     }

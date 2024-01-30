@@ -240,7 +240,7 @@ namespace covered
         {
             GetCollectedPopularityParam tmp_param(tmp_key);
             tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param);
-            is_tracked_before_fetch_value = tmp_param.getCollectedPopularity().isTracked();
+            is_tracked_before_fetch_value = tmp_param.getCollectedPopularityConstRef().isTracked();
         }
 
         #ifdef DEBUG_CACHE_SERVER_WORKER
@@ -314,7 +314,7 @@ namespace covered
         {
             TryToTriggerPlacementNotificationAfterHybridFetchFuncParam tmp_param(tmp_key, tmp_value, best_placement_edgeset, total_bandwidth_usage, event_list, skip_propagation_latency);
             constCustomFunc(TryToTriggerPlacementNotificationAfterHybridFetchFuncParam::FUNCNAME, &tmp_param);
-            is_finish = tmp_param.isFinish();
+            is_finish = tmp_param.isFinishConstRef();
             if (is_finish) // Edge is NOT running now
             {
                 return is_finish;
@@ -358,7 +358,7 @@ namespace covered
         {
             GetCollectedPopularityParam tmp_param(tmp_key);
             tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param);
-            const CollectedPopularity tmp_collected_popularity_after_fetch_value = tmp_param.getCollectedPopularity();
+            const CollectedPopularity tmp_collected_popularity_after_fetch_value = tmp_param.getCollectedPopularityRef();
             const bool is_tracked_after_fetch_value = tmp_collected_popularity_after_fetch_value.isTracked();
             if (!is_tracked_before_fetch_value && is_tracked_after_fetch_value) // Newly-tracked after fetching value from neighbor/cloud
             {
@@ -367,7 +367,7 @@ namespace covered
                 // Try to trigger cache placement if necessary (sender is beacon, or beacon node provides fast-path hint)
                 TryToTriggerCachePlacementForGetrspFuncParam tmp_param(tmp_key, tmp_value, tmp_collected_popularity_after_fetch_value, fast_path_hint, is_cooperative_cached, total_bandwidth_usage, event_list, skip_propagation_latency);
                 constCustomFunc(TryToTriggerCachePlacementForGetrspFuncParam::FUNCNAME, &tmp_param);
-                is_finish = tmp_param.isFinish();
+                is_finish = tmp_param.isFinishConstRef();
                 if (is_finish)
                 {
                     return is_finish;

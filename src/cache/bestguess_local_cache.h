@@ -67,11 +67,11 @@ namespace covered
         // (4) Other functions
 
         virtual void invokeCustomFunctionInternal_(const std::string& func_name, CacheCustomFuncParamBase* func_param_ptr) override; // Invoke some method-specific function for local edge cache
-        void updateNeighborVictimVtimeInternal_(UpdateNeighborVictimVtimeParam* func_param_ptr); // Update victim vtime of the given neighbor edge node
+        void updateNeighborVictimVtimeInternal_(const uint32_t& neighbor_edge_idx, const uint64_t& neighbor_victim_vtime); // Update victim vtime of the given neighbor edge node
 
         virtual void invokeConstCustomFunctionInternal_(const std::string& func_name, CacheCustomFuncParamBase* func_param_ptr) const override; // Invoke some method-specific function for local edge cache
-        void getLocalVictimVtimeInternal_(GetLocalVictimVtimeFuncParam* func_param_ptr) const; // Get victim vtime of current edge node
-        void getPlacementEdgeIdxInternal_(GetPlacementEdgeIdxParam* func_param_ptr) const; // Get placement edge idx under best-guess replacement policy
+        void getLocalVictimVtimeInternal_(uint64_t& local_victim_vtime) const; // Get victim vtime of current edge node
+        void getPlacementEdgeIdxInternal_(uint32_t& placement_edge_idx) const; // Get placement edge idx under best-guess replacement policy
 
         // In units of bytes
         virtual uint64_t getSizeForCapacityInternal_() const override;

@@ -56,13 +56,9 @@ namespace covered
         // NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation (note that victim tracker has been updated by getLocalEdgeCache_() before this function)
 
         // Selective popularity aggregation after local directory lookup
-        AfterDirectoryLookupHelperFuncParam tmp_param_after_dirlookup(key, current_edge_idx, tmp_param_for_popcollect.getCollectedPopularity(), is_global_cached, is_source_cached, NULL, edge_cache_server_worker_recvrsp_socket_server_ptr_, edge_cache_server_worker_recvrsp_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        AfterDirectoryLookupHelperFuncParam tmp_param_after_dirlookup(key, current_edge_idx, tmp_param_for_popcollect.getCollectedPopularityConstRef(), is_global_cached, is_source_cached, best_placement_edgeset, need_hybrid_fetching, NULL, edge_cache_server_worker_recvrsp_socket_server_ptr_, edge_cache_server_worker_recvrsp_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         tmp_edge_wrapper_ptr->constCustomFunc(AfterDirectoryLookupHelperFuncParam::FUNCNAME, &tmp_param_after_dirlookup);
-        is_finish = tmp_param_after_dirlookup.isFinish();
-        best_placement_edgeset = tmp_param_after_dirlookup.getBestPlacementEdgesetConstRef();
-        need_hybrid_fetching = tmp_param_after_dirlookup.isNeedHybridFetching();
-        total_bandwidth_usage = tmp_param_after_dirlookup.getTotalBandwidthUsage();
-        event_list = tmp_param_after_dirlookup.getEventListConstRef();
+        is_finish = tmp_param_after_dirlookup.isFinishConstRef();
 
         return is_finish;
     }
@@ -79,7 +75,7 @@ namespace covered
         GetCollectedPopularityParam tmp_param(key);
         tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param);
 
-        const CollectedPopularity tmp_collected_popularity = tmp_param.getCollectedPopularity();
+        const CollectedPopularity tmp_collected_popularity = tmp_param.getCollectedPopularityConstRef();
         bool is_key_tracked = tmp_collected_popularity.isTracked(); // Indicate if the local uncached key is tracked in local uncached metadata
         if (!is_key_tracked) // If key is NOT tracked by local uncached metadata (key is cached or key is uncached yet not popular)
         {
@@ -130,7 +126,7 @@ namespace covered
         tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param); // collected_popularity.is_tracked_ indicates if the local uncached key is tracked in local uncached metadata
 
         // Prepare CoveredDirectoryLookupRequest to check directory information in beacon node with popularity collection and victim synchronization
-        MessageBase* covered_directory_lookup_request_ptr = new CoveredDirectoryLookupRequest(key, tmp_param.getCollectedPopularity(), victim_syncset, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+        MessageBase* covered_directory_lookup_request_ptr = new CoveredDirectoryLookupRequest(key, tmp_param.getCollectedPopularityConstRef(), victim_syncset, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
         assert(covered_directory_lookup_request_ptr != NULL);
 
         return covered_directory_lookup_request_ptr;
@@ -224,7 +220,7 @@ namespace covered
             GetCollectedPopularityParam tmp_param(tmp_key);
             tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param);
 
-            const CollectedPopularity tmp_collected_popularity = tmp_param.getCollectedPopularity();
+            const CollectedPopularity& tmp_collected_popularity = tmp_param.getCollectedPopularityConstRef();
             bool is_key_tracked = tmp_collected_popularity.isTracked(); // Indicate if the local uncached key is tracked in local uncached metadata
             if (is_key_tracked) // If key is tracked by local uncached metadata
             {
@@ -340,13 +336,15 @@ namespace covered
         // Prepare local uncached popularity of key for popularity aggregation
         // NOTE: we NEED popularity aggregation for accumulated changes on local uncached popularity due to directory metadata cache
         // NOTE: NOT need piggyacking-based popularity collection and victim synchronization for local acquire write lock
-        GetCollectedPopularityParam tmp_param(key);
-        tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param); // collected_popularity.is_tracked_ is false if the given key is local cached or the key is local uncached yet NOT tracked in local uncached metadata
+        GetCollectedPopularityParam tmp_param_for_popcollect(key);
+        tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param_for_popcollect); // collected_popularity.is_tracked_ is false if the given key is local cached or the key is local uncached yet NOT tracked in local uncached metadata
 
         // NOTE: NO need to update local synced victims, which will be done by updateLocalEdgeCache_() and removeLocalEdgeCache_() after this function
 
         // Selective popularity aggregation after local acquire writelock
-        is_finish = tmp_edge_wrapper_ptr->afterWritelockAcquireHelper_(key, current_edge_idx, tmp_param.getCollectedPopularity(), is_global_cached, is_source_cached, edge_cache_server_worker_recvrsp_socket_server_ptr_, edge_cache_server_worker_recvrsp_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        AfterWritelockAcquireHelperFuncParam tmp_param_after_acquirelock(key, current_edge_idx, tmp_param_for_popcollect.getCollectedPopularityConstRef(), is_global_cached, is_source_cached, edge_cache_server_worker_recvrsp_socket_server_ptr_, edge_cache_server_worker_recvrsp_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        tmp_edge_wrapper_ptr->constCustomFunc(AfterWritelockAcquireHelperFuncParam::FUNCNAME, &tmp_param_after_acquirelock);
+        is_finish = tmp_param_after_acquirelock.isFinishConstRef();
 
         return is_finish;
     }
@@ -370,7 +368,7 @@ namespace covered
         GetCollectedPopularityParam tmp_param(key);
         tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param); // collected_popularity.is_tracked_ is false if the given key is local cached or the key is local uncached yet NOT tracked in local uncached metadata
 
-        MessageBase* covered_acquire_writelock_request_ptr = new CoveredAcquireWritelockRequest(key, tmp_param.getCollectedPopularity(), victim_syncset, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+        MessageBase* covered_acquire_writelock_request_ptr = new CoveredAcquireWritelockRequest(key, tmp_param.getCollectedPopularityConstRef(), victim_syncset, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
         assert(covered_acquire_writelock_request_ptr != NULL);
 
         // Remove existing cached directory if any as key will be local cached
@@ -495,15 +493,17 @@ namespace covered
         // Prepare local uncached popularity of key for popularity aggregation
         // NOTE: although acquireLocalWritelock_() has aggregated accumulated changes of local uncached popularity due to directory metadata cache, we still NEED popularity aggregation as local uncached metadata may be updated before releasing the write lock if the global cached key is local uncached
         // NOTE: NOT need piggyacking-based popularity collection and victim synchronization for local release write lock
-        GetCollectedPopularityParam tmp_param(key);
-        tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param); // collected_popularity.is_tracked_ is false if the given key is local cached or the key is local uncached yet NOT tracked in local uncached metadata
+        GetCollectedPopularityParam tmp_param_for_popcollect(key);
+        tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param_for_popcollect); // collected_popularity.is_tracked_ is false if the given key is local cached or the key is local uncached yet NOT tracked in local uncached metadata
 
         // NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation (note that we have updated victim tracker in updateLocalEdgeCache_() or removeLocalEdgeCache_() before this function)
 
         // Selective popularity aggregation after local release writelock
         Edgeset best_placement_edgeset; // Used for non-blocking placement notification if need hybrid data fetching for COVERED
         bool need_hybrid_fetching = false;
-        is_finish = tmp_edge_wrapper_ptr->afterWritelockReleaseHelper_(key, current_edge_idx, tmp_param.getCollectedPopularity(), is_source_cached, best_placement_edgeset, need_hybrid_fetching, edge_cache_server_worker_recvrsp_socket_server_ptr_, edge_cache_server_worker_recvrsp_source_addr_, total_bandwidth_usgae, event_list, skip_propagation_latency);
+        AfterWritelockReleaseHelperFuncParam tmp_param_after_releaselock(key, current_edge_idx, tmp_param_for_popcollect.getCollectedPopularityConstRef(), is_source_cached, best_placement_edgeset, need_hybrid_fetching, edge_cache_server_worker_recvrsp_socket_server_ptr_, edge_cache_server_worker_recvrsp_source_addr_, total_bandwidth_usgae, event_list, skip_propagation_latency);
+        tmp_edge_wrapper_ptr->constCustomFunc(AfterWritelockReleaseHelperFuncParam::FUNCNAME, &tmp_param_after_releaselock);
+        is_finish = tmp_param_after_releaselock.isFinishConstRef();
         if (is_finish)
         {
             return is_finish; // Edge node is NOT running now
@@ -539,7 +539,7 @@ namespace covered
         GetCollectedPopularityParam tmp_param(key);
         tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param); // collected_popularity.is_tracked_ is false if the given key is local cached or the key is local uncached yet NOT tracked in local uncached metadata
 
-        MessageBase* covered_release_writelock_request_ptr = new CoveredReleaseWritelockRequest(key, tmp_param.getCollectedPopularity(), victim_syncset, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+        MessageBase* covered_release_writelock_request_ptr = new CoveredReleaseWritelockRequest(key, tmp_param.getCollectedPopularityConstRef(), victim_syncset, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
         assert(covered_release_writelock_request_ptr != NULL);
 
         // Remove existing cached directory if any as key will be local cached
@@ -623,14 +623,16 @@ namespace covered
         if (funcname == TryToTriggerCachePlacementForGetrspFuncParam::FUNCNAME)
         {
             TryToTriggerCachePlacementForGetrspFuncParam* tmp_param_ptr = static_cast<TryToTriggerCachePlacementForGetrspFuncParam*>(func_param_ptr);
-            bool is_finish = tryToTriggerCachePlacementForGetrspInternal_(tmp_param_ptr->getKeyConstRef(), tmp_param_ptr->getValueConstRef(), tmp_param_ptr->getCollectedPopularityConstRef(), tmp_param_ptr->getFastPathHintConstRef(), tmp_param_ptr->isGlobalCached(), tmp_param_ptr->getTotalBandwidthUsageRef(), tmp_param_ptr->getEventListRef(), tmp_param_ptr->isSkipPropagationLatency());
-            tmp_param_ptr->setIsFinish(is_finish);
+
+            bool& is_finish_ref = tmp_param_ptr->isFinishRef();
+            is_finish_ref = tryToTriggerCachePlacementForGetrspInternal_(tmp_param_ptr->getKeyConstRef(), tmp_param_ptr->getValueConstRef(), tmp_param_ptr->getCollectedPopularityConstRef(), tmp_param_ptr->getFastPathHintConstRef(), tmp_param_ptr->isGlobalCached(), tmp_param_ptr->getTotalBandwidthUsageRef(), tmp_param_ptr->getEventListRef(), tmp_param_ptr->isSkipPropagationLatency());
         }
         else if (funcname == TryToTriggerPlacementNotificationAfterHybridFetchFuncParam::FUNCNAME)
         {
             TryToTriggerPlacementNotificationAfterHybridFetchFuncParam* tmp_param_ptr = static_cast<TryToTriggerPlacementNotificationAfterHybridFetchFuncParam*>(func_param_ptr);
-            bool is_finish = tryToTriggerPlacementNotificationAfterHybridFetchInternal_(tmp_param_ptr->getKeyConstRef(), tmp_param_ptr->getValueConstRef(), tmp_param_ptr->getBestPlacementEdgesetConstRef(), tmp_param_ptr->getTotalBandwidthUsageRef(), tmp_param_ptr->getEventListRef(), tmp_param_ptr->isSkipPropagationLatency());
-            tmp_param_ptr->setIsFinish(is_finish);
+
+            bool& is_finish_ref = tmp_param_ptr->isFinishRef();
+            is_finish_ref = tryToTriggerPlacementNotificationAfterHybridFetchInternal_(tmp_param_ptr->getKeyConstRef(), tmp_param_ptr->getValueConstRef(), tmp_param_ptr->getBestPlacementEdgesetConstRef(), tmp_param_ptr->getTotalBandwidthUsageRef(), tmp_param_ptr->getEventListRef(), tmp_param_ptr->isSkipPropagationLatency());
         }
         else
         {
@@ -698,7 +700,7 @@ namespace covered
             Popularity redirected_uncached_popularity = fast_path_hint.getSumLocalUncachedPopularity(); // NOTE: sum_local_uncached_popularity MUST NOT include local uncached popularity of the current edge node
             CalcLocalUncachedRewardFuncParam tmp_param(local_uncached_popularity, is_global_cached, redirected_uncached_popularity);
             tmp_edge_wrapper_ptr->constCustomFunc(CalcLocalUncachedRewardFuncParam::FUNCNAME, &tmp_param);
-            DeltaReward local_admission_benefit = tmp_param.getReward();
+            DeltaReward local_admission_benefit = tmp_param.getRewardConstRef();
 
             // Approximate global admission policy
             bool is_global_popular = false;
@@ -734,7 +736,7 @@ namespace covered
                     // Get dirinfo for local beaconed victims
                     GetLocalBeaconedVictimsFromCacheinfosParam tmp_param(tmp_local_cached_victim_cacheinfos);
                     tmp_cooperation_wrapper_ptr->constCustomFunc(GetLocalBeaconedVictimsFromCacheinfosParam::FUNCNAME, &tmp_param);
-                    const std::list<std::pair<Key, DirinfoSet>>& tmp_local_beaconed_local_cached_victim_dirinfoset_const_ref = tmp_param.getLocalBeaconedVictimDirinfosetsRef();
+                    const std::list<std::pair<Key, DirinfoSet>>& tmp_local_beaconed_local_cached_victim_dirinfoset_const_ref = tmp_param.getLocalBeaconedVictimDirinfosetsConstRef();
 
                     // Calculate local eviction cost by VictimTracker (to utilize perkey_victim_dirinfo_)
                     local_eviction_cost = tmp_covered_cache_manager_ptr->accessVictimTrackerForFastPathEvictionCost(tmp_edge_wrapper_ptr, tmp_local_cached_victim_cacheinfos, tmp_local_beaconed_local_cached_victim_dirinfoset_const_ref);
