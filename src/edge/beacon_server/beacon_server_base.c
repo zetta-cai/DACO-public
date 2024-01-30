@@ -259,7 +259,6 @@ namespace covered
         event_list.addEvent(Event::EDGE_BEACON_SERVER_LOOKUP_LOCAL_DIRECTORY_EVENT_NAME, lookup_local_directory_latency_us);
 
         // Prepare a directory lookup response
-        embedBackgroundCounterIfNotEmpty_(total_bandwidth_usage, event_list); // Embed background events/bandwidth if any into control response message
         MessageBase* directory_lookup_response_ptr = getRspToLookupLocalDirectory_(control_request_ptr, is_being_written, is_valid_directory_exist, directory_info, best_placement_edgeset, need_hybrid_fetching, fast_path_hint, total_bandwidth_usage, event_list);
         assert(directory_lookup_response_ptr != NULL);
 
@@ -323,7 +322,6 @@ namespace covered
         }
 
         // Prepare a directory update response
-        embedBackgroundCounterIfNotEmpty_(total_bandwidth_usage, event_list); // Embed background events/bandwidth if any into control response message
         MessageBase* directory_update_response_ptr = getRspToUpdateLocalDirectory_(control_request_ptr, is_being_written, is_neighbor_cached, best_placement_edgeset, need_hybrid_fetching, total_bandwidth_usage, event_list);
         assert(directory_update_response_ptr != NULL);
 
@@ -390,7 +388,6 @@ namespace covered
         }
 
         // Prepare a acquire writelock response
-        embedBackgroundCounterIfNotEmpty_(total_bandwidth_usage, event_list); // Embed background events/bandwidth if any into control response message
         MessageBase* acquire_writelock_response_ptr = getRspToAcquireLocalWritelock_(control_request_ptr, lock_result, total_bandwidth_usage, event_list);
         assert(acquire_writelock_response_ptr != NULL);
 
@@ -449,7 +446,6 @@ namespace covered
         is_finish = edge_wrapper_ptr_->parallelNotifyEdgesToFinishBlock(edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, tmp_key, blocked_edges, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermedate responses if with event tracking
 
         // Prepare a release writelock response
-        embedBackgroundCounterIfNotEmpty_(total_bandwidth_usage, event_list); // Embed background events/bandwidth if any into control response message
         MessageBase* release_writelock_response_ptr = getRspToReleaseLocalWritelock_(control_request_ptr, best_placement_edgeset, need_hybrid_fetching, total_bandwidth_usage, event_list);
         assert(release_writelock_response_ptr != NULL);
 
@@ -461,18 +457,6 @@ namespace covered
         release_writelock_response_ptr = NULL;
 
         return is_finish;
-    }
-
-    // (5) Embed background events and bandwidth usage
-
-    void BeaconServerBase::embedBackgroundCounterIfNotEmpty_(BandwidthUsage& bandwidth_usage, EventList& event_list) const
-    {
-        checkPointers_();
-
-        bool is_empty_before_reset = edge_wrapper_ptr_->getEdgeBackgroundCounterForBeaconServerRef().loadAndReset(bandwidth_usage, event_list);
-        UNUSED(is_empty_before_reset);
-
-        return;
     }
 
     // (6) Utility functions

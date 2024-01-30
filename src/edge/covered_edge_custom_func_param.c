@@ -112,7 +112,7 @@ namespace covered
 
     const std::string TryToTriggerPlacementNotificationAfterHybridFetchFuncParam::kClassName("TryToTriggerPlacementNotificationAfterHybridFetchFuncParam");
 
-    const std::string TryToTriggerPlacementNotificationAfterHybridFetchFuncParam::FUNCNAME("try_to_trigger_cache_placement_for_getrsp");
+    const std::string TryToTriggerPlacementNotificationAfterHybridFetchFuncParam::FUNCNAME("try_to_trigger_placement_notification_after_hybrid_fetch");
 
     TryToTriggerPlacementNotificationAfterHybridFetchFuncParam::TryToTriggerPlacementNotificationAfterHybridFetchFuncParam(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) : EdgeCustomFuncParamBase(), key_const_ref_(key), value_const_ref_(value), best_placement_edgeset_const_ref_(best_placement_edgeset), bandwidth_usage_ref_(total_bandwidth_usage), event_list_ref_(event_list), skip_propagation_latency_(skip_propagation_latency)
     {

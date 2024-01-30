@@ -64,6 +64,8 @@ namespace covered
         edge_wrapper_ptr_->constCustomFunc(AfterDirectoryLookupHelperFuncParam::FUNCNAME, &tmp_param_after_dirlookup);
         is_finish = tmp_param_after_dirlookup.isFinishConstRef();
 
+        embedBackgroundCounterIfNotEmpty_(total_bandwidth_usage, event_list); // Embed background events/bandwidth if any into control response message
+
         return is_finish;
     }
 
@@ -274,6 +276,8 @@ namespace covered
             edge_wrapper_ptr_->constCustomFunc(NonblockNotifyForPlacementFuncParam::FUNCNAME, &tmp_param);
         }
 
+        embedBackgroundCounterIfNotEmpty_(total_bandwidth_usage, event_list); // Embed background events/bandwidth if any into control response message
+
         return is_finish;
     }
 
@@ -379,6 +383,8 @@ namespace covered
         edge_wrapper_ptr_->constCustomFunc(AfterWritelockAcquireHelperFuncParam::FUNCNAME, &tmp_param_after_acquirelock);
         is_finish = tmp_param_after_acquirelock.isFinishConstRef();
 
+        embedBackgroundCounterIfNotEmpty_(total_bandwidth_usage, event_list); // Embed background events/bandwidth if any into control response message
+
         return is_finish;
     }
 
@@ -440,6 +446,8 @@ namespace covered
             return is_finish; // Edge node is finished
         }
 
+        embedBackgroundCounterIfNotEmpty_(total_bandwidth_usage, event_list); // Embed background events/bandwidth if any into control response message
+
         return is_finish;
     }
 
@@ -476,6 +484,18 @@ namespace covered
     bool CoveredBeaconServer::processOtherControlRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr)
     {
         return false;
+    }
+
+    // (4) Embed background events and bandwidth usage
+
+    void CoveredBeaconServer::embedBackgroundCounterIfNotEmpty_(BandwidthUsage& bandwidth_usage, EventList& event_list) const
+    {
+        checkPointers_();
+
+        bool is_empty_before_reset = edge_wrapper_ptr_->getEdgeBackgroundCounterForBeaconServerRef().loadAndReset(bandwidth_usage, event_list);
+        UNUSED(is_empty_before_reset);
+
+        return;
     }
 
     // (5) Cache-method-specific custom functions

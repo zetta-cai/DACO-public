@@ -431,13 +431,16 @@ namespace covered
         bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon(key);
 
         // Update local/remote beacon access cnt for workload-aware probability tuning
-        if (current_is_beacon) // Local beacon access
+        if (tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME)
         {
-            tmp_edge_wrapper_ptr->getWeightTunerRef().incrLocalBeaconAccessCnt();
-        }
-        else // Remote beacon access
-        {
-            tmp_edge_wrapper_ptr->getWeightTunerRef().incrRemoteBeaconAccessCnt();
+            if (current_is_beacon) // Local beacon access
+            {
+                tmp_edge_wrapper_ptr->getWeightTunerRef().incrLocalBeaconAccessCnt();
+            }
+            else // Remote beacon access
+            {
+                tmp_edge_wrapper_ptr->getWeightTunerRef().incrRemoteBeaconAccessCnt();
+            }
         }
 
         #ifdef DEBUG_CACHE_SERVER_WORKER
@@ -636,7 +639,10 @@ namespace covered
                 {
                     tmp_content_discovery_cross_edge_latency_us += tmp_edge_wrapper_ptr->getPropagationLatencyCrossedgeUs();
                 }
-                tmp_edge_wrapper_ptr->getWeightTunerRef().updateEwmaCrossedgeLatency(tmp_content_discovery_cross_edge_latency_us);
+                if (tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME)
+                {
+                    tmp_edge_wrapper_ptr->getWeightTunerRef().updateEwmaCrossedgeLatency(tmp_content_discovery_cross_edge_latency_us);
+                }
 
                 // Receive the control response message successfully
                 MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
@@ -724,7 +730,10 @@ namespace covered
                 {
                     tmp_request_redirection_cross_edge_latency_us += tmp_edge_wrapper_ptr->getPropagationLatencyCrossedgeUs();
                 }
-                tmp_edge_wrapper_ptr->getWeightTunerRef().updateEwmaCrossedgeLatency(tmp_request_redirection_cross_edge_latency_us);
+                if (tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME)
+                {
+                    tmp_edge_wrapper_ptr->getWeightTunerRef().updateEwmaCrossedgeLatency(tmp_request_redirection_cross_edge_latency_us);
+                }
 
                 // Receive the redirected response message successfully
                 MessageBase* redirected_response_ptr = MessageBase::getResponseFromMsgPayload(redirected_response_msg_payload);
@@ -846,7 +855,10 @@ namespace covered
                 {
                     tmp_cloud_access_edge_cloud_latency_us += tmp_edge_wrapper_ptr->getPropagationLatencyEdgecloudUs();
                 }
-                tmp_edge_wrapper_ptr->getWeightTunerRef().updateEwmaEdgecloudLatency(tmp_cloud_access_edge_cloud_latency_us);
+                if (tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME)
+                {
+                    tmp_edge_wrapper_ptr->getWeightTunerRef().updateEwmaEdgecloudLatency(tmp_cloud_access_edge_cloud_latency_us);
+                }
 
                 // Receive the global response message successfully
                 MessageBase* global_response_ptr = MessageBase::getResponseFromMsgPayload(global_response_msg_payload);

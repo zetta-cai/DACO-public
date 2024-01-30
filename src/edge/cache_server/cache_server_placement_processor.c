@@ -182,6 +182,7 @@ namespace covered
         event_list.addEvent(Event::BG_EDGE_CACHE_SERVER_PLACEMENT_PROCESSOR_PLACEMENT_NOTIFY_EVENT_NAME, placement_notify_latency_us); // Add placement notify event if with event tracking
 
         // Get background eventlist and bandwidth usage to update background counter for beacon server
+        assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME);
         tmp_edge_wrapper_ptr->getEdgeBackgroundCounterForBeaconServerRef().updateBandwidthUsgae(total_bandwidth_usage);
         tmp_edge_wrapper_ptr->getEdgeBackgroundCounterForBeaconServerRef().addEvents(event_list);
 
@@ -222,6 +223,7 @@ namespace covered
         event_list.addEvent(Event::BG_EDGE_CACHE_SERVER_PLACEMENT_PROCESSOR_LOCAL_CACHE_ADMISSION_EVENT_NAME, admission_latency_us); // Add placement notify event if with event tracking
 
         // Get background eventlist and bandwidth usage to update background counter for beacon server
+        assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME);
         tmp_edge_wrapper_ptr->getEdgeBackgroundCounterForBeaconServerRef().updateBandwidthUsgae(total_bandwidth_usage);
         tmp_edge_wrapper_ptr->getEdgeBackgroundCounterForBeaconServerRef().addEvents(event_list);
 

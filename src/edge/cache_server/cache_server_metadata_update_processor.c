@@ -125,6 +125,7 @@ namespace covered
         event_list.addEvent(Event::BG_EDGE_CACHE_SERVER_METADATA_UPDATE_PROCESSOR_UPDATE_EVENT_NAME, metadata_update_latency_us); // Add metadata update event if with event tracking
         
         // Get background eventlist and bandwidth usage to update background counter for beacon server
+        assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME);
         tmp_edge_wrapper_ptr->getEdgeBackgroundCounterForBeaconServerRef().updateBandwidthUsgae(total_bandwidth_usage);
         tmp_edge_wrapper_ptr->getEdgeBackgroundCounterForBeaconServerRef().addEvents(event_list);
 
