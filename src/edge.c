@@ -55,7 +55,7 @@ int main(int argc, char **argv) {
         oss << "launch edge node " << edge_idx;
         covered::Util::dumpNormalMsg(main_class_name, oss.str());
 
-        //pthread_returncode = pthread_create(&current_machine_edge_threads[edge_idx - left_inclusive_edge_idx], NULL, covered::EdgeWrapper::launchEdge, (void*)(&(current_machine_edge_params[edge_idx - left_inclusive_edge_idx])));
+        //pthread_returncode = pthread_create(&current_machine_edge_threads[edge_idx - left_inclusive_edge_idx], NULL, covered::EdgeWrapperBase::launchEdge, (void*)(&(current_machine_edge_params[edge_idx - left_inclusive_edge_idx])));
         // if (pthread_returncode != 0)
         // {
         //     std::ostringstream oss;
@@ -65,7 +65,7 @@ int main(int argc, char **argv) {
         // }
 
         std::string tmp_thread_name = "edge-wrapper-" + std::to_string(edge_idx);
-        covered::ThreadLauncher::pthreadCreateLowPriority(tmp_thread_name, &current_machine_edge_threads[edge_idx - left_inclusive_edge_idx], covered::EdgeWrapper::launchEdge, (void*)(&(current_machine_edge_params[edge_idx - left_inclusive_edge_idx])));
+        covered::ThreadLauncher::pthreadCreateLowPriority(tmp_thread_name, &current_machine_edge_threads[edge_idx - left_inclusive_edge_idx], covered::EdgeWrapperBase::launchEdge, (void*)(&(current_machine_edge_params[edge_idx - left_inclusive_edge_idx])));
     }
 
     // (3) Wait for current_machine_edgecnt edge threads

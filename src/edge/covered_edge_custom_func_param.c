@@ -192,6 +192,9 @@ namespace covered
     {
     }
 
+    UpdateCacheManagerForNeighborVictimSyncsetFuncParam::~UpdateCacheManagerForNeighborVictimSyncsetFuncParam()
+    {}
+
     uint32_t UpdateCacheManagerForNeighborVictimSyncsetFuncParam::getSourceEdgeIdx() const
     {
         return source_edge_idx_;
@@ -211,6 +214,9 @@ namespace covered
     NonblockDataFetchForPlacementFuncParam::NonblockDataFetchForPlacementFuncParam(const Key& key, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency, const bool& sender_is_beacon, bool& need_hybrid_fetching) : EdgeCustomFuncParamBase(), key_const_ref_(key), best_placement_edgeset_const_ref_(best_placement_edgeset), skip_propagation_latency_(skip_propagation_latency), sender_is_beacon_(sender_is_beacon), need_hybrid_fetching_ref_(need_hybrid_fetching)
     {
     }
+
+    NonblockDataFetchForPlacementFuncParam::~NonblockDataFetchForPlacementFuncParam()
+    {}
 
     const Key& NonblockDataFetchForPlacementFuncParam::getKeyConstRef() const
     {

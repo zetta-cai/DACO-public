@@ -112,7 +112,7 @@ int main(int argc, char **argv) {
         oss << "launch edge node " << edge_idx;
         covered::Util::dumpNormalMsg(main_class_name, oss.str());
 
-        //pthread_returncode = pthread_create(&edge_threads[edge_idx], NULL, covered::EdgeWrapper::launchEdge, (void*)(&(edge_params[edge_idx])));
+        //pthread_returncode = pthread_create(&edge_threads[edge_idx], NULL, covered::EdgeWrapperBase::launchEdge, (void*)(&(edge_params[edge_idx])));
         // if (pthread_returncode != 0)
         // {
         //     std::ostringstream oss;
@@ -122,7 +122,7 @@ int main(int argc, char **argv) {
         // }
 
         tmp_thread_name = "edge-wrapper-" + std::to_string(edge_idx);
-        covered::ThreadLauncher::pthreadCreateLowPriority(tmp_thread_name, &edge_threads[edge_idx], covered::EdgeWrapper::launchEdge, (void*)(&(edge_params[edge_idx])));
+        covered::ThreadLauncher::pthreadCreateLowPriority(tmp_thread_name, &edge_threads[edge_idx], covered::EdgeWrapperBase::launchEdge, (void*)(&(edge_params[edge_idx])));
     }
     
     // (4) Simulate clientcnt clients by multi-threading
