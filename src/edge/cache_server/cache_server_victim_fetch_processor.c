@@ -91,7 +91,7 @@ namespace covered
         assert(control_request_ptr->getMessageType() == MessageType::kCoveredVictimFetchRequest);
 
         checkPointers_();
-        CacheServer* tmp_cache_server_ptr = cache_server_victim_fetch_processor_param_ptr_->getCacheServerPtr();
+        CacheServerBase* tmp_cache_server_ptr = cache_server_victim_fetch_processor_param_ptr_->getCacheServerPtr();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
         CooperationWrapperBase* tmp_cooperation_wrapper_ptr = tmp_edge_wrapper_ptr->getCooperationWrapperPtr();
         // CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();

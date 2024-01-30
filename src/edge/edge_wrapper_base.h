@@ -29,7 +29,7 @@ namespace covered
 #include "cooperation/cooperation_wrapper_base.h"
 #include "cooperation/directory/dirinfo_set.h"
 #include "edge/edge_custom_func_param_base.h"
-#include "edge/cache_server/cache_server.h"
+#include "edge/cache_server/cache_server_base.h"
 #include "edge/utils/background_counter.h"
 #include "edge/utils/local_cache_admission_item.h"
 #include "edge/utils/weight_tuner.h"
@@ -172,7 +172,7 @@ namespace covered
         // Common data structure shared by edge cache server and edge beacon server
         // -> Pushed by cache server worker (for in-advance remote placement notification after hybrid data fetching and local placement notification if sender is beacon) and beacon server (for local placement notification if sender is NOT beacon)
         // -> Popped by cache server placement processor
-        // NOTE: we CANNOT expose CacheServer* in EdgeWrapper, as CacheServer and BeaconServer have shorter life span than EdgeWrapper -> if we expose CacheServer* in EdgeWrapper, BeaconServer may still access CacheServer, which has already been released by cache server thread yet
+        // NOTE: we CANNOT expose CacheServerBase* in EdgeWrapper, as CacheServer and BeaconServer have shorter life span than EdgeWrapper -> if we expose CacheServerBase* in EdgeWrapper, BeaconServer may still access CacheServer, which has already been released by cache server thread yet
         RingBuffer<LocalCacheAdmissionItem>* local_cache_admission_buffer_ptr_; // thread safe (local cached admission + eviction)
     };
 }

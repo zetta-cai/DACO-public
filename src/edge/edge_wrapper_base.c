@@ -9,7 +9,7 @@
 #include "edge/basic_edge_wrapper.h"
 #include "edge/covered_edge_wrapper.h"
 #include "edge/beacon_server/beacon_server_base.h"
-#include "edge/cache_server/cache_server.h"
+#include "edge/cache_server/cache_server_base.h"
 #include "event/event.h"
 #include "message/control_message.h"
 #include "network/propagation_simulator.h"
@@ -665,7 +665,7 @@ namespace covered
         ThreadLauncher::pthreadCreateHighPriority(ThreadLauncher::EDGE_THREAD_ROLE, tmp_thread_name, &beacon_server_thread_, BeaconServerBase::launchBeaconServer, (void*)(this));
 
         // Launch cache server
-        //pthread_returncode = pthread_create(&cache_server_thread_, NULL, CacheServer::launchCacheServer, (void*)(this));
+        //pthread_returncode = pthread_create(&cache_server_thread_, NULL, CacheServerBase::launchCacheServer, (void*)(this));
         // if (pthread_returncode != 0)
         // {
         //     std::ostringstream oss;
@@ -674,7 +674,7 @@ namespace covered
         //     exit(1);
         // }
         tmp_thread_name = "edge-cache-server-" + std::to_string(node_idx_);
-        ThreadLauncher::pthreadCreateHighPriority(ThreadLauncher::EDGE_THREAD_ROLE, tmp_thread_name, &cache_server_thread_, CacheServer::launchCacheServer, (void*)(this));
+        ThreadLauncher::pthreadCreateHighPriority(ThreadLauncher::EDGE_THREAD_ROLE, tmp_thread_name, &cache_server_thread_, CacheServerBase::launchCacheServer, (void*)(this));
 
         return;
     }

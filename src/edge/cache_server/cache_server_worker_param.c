@@ -13,7 +13,7 @@ namespace covered
         data_request_buffer_ptr_ = NULL;
     }
 
-    CacheServerWorkerParam::CacheServerWorkerParam(CacheServer* cache_server_ptr, const uint32_t& local_cache_server_worker_idx, const uint32_t& data_request_buffer_size)
+    CacheServerWorkerParam::CacheServerWorkerParam(CacheServerBase* cache_server_ptr, const uint32_t& local_cache_server_worker_idx, const uint32_t& data_request_buffer_size)
     {
         cache_server_ptr_ = cache_server_ptr;
         local_cache_server_worker_idx_ = local_cache_server_worker_idx;
@@ -75,7 +75,7 @@ namespace covered
         return *this;
     }
 
-    CacheServer* CacheServerWorkerParam::getCacheServerPtr() const
+    CacheServerBase* CacheServerWorkerParam::getCacheServerPtr() const
     {
         assert(cache_server_ptr_ != NULL);
         return cache_server_ptr_;

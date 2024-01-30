@@ -586,7 +586,7 @@ namespace covered
         }
 
         checkPointers_();
-        CacheServer* tmp_cache_server_ptr = cache_server_worker_param_ptr_->getCacheServerPtr();
+        CacheServerBase* tmp_cache_server_ptr = cache_server_worker_param_ptr_->getCacheServerPtr();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
 
         // Victim synchronization
@@ -597,7 +597,9 @@ namespace covered
         if (need_hybrid_fetching)
         {
             // Trigger placement notification remotely at the beacon edge node
-            is_finish = tmp_cache_server_ptr->notifyBeaconForPlacementAfterHybridFetch_(tmp_key, value, best_placement_edgeset, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            NotifyBeaconForPlacementAfterHybridFetchFuncParam tmp_param(tmp_key, value, best_placement_edgeset, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            tmp_cache_server_ptr->constCustomFunc(NotifyBeaconForPlacementAfterHybridFetchFuncParam::FUNCNAME, &tmp_param);
+            is_finish = tmp_param.isFinishConstRef();
             if (is_finish)
             {
                 return is_finish;
@@ -651,7 +653,7 @@ namespace covered
         checkPointers_();
         assert(collected_popularity_after_fetch_value.isTracked()); // MUST be tracked (actually newly-tracked) after fetching value from neighbor/cloud
 
-        CacheServer* tmp_cache_server_ptr = cache_server_worker_param_ptr_->getCacheServerPtr();
+        CacheServerBase* tmp_cache_server_ptr = cache_server_worker_param_ptr_->getCacheServerPtr();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
         CooperationWrapperBase* tmp_cooperation_wrapper_ptr = tmp_edge_wrapper_ptr->getCooperationWrapperPtr();
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
@@ -771,7 +773,7 @@ namespace covered
     bool CoveredCacheServerWorker::tryToTriggerPlacementNotificationAfterHybridFetchInternal_(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         checkPointers_();
-        CacheServer* tmp_cache_server_ptr = cache_server_worker_param_ptr_->getCacheServerPtr();
+        CacheServerBase* tmp_cache_server_ptr = cache_server_worker_param_ptr_->getCacheServerPtr();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
         assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME);
 
@@ -787,7 +789,9 @@ namespace covered
         else // best_placement_edgeset and need_hybrid_fetching come from lookupBeaconDirectory_()
         {
             // Trigger placement notification remotely at the beacon edge node
-            is_finish = tmp_cache_server_ptr->notifyBeaconForPlacementAfterHybridFetch_(key, value, best_placement_edgeset, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            NotifyBeaconForPlacementAfterHybridFetchFuncParam tmp_param(key, value, best_placement_edgeset, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            tmp_cache_server_ptr->constCustomFunc(NotifyBeaconForPlacementAfterHybridFetchFuncParam::FUNCNAME, &tmp_param);
+            is_finish = tmp_param.isFinishConstRef();
         }
 
         return is_finish;

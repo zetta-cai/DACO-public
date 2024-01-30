@@ -57,14 +57,14 @@ namespace covered
         MessageBase* message_ptr_;
     };
 
-    // (2) For edge cache server
+    // (2) For edge cache server worker
 
     // TryToTriggerCachePlacementForGetrspFuncParam
 
     class TryToTriggerCachePlacementForGetrspFuncParam : public EdgeCustomFuncParamBase
     {
     public:
-        static const std::string FUNCNAME; // try to trigger fast-path cache placement for get response
+        static const std::string FUNCNAME; // try to trigger fast-path cache placement calculation for get response (or trigger normal placement if current is beacon)
 
         TryToTriggerCachePlacementForGetrspFuncParam(const Key& key, const Value& value, const CollectedPopularity& collected_popularity_after_fetch_value, const FastPathHint& fast_path_hint, const bool& is_global_cached, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency);
         ~TryToTriggerCachePlacementForGetrspFuncParam();
@@ -100,7 +100,7 @@ namespace covered
     class TryToTriggerPlacementNotificationAfterHybridFetchFuncParam : public EdgeCustomFuncParamBase
     {
     public:
-        static const std::string FUNCNAME; // try to trigger fast-path cache placement for get response
+        static const std::string FUNCNAME; // try to trigger non-blocking placement deployment after hybrid data fetching (or directly issue placement notifications if current is beacon)
 
         TryToTriggerPlacementNotificationAfterHybridFetchFuncParam(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency);
         ~TryToTriggerPlacementNotificationAfterHybridFetchFuncParam();
@@ -127,7 +127,28 @@ namespace covered
         bool is_finish_;
     };
 
-    // (3) For edge wrapper
+    // (3) For edge cache server
+
+    // NotifyBeaconForPlacementAfterHybridFetchFuncParam
+
+    class NotifyBeaconForPlacementAfterHybridFetchFuncParam : public TryToTriggerPlacementNotificationAfterHybridFetchFuncParam
+    {
+    public:
+        static const std::string FUNCNAME; // trigger non-blocking placement deployment after hybrid data fetching
+
+        NotifyBeaconForPlacementAfterHybridFetchFuncParam(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency);
+        ~NotifyBeaconForPlacementAfterHybridFetchFuncParam();
+
+        const NetworkAddr& getRecvrspSourceAddrConstRef() const;
+        UdpMsgSocketServer* getRecvrspSocketServerPtr() const;
+    private:
+        static const std::string kClassName;
+
+        const NetworkAddr& recvrsp_source_addr_;
+        UdpMsgSocketServer* recvrsp_socket_server_ptr_;
+    };
+
+    // (4) For edge wrapper
 
     // UpdateCacheManagerForLocalSyncedVictimsFuncParam
 

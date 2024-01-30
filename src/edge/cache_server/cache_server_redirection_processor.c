@@ -247,7 +247,7 @@ namespace covered
         assert(redirected_request_ptr != NULL);
 
         checkPointers_();
-        CacheServer* tmp_cache_server_ptr = cache_server_redirection_processor_param_ptr_->getCacheServerPtr();
+        CacheServerBase* tmp_cache_server_ptr = cache_server_redirection_processor_param_ptr_->getCacheServerPtr();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
         uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         NetworkAddr edge_cache_server_recvreq_source_addr = tmp_cache_server_ptr->getEdgeCacheServerRecvreqPublicSourceAddr(); // NOTE: cross-edge communication for request redirection uses public IP address

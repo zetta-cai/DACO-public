@@ -17,7 +17,7 @@ namespace covered
 #include "concurrency/blocking_ring_buffer_impl.h"
 #include "concurrency/ring_buffer_impl.h"
 #include "edge/cache_server/cache_server_item.h"
-#include "edge/cache_server/cache_server.h"
+#include "edge/cache_server/cache_server_base.h"
 
 namespace covered
 {   
@@ -25,13 +25,13 @@ namespace covered
     {
     public:
         CacheServerProcessorParam();
-        CacheServerProcessorParam(CacheServer* cache_server_ptr, const uint32_t& data_request_buffer_size, const bool& is_polling_based);
+        CacheServerProcessorParam(CacheServerBase* cache_server_ptr, const uint32_t& data_request_buffer_size, const bool& is_polling_based);
         ~CacheServerProcessorParam();
 
         const CacheServerProcessorParam& operator=(const CacheServerProcessorParam& other);
 
         bool isPollingBase() const;
-        CacheServer* getCacheServerPtr() const;
+        CacheServerBase* getCacheServerPtr() const;
 
         bool push(const CacheServerItem& cache_server_item);
         bool pop(CacheServerItem& cache_server_item, void* edge_wrapper_ptr); // NOTE: edge_wrapper_ptr is ONLY used if is_polling_based_ = false
@@ -48,7 +48,7 @@ namespace covered
         // Const variable
         bool is_polling_based_;
 
-        CacheServer* cache_server_ptr_; // thread safe
+        CacheServerBase* cache_server_ptr_; // thread safe
         RingBuffer<CacheServerItem>* cache_server_item_buffer_ptr_; // thread safe (used if is_polling_based_ = true)
         BlockingRingBuffer<CacheServerItem>* cache_server_item_blocking_buffer_ptr_; // thread safe (used if is_polling_based_ = false)
     };

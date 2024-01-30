@@ -14,7 +14,7 @@ namespace covered
         cache_server_item_blocking_buffer_ptr_ = NULL;
     }
 
-    CacheServerProcessorParam::CacheServerProcessorParam(CacheServer* cache_server_ptr, const uint32_t& data_request_buffer_size, const bool& is_polling_based)
+    CacheServerProcessorParam::CacheServerProcessorParam(CacheServerBase* cache_server_ptr, const uint32_t& data_request_buffer_size, const bool& is_polling_based)
     {
         is_polling_based_ = is_polling_based;
         cache_server_ptr_ = cache_server_ptr;
@@ -138,7 +138,7 @@ namespace covered
         return is_polling_based_;
     }
 
-    CacheServer* CacheServerProcessorParam::getCacheServerPtr() const
+    CacheServerBase* CacheServerProcessorParam::getCacheServerPtr() const
     {
         assert(cache_server_ptr_ != NULL);
         return cache_server_ptr_;

@@ -42,7 +42,7 @@ namespace covered
         return message_ptr_;
     }
 
-    // (2) For edge cache server
+    // (2) For edge cache server worker
 
     // TryToTriggerCachePlacementForGetrspFuncParam
 
@@ -162,7 +162,32 @@ namespace covered
         return is_finish_;
     }
 
-    // (3) For edge wrapper
+    // (3) For edge cache server
+
+    // NotifyBeaconForPlacementAfterHybridFetchFuncParam
+
+    const std::string NotifyBeaconForPlacementAfterHybridFetchFuncParam::kClassName("NotifyBeaconForPlacementAfterHybridFetchFuncParam");
+
+    const std::string NotifyBeaconForPlacementAfterHybridFetchFuncParam::FUNCNAME("notify_beacon_for_placement_after_hybrid_fetch");
+
+    NotifyBeaconForPlacementAfterHybridFetchFuncParam::NotifyBeaconForPlacementAfterHybridFetchFuncParam(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) : TryToTriggerPlacementNotificationAfterHybridFetchFuncParam(key, value, best_placement_edgeset, total_bandwidth_usage, event_list, skip_propagation_latency), recvrsp_source_addr_(recvrsp_source_addr), recvrsp_socket_server_ptr_(recvrsp_socket_server_ptr)
+    {
+    }
+
+    NotifyBeaconForPlacementAfterHybridFetchFuncParam::~NotifyBeaconForPlacementAfterHybridFetchFuncParam()
+    {}
+
+    const NetworkAddr& NotifyBeaconForPlacementAfterHybridFetchFuncParam::getRecvrspSourceAddrConstRef() const
+    {
+        return recvrsp_source_addr_;
+    }
+
+    UdpMsgSocketServer* NotifyBeaconForPlacementAfterHybridFetchFuncParam::getRecvrspSocketServerPtr() const
+    {
+        return recvrsp_socket_server_ptr_;
+    }
+
+    // (4) For edge wrapper
 
     // UpdateCacheManagerForLocalSyncedVictimsFuncParam
 

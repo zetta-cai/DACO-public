@@ -1,5 +1,5 @@
 /*
- * CacheServer: listen to receive local/redirected requests issued by clients/neighbors; launch multiple cache server worker threads to process received requests in parallel.
+ * CacheServerBase: the base class to listen to receive local/redirected requests issued by clients/neighbors; launch multiple cache server worker threads to process received requests in parallel.
  *
  * NOTE: we place cache and directory admission/eviction in CacheServer as they can be invoked by both cache server worker and cache server placement processor.
  * (i) Admission can be foreground in cache server worker for baselines (independent admission) and COVERED (only-/including-sender hybrid data fetching = in-advance remote placement notification); and also background in cache server placement processor for COVERED (remote placement notification).
@@ -10,35 +10,36 @@
  * By Siyuan Sheng (2023.06.26).
  */
 
-#ifndef CACHE_SERVER_H
-#define CACHE_SERVER_H
+#ifndef CACHE_SERVER_BASE_H
+#define CACHE_SERVER_BASE_H
 
-//#define DEBUG_CACHE_SERVER
+//#define DEBUG_CACHE_SERVER_BASE
 
 #include <string>
 #include <vector>
 
 namespace covered
 {
-    class CacheServer;
+    class CacheServerBase;
 }
 
 #include "concurrency/rwlock.h"
 #include "edge/cache_server/cache_server_processor_param.h"
 #include "edge/cache_server/cache_server_worker_param.h"
 #include "edge/edge_wrapper_base.h"
+#include "edge/edge_custom_func_param_base.h"
 #include "hash/hash_wrapper_base.h"
 #include "network/udp_msg_socket_server.h"
 
 namespace covered
 {
-    class CacheServer
+    class CacheServerBase
     {
     public:
         static void* launchCacheServer(void* edge_wrapper_ptr);
 
-        CacheServer(EdgeWrapperBase* edge_wrapper_ptr);
-        ~CacheServer();
+        CacheServerBase(EdgeWrapperBase* edge_wrapper_ptr);
+        virtual ~CacheServerBase();
 
         void start();
 
@@ -59,11 +60,15 @@ namespace covered
         bool parallelEvictDirectory_(const std::unordered_map<Key, Value, KeyHasher>& total_victims, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, const bool& is_background) const; // For each evicted key in total victims
         bool evictLocalDirectory_(const Key& key, const Value& value, const DirectoryInfo& directory_info, bool& is_being_written, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, const bool& is_background) const; // Evict directory info from current edge node (return if edge node is finished)
         MessageBase* getReqToEvictBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, const NetworkAddr& source_addr, const bool& skip_propagation_latency, const bool& is_background) const; // Send directory update request with is_admit = false to remove dirinfo of evicted victim
-        bool processRspToEvictBeaconDirectory_(MessageBase* control_response_ptr, const Value& value, bool& is_being_written, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, const bool& is_background) const;
+        virtual bool processRspToEvictBeaconDirectory_(MessageBase* control_response_ptr, const Value& value, bool& is_being_written, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, const bool& is_background) const = 0;
 
-        // (3) Trigger non-blocking placement notification (ONLY for COVERED)
-        // NOTE: recvrsp_source_addr and recvrsp_socket_server_ptr refer to some edge cache server worker
-        bool notifyBeaconForPlacementAfterHybridFetch_(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // Sender is NOT beacon; return if edge node is finished
+        // (3) Method-specific functions
+        virtual void constCustomFunc(const std::string& funcname, EdgeCustomFuncParamBase* func_param_ptr) const = 0;
+    protected:
+        void checkPointers_() const;
+        
+        // Const shared variable
+        EdgeWrapperBase* edge_wrapper_ptr_;
     private:
         static const bool IS_HIGH_PRIORITY_FOR_CACHE_PLACEMENT;
         static const bool IS_HIGH_PRIORITY_FOR_METADATA_UPDATE;
@@ -74,11 +79,8 @@ namespace covered
         void receiveRequestsAndPartition_();
         void partitionRequest_(MessageBase* data_requeset_ptr);
 
-        void checkPointers_() const;
-
         // Const shared variable
-        std::string instance_name_;
-        EdgeWrapperBase* edge_wrapper_ptr_;
+        std::string base_instance_name_;
         HashWrapperBase* hash_wrapper_ptr_;
 
         // Non-const individual variable

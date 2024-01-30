@@ -16,7 +16,7 @@ namespace covered
 
 #include "concurrency/ring_buffer_impl.h"
 #include "edge/cache_server/cache_server_item.h"
-#include "edge/cache_server/cache_server.h"
+#include "edge/cache_server/cache_server_base.h"
 
 namespace covered
 {   
@@ -24,18 +24,18 @@ namespace covered
     {
     public:
         CacheServerWorkerParam();
-        CacheServerWorkerParam(CacheServer* cache_server_ptr, const uint32_t& local_cache_server_worker_idx, const uint32_t& data_request_buffer_size);
+        CacheServerWorkerParam(CacheServerBase* cache_server_ptr, const uint32_t& local_cache_server_worker_idx, const uint32_t& data_request_buffer_size);
         ~CacheServerWorkerParam();
 
         const CacheServerWorkerParam& operator=(const CacheServerWorkerParam& other);
 
-        CacheServer* getCacheServerPtr() const;
+        CacheServerBase* getCacheServerPtr() const;
         uint32_t getLocalCacheServerWorkerIdx() const;
         RingBuffer<CacheServerItem>* getDataRequestBufferPtr() const;
     private:
         static const std::string kClassName;
 
-        CacheServer* cache_server_ptr_; // thread safe
+        CacheServerBase* cache_server_ptr_; // thread safe
         uint32_t local_cache_server_worker_idx_; // const shared variable
         RingBuffer<CacheServerItem>* data_request_buffer_ptr_; // thread safe
     };

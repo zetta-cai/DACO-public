@@ -91,7 +91,7 @@ namespace covered
         assert(control_request_ptr->getMessageType() == MessageType::kInvalidationRequest || control_request_ptr->getMessageType() == MessageType::kCoveredInvalidationRequest);
 
         checkPointers_();
-        CacheServer* tmp_cache_server_ptr = cache_server_invalidation_processor_param_ptr_->getCacheServerPtr();
+        CacheServerBase* tmp_cache_server_ptr = cache_server_invalidation_processor_param_ptr_->getCacheServerPtr();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
 
         bool is_finish = false;
@@ -128,7 +128,7 @@ namespace covered
     void CacheServerInvalidationProcessor::processReqForInvalidation_(MessageBase* control_request_ptr)
     {
         checkPointers_();
-        CacheServer* tmp_cache_server_ptr = cache_server_invalidation_processor_param_ptr_->getCacheServerPtr();
+        CacheServerBase* tmp_cache_server_ptr = cache_server_invalidation_processor_param_ptr_->getCacheServerPtr();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
         CacheWrapper* tmp_cache_wrapper_ptr = tmp_edge_wrapper_ptr->getEdgeCachePtr();
 
@@ -179,7 +179,7 @@ namespace covered
     MessageBase* CacheServerInvalidationProcessor::getRspForInvalidation_(MessageBase* control_request_ptr, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list)
     {
         checkPointers_();
-        CacheServer* tmp_cache_server_ptr = cache_server_invalidation_processor_param_ptr_->getCacheServerPtr();
+        CacheServerBase* tmp_cache_server_ptr = cache_server_invalidation_processor_param_ptr_->getCacheServerPtr();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
         //CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
         const uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
