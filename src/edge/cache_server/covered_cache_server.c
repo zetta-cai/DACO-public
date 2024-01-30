@@ -95,7 +95,7 @@ namespace covered
         {
             NotifyBeaconForPlacementAfterHybridFetchFuncParam* tmp_param_ptr = static_cast<NotifyBeaconForPlacementAfterHybridFetchFuncParam*>(func_param_ptr);
 
-            bool tmp_is_finish_ref = tmp_param_ptr->isFinishRef();
+            bool& tmp_is_finish_ref = tmp_param_ptr->isFinishRef();
             tmp_is_finish_ref = notifyBeaconForPlacementAfterHybridFetchInternal_(tmp_param_ptr->getKeyConstRef(), tmp_param_ptr->getValueConstRef(), tmp_param_ptr->getBestPlacementEdgesetConstRef(), tmp_param_ptr->getRecvrspSourceAddrConstRef(), tmp_param_ptr->getRecvrspSocketServerPtr(), tmp_param_ptr->getTotalBandwidthUsageRef(), tmp_param_ptr->getEventListRef(), tmp_param_ptr->isSkipPropagationLatency());
         }
         else
