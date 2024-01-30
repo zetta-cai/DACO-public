@@ -6,6 +6,8 @@
 #include "common/config.h"
 #include "common/thread_launcher.h"
 #include "common/util.h"
+#include "edge/basic_edge_wrapper.h"
+#include "edge/covered_edge_wrapper.h"
 #include "edge/beacon_server/beacon_server_base.h"
 #include "edge/cache_server/cache_server.h"
 #include "event/event.h"
@@ -61,8 +63,21 @@ namespace covered
         uint32_t edge_idx = edge_wrapper_param.getEdgeIdx();
         EdgeCLI* edge_cli_ptr = edge_wrapper_param.getEdgeCLIPtr();
 
-        EdgeWrapperBase local_edge(edge_cli_ptr->getCacheName(), edge_cli_ptr->getCapacityBytes(), edge_idx, edge_cli_ptr->getEdgecnt(), edge_cli_ptr->getHashName(), edge_cli_ptr->getCoveredLocalUncachedMaxMemUsageBytes(), edge_cli_ptr->getPercacheserverWorkercnt(), edge_cli_ptr->getCoveredPeredgeSyncedVictimcnt(), edge_cli_ptr->getCoveredPeredgeMonitoredVictimsetcnt(), edge_cli_ptr->getCoveredPopularityAggregationMaxMemUsageBytes(), edge_cli_ptr->getCoveredPopularityCollectionChangeRatio(), edge_cli_ptr->getPropagationLatencyClientedgeUs(), edge_cli_ptr->getPropagationLatencyCrossedgeUs(), edge_cli_ptr->getPropagationLatencyEdgecloudUs(), edge_cli_ptr->getCoveredTopkEdgecnt());
-        local_edge.start();
+        EdgeWrapperBase* edge_wrapper_ptr = NULL;
+        const std::string cache_name = edge_cli_ptr->getCacheName();
+        if (cache_name == Util::COVERED_CACHE_NAME)
+        {
+            edge_wrapper_ptr = new CoveredEdgeWrapper(cache_name, edge_cli_ptr->getCapacityBytes(), edge_idx, edge_cli_ptr->getEdgecnt(), edge_cli_ptr->getHashName(), edge_cli_ptr->getCoveredLocalUncachedMaxMemUsageBytes(), edge_cli_ptr->getPercacheserverWorkercnt(), edge_cli_ptr->getCoveredPeredgeSyncedVictimcnt(), edge_cli_ptr->getCoveredPeredgeMonitoredVictimsetcnt(), edge_cli_ptr->getCoveredPopularityAggregationMaxMemUsageBytes(), edge_cli_ptr->getCoveredPopularityCollectionChangeRatio(), edge_cli_ptr->getPropagationLatencyClientedgeUs(), edge_cli_ptr->getPropagationLatencyCrossedgeUs(), edge_cli_ptr->getPropagationLatencyEdgecloudUs(), edge_cli_ptr->getCoveredTopkEdgecnt());
+        }
+        else
+        {
+            edge_wrapper_ptr = new BasicEdgeWrapper(cache_name, edge_cli_ptr->getCapacityBytes(), edge_idx, edge_cli_ptr->getEdgecnt(), edge_cli_ptr->getHashName(), edge_cli_ptr->getCoveredLocalUncachedMaxMemUsageBytes(), edge_cli_ptr->getPercacheserverWorkercnt(), edge_cli_ptr->getCoveredPeredgeSyncedVictimcnt(), edge_cli_ptr->getCoveredPeredgeMonitoredVictimsetcnt(), edge_cli_ptr->getCoveredPopularityAggregationMaxMemUsageBytes(), edge_cli_ptr->getCoveredPopularityCollectionChangeRatio(), edge_cli_ptr->getPropagationLatencyClientedgeUs(), edge_cli_ptr->getPropagationLatencyCrossedgeUs(), edge_cli_ptr->getPropagationLatencyEdgecloudUs(), edge_cli_ptr->getCoveredTopkEdgecnt());
+        }
+        assert(edge_wrapper_ptr != NULL);
+        edge_wrapper_ptr->start();
+
+        delete edge_wrapper_ptr;
+        edge_wrapper_ptr = NULL;
         
         pthread_exit(NULL);
         return NULL;

@@ -34,6 +34,10 @@ namespace covered
         virtual BackgroundCounter& getEdgeBackgroundCounterForBeaconServerRef() override;
         virtual WeightTuner& getWeightTunerRef() override;
 
+        // (2) Utility functions
+
+        virtual uint64_t getSizeForCapacity() const;
+
         // (3) Invalidate and unblock for MSI protocol
 
         // NOTE: NO need to add events of issue_invalidation_req, as they happen in parallel and have been counted in the event of invalidate_cache_copies
@@ -47,10 +51,10 @@ namespace covered
         // (6) Common utility functions (invoked by edge cache server worker/placement-processor or edge beacon server of closest/beacon edge node)
 
         // (6.1) For local edge cache access
-        virtual bool getLocalEdgeCache_(const Key& key, const bool& is_redirected, Value& value) const = 0; // Return is local cached and valid
+        virtual bool getLocalEdgeCache_(const Key& key, const bool& is_redirected, Value& value) const override; // Return is local cached and valid
 
         // (6.2) For local directory admission
-        virtual void admitLocalDirectory_(const Key& key, const DirectoryInfo& directory_info, bool& is_being_written, bool& is_neighbor_cached, const bool& skip_propagation_latency) const = 0; // Admit directory info in current edge node (is_neighbor_cached indicates if key is cached by any other edge node except the current edge node after admiting local dirinfo; invoked by cache server worker or beacon server for local placement notification if sender is or not beacon)
+        virtual void admitLocalDirectory_(const Key& key, const DirectoryInfo& directory_info, bool& is_being_written, bool& is_neighbor_cached, const bool& skip_propagation_latency) const override; // Admit directory info in current edge node (is_neighbor_cached indicates if key is cached by any other edge node except the current edge node after admiting local dirinfo; invoked by cache server worker or beacon server for local placement notification if sender is or not beacon)
 
         // (7) Method-specific functions
         virtual void constCustomFunc(const std::string& funcname, EdgeCustomFuncParamBase* func_param_ptr) const override;

@@ -20,9 +20,9 @@ namespace covered
     CoveredCacheServerWorker::CoveredCacheServerWorker(CacheServerWorkerParam* cache_server_worker_param_ptr) : CacheServerWorkerBase(cache_server_worker_param_ptr)
     {
         assert(cache_server_worker_param_ptr != NULL);
-        EdgeWrapper* tmp_edgewrapper_ptr = cache_server_worker_param_ptr->getCacheServerPtr()->getEdgeWrapperPtr();
-        assert(tmp_edgewrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME);
-        uint32_t edge_idx = tmp_edgewrapper_ptr->getNodeIdx();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr->getCacheServerPtr()->getEdgeWrapperPtr();
+        assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME);
+        uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         uint32_t local_cache_server_worker_idx = cache_server_worker_param_ptr->getLocalCacheServerWorkerIdx();
 
         // Differentiate CoveredCacheServerWorker in different edge nodes
@@ -309,7 +309,7 @@ namespace covered
 
         // Avoid unnecessary VictimTracker update by checking affect_victim_tracker
         UpdateCacheManagerForLocalSyncedVictimsFuncParam tmp_param(affect_victim_tracker);
-        tmp_edge_wrapper_ptr->customFunc(UpdateCacheManagerForLocalSyncedVictimsFuncParam::FUNCNAME, &tmp_param);
+        tmp_edge_wrapper_ptr->constCustomFunc(UpdateCacheManagerForLocalSyncedVictimsFuncParam::FUNCNAME, &tmp_param);
         
         return is_local_cached_and_invalid;
     }
@@ -452,7 +452,7 @@ namespace covered
 
         // Avoid unnecessary VictimTracker update by checking affect_victim_tracker
         UpdateCacheManagerForLocalSyncedVictimsFuncParam tmp_param(affect_victim_tracker);
-        tmp_edge_wrapper_ptr->customFunc(UpdateCacheManagerForLocalSyncedVictimsFuncParam::FUNCNAME, &tmp_param);
+        tmp_edge_wrapper_ptr->constCustomFunc(UpdateCacheManagerForLocalSyncedVictimsFuncParam::FUNCNAME, &tmp_param);
 
         return is_local_cached_after_udpate;
     }
@@ -467,7 +467,7 @@ namespace covered
 
         // Avoid unnecessary VictimTracker update by checking affect_victim_tracker
         UpdateCacheManagerForLocalSyncedVictimsFuncParam tmp_param(affect_victim_tracker);
-        tmp_edge_wrapper_ptr->customFunc(UpdateCacheManagerForLocalSyncedVictimsFuncParam::FUNCNAME, &tmp_param);
+        tmp_edge_wrapper_ptr->constCustomFunc(UpdateCacheManagerForLocalSyncedVictimsFuncParam::FUNCNAME, &tmp_param);
 
         return is_local_cached_after_remove;
     }

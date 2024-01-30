@@ -31,7 +31,7 @@ namespace covered
     {
         assert(edge_wrapper_ptr != NULL);
 
-        CacheServer cache_server = CacheServer((EdgeWrapper*)edge_wrapper_ptr);
+        CacheServer cache_server = CacheServer((EdgeWrapperBase*)edge_wrapper_ptr);
         cache_server.start();
 
         pthread_exit(NULL);
@@ -916,13 +916,15 @@ namespace covered
             // NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation -> while here NOT need piggyacking-based popularity collection and victim synchronization for local directory update
 
             // Prepare local uncached popularity of key for popularity aggregation
-            GetCollectedPopularityParam tmp_param(key);
-            edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param); // collected_popularity.is_tracked_ indicates if the local uncached key is tracked in local uncached metadata
+            GetCollectedPopularityParam tmp_param_for_popcollect(key);
+            edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param_for_popcollect); // collected_popularity.is_tracked_ indicates if the local uncached key is tracked in local uncached metadata
 
             // Issue metadata update request if necessary, update victim dirinfo, assert NO local uncached popularity, and perform selective popularity aggregation after local directory eviction
             Edgeset best_placement_edgeset; // Used for non-blocking placement notification if need hybrid data fetching for COVERED
             bool need_hybrid_fetching = false;
-            is_finish = edge_wrapper_ptr_->afterDirectoryEvictionHelper_(key, current_edge_idx, metadata_update_requirement, directory_info, tmp_param.getCollectedPopularityConstRef(), is_global_cached, best_placement_edgeset, need_hybrid_fetching, recvrsp_socket_server_ptr, source_addr, total_bandwidth_usage, event_list, skip_propagation_latency, is_background);
+            AfterDirectoryEvictionHelperFuncParam tmp_param_after_direvict(key, current_edge_idx, metadata_update_requirement, directory_info, tmp_param_for_popcollect.getCollectedPopularityConstRef(), is_global_cached, best_placement_edgeset, need_hybrid_fetching, recvrsp_socket_server_ptr, source_addr, total_bandwidth_usage, event_list, skip_propagation_latency, is_background);
+            edge_wrapper_ptr_->constCustomFunc(AfterDirectoryEvictionHelperFuncParam::FUNCNAME, &tmp_param_after_direvict);
+            is_finish = tmp_param_after_direvict.isFinishConstRef();
             if (is_finish) // Edge node is NOT running
             {
                 return is_finish;

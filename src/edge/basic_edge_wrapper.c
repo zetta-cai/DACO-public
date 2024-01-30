@@ -70,7 +70,7 @@ namespace covered
         MessageBase* invalidation_request_ptr = new InvalidationRequest(key, edge_idx, recvrsp_source_addr, skip_propagation_latency);
         assert(invalidation_request_ptr != NULL);
 
-        return;
+        return invalidation_request_ptr;
     }
 
     void BasicEdgeWrapper::processInvalidationResponse_(MessageBase* invalidation_response_ptr) const
@@ -90,7 +90,7 @@ namespace covered
         MessageBase* finish_block_request_ptr = new FinishBlockRequest(key, edge_idx, recvrsp_source_addr, skip_propagation_latency);
         assert(finish_block_request_ptr != NULL);
 
-        return;
+        return finish_block_request_ptr;
     }
 
     void BasicEdgeWrapper::processFinishBlockResponse_(MessageBase* finish_block_response_ptr) const

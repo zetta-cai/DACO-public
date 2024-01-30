@@ -81,6 +81,19 @@ namespace covered
         return weight_tuner_;
     }
 
+    // (2) Utility functions
+
+    uint64_t CoveredEdgeWrapper::getSizeForCapacity() const
+    {
+        uint64_t size = EdgeWrapperBase::getSizeForCapacity();
+
+        uint64_t cache_manager_size = covered_cache_manager_ptr_->getSizeForCapacity();
+        uint64_t weight_tuner_size = weight_tuner_.getSizeForCapacity();
+        size += (cache_manager_size + weight_tuner_size);
+
+        return size;
+    }
+
     // (3) Invalidate and unblock for MSI protocol
 
     MessageBase* CoveredEdgeWrapper::getInvalidationRequest_(const Key& key, const NetworkAddr& recvrsp_source_addr, const uint32_t& dst_edge_idx_for_compression, const bool& skip_propagation_latency) const
@@ -98,7 +111,7 @@ namespace covered
         MessageBase* invalidation_request_ptr = new CoveredInvalidationRequest(key, edge_idx, recvrsp_source_addr, skip_propagation_latency);
         assert(invalidation_request_ptr != NULL);
 
-        return;
+        return invalidation_request_ptr;
     }
 
     void CoveredEdgeWrapper::processInvalidationResponse_(MessageBase* invalidation_response_ptr) const
@@ -130,7 +143,7 @@ namespace covered
         MessageBase* finish_block_request_ptr = new CoveredFinishBlockRequest(key, victim_syncset, edge_idx, recvrsp_source_addr, skip_propagation_latency);
         assert(finish_block_request_ptr != NULL);
 
-        return;
+        return finish_block_request_ptr;
     }
 
     void CoveredEdgeWrapper::processFinishBlockResponse_(MessageBase* finish_block_response_ptr) const

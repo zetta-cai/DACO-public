@@ -16,9 +16,9 @@ namespace covered
     BasicCacheServerWorker::BasicCacheServerWorker(CacheServerWorkerParam* cache_server_worker_param_ptr) : CacheServerWorkerBase(cache_server_worker_param_ptr)
     {
         assert(cache_server_worker_param_ptr != NULL);
-        EdgeWrapper* tmp_edgewrapper_ptr = cache_server_worker_param_ptr->getCacheServerPtr()->getEdgeWrapperPtr();
-        assert(tmp_edgewrapper_ptr->getCacheName() != Util::COVERED_CACHE_NAME);
-        uint32_t edge_idx = tmp_edgewrapper_ptr->getNodeIdx();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr->getCacheServerPtr()->getEdgeWrapperPtr();
+        assert(tmp_edge_wrapper_ptr->getCacheName() != Util::COVERED_CACHE_NAME);
+        uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         uint32_t local_cache_server_worker_idx = cache_server_worker_param_ptr->getLocalCacheServerWorkerIdx();
 
         // Differentiate BasicCacheServerWorker in different edge nodes

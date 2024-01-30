@@ -58,7 +58,7 @@ namespace covered
         edge_wrapper_ptr_->constCustomFunc(UpdateCacheManagerForNeighborVictimSyncsetFuncParam::FUNCNAME, &tmp_param_for_victim_sync);
 
         // Selective popularity aggregation after remote directory lookup
-        const CollectedPopularity& collected_popularity = covered_directory_lookup_request_ptr->getCollectedPopularityConstRef();
+        const CollectedPopularity& collected_popularity = covered_directory_lookup_request_ptr->getCollectedPopularityRef();
         const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
         AfterDirectoryLookupHelperFuncParam tmp_param_after_dirlookup(tmp_key, source_edge_idx, collected_popularity, is_global_cached, is_source_cached, best_placement_edgeset, need_hybrid_fetching, &fast_path_hint, edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         edge_wrapper_ptr_->constCustomFunc(AfterDirectoryLookupHelperFuncParam::FUNCNAME, &tmp_param_after_dirlookup);

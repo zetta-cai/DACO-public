@@ -19,7 +19,7 @@ namespace covered
     {
         assert(edge_wrapper_ptr != NULL);
 
-        BeaconServerBase* beacon_server_ptr = BeaconServerBase::getBeaconServerByCacheName((EdgeWrapper*)edge_wrapper_ptr);
+        BeaconServerBase* beacon_server_ptr = BeaconServerBase::getBeaconServerByCacheName((EdgeWrapperBase*)edge_wrapper_ptr);
         assert(beacon_server_ptr != NULL);
         beacon_server_ptr->start();
 

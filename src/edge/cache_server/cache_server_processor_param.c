@@ -195,7 +195,7 @@ namespace covered
     bool CacheServerProcessorParam::isNodeFinish_(void* edge_wrapper_ptr)
     {
         assert(edge_wrapper_ptr != NULL);
-        EdgeWrapperBase* tmp_edge_wrapper_ptr = static_cast<EdgeWrapper*>(edge_wrapper_ptr);
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = static_cast<EdgeWrapperBase*>(edge_wrapper_ptr);
         const bool is_edge_finish = !tmp_edge_wrapper_ptr->isNodeRunning();
         return is_edge_finish;
     }
