@@ -19,6 +19,100 @@ namespace covered
     CoveredCacheServer::~CoveredCacheServer()
     {}
 
+    // (1) For local edge cache admission and remote directory admission
+
+    void CoveredCacheServer::admitLocalEdgeCache_(const Key& key, const Value& value, const bool& is_neighbor_cached, const bool& is_valid) const
+    {
+        checkPointers_();
+
+        bool affect_victim_tracker = false; // If key is a local synced victim now
+        const uint32_t beacon_edgeidx = edge_wrapper_ptr_->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
+        edge_wrapper_ptr_->getEdgeCachePtr()->admit(key, value, is_neighbor_cached, is_valid, beacon_edgeidx, affect_victim_tracker);
+
+        // Avoid unnecessary VictimTracker update by checking affect_victim_tracker
+        UpdateCacheManagerForLocalSyncedVictimsFuncParam tmp_param(affect_victim_tracker);
+        edge_wrapper_ptr_->constCustomFunc(UpdateCacheManagerForLocalSyncedVictimsFuncParam::FUNCNAME, &tmp_param);
+
+        // Remove existing cached directory if any as key is local cached, while we ONLY cache valid remote dirinfo for local uncached objects
+        edge_wrapper_ptr_->getCoveredCacheManagerPtr()->updateDirectoryCacherToRemoveCachedDirectory(key);
+
+        return;
+    }
+
+    MessageBase* CoveredCacheServer::getReqToAdmitBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, const NetworkAddr& source_addr, const bool& skip_propagation_latency, const bool& is_background) const
+    {
+        checkPointers_();
+
+        const bool is_admit = true; // Try to admit a new key as local cached object (NOTE: local edge cache has NOT been admitted yet)
+        uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
+
+        // NOTE: current edge node MUST NOT be the beacon edge node for the given key
+        const uint32_t dst_beacon_edge_idx_for_compression = edge_wrapper_ptr_->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
+        assert(dst_beacon_edge_idx_for_compression != edge_idx);
+
+        MessageBase* directory_update_request_ptr = NULL;
+        CoveredCacheManager* tmp_covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
+
+        // Prepare victim syncset for piggybacking-based victim synchronization
+        VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_beacon_edge_idx_for_compression, edge_wrapper_ptr_->getCacheMarginBytes());
+
+        // ONLY need victim synchronization yet without popularity collection/aggregation
+        if (!is_background) // Foreground remote directory admission triggered by hybrid data fetching at the sender/closest edge node (different from beacon)
+        {
+            // (OBSOLETE) NOTE: For COVERED, although there still exist foreground directory update requests for eviction (triggered by local gets to update invalid value and local puts to update cached value), all directory update requests for admission MUST be background due to non-blocking placement deployment
+
+            // NOTE: For COVERED, both directory eviction (triggered by value update and local/remote placement notification) and directory admission (triggered by only-sender hybrid data fetching, fast-path single placement, and local/remote placement notification) can be foreground and background
+            directory_update_request_ptr = new CoveredDirectoryUpdateRequest(key, is_admit, directory_info, victim_syncset, edge_idx, source_addr, skip_propagation_latency);
+        }
+        else // Background remote directory admission triggered by remote placement notification
+        {
+            // NOTE: use background event names by sending CoveredPlacementDirectoryUpdateRequest (NOT DISABLE recursive cache placement due to is_admit = true)
+            directory_update_request_ptr = new CoveredPlacementDirectoryUpdateRequest(key, is_admit, directory_info, victim_syncset, edge_idx, source_addr, skip_propagation_latency);
+        }
+        assert(directory_update_request_ptr != NULL);
+
+        return directory_update_request_ptr;
+    }
+
+    void CoveredCacheServer::processRspToAdmitBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written, bool& is_neighbor_cached, const bool& is_background) const
+    {
+        checkPointers_();
+        assert(control_response_ptr != NULL);
+
+        // CoveredCacheManager* tmp_covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
+
+        uint32_t source_edge_idx = control_response_ptr->getSourceIndex();
+        VictimSyncset neighbor_victim_syncset;
+
+        // NOTE: ONLY foreground directory eviction could trigger hybrid data fetching, while foreground/background directory admission will NEVER perform placement calculation and hence NO hybrid data fetching
+        if (!is_background)
+        {
+            assert(control_response_ptr->getMessageType() == MessageType::kCoveredDirectoryUpdateResponse);
+
+            // Get is_being_written and victim syncset from control response message
+            const CoveredDirectoryUpdateResponse* const covered_directory_update_response_ptr = static_cast<const CoveredDirectoryUpdateResponse*>(control_response_ptr);
+            is_being_written = covered_directory_update_response_ptr->isBeingWritten();
+            is_neighbor_cached = covered_directory_update_response_ptr->isNeighborCached();
+            neighbor_victim_syncset = covered_directory_update_response_ptr->getVictimSyncsetRef();
+        }
+        else
+        {
+            assert(control_response_ptr->getMessageType() == MessageType::kCoveredPlacementDirectoryUpdateResponse);
+
+            // Get is_being_written and victim syncset from control response message
+            const CoveredPlacementDirectoryUpdateResponse* const covered_placement_directory_update_response_ptr = static_cast<const CoveredPlacementDirectoryUpdateResponse*>(control_response_ptr);
+            is_being_written = covered_placement_directory_update_response_ptr->isBeingWritten();
+            is_neighbor_cached = covered_placement_directory_update_response_ptr->isNeighborCached();
+            neighbor_victim_syncset = covered_placement_directory_update_response_ptr->getVictimSyncsetRef();
+        }
+
+        // Victim synchronization
+        UpdateCacheManagerForNeighborVictimSyncsetFuncParam tmp_param(source_edge_idx, neighbor_victim_syncset);
+        edge_wrapper_ptr_->constCustomFunc(UpdateCacheManagerForNeighborVictimSyncsetFuncParam::FUNCNAME, &tmp_param);
+
+        return;
+    }
+
     // (2) For blocking-based cache eviction and local/remote directory eviction (invoked by edge cache server worker for independent admission or value update; or by placement processor for remote placement notification)
     
     bool CoveredCacheServer::processRspToEvictBeaconDirectory_(MessageBase* control_response_ptr, const Value& value, bool& is_being_written, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, const bool& is_background) const
