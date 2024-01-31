@@ -9,6 +9,8 @@ namespace covered
 
     BasicCacheServer::BasicCacheServer(EdgeWrapperBase* edge_wrapper_ptr) : CacheServerBase(edge_wrapper_ptr)
     {
+        assert(edge_wrapper_ptr->getCacheName() != Util::COVERED_CACHE_NAME);
+
         // Differentiate cache servers in different edge nodes
         std::ostringstream oss;
         oss << kClassName << " edge" << edge_wrapper_ptr->getNodeIdx();
@@ -64,6 +66,51 @@ namespace covered
     }
 
     // (2) For blocking-based cache eviction and local/remote directory eviction (invoked by edge cache server worker for independent admission or value update; or by placement processor for remote placement notification)
+
+    void BasicCacheServer::evictLocalEdgeCache_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size) const
+    {
+        checkPointers_();
+
+        edge_wrapper_ptr_->getEdgeCachePtr()->evict(victims, required_size);
+
+        return;
+    }
+
+    bool BasicCacheServer::evictLocalDirectory_(const Key& key, const Value& value, const DirectoryInfo& directory_info, bool& is_being_written, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, const bool& is_background) const
+    {
+        checkPointers_();
+        CooperationWrapperBase* tmp_cooperation_wrapper_ptr = edge_wrapper_ptr_->getCooperationWrapperPtr();
+
+        bool is_finish = false;
+
+        uint32_t current_edge_idx = edge_wrapper_ptr_->getNodeIdx();
+        const bool is_admit = false; // Evict a victim as local uncached object
+        bool unused_is_neighbor_cached = false; // NOTE: ONLY need is_neighbor_cached for directory admission to initizalize cached metadata, yet NO need for directory eviction
+        MetadataUpdateRequirement metadata_update_requirement;
+        bool unused_is_global_cached = tmp_cooperation_wrapper_ptr->updateDirectoryTable(key, current_edge_idx, is_admit, directory_info, is_being_written, unused_is_neighbor_cached, metadata_update_requirement);
+        UNUSED(unused_is_neighbor_cached);
+        UNUSED(unused_is_global_cached);
+
+        return is_finish;
+    }
+
+    MessageBase* BasicCacheServer::getReqToEvictBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, const NetworkAddr& source_addr, const bool& skip_propagation_latency, const bool& is_background) const
+    {
+        checkPointers_();
+
+        uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
+        const bool is_admit = false; // Evict a victim as local uncached object (NOTE: local edge cache has already been evicted)
+        MessageBase* directory_update_request_ptr = NULL;
+
+        // NOTE: current edge node MUST NOT be the beacon edge node for the given key
+        const uint32_t dst_beacon_edge_idx_for_compression = edge_wrapper_ptr_->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
+        assert(dst_beacon_edge_idx_for_compression != edge_idx);
+    
+        directory_update_request_ptr = new DirectoryUpdateRequest(key, is_admit, directory_info, edge_idx, source_addr, skip_propagation_latency);
+
+        assert(directory_update_request_ptr != NULL);
+        return directory_update_request_ptr;
+    }
     
     bool BasicCacheServer::processRspToEvictBeaconDirectory_(MessageBase* control_response_ptr, const Value& value, bool& is_being_written, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, const bool& is_background) const
     {

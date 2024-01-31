@@ -344,5 +344,7 @@ namespace covered
         assert(placement_edge_idx < tmp_edge_wrapper_ptr->getNodeCnt());
 
         // TODO: END HERE
+
+        return false;
     }
 }

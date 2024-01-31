@@ -3,20 +3,17 @@
 #include <assert.h>
 #include <sstream>
 
-#include "cache/covered_cache_custom_func_param.h"
 #include "common/config.h"
 #include "common/thread_launcher.h"
 #include "common/util.h"
-#include "edge/covered_edge_custom_func_param.h"
 #include "edge/cache_server/cache_server_invalidation_processor.h"
 #include "edge/cache_server/cache_server_metadata_update_processor.h"
 #include "edge/cache_server/cache_server_placement_processor.h"
-#include "edge/cache_server/cache_server_redirection_processor.h"
+#include "edge/cache_server/cache_server_redirection_processor_base.h"
 #include "edge/cache_server/cache_server_victim_fetch_processor.h"
 #include "edge/cache_server/cache_server_worker_base.h"
 #include "edge/cache_server/basic_cache_server.h"
 #include "edge/cache_server/covered_cache_server.h"
-#include "message/control_message.h"
 #include "network/network_addr.h"
 
 namespace covered
@@ -218,7 +215,7 @@ namespace covered
         }
 
         // Launch cache server redirection processor
-        //pthread_returncode = pthread_create(&cache_server_redirection_processor_thread, NULL, CacheServerRedirectionProcessor::launchCacheServerRedirectionProcessor, (void*)(cache_server_redirection_processor_param_ptr_));
+        //pthread_returncode = pthread_create(&cache_server_redirection_processor_thread, NULL, CacheServerRedirectionProcessorBase::launchCacheServerRedirectionProcessor, (void*)(cache_server_redirection_processor_param_ptr_));
         // if (pthread_returncode != 0)
         // {
         //     std::ostringstream oss;
@@ -227,7 +224,7 @@ namespace covered
         //     exit(1);
         // }
         tmp_thread_name = "edge-cache-server-redirection-processor-" + std::to_string(edge_idx);
-        ThreadLauncher::pthreadCreateHighPriority(ThreadLauncher::EDGE_THREAD_ROLE, tmp_thread_name, &cache_server_redirection_processor_thread, CacheServerRedirectionProcessor::launchCacheServerRedirectionProcessor, (void*)(cache_server_redirection_processor_param_ptr_));
+        ThreadLauncher::pthreadCreateHighPriority(ThreadLauncher::EDGE_THREAD_ROLE, tmp_thread_name, &cache_server_redirection_processor_thread, CacheServerRedirectionProcessorBase::launchCacheServerRedirectionProcessor, (void*)(cache_server_redirection_processor_param_ptr_));
 
         // Launch cache server placement processor
         //pthread_returncode = pthread_create(&cache_server_placement_processor_thread, NULL, CacheServerPlacementProcessor::launchCacheServerPlacementProcessor, (void*)(cache_server_placement_processor_param_ptr_));
@@ -636,23 +633,6 @@ namespace covered
         return is_finish;
     }
 
-    void CacheServerBase::evictLocalEdgeCache_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size) const
-    {
-        checkPointers_();
-
-        edge_wrapper_ptr_->getEdgeCachePtr()->evict(victims, required_size);
-
-        if (edge_wrapper_ptr_->getCacheName() == Util::COVERED_CACHE_NAME) // ONLY for COVERED
-        {
-            // NOTE: eviction MUST affect victim tracker due to evicting objects with least local rewards (i.e., local synced victims)
-            const bool affect_victim_tracker = true;
-            UpdateCacheManagerForLocalSyncedVictimsFuncParam tmp_param(affect_victim_tracker);
-            edge_wrapper_ptr_->constCustomFunc(UpdateCacheManagerForLocalSyncedVictimsFuncParam::FUNCNAME, &tmp_param);
-        }
-
-        return;
-    }
-
     bool CacheServerBase::parallelEvictDirectory_(const std::unordered_map<Key, Value, KeyHasher>& total_victims, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, const bool& is_background) const
     {
         checkPointers_();
@@ -800,102 +780,6 @@ namespace covered
         } // End of (acked_cnt != total_victim_cnt)
 
         return is_finish;
-    }
-
-    bool CacheServerBase::evictLocalDirectory_(const Key& key, const Value& value, const DirectoryInfo& directory_info, bool& is_being_written, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, const bool& is_background) const
-    {
-        checkPointers_();
-        CooperationWrapperBase* tmp_cooperation_wrapper_ptr = edge_wrapper_ptr_->getCooperationWrapperPtr();
-
-        bool is_finish = false;
-
-        uint32_t current_edge_idx = edge_wrapper_ptr_->getNodeIdx();
-        const bool is_admit = false; // Evict a victim as local uncached object
-        bool unused_is_neighbor_cached = false; // NOTE: ONLY need is_neighbor_cached for directory admission to initizalize cached metadata, yet NO need for directory eviction
-        MetadataUpdateRequirement metadata_update_requirement;
-        bool is_global_cached = tmp_cooperation_wrapper_ptr->updateDirectoryTable(key, current_edge_idx, is_admit, directory_info, is_being_written, unused_is_neighbor_cached, metadata_update_requirement);
-        UNUSED(unused_is_neighbor_cached);
-
-        if (edge_wrapper_ptr_->getCacheName() == Util::COVERED_CACHE_NAME) // ONLY for COVERED
-        {
-            // NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation -> while here NOT need piggyacking-based popularity collection and victim synchronization for local directory update
-
-            // Prepare local uncached popularity of key for popularity aggregation
-            GetCollectedPopularityParam tmp_param_for_popcollect(key);
-            edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param_for_popcollect); // collected_popularity.is_tracked_ indicates if the local uncached key is tracked in local uncached metadata
-
-            // Issue metadata update request if necessary, update victim dirinfo, assert NO local uncached popularity, and perform selective popularity aggregation after local directory eviction
-            Edgeset best_placement_edgeset; // Used for non-blocking placement notification if need hybrid data fetching for COVERED
-            bool need_hybrid_fetching = false;
-            AfterDirectoryEvictionHelperFuncParam tmp_param_after_direvict(key, current_edge_idx, metadata_update_requirement, directory_info, tmp_param_for_popcollect.getCollectedPopularityConstRef(), is_global_cached, best_placement_edgeset, need_hybrid_fetching, recvrsp_socket_server_ptr, source_addr, total_bandwidth_usage, event_list, skip_propagation_latency, is_background);
-            edge_wrapper_ptr_->constCustomFunc(AfterDirectoryEvictionHelperFuncParam::FUNCNAME, &tmp_param_after_direvict);
-            is_finish = tmp_param_after_direvict.isFinishConstRef();
-            if (is_finish) // Edge node is NOT running
-            {
-                return is_finish;
-            }
-
-            // Trigger non-blocking placement notification if need hybrid fetching for non-blocking data fetching (ONLY for COVERED)
-            if (need_hybrid_fetching)
-            {
-                assert(!is_background); // Must be foreground local directory eviction (triggered by invalid/valid value update by local get/put and independent admission)
-
-                assert(edge_wrapper_ptr_->getCacheName() == Util::COVERED_CACHE_NAME);
-                NonblockNotifyForPlacementFuncParam tmp_param(key, value, best_placement_edgeset, skip_propagation_latency);
-                edge_wrapper_ptr_->constCustomFunc(NonblockNotifyForPlacementFuncParam::FUNCNAME, &tmp_param);
-            }
-        }
-
-        return is_finish;
-    }
-
-    MessageBase* CacheServerBase::getReqToEvictBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, const NetworkAddr& source_addr, const bool& skip_propagation_latency, const bool& is_background) const
-    {
-        checkPointers_();
-
-        uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
-        const bool is_admit = false; // Evict a victim as local uncached object (NOTE: local edge cache has already been evicted)
-        MessageBase* directory_update_request_ptr = NULL;
-
-        // NOTE: current edge node MUST NOT be the beacon edge node for the given key
-        const uint32_t dst_beacon_edge_idx_for_compression = edge_wrapper_ptr_->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
-        assert(dst_beacon_edge_idx_for_compression != edge_idx);
-    
-        if (edge_wrapper_ptr_->getCacheName() == Util::COVERED_CACHE_NAME) // ONLY for COVERED
-        {
-            CoveredCacheManager* tmp_covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
-
-            // Prepare local uncached popularity of key for piggybacking-based popularity collection
-            GetCollectedPopularityParam tmp_param(key);
-            edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param); // collected_popularity.is_tracked_ indicates if the local uncached key is tracked in local uncached metadata (due to selective metadata preservation)
-
-            // Prepare victim syncset for piggybacking-based victim synchronization
-            VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_beacon_edge_idx_for_compression, edge_wrapper_ptr_->getCacheMarginBytes());
-
-            // Need BOTH popularity collection and victim synchronization
-            if (!is_background) // Foreground remote directory eviction (triggered by invalid/valid value update by local get/put and independent admission)
-            {
-                directory_update_request_ptr = new CoveredDirectoryUpdateRequest(key, is_admit, directory_info, tmp_param.getCollectedPopularityConstRef(), victim_syncset, edge_idx, source_addr, skip_propagation_latency);
-            }
-            else // Background remote directory eviction (triggered by remote placement nofication and local placement notification at local/remote beacon edge node)
-            {
-                // NOTE: use background event names and DISABLE recursive cache placement by sending CoveredPlacementDirectoryUpdateRequest
-                directory_update_request_ptr = new CoveredPlacementDirectoryUpdateRequest(key, is_admit, directory_info, tmp_param.getCollectedPopularityConstRef(), victim_syncset, edge_idx, source_addr, skip_propagation_latency);
-            }
-
-            // NOTE: key MUST NOT have any cached directory, as key is local cached before eviction (even if key may be local uncached and tracked by local uncached metadata due to metadata preservation after eviction, we have NOT lookuped remote directory yet from beacon node)
-            CachedDirectory cached_directory;
-            bool has_cached_directory = tmp_covered_cache_manager_ptr->accessDirectoryCacherForCachedDirectory(key, cached_directory);
-            assert(!has_cached_directory);
-            UNUSED(cached_directory);
-        }
-        else // Baselines
-        {
-            directory_update_request_ptr = new DirectoryUpdateRequest(key, is_admit, directory_info, edge_idx, source_addr, skip_propagation_latency);
-        }
-
-        assert(directory_update_request_ptr != NULL);
-        return directory_update_request_ptr;
     }
 
     void CacheServerBase::checkPointers_() const
