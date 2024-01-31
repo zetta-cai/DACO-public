@@ -528,7 +528,6 @@ namespace covered
     {
         checkPointers_();
         assert(redirected_get_response_ptr != NULL);
-        assert(edge_wrapper_ptr_->getCacheName() == Util::COVERED_CACHE_NAME);
         // CoveredCacheManager* covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
 
         const CoveredPlacementRedirectedGetResponse* const covered_placement_redirected_get_response_ptr = static_cast<const CoveredPlacementRedirectedGetResponse*>(redirected_get_response_ptr);
@@ -575,7 +574,6 @@ namespace covered
     {
         checkPointers_();
         assert(global_get_response_ptr != NULL);
-        assert(edge_wrapper_ptr_->getCacheName() == Util::COVERED_CACHE_NAME);
 
         const CoveredPlacementGlobalGetResponse* const covered_placement_global_get_response_ptr = static_cast<const CoveredPlacementGlobalGetResponse*>(global_get_response_ptr);
         //const Value tmp_value = covered_placement_global_get_response_ptr->getValue();

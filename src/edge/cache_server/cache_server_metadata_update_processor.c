@@ -24,10 +24,13 @@ namespace covered
     CacheServerMetadataUpdateProcessor::CacheServerMetadataUpdateProcessor(CacheServerProcessorParam* cache_server_metadata_update_processor_param_ptr) : cache_server_metadata_update_processor_param_ptr_(cache_server_metadata_update_processor_param_ptr)
     {
         assert(cache_server_metadata_update_processor_param_ptr != NULL);
-        const uint32_t edge_idx = cache_server_metadata_update_processor_param_ptr->getCacheServerPtr()->getEdgeWrapperPtr()->getNodeIdx();
+        
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_metadata_update_processor_param_ptr->getCacheServerPtr()->getEdgeWrapperPtr();
+        assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME);
 
         // Differentiate cache servers of different edge nodes
         std::ostringstream oss;
+        const uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         oss << kClassName << " edge" << edge_idx << "-metadata-update-processor";
         instance_name_ = oss.str();
     }
@@ -125,7 +128,6 @@ namespace covered
         event_list.addEvent(Event::BG_EDGE_CACHE_SERVER_METADATA_UPDATE_PROCESSOR_UPDATE_EVENT_NAME, metadata_update_latency_us); // Add metadata update event if with event tracking
         
         // Get background eventlist and bandwidth usage to update background counter for beacon server
-        assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME);
         tmp_edge_wrapper_ptr->getEdgeBackgroundCounterForBeaconServerRef().updateBandwidthUsgae(total_bandwidth_usage);
         tmp_edge_wrapper_ptr->getEdgeBackgroundCounterForBeaconServerRef().addEvents(event_list);
 

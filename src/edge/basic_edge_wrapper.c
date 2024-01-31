@@ -113,12 +113,14 @@ namespace covered
 
     // (6.1) For local edge cache access
 
-    bool BasicEdgeWrapper::getLocalEdgeCache_(const Key& key, const bool& is_redirected, Value& value) const
+    bool BasicEdgeWrapper::getLocalEdgeCache_(const Key& key, const bool& is_redirected, Value& value, bool& is_tracked_before_fetch_value) const
     {
         // Cache server gets local edge cache for foreground local data requests
         // Beacon server gets local edge cache for background non-blocking data fetching
 
         checkPointers_();
+
+        UNUSED(is_tracked_before_fetch_value);
 
         bool affect_victim_tracker = false; // If key was a local synced victim before or is a local synced victim now
         bool is_local_cached_and_valid = edge_cache_ptr_->get(key, is_redirected, value, affect_victim_tracker);

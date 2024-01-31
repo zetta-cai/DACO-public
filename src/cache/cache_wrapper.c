@@ -182,8 +182,7 @@ namespace covered
             }
             else // Invalidate otherwise
             {
-                // NOTE: ONLY Segcache will fail to update due to object size > segment size
-                assert(cache_name_ == Util::SEGCACHE_CACHE_NAME);
+                // NOTE: all methods could fail to update due to invalid object size (e.g., > segment size)
 
                 invalidateKeyForLocalCachedObject_(key);
             }
@@ -239,8 +238,7 @@ namespace covered
                 }
                 else // Invalidate otherwise
                 {
-                    // NOTE: ONLY Segcache will fail to update due to object size > segment size
-                    assert(cache_name_ == Util::SEGCACHE_CACHE_NAME);
+                    // NOTE: all methods could fail to update due to invalid object size (e.g., > segment size)
 
                     invalidateKeyForLocalCachedObject_(key);
                 }

@@ -38,7 +38,9 @@ namespace covered
         Key tmp_key = redirected_get_request_ptr->getKey();
 
         // Access local edge cache for redirected get request
-        is_cooperative_cached_and_valid = tmp_edge_wrapper_ptr->getLocalEdgeCache_(tmp_key, is_redirected, value);
+        bool unused_is_tracked_before_fetch_value = false;
+        is_cooperative_cached_and_valid = tmp_edge_wrapper_ptr->getLocalEdgeCache_(tmp_key, is_redirected, value, unused_is_tracked_before_fetch_value);
+        UNUSED(unused_is_tracked_before_fetch_value);
         is_cooperative_cached = tmp_edge_wrapper_ptr->getEdgeCachePtr()->isLocalCached(tmp_key);
         
         return;

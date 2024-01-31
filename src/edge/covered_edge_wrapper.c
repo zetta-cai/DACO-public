@@ -176,7 +176,7 @@ namespace covered
 
     // (6.1) For local edge cache access
 
-    bool CoveredEdgeWrapper::getLocalEdgeCache_(const Key& key, const bool& is_redirected, Value& value) const
+    bool CoveredEdgeWrapper::getLocalEdgeCache_(const Key& key, const bool& is_redirected, Value& value, bool& is_tracked_before_fetch_value) const
     {
         // Cache server gets local edge cache for foreground local data requests
         // Beacon server gets local edge cache for background non-blocking data fetching
@@ -188,6 +188,13 @@ namespace covered
 
         // Avoid unnecessary VictimTracker update by checking affect_victim_tracker for COVERED
         updateCacheManagerForLocalSyncedVictimsInternal_(affect_victim_tracker);
+
+        // Get is tracked by local uncached metadata before fetching value from neighbor/cloud
+        // TODO: is_tracked_before_fetch_value can be set by edge_cache_ptr_->get() for less processing overhead
+        is_tracked_before_fetch_value = false;
+        GetCollectedPopularityParam tmp_param(key);
+        edge_cache_ptr_->constCustomFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param);
+        is_tracked_before_fetch_value = tmp_param.getCollectedPopularityConstRef().isTracked();
 
         return is_local_cached_and_valid;
     }
@@ -362,7 +369,9 @@ namespace covered
         // NOTE: NOT update aggregated uncached popularity to avoid recursive placement calculation even if local uncached popularity is cached
         Value value;
         const bool is_redirected = !sender_is_beacon; // Approximately treat local control message as local cache access if sender is beacon, yet treat remote control message as remote cache access if sender is NOT beacon
-        bool is_local_cached_and_valid = getLocalEdgeCache_(key, is_redirected, value);
+        bool unused_is_tracked_before_fetch_value = false;
+        bool is_local_cached_and_valid = getLocalEdgeCache_(key, is_redirected, value, unused_is_tracked_before_fetch_value);
+        UNUSED(unused_is_tracked_before_fetch_value);
 
         if (is_local_cached_and_valid) // Directly get valid value from local edge cache in local/remote beacon node
         {

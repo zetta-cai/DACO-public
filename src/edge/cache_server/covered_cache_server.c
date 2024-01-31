@@ -168,7 +168,6 @@ namespace covered
         {
             assert(!is_background); // Must be foreground local directory eviction (triggered by invalid/valid value update by local get/put and independent admission)
 
-            assert(edge_wrapper_ptr_->getCacheName() == Util::COVERED_CACHE_NAME);
             NonblockNotifyForPlacementFuncParam tmp_param(key, value, best_placement_edgeset, skip_propagation_latency);
             edge_wrapper_ptr_->constCustomFunc(NonblockNotifyForPlacementFuncParam::FUNCNAME, &tmp_param);
         }

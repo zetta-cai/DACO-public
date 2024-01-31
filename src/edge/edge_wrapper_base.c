@@ -791,7 +791,6 @@ namespace covered
     uint64_t EdgeWrapperBase::getCacheMarginBytes() const
     {
         checkPointers_();
-        //assert(cache_name_ == Util::COVERED_CACHE_NAME);
 
         // Get local edge margin bytes
         uint64_t used_bytes = getSizeForCapacity();

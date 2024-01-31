@@ -48,6 +48,9 @@ namespace covered
         bool is_source_cached = false;
         bool is_global_cached = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->lookupDirectoryTableByCacheServer(key, current_edge_idx, is_being_written, is_valid_directory_exist, directory_info, is_source_cached);
 
+        // Update local/remote beacon access cnt for workload-aware probability tuning (NOTE: lookupLocalDirectory_() is ONLY invoked by CacheServerWorkerBase::fetchDataFromNeighbor_())
+        tmp_edge_wrapper_ptr->getWeightTunerRef().incrLocalBeaconAccessCnt(); // Local beacon access (sender is beacon)
+
         // Prepare local uncached popularity of key for popularity aggregation
         // NOTE: NOT need piggyacking-based popularity collection and victim synchronization for local directory lookup
         GetCollectedPopularityParam tmp_param_for_popcollect(key);
@@ -118,6 +121,9 @@ namespace covered
         const uint32_t dst_beacon_edge_idx_for_compression = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
         assert(dst_beacon_edge_idx_for_compression != edge_idx);
 
+        // Update local/remote beacon access cnt for workload-aware probability tuning (NOTE: getReqToLookupBeaconDirectory_() is ONLY invoked by CacheServerWorkerBase::lookupBeaconDirectory_() in CacheServerWorkerBase::fetchDataFromNeighbor_())
+        tmp_edge_wrapper_ptr->getWeightTunerRef().incrRemoteBeaconAccessCnt(); // Remote beacon access (sender is not beacon)
+
         // Prepare victim syncset for piggybacking-based victim synchronization
         VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_beacon_edge_idx_for_compression, tmp_edge_wrapper_ptr->getCacheMarginBytes());
 
@@ -132,7 +138,7 @@ namespace covered
         return covered_directory_lookup_request_ptr;
     }
 
-    void CoveredCacheServerWorker::processRspToLookupBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, FastPathHint& fast_path_hint) const
+    void CoveredCacheServerWorker::processRspToLookupBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, FastPathHint& fast_path_hint, const uint32_t& content_discovery_cross_edge_latency_us) const
     {
         checkPointers_();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -140,6 +146,9 @@ namespace covered
 
         assert(control_response_ptr != NULL);
         const MessageType message_type = control_response_ptr->getMessageType();
+
+        // Update EWMA of cross-edge latency for latency-aware weight tuning (NOTE: processRspToLookupBeaconDirectory_() is ONLY invoked by CacheServerWorkerBase::lookupBeaconDirectory_() in CacheServerWorkerBase::fetchDataFromNeighbor_())
+        tmp_edge_wrapper_ptr->getWeightTunerRef().updateEwmaCrossedgeLatency(content_discovery_cross_edge_latency_us);
 
         Key tmp_key;
         uint32_t source_edge_idx = 0;
@@ -257,7 +266,7 @@ namespace covered
         return covered_redirected_get_request_ptr;
     }
 
-    void CoveredCacheServerWorker::processRspToRedirectGet_(MessageBase* redirected_response_ptr, Value& value, Hitflag& hitflag) const
+    void CoveredCacheServerWorker::processRspToRedirectGet_(MessageBase* redirected_response_ptr, Value& value, Hitflag& hitflag, const uint32_t& request_redirection_cross_edge_latency_us) const
     {
         assert(redirected_response_ptr != NULL);
         assert(redirected_response_ptr->getMessageType() == MessageType::kCoveredRedirectedGetResponse);
@@ -265,6 +274,9 @@ namespace covered
         checkPointers_();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
+
+        // Update EWMA of cross-edge latency for latency-aware weight tuning (NOTE: processRspToRedirectGet_() is ONLY invoked by CacheServerWorkerBase::redirectGetToTarget_() in CacheServerWorkerBase::fetchDataFromNeighbor_())
+        tmp_edge_wrapper_ptr->getWeightTunerRef().updateEwmaCrossedgeLatency(request_redirection_cross_edge_latency_us);
 
         // Get value and hitflag from redirected response message
         const CoveredRedirectedGetResponse* const covered_redirected_get_response_ptr = static_cast<const CoveredRedirectedGetResponse*>(redirected_response_ptr);
@@ -284,6 +296,24 @@ namespace covered
             tmp_covered_cache_manager_ptr->updateDirectoryCacherToRemoveCachedDirectory(tmp_key); // Remove existing cached directory if any
         }
         // NOTE: If hitflag is kCooperativeHit, we do NOT need to insert/update DirectoryCacher, as it has been done during directory lookup if necessary
+
+        return;
+    }
+
+    // (1.3) Access cloud
+
+    void CoveredCacheServerWorker::processRspToAccessCloud_(MessageBase* global_response_ptr, Value& value, const uint32_t& cloud_access_edge_cloud_latency) const
+    {
+        checkPointers_();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+
+        assert(global_response_ptr->getMessageType() == MessageType::kGlobalGetResponse);
+
+        // Update EWMA of edge-cloud latency for latency-aware weight tuning (NOTE: processRspToAccessCloud_() is ONLY invoked by CacheServerWorkerBase::fetchDataFromCloud_() in CacheServerWorkerBase::fetchDataFromCloud_())
+        tmp_edge_wrapper_ptr->getWeightTunerRef().updateEwmaEdgecloudLatency(cloud_access_edge_cloud_latency);
+
+        const GlobalGetResponse* const global_get_response_ptr = static_cast<const GlobalGetResponse*>(global_response_ptr);
+        value = global_get_response_ptr->getValue();
 
         return;
     }
@@ -312,6 +342,76 @@ namespace covered
         tmp_edge_wrapper_ptr->constCustomFunc(UpdateCacheManagerForLocalSyncedVictimsFuncParam::FUNCNAME, &tmp_param);
         
         return is_local_cached_and_invalid;
+    }
+
+    // (1.5) After getting value from local/neighbor/cloud
+
+    bool CoveredCacheServerWorker::afterFetchingValue_(const Key& key, const Value& value, const bool& is_tracked_before_fetch_value, const bool& is_cooperative_cached, const Edgeset& best_placement_edgeset, const bool& need_hybrid_fetching, const FastPathHint& fast_path_hint, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
+    {
+        checkPointers_();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+
+        bool is_finish = false;
+
+        // NOTE: hybrid fetching MUST NOT trigger fast-path placement due to key is already tracked by local uncached metadata (no matter sender is beacon or not)
+        if (need_hybrid_fetching)
+        {
+            assert(!fast_path_hint.isValid());
+
+            // NOTE: key MUST be tracked before fetching value, such that directory lookup request can trigger placement calculation and hence need hybrid data fetching for non-blocking placement deployment
+            assert(is_tracked_before_fetch_value);
+        }
+        if (fast_path_hint.isValid())
+        {
+            assert(!need_hybrid_fetching);
+
+            // NOTE: key MUST NOT tracked by local uncached metadata before fetching value from neighbor/cloud
+            assert(!is_tracked_before_fetch_value);
+        }
+
+        // Trigger non-blocking placement notification if need hybrid fetching for non-blocking data fetching
+        struct timespec trigger_placement_start_timestamp = Util::getCurrentTimespec();
+        if (need_hybrid_fetching)
+        {
+            TryToTriggerPlacementNotificationAfterHybridFetchFuncParam tmp_param(key, value, best_placement_edgeset, total_bandwidth_usage, event_list, skip_propagation_latency);
+            constCustomFunc(TryToTriggerPlacementNotificationAfterHybridFetchFuncParam::FUNCNAME, &tmp_param);
+            is_finish = tmp_param.isFinishConstRef();
+            if (is_finish) // Edge is NOT running now
+            {
+                return is_finish;
+            }
+        }
+        struct timespec trigger_placement_end_timestamp = Util::getCurrentTimespec();
+        uint32_t trigger_placement_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(trigger_placement_end_timestamp, trigger_placement_start_timestamp));
+        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_TRIGGER_PLACEMENT_EVENT_NAME, trigger_placement_latency_us); // Add intermediate event if with event tracking
+
+        // Try to trigger cache placement calculation for getrsp if w/ sender-is-beacon or fast-path placement, if key is local uncached and newly-tracked after fetching value from neighbor/cloud
+        if (!tmp_edge_wrapper_ptr->getEdgeCachePtr()->isLocalCached(key) && !is_tracked_before_fetch_value) // Local uncached object and NOT tracked before fetching value
+        {
+            GetCollectedPopularityParam tmp_param(key);
+            tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param);
+            const CollectedPopularity tmp_collected_popularity_after_fetch_value = tmp_param.getCollectedPopularityRef();
+            const bool is_tracked_after_fetch_value = tmp_collected_popularity_after_fetch_value.isTracked();
+            if (is_tracked_after_fetch_value) // Newly-tracked after fetching value from neighbor/cloud (local uncached metadata is updated when accessing local edge cache to try to update invalid value)
+            {
+                struct timespec placement_for_getrsp_start_timestamp = Util::getCurrentTimespec();
+
+                // Try to trigger cache placement if necessary (sender is beacon, or beacon node provides fast-path hint)
+                TryToTriggerCachePlacementForGetrspFuncParam tmp_param(key, value, tmp_collected_popularity_after_fetch_value, fast_path_hint, is_cooperative_cached, total_bandwidth_usage, event_list, skip_propagation_latency);
+                constCustomFunc(TryToTriggerCachePlacementForGetrspFuncParam::FUNCNAME, &tmp_param);
+                is_finish = tmp_param.isFinishConstRef();
+                if (is_finish)
+                {
+                    return is_finish;
+                }
+
+                struct timespec placement_for_getrsp_end_timestamp = Util::getCurrentTimespec();
+                uint32_t placement_for_getrsp_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(placement_for_getrsp_end_timestamp, placement_for_getrsp_start_timestamp));
+                event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_PLACEMENT_FOR_GETRSP_EVENT_NAME, placement_for_getrsp_latency_us); // Add intermediate event if with event tracking
+            }
+        }
+
+        return is_finish;
     }
 
     // (2.1) Acquire write lock and block for MSI protocol
@@ -512,7 +612,6 @@ namespace covered
         // Trigger non-blocking placement notification if need hybrid fetching for non-blocking data fetching
         if (need_hybrid_fetching)
         {
-            assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME);
             NonblockNotifyForPlacementFuncParam tmp_param(key, value, best_placement_edgeset, skip_propagation_latency);
             tmp_edge_wrapper_ptr->constCustomFunc(NonblockNotifyForPlacementFuncParam::FUNCNAME, &tmp_param);
         }
@@ -685,7 +784,6 @@ namespace covered
             // Trigger non-blocking placement notification if need hybrid fetching for non-blocking data fetching
             if (need_hybrid_fetching)
             {
-                assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME);
                 NonblockNotifyForPlacementFuncParam tmp_param(key, value, best_placement_edgeset, skip_propagation_latency);
                 tmp_edge_wrapper_ptr->constCustomFunc(NonblockNotifyForPlacementFuncParam::FUNCNAME, &tmp_param);
             }
@@ -775,7 +873,6 @@ namespace covered
         checkPointers_();
         CacheServerBase* tmp_cache_server_ptr = cache_server_worker_param_ptr_->getCacheServerPtr();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
-        assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME);
 
         bool is_finish = false;
         

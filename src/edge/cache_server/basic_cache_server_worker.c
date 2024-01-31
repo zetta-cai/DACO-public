@@ -78,7 +78,7 @@ namespace covered
         return directory_lookup_request_ptr;
     }
 
-    void BasicCacheServerWorker::processRspToLookupBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, FastPathHint& fast_path_hint) const
+    void BasicCacheServerWorker::processRspToLookupBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, FastPathHint& fast_path_hint, const uint32_t& content_discovery_cross_edge_latency_us) const
     {
         assert(control_response_ptr != NULL);
         assert(control_response_ptr->getMessageType() == MessageType::kDirectoryLookupResponse);
@@ -92,6 +92,7 @@ namespace covered
         UNUSED(best_placement_edgeset);
         UNUSED(need_hybrid_fetching);
         UNUSED(fast_path_hint);
+        UNUSED(content_discovery_cross_edge_latency_us);
 
         return;
     }
@@ -111,7 +112,7 @@ namespace covered
         return redirected_get_request_ptr;
     }
 
-    void BasicCacheServerWorker::processRspToRedirectGet_(MessageBase* redirected_response_ptr, Value& value, Hitflag& hitflag) const
+    void BasicCacheServerWorker::processRspToRedirectGet_(MessageBase* redirected_response_ptr, Value& value, Hitflag& hitflag, const uint32_t& request_redirection_cross_edge_latency_us) const
     {
         assert(redirected_response_ptr != NULL);
         assert(redirected_response_ptr->getMessageType() == MessageType::kRedirectedGetResponse);
@@ -120,6 +121,22 @@ namespace covered
         const RedirectedGetResponse* const redirected_get_response_ptr = static_cast<const RedirectedGetResponse*>(redirected_response_ptr);
         value = redirected_get_response_ptr->getValue();
         hitflag = redirected_get_response_ptr->getHitflag();
+
+        UNUSED(request_redirection_cross_edge_latency_us);
+
+        return;
+    }
+    
+    // (1.3) Access cloud
+
+    void BasicCacheServerWorker::processRspToAccessCloud_(MessageBase* global_response_ptr, Value& value, const uint32_t& cloud_access_edge_cloud_latency) const
+    {
+        assert(global_response_ptr->getMessageType() == MessageType::kGlobalGetResponse);
+
+        const GlobalGetResponse* const global_get_response_ptr = static_cast<const GlobalGetResponse*>(global_response_ptr);
+        value = global_get_response_ptr->getValue();
+
+        UNUSED(cloud_access_edge_cloud_latency);
 
         return;
     }
@@ -144,6 +161,48 @@ namespace covered
         UNUSED(affect_victim_tracker); // ONLY used by COVERED
         
         return is_local_cached_and_invalid;
+    }
+
+    // (1.5) After getting value from local/neighbor/cloud
+
+    bool BasicCacheServerWorker::afterFetchingValue_(const Key& key, const Value& value, const bool& is_tracked_before_fetch_value, const bool& is_cooperative_cached, const Edgeset& best_placement_edgeset, const bool& need_hybrid_fetching, const FastPathHint& fast_path_hint, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
+    {
+        checkPointers_();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+
+        UNUSED(is_tracked_before_fetch_value);
+        UNUSED(is_cooperative_cached);
+        UNUSED(best_placement_edgeset);
+        UNUSED(need_hybrid_fetching);
+        UNUSED(fast_path_hint);
+
+        bool is_finish = false;
+
+        // Trigger independent cache admission for local/global cache miss if necessary
+        // NOTE: For COVERED, beacon node will tell the edge node whether to admit or not, w/o independent decision
+        struct timespec independent_admission_start_timestamp = Util::getCurrentTimespec();
+        is_finish = tryToTriggerIndependentAdmission_(key, value, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermediate responses if with event tracking
+        if (is_finish)
+        {
+            return is_finish;
+        }
+        struct timespec independent_admission_end_timestamp = Util::getCurrentTimespec();
+        uint32_t independent_admission_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(independent_admission_end_timestamp, independent_admission_start_timestamp));
+        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_INDEPENDENT_ADMISSION_EVENT_NAME, independent_admission_latency_us); // Add intermediate event if with event tracking
+
+        // Trigger best-guess placement/replacement
+        if (tmp_edge_wrapper_ptr->getCacheName() == Util::BESTGUESS_CACHE_NAME && !tmp_edge_wrapper_ptr->getEdgeCachePtr()->isLocalCached(key) && !is_cooperative_cached) // Local uncached and cooperative uncached (i.e., global uncached)
+        {
+            TriggerBestGuessPlacementFuncParam tmp_param(key, value, total_bandwidth_usage, event_list, skip_propagation_latency);
+            constCustomFunc(TriggerBestGuessPlacementFuncParam::FUNCNAME, &tmp_param);
+            is_finish = tmp_param.isFinish();
+            if (is_finish)
+            {
+                return is_finish;
+            }
+        }
+
+        return is_finish;
     }
 
     // (2.1) Acquire write lock and block for MSI protocol

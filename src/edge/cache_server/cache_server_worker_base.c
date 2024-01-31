@@ -225,7 +225,8 @@ namespace covered
         // Access local edge cache (current edge node is the closest edge node)
         struct timespec get_local_cache_start_timestamp = Util::getCurrentTimespec();
         const bool is_redirected = false;
-        bool is_local_cached_and_valid = tmp_edge_wrapper_ptr->getLocalEdgeCache_(tmp_key, is_redirected, tmp_value);
+        bool is_tracked_before_fetch_value = false;
+        bool is_local_cached_and_valid = tmp_edge_wrapper_ptr->getLocalEdgeCache_(tmp_key, is_redirected, tmp_value, is_tracked_before_fetch_value);
         if (is_local_cached_and_valid) // local cached and valid
         {
             hitflag = Hitflag::kLocalHit;
@@ -233,15 +234,6 @@ namespace covered
         struct timespec get_local_cache_end_timestamp = Util::getCurrentTimespec();
         uint32_t get_local_cache_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(get_local_cache_end_timestamp, get_local_cache_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_GET_LOCAL_CACHE_EVENT_NAME, get_local_cache_latency_us); // Add intermediate event if with event tracking
-
-        // Get is tracked by local uncached metadata before fetching value from neighbor/cloud (ONLY used by COVERED)
-        bool is_tracked_before_fetch_value = false;
-        if (tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME)
-        {
-            GetCollectedPopularityParam tmp_param(tmp_key);
-            tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param);
-            is_tracked_before_fetch_value = tmp_param.getCollectedPopularityConstRef().isTracked();
-        }
 
         #ifdef DEBUG_CACHE_SERVER_WORKER
         Util::dumpVariablesForDebug(base_instance_name_, 5, "acesss local edge cache;", "is_local_cached_and_valid:", Util::toString(is_local_cached_and_valid).c_str(), "keystr:", tmp_key.getKeystr().c_str());
@@ -281,19 +273,6 @@ namespace covered
             #endif
         }
 
-        // NOTE: hybrid fetching MUST NOT trigger fast-path placement due to key is already tracked by local uncached metadata (no matter sender is beacon or not)
-        if (need_hybrid_fetching)
-        {
-            assert(!fast_path_hint.isValid());
-        }
-        if (fast_path_hint.isValid())
-        {
-            assert(!need_hybrid_fetching);
-
-            // NOTE: key MUST NOT tracked by local uncached metadata before fetching value from neighbor/cloud
-            assert(!is_tracked_before_fetch_value);
-        }
-
         // Get data from cloud for global cache miss
         struct timespec get_cloud_start_timestamp = Util::getCurrentTimespec();
         if (!is_local_cached_and_valid && !is_cooperative_cached_and_valid) // (not cached or invalid) in both local and cooperative cache
@@ -308,26 +287,10 @@ namespace covered
         uint32_t get_cloud_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(get_cloud_end_timestamp, get_cloud_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_GET_CLOUD_EVENT_NAME, get_cloud_latency_us); // Add intermediate event if with event tracking
 
-        // Trigger non-blocking placement notification if need hybrid fetching for non-blocking data fetching (ONLY used by COVERED)
-        struct timespec trigger_placement_start_timestamp = Util::getCurrentTimespec();
-        if (tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME && need_hybrid_fetching)
-        {
-            TryToTriggerPlacementNotificationAfterHybridFetchFuncParam tmp_param(tmp_key, tmp_value, best_placement_edgeset, total_bandwidth_usage, event_list, skip_propagation_latency);
-            constCustomFunc(TryToTriggerPlacementNotificationAfterHybridFetchFuncParam::FUNCNAME, &tmp_param);
-            is_finish = tmp_param.isFinishConstRef();
-            if (is_finish) // Edge is NOT running now
-            {
-                return is_finish;
-            }
-        }
-        struct timespec trigger_placement_end_timestamp = Util::getCurrentTimespec();
-        uint32_t trigger_placement_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(trigger_placement_end_timestamp, trigger_placement_start_timestamp));
-        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_TRIGGER_PLACEMENT_EVENT_NAME, trigger_placement_latency_us); // Add intermediate event if with event tracking
-
         // Update invalid object of local edge cache if necessary
         struct timespec update_invalid_local_cache_start_timestamp = Util::getCurrentTimespec();
         const bool is_global_cached = (tmp_edge_wrapper_ptr->getEdgeCachePtr()->isLocalCached(tmp_key) || is_cooperative_cached);
-        bool is_local_cached_and_invalid = tryToUpdateInvalidLocalEdgeCache_(tmp_key, tmp_value, is_global_cached);
+        bool is_local_cached_and_invalid = tryToUpdateInvalidLocalEdgeCache_(tmp_key, tmp_value, is_global_cached); // NOTE: this may update local uncached metadata and may trigger fast-path placement calculation for COVERED
         if (!tmp_value.isDeleted() && is_local_cached_and_invalid) // Update may trigger eviction
         {
             is_finish = tmp_cache_server_ptr->evictForCapacity_(tmp_key, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermediate response if with event tracking
@@ -340,54 +303,11 @@ namespace covered
         uint32_t update_invalid_local_cache_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(update_invalid_local_cache_end_timestamp, update_invalid_local_cache_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_UPDATE_INVALID_LOCAL_CACHE_EVENT_NAME, update_invalid_local_cache_latency_us); // Add intermediate event if with event tracking
 
-        // Trigger independent cache admission for local/global cache miss if necessary
-        // NOTE: For COVERED, beacon node will tell the edge node whether to admit or not, w/o independent decision
-        struct timespec independent_admission_start_timestamp = Util::getCurrentTimespec();
-        is_finish = tryToTriggerIndependentAdmission_(tmp_key, tmp_value, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermediate responses if with event tracking
+        // After fetching value from local/neighbor/cloud
+        is_finish = afterFetchingValue_(tmp_key, tmp_value, is_tracked_before_fetch_value, is_cooperative_cached, best_placement_edgeset, need_hybrid_fetching, fast_path_hint, total_bandwidth_usage, event_list, skip_propagation_latency); // NOTE: MUST after tryToUpdateInvalidLocalEdgeCache_() for potential fast-path placement calculation for COVERED
         if (is_finish)
         {
             return is_finish;
-        }
-        struct timespec independent_admission_end_timestamp = Util::getCurrentTimespec();
-        uint32_t independent_admission_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(independent_admission_end_timestamp, independent_admission_start_timestamp));
-        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_INDEPENDENT_ADMISSION_EVENT_NAME, independent_admission_latency_us); // Add intermediate event if with event tracking
-
-        // TODO: Introduce a virtual function tryToTriggerSpecialPlacement for COVERED and BestGuess
-        // (1) Try to trigger cache placement for getrsp if w/ sender-is-beacon or fast-path placement, if key is local uncached and newly-tracked after fetching value from neighbor/cloud (ONLY used by COVERED);
-        if (tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME && !tmp_edge_wrapper_ptr->getEdgeCachePtr()->isLocalCached(tmp_key)) // Local uncached object
-        {
-            GetCollectedPopularityParam tmp_param(tmp_key);
-            tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param);
-            const CollectedPopularity tmp_collected_popularity_after_fetch_value = tmp_param.getCollectedPopularityRef();
-            const bool is_tracked_after_fetch_value = tmp_collected_popularity_after_fetch_value.isTracked();
-            if (!is_tracked_before_fetch_value && is_tracked_after_fetch_value) // Newly-tracked after fetching value from neighbor/cloud
-            {
-                struct timespec placement_for_getrsp_start_timestamp = Util::getCurrentTimespec();
-
-                // Try to trigger cache placement if necessary (sender is beacon, or beacon node provides fast-path hint)
-                TryToTriggerCachePlacementForGetrspFuncParam tmp_param(tmp_key, tmp_value, tmp_collected_popularity_after_fetch_value, fast_path_hint, is_cooperative_cached, total_bandwidth_usage, event_list, skip_propagation_latency);
-                constCustomFunc(TryToTriggerCachePlacementForGetrspFuncParam::FUNCNAME, &tmp_param);
-                is_finish = tmp_param.isFinishConstRef();
-                if (is_finish)
-                {
-                    return is_finish;
-                }
-
-                struct timespec placement_for_getrsp_end_timestamp = Util::getCurrentTimespec();
-                uint32_t placement_for_getrsp_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(placement_for_getrsp_end_timestamp, placement_for_getrsp_start_timestamp));
-                event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_PLACEMENT_FOR_GETRSP_EVENT_NAME, placement_for_getrsp_latency_us); // Add intermediate event if with event tracking
-            }
-        }
-        // (2) Trigger best-guess placement/replacement
-        else if (tmp_edge_wrapper_ptr->getCacheName() == Util::BESTGUESS_CACHE_NAME && !tmp_edge_wrapper_ptr->getEdgeCachePtr()->isLocalCached(tmp_key) && !is_cooperative_cached) // Local uncached and cooperative uncached (i.e., global uncached)
-        {
-            TriggerBestGuessPlacementFuncParam tmp_param(tmp_key, tmp_value, total_bandwidth_usage, event_list, skip_propagation_latency);
-            constCustomFunc(TriggerBestGuessPlacementFuncParam::FUNCNAME, &tmp_param);
-            is_finish = tmp_param.isFinish();
-            if (is_finish)
-            {
-                return is_finish;
-            }
         }
 
         struct timespec process_local_getreq_end_timestamp = Util::getCurrentTimespec();
@@ -429,19 +349,6 @@ namespace covered
 
         // Update remote address of edge_cache_server_worker_sendreq_tocloud_socket_client_ptr_ as the beacon node for the key if remote
         bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon(key);
-
-        // Update local/remote beacon access cnt for workload-aware probability tuning
-        if (tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME)
-        {
-            if (current_is_beacon) // Local beacon access
-            {
-                tmp_edge_wrapper_ptr->getWeightTunerRef().incrLocalBeaconAccessCnt();
-            }
-            else // Remote beacon access
-            {
-                tmp_edge_wrapper_ptr->getWeightTunerRef().incrRemoteBeaconAccessCnt();
-            }
-        }
 
         #ifdef DEBUG_CACHE_SERVER_WORKER
         Util::dumpVariablesForDebug(base_instance_name_, 4, "current_is_beacon:", Util::toString(current_is_beacon).c_str(), "keystr:", key.getKeystr().c_str());
@@ -639,16 +546,12 @@ namespace covered
                 {
                     tmp_content_discovery_cross_edge_latency_us += tmp_edge_wrapper_ptr->getPropagationLatencyCrossedgeUs();
                 }
-                if (tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME)
-                {
-                    tmp_edge_wrapper_ptr->getWeightTunerRef().updateEwmaCrossedgeLatency(tmp_content_discovery_cross_edge_latency_us);
-                }
 
                 // Receive the control response message successfully
                 MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
                 assert(control_response_ptr != NULL);
 
-                processRspToLookupBeaconDirectory_(control_response_ptr, is_being_written, is_valid_directory_exist, directory_info, best_placement_edgeset, need_hybrid_fetching, fast_path_hint);
+                processRspToLookupBeaconDirectory_(control_response_ptr, is_being_written, is_valid_directory_exist, directory_info, best_placement_edgeset, need_hybrid_fetching, fast_path_hint, tmp_content_discovery_cross_edge_latency_us);
 
                 // Update total bandwidth usage for received directory lookup response
                 BandwidthUsage directory_lookup_response_bandwidth_usage = control_response_ptr->getBandwidthUsageRef();
@@ -730,10 +633,6 @@ namespace covered
                 {
                     tmp_request_redirection_cross_edge_latency_us += tmp_edge_wrapper_ptr->getPropagationLatencyCrossedgeUs();
                 }
-                if (tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME)
-                {
-                    tmp_edge_wrapper_ptr->getWeightTunerRef().updateEwmaCrossedgeLatency(tmp_request_redirection_cross_edge_latency_us);
-                }
 
                 // Receive the redirected response message successfully
                 MessageBase* redirected_response_ptr = MessageBase::getResponseFromMsgPayload(redirected_response_msg_payload);
@@ -741,7 +640,7 @@ namespace covered
 
                 // Get value and hitflag from redirected response message
                 Hitflag hitflag = Hitflag::kGlobalMiss;
-                processRspToRedirectGet_(redirected_response_ptr, value, hitflag);
+                processRspToRedirectGet_(redirected_response_ptr, value, hitflag, tmp_request_redirection_cross_edge_latency_us);
 
                 // Judge if key is cooperative cached and valid in the neighbor edge node
                 if (hitflag == Hitflag::kCooperativeHit)
@@ -855,18 +754,13 @@ namespace covered
                 {
                     tmp_cloud_access_edge_cloud_latency_us += tmp_edge_wrapper_ptr->getPropagationLatencyEdgecloudUs();
                 }
-                if (tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME)
-                {
-                    tmp_edge_wrapper_ptr->getWeightTunerRef().updateEwmaEdgecloudLatency(tmp_cloud_access_edge_cloud_latency_us);
-                }
 
                 // Receive the global response message successfully
                 MessageBase* global_response_ptr = MessageBase::getResponseFromMsgPayload(global_response_msg_payload);
-                assert(global_response_ptr != NULL && global_response_ptr->getMessageType() == MessageType::kGlobalGetResponse);
+                assert(global_response_ptr != NULL);
                 
                 // Get value from global response message
-                const GlobalGetResponse* const global_get_response_ptr = static_cast<const GlobalGetResponse*>(global_response_ptr);
-                value = global_get_response_ptr->getValue();
+                processRspToAccessCloud_(global_response_ptr, value, tmp_cloud_access_edge_cloud_latency_us);
 
                 // Update total bandwidth usage for received global get response
                 BandwidthUsage global_response_bandwidth_usage = global_response_ptr->getBandwidthUsageRef();
@@ -875,7 +769,7 @@ namespace covered
                 total_bandwidth_usage.update(global_response_bandwidth_usage);
 
                 // Add events of intermediate response if with event tracking
-                event_list.addEvents(global_get_response_ptr->getEventListRef());
+                event_list.addEvents(global_response_ptr->getEventListRef());
 
                 #ifdef DEBUG_CACHE_SERVER_WORKER
                 Util::dumpVariablesForDebug(base_instance_name_, 5, "receive a global response", "type:", MessageBase::messageTypeToString(global_response_ptr->getMessageType()).c_str(), "keystr:", global_get_response_ptr->getKey().getKeystr().c_str());
@@ -1573,7 +1467,8 @@ namespace covered
 
         if (local_edge_cache_ptr->needIndependentAdmit(key, value)) // Trigger independent admission
         {
-            // NOTE: COVERED will NOT trigger any independent cache admission/eviction decision
+            // NOTE: BestGuess and COVERED will NOT trigger any independent cache admission/eviction decision
+            assert(tmp_edge_wrapper_ptr->getCacheName() != Util::BESTGUESS_CACHE_NAME);
             assert(tmp_edge_wrapper_ptr->getCacheName() != Util::COVERED_CACHE_NAME);
 
             #ifdef DEBUG_CACHE_SERVER_WORKER

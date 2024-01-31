@@ -24,8 +24,11 @@ namespace covered
     CacheServerPlacementProcessor::CacheServerPlacementProcessor(CacheServerProcessorParam* cache_server_placement_processor_param_ptr) : cache_server_placement_processor_param_ptr_(cache_server_placement_processor_param_ptr)
     {
         assert(cache_server_placement_processor_param_ptr != NULL);
-        const uint32_t edge_idx = cache_server_placement_processor_param_ptr->getCacheServerPtr()->getEdgeWrapperPtr()->getNodeIdx();
-        const uint32_t edgecnt = cache_server_placement_processor_param_ptr->getCacheServerPtr()->getEdgeWrapperPtr()->getNodeCnt();
+
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_placement_processor_param_ptr->getCacheServerPtr()->getEdgeWrapperPtr();
+        assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME);
+        const uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
+        const uint32_t edgecnt = tmp_edge_wrapper_ptr->getNodeCnt();
 
         // Differentiate cache servers of different edge nodes
         std::ostringstream oss;
@@ -182,7 +185,6 @@ namespace covered
         event_list.addEvent(Event::BG_EDGE_CACHE_SERVER_PLACEMENT_PROCESSOR_PLACEMENT_NOTIFY_EVENT_NAME, placement_notify_latency_us); // Add placement notify event if with event tracking
 
         // Get background eventlist and bandwidth usage to update background counter for beacon server
-        assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME);
         tmp_edge_wrapper_ptr->getEdgeBackgroundCounterForBeaconServerRef().updateBandwidthUsgae(total_bandwidth_usage);
         tmp_edge_wrapper_ptr->getEdgeBackgroundCounterForBeaconServerRef().addEvents(event_list);
 
@@ -223,7 +225,6 @@ namespace covered
         event_list.addEvent(Event::BG_EDGE_CACHE_SERVER_PLACEMENT_PROCESSOR_LOCAL_CACHE_ADMISSION_EVENT_NAME, admission_latency_us); // Add placement notify event if with event tracking
 
         // Get background eventlist and bandwidth usage to update background counter for beacon server
-        assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME);
         tmp_edge_wrapper_ptr->getEdgeBackgroundCounterForBeaconServerRef().updateBandwidthUsgae(total_bandwidth_usage);
         tmp_edge_wrapper_ptr->getEdgeBackgroundCounterForBeaconServerRef().addEvents(event_list);
 
