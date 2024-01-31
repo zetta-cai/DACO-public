@@ -179,7 +179,8 @@ namespace covered
         bool is_finish = false;
 
         // Trigger independent cache admission for local/global cache miss if necessary
-        // NOTE: For COVERED, beacon node will tell the edge node whether to admit or not, w/o independent decision
+        // NOTE: for COVERED, beacon node will tell the edge node whether to admit or not, w/o independent decision
+        // NOTE: for BestGuess, the closest node will trigger best-guess placement via beacon node, w/o independent decision
         struct timespec independent_admission_start_timestamp = Util::getCurrentTimespec();
         is_finish = tryToTriggerIndependentAdmission_(key, value, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermediate responses if with event tracking
         if (is_finish)
