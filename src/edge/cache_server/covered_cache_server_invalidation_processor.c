@@ -55,7 +55,7 @@ namespace covered
         return;
     }
 
-    MessageBase* CacheServerInvalidationProcessorBase::getRspForInvalidation_(MessageBase* control_request_ptr, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list)
+    MessageBase* CoveredCacheServerInvalidationProcessor::getRspForInvalidation_(MessageBase* control_request_ptr, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list)
     {
         checkPointers_();
         CacheServerBase* tmp_cache_server_ptr = cache_server_invalidation_processor_param_ptr_->getCacheServerPtr();

@@ -26,7 +26,6 @@ namespace covered
         assert(cache_server_metadata_update_processor_param_ptr != NULL);
         
         EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_metadata_update_processor_param_ptr->getCacheServerPtr()->getEdgeWrapperPtr();
-        assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME);
 
         // Differentiate cache servers of different edge nodes
         std::ostringstream oss;
@@ -98,6 +97,8 @@ namespace covered
         EdgeWrapperBase* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
         // CooperationWrapperBase* tmp_cooperation_wrapper_ptr = tmp_edge_wrapper_ptr->getCooperationWrapperPtr();
         // CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
+
+        assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME);
 
         bool is_finish = false;
         BandwidthUsage total_bandwidth_usage;

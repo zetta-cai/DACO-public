@@ -6,7 +6,7 @@
 #include "common/config.h"
 #include "common/thread_launcher.h"
 #include "common/util.h"
-#include "edge/cache_server/cache_server_invalidation_processor.h"
+#include "edge/cache_server/cache_server_invalidation_processor_base.h"
 #include "edge/cache_server/cache_server_metadata_update_processor.h"
 #include "edge/cache_server/cache_server_placement_processor.h"
 #include "edge/cache_server/cache_server_redirection_processor_base.h"
@@ -246,7 +246,7 @@ namespace covered
         }
 
         // Launch cache server invalidation processor
-        //pthread_returncode = pthread_create(&cache_server_invalidation_processor_thread, NULL, CacheServerInvalidationProcessor::launchCacheServerInvalidationProcessor, (void*)(cache_server_invalidation_processor_param_ptr_));
+        //pthread_returncode = pthread_create(&cache_server_invalidation_processor_thread, NULL, CacheServerInvalidationProcessorBase::launchCacheServerInvalidationProcessor, (void*)(cache_server_invalidation_processor_param_ptr_));
         // if (pthread_returncode != 0)
         // {
         //     std::ostringstream oss;
@@ -255,7 +255,7 @@ namespace covered
         //     exit(1);
         // }
         tmp_thread_name = "edge-cache-server-invalidation-processor-" + std::to_string(edge_idx);
-        ThreadLauncher::pthreadCreateLowPriority(tmp_thread_name, &cache_server_invalidation_processor_thread, CacheServerInvalidationProcessor::launchCacheServerInvalidationProcessor, (void*)(cache_server_invalidation_processor_param_ptr_));
+        ThreadLauncher::pthreadCreateLowPriority(tmp_thread_name, &cache_server_invalidation_processor_thread, CacheServerInvalidationProcessorBase::launchCacheServerInvalidationProcessor, (void*)(cache_server_invalidation_processor_param_ptr_));
 
         // Launch cache server metadata update processor
         //pthread_returncode = pthread_create(&cache_server_metadata_update_processor_thread, NULL, CacheServerMetadataUpdateProcessor::launchCacheServerMetadataUpdateProcessor, (void*)(cache_server_metadata_update_processor_param_ptr_));

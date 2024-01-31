@@ -26,7 +26,6 @@ namespace covered
         assert(cache_server_placement_processor_param_ptr != NULL);
 
         EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_placement_processor_param_ptr->getCacheServerPtr()->getEdgeWrapperPtr();
-        assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME);
         const uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         const uint32_t edgecnt = tmp_edge_wrapper_ptr->getNodeCnt();
 
@@ -128,6 +127,8 @@ namespace covered
         EdgeWrapperBase* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
         // CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
+        assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME);
+
         bool is_finish = false;
         BandwidthUsage total_bandwidth_usage;
         EventList event_list;
@@ -196,6 +197,8 @@ namespace covered
         checkPointers_();
         CacheServerBase* tmp_cache_server_ptr = cache_server_placement_processor_param_ptr_->getCacheServerPtr();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
+
+        assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME);
 
         bool is_finish = false;
         BandwidthUsage total_bandwidth_usage;
