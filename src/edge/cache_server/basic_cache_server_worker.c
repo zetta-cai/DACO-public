@@ -4,6 +4,7 @@
 #include <sstream>
 
 #include "cache/basic_cache_custom_func_param.h"
+#include "cooperation/basic_cooperation_custom_func_param.h"
 #include "edge/basic_edge_custom_func_param.h"
 #include "message/control_message.h"
 #include "message/data_message.h"
@@ -397,14 +398,103 @@ namespace covered
         EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
         CacheWrapper* tmp_edge_cache_ptr = tmp_edge_wrapper_ptr->getEdgeCachePtr();
 
+        bool is_finish = false;
+
         // Get placement edge idx with the approximate global LRU victim
-        GetPlacementEdgeIdxParam tmp_param;
-        tmp_edge_cache_ptr->constCustomFunc(GetPlacementEdgeIdxParam::FUNCNAME, &tmp_param);
-        const uint32_t& placement_edge_idx = tmp_param.getPlacementEdgeIdxConstRef();
+        GetPlacementEdgeIdxParam tmp_param_for_placementidx;
+        tmp_edge_cache_ptr->constCustomFunc(GetPlacementEdgeIdxParam::FUNCNAME, &tmp_param_for_placementidx);
+        const uint32_t& placement_edge_idx = tmp_param_for_placementidx.getPlacementEdgeIdxConstRef();
         assert(placement_edge_idx < tmp_edge_wrapper_ptr->getNodeCnt());
 
-        // TODO: END HERE
+        // Get trigger flag from local/remote beacon node if this is the first cache miss of the globally uncached object
+        bool is_triggered = false;
+        bool is_finish = getBestGuessTriggerFlag_(key, value, placement_edge_idx, skip_propagation_latency, is_triggered);
+        if (is_finish)
+        {
+            return is_finish;
+        }
 
-        return false;
+        return is_finish;
+    }
+
+    bool BasicCacheServerWorker::getBestGuessTriggerFlag_(const Key& key, const Value& value, const uint32_t& placement_edge_idx, const bool& skip_propagation_latency, bool& is_triggered) const
+    {
+        checkPointers_();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        CacheWrapper* tmp_edge_cache_ptr = tmp_edge_wrapper_ptr->getEdgeCachePtr();
+
+        bool is_finish = false;
+
+        const uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
+        const uint32_t dst_beacon_edge_idx_to_trigger_placement = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
+        if (dst_beacon_edge_idx_to_trigger_placement == current_edge_idx) // Sender is beacon (get local trigger flag)
+        {
+            // Try to preserve invalid dirinfo in directory table for trigger flag
+            PreserveDirectoryTableIfGlobalUncachedFuncParam tmp_param_for_preserve(key, DirectoryInfo(placement_edge_idx));
+            tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->customFunc(PreserveDirectoryTableIfGlobalUncachedFuncParam::FUNCNAME, &tmp_param_for_preserve);
+            is_triggered = tmp_param_for_preserve.isSuccessfulPreservationConstRef();
+        }
+        else // Sender is not beacon (get beacon trigger flag)
+        {
+            // Get local victim vtime for vtime synchronization
+            GetLocalVictimVtimeFuncParam tmp_param_for_vtimesync;
+            tmp_edge_cache_ptr->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
+            const uint64_t& local_victim_vtime = tmp_param_for_vtimesync.getLocalVictimVtimeRef();
+
+            // Prepare destination address of beacon server
+            NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = tmp_edge_wrapper_ptr->getBeaconDstaddr_(dst_beacon_edge_idx_to_trigger_placement);
+
+            while (true) // Timeout-and-retry mechanism
+            {
+                // Prepare placement trigger request
+                MessageBase* tmp_request_ptr = new BestGuessPlacementTriggerRequest(key, value, BestGuessPlaceinfo(placement_edge_idx), BestGuessSyncinfo(local_victim_vtime), current_edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+                assert(tmp_request_ptr != NULL);
+
+                // Push the control request into edge-to-edge propagation simulator to the beacon node
+                bool is_successful = tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(tmp_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
+                assert(is_successful);
+
+                // NOTE: control_request_ptr will be released by edge-to-edge propagation simulator
+                tmp_request_ptr = NULL;
+
+                // Wait for the corresponding control response from the beacon edge node
+                DynamicArray control_response_msg_payload;
+                bool is_timeout = edge_cache_server_worker_recvrsp_socket_server_ptr_->recv(control_response_msg_payload);
+                if (is_timeout)
+                {
+                    if (!tmp_edge_wrapper_ptr->isNodeRunning())
+                    {
+                        is_finish = true; // Edge is NOT running
+                        break; // Break from while (true)
+                    }
+                    else
+                    {
+                        std::ostringstream oss;
+                        oss << "edge timeout to wait for BestGuessPlacementTriggerResponse for key " << key.getKeystr();
+                        Util::dumpWarnMsg(instance_name_, oss.str());
+                        continue; // Resend the control request message
+                    }
+                } // End of (is_timeout == true)
+                else
+                {
+                    // Receive the control response message successfully
+                    MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
+                    assert(control_response_ptr != NULL);
+
+                    // Get trigger flag
+                    assert(control_response_ptr->getMessageType() == MessageType::kBestGuessPlacementTriggerResponse);
+                    BestGuessPlacementTriggerResponse* best_guess_placement_trigger_response_ptr = static_cast<BestGuessPlacementTriggerResponse*>(control_response_ptr);
+                    is_triggered = best_guess_placement_trigger_response_ptr->isTriggered();
+
+                    // Release the control response message
+                    delete control_response_ptr;
+                    control_response_ptr = NULL;
+
+                    break;
+                } // End of (is_timeout == false)
+            } // End of while (true)
+        } // End of (sender is not beacon)
+
+        return is_finish;
     }
 }

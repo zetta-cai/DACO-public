@@ -98,6 +98,7 @@ namespace covered
         kCoveredMetadataUpdateRequest,
         // ONLY used by BestGuess
         kBestGuessPlacementTriggerRequest,
+        kBestGuessPlacementTriggerResponse,
     };
 
     enum Hitflag

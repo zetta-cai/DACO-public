@@ -76,10 +76,6 @@ namespace covered
         // Return if edge node is finished
         virtual bool processOtherControlRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr) = 0;
 
-        // (4) Embed background events and bandwidth usage
-
-        void embedBackgroundCounterIfNotEmpty_(BandwidthUsage& bandwidth_usage, EventList& event_list) const;
-
         // (5) Cache-method-specific custom functions
 
         virtual void customFunc(const std::string& funcname, EdgeCustomFuncParamBase* func_param_ptr) = 0;
@@ -89,7 +85,12 @@ namespace covered
         // Const variable
         std::string base_instance_name_;
     protected:
+        // (4) Embed background events and bandwidth usage
+
+        void embedBackgroundCounterIfNotEmpty_(BandwidthUsage& bandwidth_usage, EventList& event_list) const;
+
         // (6) Utility functions
+        
         void checkPointers_() const;
 
         // Member variables

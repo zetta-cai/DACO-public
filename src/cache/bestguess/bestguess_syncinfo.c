@@ -17,6 +17,11 @@ namespace covered
     BestGuessSyncinfo::~BestGuessSyncinfo()
     {}
 
+    uint64_t BestGuessSyncinfo::getVtime() const
+    {
+        return vtime_;
+    }
+
     uint32_t BestGuessSyncinfo::getSyncinfoPayloadSize() const
     {
         return sizeof(uint64_t);

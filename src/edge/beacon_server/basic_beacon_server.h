@@ -45,6 +45,7 @@ namespace covered
         // (5) Cache-method-specific custom functions
 
         virtual void customFunc(const std::string& funcname, EdgeCustomFuncParamBase* func_param_ptr) override;
+        bool processPlacementTriggerRequestForBestGuess_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr);
 
         // Member variables
 

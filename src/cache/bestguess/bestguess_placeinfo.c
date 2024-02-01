@@ -17,6 +17,11 @@ namespace covered
     BestGuessPlaceinfo::~BestGuessPlaceinfo()
     {}
 
+    uint32_t BestGuessPlaceinfo::getPlacementEdgeIdx() const
+    {
+        return placement_edge_idx_;
+    }
+
     uint32_t BestGuessPlaceinfo::getPlaceinfoPayloadSize() const
     {
         return sizeof(uint32_t);

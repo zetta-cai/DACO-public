@@ -20,6 +20,8 @@ namespace covered
         BestGuessPlaceinfo(const uint32_t& placement_edge_idx);
         ~BestGuessPlaceinfo();
 
+        uint32_t getPlacementEdgeIdx() const;
+
         uint32_t getPlaceinfoPayloadSize() const;
         uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position) const;
         uint32_t deserialize(const DynamicArray& msg_payload, const uint32_t& position);

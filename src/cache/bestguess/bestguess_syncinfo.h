@@ -20,6 +20,8 @@ namespace covered
         BestGuessSyncinfo(const uint64_t& vtime);
         ~BestGuessSyncinfo();
 
+        uint64_t getVtime() const;
+
         uint32_t getSyncinfoPayloadSize() const;
         uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position) const;
         uint32_t deserialize(const DynamicArray& msg_payload, const uint32_t& position);

@@ -37,6 +37,7 @@ namespace covered
 
         // (0) Cache-method-specific custom functions
 
+        virtual void customFunc(const std::string& funcname, CooperationCustomFuncParamBase* func_param_ptr) = 0;
         virtual void constCustomFunc(const std::string& funcname, CooperationCustomFuncParamBase* func_param_ptr) const = 0;
 
         // (1) Locate beacon edge node
@@ -54,7 +55,7 @@ namespace covered
         // Return whether the key is cached by a local/neighbor edge node (even if invalid temporarily)
         bool lookupDirectoryTableByCacheServer(const Key& key, const uint32_t& source_edge_idx, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, bool& is_source_cached) const; // Check local directory information (NOTE: find a non-source valid directory info if any)
         bool lookupDirectoryTableByBeaconServer(const Key& key, const uint32_t& source_edge_idx, const NetworkAddr& cache_server_worker_recvreq_dst_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, bool& is_source_cached); // Check local directory information (NOTE: find a non-source valid directory info if any)
-        bool updateDirectoryTable(const Key& key, const uint32_t& source_edge_idx, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, bool& is_neighbor_cached, MetadataUpdateRequirement& metadata_update_requirement); // Update local directory information
+        bool updateDirectoryTable(const Key& key, const uint32_t& source_edge_idx, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, bool& is_neighbor_cached, MetadataUpdateRequirement& metadata_update_requirement); // Update local directory information (return if global cached after the update)
 
         LockResult acquireLocalWritelockByCacheServer(const Key& key, const uint32_t& source_edge_idx, DirinfoSet& all_dirinfo, bool& is_source_cached);
         LockResult acquireLocalWritelockByBeaconServer(const Key& key, const uint32_t& source_edge_idx, const NetworkAddr& cache_server_worker_recvreq_dst_addr, DirinfoSet& all_dirinfo, bool& is_source_cached);

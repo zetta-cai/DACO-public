@@ -328,6 +328,11 @@ namespace covered
                 message_type_str = "kBestGuessPlacementTriggerRequest";
                 break;
             }
+            case MessageType::kBestGuessPlacementTriggerResponse:
+            {
+                message_type_str = "kBestGuessPlacementTriggerResponse";
+                break;
+            }
             default:
             {
                 message_type_str = std::to_string(static_cast<uint32_t>(message_type));
@@ -847,6 +852,11 @@ namespace covered
                 message_ptr = new CoveredFastpathDirectoryLookupResponse(msg_payload);
                 break;
             }
+            case MessageType::kBestGuessPlacementTriggerResponse:
+            {
+                message_ptr = new BestGuessPlacementTriggerResponse(msg_payload);
+                break;
+            }
             default:
             {
                 std::ostringstream oss;
@@ -1152,6 +1162,11 @@ namespace covered
             const BestGuessPlacementTriggerRequest* const best_guess_placement_trigger_request_ptr = static_cast<const BestGuessPlacementTriggerRequest*>(message_ptr);
             tmp_key = best_guess_placement_trigger_request_ptr->getKey();
         }
+        else if (message_ptr->message_type_ == MessageType::kBestGuessPlacementTriggerResponse)
+        {
+            const BestGuessPlacementTriggerResponse* const best_guess_placement_trigger_response_ptr = static_cast<const BestGuessPlacementTriggerResponse*>(message_ptr);
+            tmp_key = best_guess_placement_trigger_response_ptr->getKey();
+        }
         else
         {
             std::ostringstream oss;
@@ -1447,7 +1462,7 @@ namespace covered
     bool MessageBase::isCooperationControlResponse() const
     {
         checkIsValid_();
-        if (message_type_ == MessageType::kAcquireWritelockResponse || message_type_ == MessageType::kDirectoryLookupResponse || message_type_ == MessageType::kDirectoryUpdateResponse || message_type_ == MessageType::kFinishBlockResponse || message_type_ == MessageType::kInvalidationResponse || message_type_ == MessageType::kReleaseWritelockResponse || message_type_ == MessageType::kCoveredDirectoryLookupResponse || message_type_ == MessageType::kCoveredDirectoryUpdateResponse || message_type_ == MessageType::kCoveredAcquireWritelockResponse || message_type_ == MessageType::kCoveredReleaseWritelockResponse || message_type_ == MessageType::kCoveredPlacementDirectoryUpdateResponse || message_type_ == MessageType::kCoveredVictimFetchResponse || message_type_ == MessageType::kCoveredPlacementDirectoryLookupResponse || message_type_ == MessageType::kCoveredPlacementDirectoryEvictResponse || message_type_ == MessageType::kCoveredPlacementReleaseWritelockResponse || message_type_ == MessageType::kCoveredPlacementHybridFetchedResponse || message_type_ == MessageType::kCoveredPlacementDirectoryAdmitResponse || message_type_ == MessageType::kCoveredInvalidationResponse || message_type_ == MessageType::kCoveredFinishBlockResponse || message_type_ == MessageType::kCoveredFastDirectoryLookupResponse)
+        if (message_type_ == MessageType::kAcquireWritelockResponse || message_type_ == MessageType::kDirectoryLookupResponse || message_type_ == MessageType::kDirectoryUpdateResponse || message_type_ == MessageType::kFinishBlockResponse || message_type_ == MessageType::kInvalidationResponse || message_type_ == MessageType::kReleaseWritelockResponse || message_type_ == MessageType::kCoveredDirectoryLookupResponse || message_type_ == MessageType::kCoveredDirectoryUpdateResponse || message_type_ == MessageType::kCoveredAcquireWritelockResponse || message_type_ == MessageType::kCoveredReleaseWritelockResponse || message_type_ == MessageType::kCoveredPlacementDirectoryUpdateResponse || message_type_ == MessageType::kCoveredVictimFetchResponse || message_type_ == MessageType::kCoveredPlacementDirectoryLookupResponse || message_type_ == MessageType::kCoveredPlacementDirectoryEvictResponse || message_type_ == MessageType::kCoveredPlacementReleaseWritelockResponse || message_type_ == MessageType::kCoveredPlacementHybridFetchedResponse || message_type_ == MessageType::kCoveredPlacementDirectoryAdmitResponse || message_type_ == MessageType::kCoveredInvalidationResponse || message_type_ == MessageType::kCoveredFinishBlockResponse || message_type_ == MessageType::kCoveredFastDirectoryLookupResponse || message_type_ == MessageType::kBestGuessPlacementTriggerResponse)
         {
             return true;
         }

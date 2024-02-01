@@ -23,6 +23,16 @@ namespace covered
 
     // (0) Cache-method-specific custom functions
 
+    void CoveredCooperationWrapper::customFunc(const std::string& funcname, CooperationCustomFuncParamBase* func_param_ptr)
+    {
+        std::ostringstream oss;
+        oss << "Unknown custom function name: " << funcname;
+        Util::dumpErrorMsg(instance_name_, oss.str());
+        exit(1);
+
+        return;
+    }
+
     void CoveredCooperationWrapper::constCustomFunc(const std::string& funcname, CooperationCustomFuncParamBase* func_param_ptr) const
     {
         checkPointers_();

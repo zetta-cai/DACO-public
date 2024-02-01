@@ -24,6 +24,7 @@ namespace covered
 
         // (0) Cache-method-specific custom functions
 
+        virtual void customFunc(const std::string& funcname, CooperationCustomFuncParamBase* func_param_ptr) override;
         virtual void constCustomFunc(const std::string& funcname, CooperationCustomFuncParamBase* func_param_ptr) const override;
 
         // COVERED-specific internal functions

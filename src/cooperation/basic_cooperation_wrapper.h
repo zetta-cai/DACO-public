@@ -23,9 +23,12 @@ namespace covered
 
         // (0) Cache-method-specific custom functions
 
+        virtual void customFunc(const std::string& funcname, CooperationCustomFuncParamBase* func_param_ptr) override;
         virtual void constCustomFunc(const std::string& funcname, CooperationCustomFuncParamBase* func_param_ptr) const override;
     private:
         static const std::string kClassName;
+
+        bool preserveDirectoryTableIfGlobalUncachedInternal_(const Key& key, const DirectoryInfo& directory_info); // Preserve local directory information to avoid duplicate updates (return if with successful preservation)
 
         std::string instance_name_;
     };

@@ -3,8 +3,10 @@
 #include <assert.h>
 #include <sstream>
 
+#include "cache/basic_cache_custom_func_param.h"
 #include "common/config.h"
 #include "common/util.h"
+#include "cooperation/basic_cooperation_custom_func_param.h"
 #include "event/event.h"
 #include "event/event_list.h"
 #include "message/control_message.h"
@@ -233,5 +235,57 @@ namespace covered
         exit(1);
 
         return;
+    }
+
+    bool BasicBeaconServer::processPlacementTriggerRequestForBestGuess_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr)
+    {
+        assert(control_request_ptr != NULL);
+        assert(edge_cache_server_worker_recvrsp_dst_addr.isValidAddr());
+
+        checkPointers_();
+
+        assert(edge_wrapper_ptr_->getCacheName() == Util::BESTGUESS_CACHE_NAME);
+
+        bool is_finish = false;
+        BandwidthUsage total_bandwidth_usage;
+        EventList event_list;
+
+        // Update total bandwidth usage for received placement trigger request
+        uint32_t cross_edge_placement_trigger_req_bandwidth_bytes = control_request_ptr->getMsgPayloadSize();
+        total_bandwidth_usage.update(BandwidthUsage(0, cross_edge_placement_trigger_req_bandwidth_bytes, 0, 0, 1, 0));
+
+        // Process received request
+        assert(control_request_ptr->getMessageType() == MessageType::kBestGuessPlacementTriggerRequest);
+        const BestGuessPlacementTriggerRequest* const best_guess_placement_trigger_request_ptr = static_cast<BestGuessPlacementTriggerRequest*>(control_request_ptr);
+        const Key key = best_guess_placement_trigger_request_ptr->getKey();
+        const Value value = best_guess_placement_trigger_request_ptr->getValue();
+        const BestGuessPlaceinfo placeinfo = best_guess_placement_trigger_request_ptr->getPlaceinfo();
+        const BestGuessSyncinfo syncinfo = best_guess_placement_trigger_request_ptr->getSyncinfo();
+        const bool skip_propagation_latency = best_guess_placement_trigger_request_ptr->isSkipPropagationLatency();
+
+        // Try to preserve invalid dirinfo in directory table for trigger flag
+        PreserveDirectoryTableIfGlobalUncachedFuncParam tmp_param_for_preserve(key, DirectoryInfo(placeinfo.getPlacementEdgeIdx()));
+        edge_wrapper_ptr_->getCooperationWrapperPtr()->customFunc(PreserveDirectoryTableIfGlobalUncachedFuncParam::FUNCNAME, &tmp_param_for_preserve);
+        const bool is_triggered = tmp_param_for_preserve.isSuccessfulPreservationConstRef();
+
+        embedBackgroundCounterIfNotEmpty_(total_bandwidth_usage, event_list); // Embed background events/bandwidth if any into control response message
+
+        // Get local victim vtime for vtime synchronization
+        GetLocalVictimVtimeFuncParam tmp_param_for_vtimesync;
+        edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
+        const uint64_t& local_victim_vtime = tmp_param_for_vtimesync.getLocalVictimVtimeRef();
+
+        // Generate response
+        BestGuessPlacementTriggerResponse* best_guess_placement_trigger_response_ptr = new BestGuessPlacementTriggerResponse(key, is_triggered, BestGuessSyncinfo(local_victim_vtime), edge_wrapper_ptr_->getNodeIdx(), edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        assert(best_guess_placement_trigger_response_ptr != NULL);
+
+        // Push the response into edge-to-edge propagation simulator to cache server worker
+        bool is_successful = edge_wrapper_ptr_->getEdgeToedgePropagationSimulatorParamPtr()->push(best_guess_placement_trigger_response_ptr, edge_cache_server_worker_recvrsp_dst_addr);
+        assert(is_successful);
+
+        // NOTE: best_guess_placement_trigger_response_ptr will be released by edge-to-edge propagation simulator
+        best_guess_placement_trigger_response_ptr = NULL;
+
+        return is_finish;
     }
 }
