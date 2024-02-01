@@ -42,14 +42,6 @@ namespace covered
         return NULL;
     }
 
-    BackgroundCounter& BasicEdgeWrapper::getEdgeBackgroundCounterForBeaconServerRef()
-    {
-        std::ostringstream oss;
-        oss << "should NOT invoke getEdgeBackgroundCounterForBeaconServerRef() for baselines!";
-        Util::dumpErrorMsg(instance_name_, oss.str());
-        exit(1);
-    }
-
     WeightTuner& BasicEdgeWrapper::getWeightTunerRef()
     {
         std::ostringstream oss;

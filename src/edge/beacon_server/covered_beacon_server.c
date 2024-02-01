@@ -64,8 +64,6 @@ namespace covered
         edge_wrapper_ptr_->constCustomFunc(AfterDirectoryLookupHelperFuncParam::FUNCNAME, &tmp_param_after_dirlookup);
         is_finish = tmp_param_after_dirlookup.isFinishConstRef();
 
-        embedBackgroundCounterIfNotEmpty_(total_bandwidth_usage, event_list); // Embed background events/bandwidth if any into control response message
-
         return is_finish;
     }
 
@@ -93,7 +91,7 @@ namespace covered
             // NOTE: if need_hybrid_fetching == true, key MUST be tracked by sender local uncached metadata and hence NO need fast-path single-placement calculation
 
             // NOTE: beacon node uses best_placement_edgeset to tell the closest edge node if to perform hybrid data fetching and trigger non-blocking placement notification
-            covered_directory_lookup_response_ptr = new CoveredPlacementDirectoryLookupResponse(tmp_key, is_being_written, is_valid_directory_exist, directory_info, victim_syncset, best_placement_edgeset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            covered_directory_lookup_response_ptr = new CoveredFghybridDirectoryLookupResponse(tmp_key, is_being_written, is_valid_directory_exist, directory_info, victim_syncset, best_placement_edgeset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         }
         else // Normal directory lookup response
         {
@@ -104,7 +102,7 @@ namespace covered
             }
             else // Corresponding local getreq may be the first cache miss w/o objsize -> need fast-path placement
             {
-                covered_directory_lookup_response_ptr = new CoveredFastDirectoryLookupResponse(tmp_key, is_being_written, is_valid_directory_exist, directory_info, victim_syncset, fast_path_hint, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+                covered_directory_lookup_response_ptr = new CoveredFastpathDirectoryLookupResponse(tmp_key, is_being_written, is_valid_directory_exist, directory_info, victim_syncset, fast_path_hint, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
             }
             #else
             covered_directory_lookup_response_ptr = new CoveredDirectoryLookupResponse(tmp_key, is_being_written, is_valid_directory_exist, directory_info, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
@@ -140,7 +138,7 @@ namespace covered
         if (message_type == MessageType::kCoveredPlacementDirectoryUpdateRequest) // Background directory updates w/o hybrid data fetching for COVERED
         {
             // Get key, is_admit, directory info, victim syncset, and collected popularity (if any) from directory update request
-            const CoveredPlacementDirectoryUpdateRequest* const covered_placement_directory_update_request_ptr = static_cast<const CoveredPlacementDirectoryUpdateRequest*>(control_request_ptr);
+            const CoveredBgplaceDirectoryUpdateRequest* const covered_placement_directory_update_request_ptr = static_cast<const CoveredBgplaceDirectoryUpdateRequest*>(control_request_ptr);
             tmp_key = covered_placement_directory_update_request_ptr->getKey();
             neighbor_victim_syncset = covered_placement_directory_update_request_ptr->getVictimSyncsetRef();
 
@@ -156,7 +154,7 @@ namespace covered
         }
         else if (message_type == kCoveredPlacementHybridFetchedRequest) // Foreground request to notify the result of excluding-sender hybrid data fetching for COVERED (NO directory update)
         {
-            const CoveredPlacementHybridFetchedRequest* const covered_placement_hybrid_fetched_request_ptr = static_cast<const CoveredPlacementHybridFetchedRequest*>(control_request_ptr);
+            const CoveredFghybridHybridFetchedRequest* const covered_placement_hybrid_fetched_request_ptr = static_cast<const CoveredFghybridHybridFetchedRequest*>(control_request_ptr);
             tmp_key = covered_placement_hybrid_fetched_request_ptr->getKey();
             neighbor_victim_syncset = covered_placement_hybrid_fetched_request_ptr->getVictimSyncsetRef();
 
@@ -169,7 +167,7 @@ namespace covered
         else if (message_type == MessageType::kCoveredPlacementDirectoryAdmitRequest) // Foreground directory admission with including-sender hybrid data fetching for COVERED
         {
             // Get key, is_admit, directory info, victim syncset, and collected popularity (if any) from directory update request
-            const CoveredPlacementDirectoryAdmitRequest* const covered_placement_directory_admit_request_ptr = static_cast<const CoveredPlacementDirectoryAdmitRequest*>(control_request_ptr);
+            const CoveredFghybridDirectoryAdmitRequest* const covered_placement_directory_admit_request_ptr = static_cast<const CoveredFghybridDirectoryAdmitRequest*>(control_request_ptr);
             tmp_key = covered_placement_directory_admit_request_ptr->getKey();
             neighbor_victim_syncset = covered_placement_directory_admit_request_ptr->getVictimSyncsetRef();
 
@@ -236,9 +234,9 @@ namespace covered
             {
                 assert(!with_extra_hybrid_fetching_result); // NOTE: hybrid data fetching result must be embedded into directory admission instead of eviction to avoid recursive hybrid data fetching
 
-                // NOTE: we will DISABLE recursive cache placement for CoveredPlacementDirectoryUpdateRequest
-                // NOTE: CoveredPlacementHybridFetchedRequest will NOT arrive here due to is_directory_update = false; CoveredPlacementDirectoryAdmitRequest will also NOT arrive here due to is_admit = true
-                // NOTE: NOT DISABLE cache placement for CoveredDirectoryUpdateRequest, as foreground directory eviction is allowed to perform placement calculation (while local/remote placement notification must issue CoveredPlacementDirectoryUpdateRequest for background directory eviction to avoid recursive cache placement)
+                // NOTE: we will DISABLE recursive cache placement for CoveredBgplaceDirectoryUpdateRequest
+                // NOTE: CoveredFghybridHybridFetchedRequest will NOT arrive here due to is_directory_update = false; CoveredFghybridDirectoryAdmitRequest will also NOT arrive here due to is_admit = true
+                // NOTE: NOT DISABLE cache placement for CoveredDirectoryUpdateRequest, as foreground directory eviction is allowed to perform placement calculation (while local/remote placement notification must issue CoveredBgplaceDirectoryUpdateRequest for background directory eviction to avoid recursive cache placement)
                 const bool is_background = control_request_ptr->isBackgroundRequest();
 
                 // Issue metadata update request if necessary, update victim dirinfo, assert NO local uncached popularity, and perform selective popularity aggregation after remote directory eviction
@@ -276,8 +274,6 @@ namespace covered
             edge_wrapper_ptr_->constCustomFunc(NonblockNotifyForPlacementFuncParam::FUNCNAME, &tmp_param);
         }
 
-        embedBackgroundCounterIfNotEmpty_(total_bandwidth_usage, event_list); // Embed background events/bandwidth if any into control response message
-
         return is_finish;
     }
 
@@ -303,20 +299,20 @@ namespace covered
         {
             assert(!need_hybrid_fetching); // NOTE: ONLY foreground directory eviction could trigger hybrid data fetching
 
-            control_response_ptr = new CoveredPlacementDirectoryUpdateResponse(tmp_key, is_being_written, is_neighbor_cached, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            control_response_ptr = new CoveredBgplaceDirectoryUpdateResponse(tmp_key, is_being_written, is_neighbor_cached, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         }
         else if (message_type == MessageType::kCoveredPlacementHybridFetchedRequest) // Foreground request to notify the result of excluding-sender hybrid data fetching for COVERED (NO directory update)
         {
             assert(!need_hybrid_fetching); // NOTE: ONLY foreground directory eviction could trigger hybrid data fetching
 
             UNUSED(is_neighbor_cached); // NOTE: excluding-sender hybrid data fetching does NOT need t provide is_neighbor_cached for sender due to NO placement
-            control_response_ptr = new CoveredPlacementHybridFetchedResponse(tmp_key, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            control_response_ptr = new CoveredFghybridHybridFetchedResponse(tmp_key, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         }
         else if (message_type == MessageType::kCoveredPlacementDirectoryAdmitRequest) // Foreground directory admission with including-sender hybrid data fetching for COVERED
         {
             assert(!need_hybrid_fetching); // NOTE: ONLY foreground directory eviction could trigger hybrid data fetching
 
-            control_response_ptr = new CoveredPlacementDirectoryAdmitResponse(tmp_key, is_being_written, is_neighbor_cached, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            control_response_ptr = new CoveredFghybridDirectoryAdmitResponse(tmp_key, is_being_written, is_neighbor_cached, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         }
         else if (message_type == MessageType::kCoveredDirectoryUpdateRequest) // Foreground directory updates (with only-sender hybrid data fetching or fast-path single placement for COVERED if is_admit = true; with value update for COVERED is is_admit = false)
         {
@@ -328,7 +324,7 @@ namespace covered
                 assert(!covered_directory_update_request_ptr->isValidDirectoryExist());
 
                 // NOTE: beacon node uses best_placement_edgeset to tell the closest edge node if to perform hybrid data fetching and trigger non-blocking placement notification
-                control_response_ptr = new CoveredPlacementDirectoryEvictResponse(tmp_key, is_being_written, victim_syncset, best_placement_edgeset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+                control_response_ptr = new CoveredFghybridDirectoryEvictResponse(tmp_key, is_being_written, victim_syncset, best_placement_edgeset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
             }
             else // Normal directory update response (foreground directory admission/eviction)
             {
@@ -382,8 +378,6 @@ namespace covered
         AfterWritelockAcquireHelperFuncParam tmp_param_after_acquirelock(tmp_key, source_edge_idx, collected_popularity, is_global_cached, is_source_cached, edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         edge_wrapper_ptr_->constCustomFunc(AfterWritelockAcquireHelperFuncParam::FUNCNAME, &tmp_param_after_acquirelock);
         is_finish = tmp_param_after_acquirelock.isFinishConstRef();
-
-        embedBackgroundCounterIfNotEmpty_(total_bandwidth_usage, event_list); // Embed background events/bandwidth if any into control response message
 
         return is_finish;
     }
@@ -446,8 +440,6 @@ namespace covered
             return is_finish; // Edge node is finished
         }
 
-        embedBackgroundCounterIfNotEmpty_(total_bandwidth_usage, event_list); // Embed background events/bandwidth if any into control response message
-
         return is_finish;
     }
 
@@ -468,7 +460,7 @@ namespace covered
         MessageBase* covered_release_writelock_response_ptr = NULL;
         if (need_hybrid_fetching)
         {
-            covered_release_writelock_response_ptr = new CoveredPlacementReleaseWritelockResponse(tmp_key, victim_syncset, best_placement_edgeset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            covered_release_writelock_response_ptr = new CoveredFghybridReleaseWritelockResponse(tmp_key, victim_syncset, best_placement_edgeset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         }
         else // Normal release writelock response
         {
@@ -484,18 +476,6 @@ namespace covered
     bool CoveredBeaconServer::processOtherControlRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr)
     {
         return false;
-    }
-
-    // (4) Embed background events and bandwidth usage
-
-    void CoveredBeaconServer::embedBackgroundCounterIfNotEmpty_(BandwidthUsage& bandwidth_usage, EventList& event_list) const
-    {
-        checkPointers_();
-
-        bool is_empty_before_reset = edge_wrapper_ptr_->getEdgeBackgroundCounterForBeaconServerRef().loadAndReset(bandwidth_usage, event_list);
-        UNUSED(is_empty_before_reset);
-
-        return;
     }
 
     // (5) Cache-method-specific custom functions
@@ -530,7 +510,7 @@ namespace covered
         assert(redirected_get_response_ptr != NULL);
         // CoveredCacheManager* covered_cache_manager_ptr = edge_wrapper_ptr_->getCoveredCacheManagerPtr();
 
-        const CoveredPlacementRedirectedGetResponse* const covered_placement_redirected_get_response_ptr = static_cast<const CoveredPlacementRedirectedGetResponse*>(redirected_get_response_ptr);
+        const CoveredBgfetchRedirectedGetResponse* const covered_placement_redirected_get_response_ptr = static_cast<const CoveredBgfetchRedirectedGetResponse*>(redirected_get_response_ptr);
         //const Value tmp_value = covered_placement_redirected_get_response_ptr->getValue();
 
         // Victim synchronization
@@ -575,7 +555,7 @@ namespace covered
         checkPointers_();
         assert(global_get_response_ptr != NULL);
 
-        const CoveredPlacementGlobalGetResponse* const covered_placement_global_get_response_ptr = static_cast<const CoveredPlacementGlobalGetResponse*>(global_get_response_ptr);
+        const CoveredBgfetchGlobalGetResponse* const covered_placement_global_get_response_ptr = static_cast<const CoveredBgfetchGlobalGetResponse*>(global_get_response_ptr);
         //const Value tmp_value = covered_placement_global_get_response_ptr->getValue();
 
         // NOTE: NO need for victim synchronization due to edge-cloud communication

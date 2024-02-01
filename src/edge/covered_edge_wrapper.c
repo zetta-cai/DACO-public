@@ -13,7 +13,7 @@ namespace covered
 {
     const std::string CoveredEdgeWrapper::kClassName("CoveredEdgeWrapper");
 
-    CoveredEdgeWrapper::CoveredEdgeWrapper(const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& edge_idx, const uint32_t& edgecnt, const std::string& hash_name, const uint64_t& local_uncached_capacity_bytes, const uint32_t& percacheserver_workercnt, const uint32_t& peredge_synced_victimcnt, const uint32_t& peredge_monitored_victimsetcnt, const uint64_t& popularity_aggregation_capacity_bytes, const double& popularity_collection_change_ratio, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us, const uint32_t& topk_edgecnt) : EdgeWrapperBase(cache_name, capacity_bytes, edge_idx, edgecnt, hash_name, local_uncached_capacity_bytes, percacheserver_workercnt, peredge_synced_victimcnt, peredge_monitored_victimsetcnt, popularity_aggregation_capacity_bytes, popularity_collection_change_ratio, propagation_latency_clientedge_us, propagation_latency_crossedge_us, propagation_latency_edgecloud_us, topk_edgecnt), topk_edgecnt_for_placement_(topk_edgecnt), edge_background_counter_for_beacon_server_(), weight_tuner_(edge_idx, edgecnt, propagation_latency_clientedge_us, propagation_latency_crossedge_us, propagation_latency_edgecloud_us)
+    CoveredEdgeWrapper::CoveredEdgeWrapper(const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& edge_idx, const uint32_t& edgecnt, const std::string& hash_name, const uint64_t& local_uncached_capacity_bytes, const uint32_t& percacheserver_workercnt, const uint32_t& peredge_synced_victimcnt, const uint32_t& peredge_monitored_victimsetcnt, const uint64_t& popularity_aggregation_capacity_bytes, const double& popularity_collection_change_ratio, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us, const uint32_t& topk_edgecnt) : EdgeWrapperBase(cache_name, capacity_bytes, edge_idx, edgecnt, hash_name, local_uncached_capacity_bytes, percacheserver_workercnt, peredge_synced_victimcnt, peredge_monitored_victimsetcnt, popularity_aggregation_capacity_bytes, popularity_collection_change_ratio, propagation_latency_clientedge_us, propagation_latency_crossedge_us, propagation_latency_edgecloud_us, topk_edgecnt), topk_edgecnt_for_placement_(topk_edgecnt), weight_tuner_(edge_idx, edgecnt, propagation_latency_clientedge_us, propagation_latency_crossedge_us, propagation_latency_edgecloud_us)
     {
         assert(cache_name == Util::COVERED_CACHE_NAME);
 
@@ -69,11 +69,6 @@ namespace covered
         // NOTE: non-COVERED caches should NOT call this function
         assert(covered_cache_manager_ptr_ != NULL);
         return covered_cache_manager_ptr_;
-    }
-
-    BackgroundCounter& CoveredEdgeWrapper::getEdgeBackgroundCounterForBeaconServerRef()
-    {
-        return edge_background_counter_for_beacon_server_;
     }
 
     WeightTuner& CoveredEdgeWrapper::getWeightTunerRef()
@@ -401,19 +396,19 @@ namespace covered
                 {
                     assert(!is_being_written); // Being-written object CANNOT have any valid dirinfo
 
-                    // Send CoveredPlacementRedirectedGetRequest to the neighbor node
+                    // Send CoveredBgfetchRedirectedGetRequest to the neighbor node
                     // NOTE: we use edge_beacon_server_recvreq_source_addr_ as the source address even if invoker is cache server to wait for responses
                     // (i) Although current is beacon for cache server, the role is still beacon node, which should be responsible for non-blocking placement deployment. And we don't want to resort cache server worker, which may degrade KV request processing
                     // (ii) Although we may wait for responses, beacon server is blocking for recvreq port and we don't want to introduce another blocking for recvrsp port
                     const VictimSyncset victim_syncset = covered_cache_manager_ptr_->accessVictimTrackerForLocalVictimSyncset(directory_info.getTargetEdgeIdx(), getCacheMarginBytes());
-                    CoveredPlacementRedirectedGetRequest* covered_placement_redirected_get_request_ptr = new CoveredPlacementRedirectedGetRequest(key, victim_syncset, best_placement_edgeset, current_edge_idx, edge_beacon_server_recvreq_source_addr_for_placement_, skip_propagation_latency);
+                    CoveredBgfetchRedirectedGetRequest* covered_placement_redirected_get_request_ptr = new CoveredBgfetchRedirectedGetRequest(key, victim_syncset, best_placement_edgeset, current_edge_idx, edge_beacon_server_recvreq_source_addr_for_placement_, skip_propagation_latency);
                     assert(covered_placement_redirected_get_request_ptr != NULL);
                     NetworkAddr target_edge_cache_server_recvreq_dst_addr = getTargetDstaddr(directory_info); // Send to cache server of the target edge node for cache server worker
                     bool is_successful = edge_toedge_propagation_simulator_param_ptr_->push(covered_placement_redirected_get_request_ptr, target_edge_cache_server_recvreq_dst_addr);
                     assert(is_successful);
                     covered_placement_redirected_get_request_ptr = NULL; // NOTE: covered_placement_redirected_get_request_ptr will be released by edge-to-edge propagation simulator
 
-                    // NOTE: CoveredPlacementRedirectedGetResponse will be processed by covered beacon server in the current edge node (current edge node is a remote beacon node for neighbor edge node, as neighbor MUST NOT be a different edge node for request redirection)
+                    // NOTE: CoveredBgfetchRedirectedGetResponse will be processed by covered beacon server in the current edge node (current edge node is a remote beacon node for neighbor edge node, as neighbor MUST NOT be a different edge node for request redirection)
                 }
                 else // No valid cache copy in edge layer
                 {
@@ -434,18 +429,18 @@ namespace covered
 
         // NOTE: as we have replied the sender without hybrid data fetching before, beacon server directly fetches data from cloud by itself here in a non-blocking manner (this is a corner case, as valid dirinfo has cooperative hit in most time)
 
-        // Send CoveredPlacementGlobalGetRequest to cloud
+        // Send CoveredBgfetchGlobalGetRequest to cloud
         // NOTE: we use edge_beacon_server_recvreq_source_addr_ as the source address even if the invoker (i.e., beacon server) is waiting for global responses
         // (i) Although wait for global responses, beacon server is blocking for recvreq port and we don't want to introduce another blocking for recvrsp port
         uint32_t current_edge_idx = getNodeIdx();
-        CoveredPlacementGlobalGetRequest* covered_placement_global_get_request_ptr = new CoveredPlacementGlobalGetRequest(key, best_placement_edgeset, current_edge_idx, edge_beacon_server_recvreq_source_addr_for_placement_, skip_propagation_latency);
+        CoveredBgfetchGlobalGetRequest* covered_placement_global_get_request_ptr = new CoveredBgfetchGlobalGetRequest(key, best_placement_edgeset, current_edge_idx, edge_beacon_server_recvreq_source_addr_for_placement_, skip_propagation_latency);
         assert(covered_placement_global_get_request_ptr != NULL);
         // Push the global request into edge-to-cloud propagation simulator to cloud
         bool is_successful = edge_tocloud_propagation_simulator_param_ptr_->push(covered_placement_global_get_request_ptr, corresponding_cloud_recvreq_dst_addr_for_placement_);
         assert(is_successful);
         covered_placement_global_get_request_ptr = NULL; // NOTE: covered_placement_global_get_request_ptr will be released by edge-to-cloud propagation simulator
 
-        // NOTE: CoveredPlacementRedirectedGetResponse will be processed by covered beacon server in the current edge node
+        // NOTE: CoveredBgfetchRedirectedGetResponse will be processed by covered beacon server in the current edge node
 
         return;
     }
@@ -477,10 +472,10 @@ namespace covered
                 continue;
             }
 
-            // Send CoveredPlacementNotifyRequest to remote edge node
+            // Send CoveredBgplacePlacementNotifyRequest to remote edge node
             // NOTE: source addr will NOT be used by placement processor of remote edge node due to without explicit notification ACK (we use directory update request with is_admit = true as the implicit ACK for placement notification)
             const VictimSyncset victim_syncset = covered_cache_manager_ptr_->accessVictimTrackerForLocalVictimSyncset(tmp_edge_idx, getCacheMarginBytes());
-            CoveredPlacementNotifyRequest* covered_placement_notify_request_ptr = new CoveredPlacementNotifyRequest(key, value, is_valid, victim_syncset, current_edge_idx, edge_beacon_server_recvreq_source_addr_for_placement_, skip_propagation_latency);
+            CoveredBgplacePlacementNotifyRequest* covered_placement_notify_request_ptr = new CoveredBgplacePlacementNotifyRequest(key, value, is_valid, victim_syncset, current_edge_idx, edge_beacon_server_recvreq_source_addr_for_placement_, skip_propagation_latency);
             assert(covered_placement_notify_request_ptr != NULL);
 
             // Push the global request into edge-to-edge propagation simulator to the remote edge node

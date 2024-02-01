@@ -2,7 +2,7 @@
  * KeyValueByteVictimsetMessage: the base class of messages each with a key, a value, a single byte, and a victim syncset.
  *
  * (1) For CoveredRedirectedGetResponse, the single byte is a hitflag.
- * (2) For CoveredPlacementNotifyRequest, the single byte is validity for value.
+ * (2) For CoveredBgplacePlacementNotifyRequest, the single byte is validity for value.
  * 
  * By Siyuan Sheng (2023.09.13).
  */

@@ -1,7 +1,7 @@
 /*
  * KeyTwoByteVictimsetMessage: the base class for messages each with a key, a single byte, and a victim syncset for COVERED.
  *
- * For CoveredDirectoryUpdateResponse and CoveredPlacementDirectoryUpdateResponse, the first byte is a write flag and the second byte is a neighbor cached flag.
+ * For CoveredDirectoryUpdateResponse and CoveredBgplaceDirectoryUpdateResponse, the first byte is a write flag and the second byte is a neighbor cached flag.
  * 
  * By Siyuan Sheng (2023.11.26).
  */

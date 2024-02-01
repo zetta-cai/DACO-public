@@ -129,13 +129,13 @@ namespace covered
                 }
                 else if (control_request_ptr->getMessageType() == MessageType::kCoveredPlacementRedirectedGetResponse) // Non-blocking placement deployment
                 {
-                    // NOTE: NOT embed background events/bandwidth-usage into CoveredPlacementRedirectedGetResponse even if it is received by beacon server, as we need to embed such information into foreground messages to be tracked by clients
+                    // NOTE: NOT embed background events/bandwidth-usage into CoveredBgfetchRedirectedGetResponse even if it is received by beacon server, as we need to embed such information into foreground messages to be tracked by clients
                     ProcessRspToRedirectGetForPlacementFuncParam tmp_param(control_request_ptr);
                     customFunc(ProcessRspToRedirectGetForPlacementFuncParam::FUNCNAME, &tmp_param);
                 }
                 else if (control_request_ptr->getMessageType() == MessageType::kCoveredPlacementGlobalGetResponse) // Non-blocking placement deployment
                 {
-                    // NOTE: NOT embed background events/bandwidth-usage into CoveredPlacementRedirectedGetResponse even if it is received by beacon server, as we need to embed such information into foreground messages to be tracked by clients
+                    // NOTE: NOT embed background events/bandwidth-usage into CoveredBgfetchRedirectedGetResponse even if it is received by beacon server, as we need to embed such information into foreground messages to be tracked by clients
                     ProcessRspToAccessCloudForPlacementFuncParam tmp_param(control_request_ptr);
                     customFunc(ProcessRspToAccessCloudForPlacementFuncParam::FUNCNAME, &tmp_param);
                 }
@@ -182,9 +182,9 @@ namespace covered
             is_finish = processDirectoryLookupRequest_(control_request_ptr, edge_cache_server_worker_recvrsp_dst_addr);
         }
         // DirectoryUpdateRequest: foreground directory updates for baselines
-        // CoveredPlacementDirectoryUpdateRequest: background directory updates w/o hybrid data fetching for COVERED
-        // CoveredPlacementHybridFetchedRequest: foreground request to notify the result of excluding-sender hybrid data fetching for COVERED (NO directory update)
-        // CoveredPlacementDirectoryAdmitRequest: foreground directory admission with including-sender hybrid data fetching for COVERED
+        // CoveredBgplaceDirectoryUpdateRequest: background directory updates w/o hybrid data fetching for COVERED
+        // CoveredFghybridHybridFetchedRequest: foreground request to notify the result of excluding-sender hybrid data fetching for COVERED (NO directory update)
+        // CoveredFghybridDirectoryAdmitRequest: foreground directory admission with including-sender hybrid data fetching for COVERED
         // CoveredDirectoryUpdateRequest: foreground directory updates (with only-sender hybrid data fetching for COVERED if is_admit = true)
         else if (message_type == MessageType::kDirectoryUpdateRequest || message_type == MessageType::kCoveredPlacementDirectoryUpdateRequest || message_type == MessageType::kCoveredPlacementHybridFetchedRequest || message_type == MessageType::kCoveredPlacementDirectoryAdmitRequest || message_type == MessageType::kCoveredDirectoryUpdateRequest)
         {
@@ -249,6 +249,8 @@ namespace covered
             return is_finish; // Edge node is NOT running now
         }
 
+        embedBackgroundCounterIfNotEmpty_(total_bandwidth_usage, event_list); // Embed background events/bandwidth if any into control response message
+
         #ifdef DEBUG_BEACON_SERVER
         Util::dumpVariablesForDebug(base_instance_name_, 6, "is_being_written:", Util::toString(is_being_written).c_str(), "is_valid_directory_exist:", Util::toString(is_valid_directory_exist).c_str(), "directory_info:", std::to_string(directory_info.getTargetEdgeIdx()).c_str());
         #endif
@@ -308,6 +310,8 @@ namespace covered
         {
             return is_finish; // Edge node is NOT running now
         }
+
+        embedBackgroundCounterIfNotEmpty_(total_bandwidth_usage, event_list); // Embed background events/bandwidth if any into control response message
 
         // Add intermediate event if with event tracking
         struct timespec update_local_directory_end_timestamp = Util::getCurrentTimespec();
@@ -372,6 +376,8 @@ namespace covered
             return is_finish; // Edge node is NOT running now
         }
 
+        embedBackgroundCounterIfNotEmpty_(total_bandwidth_usage, event_list); // Embed background events/bandwidth if any into control response message
+
         // Add intermediate event if with event tracking
         struct timespec acquire_local_writelock_end_timestamp = Util::getCurrentTimespec();
         uint32_t acquire_local_writelock_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(acquire_local_writelock_end_timestamp, acquire_local_writelock_start_timestamp));
@@ -434,6 +440,8 @@ namespace covered
             return is_finish; // Edge node is NOT running now
         }
 
+        embedBackgroundCounterIfNotEmpty_(total_bandwidth_usage, event_list); // Embed background events/bandwidth if any into control response message
+
         // Add intermediate event if with event tracking
         struct timespec release_local_writelock_end_timestamp = Util::getCurrentTimespec();
         uint32_t release_local_writelock_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(release_local_writelock_end_timestamp, release_local_writelock_start_timestamp));
@@ -457,6 +465,18 @@ namespace covered
         release_writelock_response_ptr = NULL;
 
         return is_finish;
+    }
+
+    // (4) Embed background events and bandwidth usage
+
+    void BeaconServerBase::embedBackgroundCounterIfNotEmpty_(BandwidthUsage& bandwidth_usage, EventList& event_list) const
+    {
+        checkPointers_();
+
+        bool is_empty_before_reset = edge_wrapper_ptr_->getEdgeBackgroundCounterForBeaconServerRef().loadAndReset(bandwidth_usage, event_list);
+        UNUSED(is_empty_before_reset);
+
+        return;
     }
 
     // (6) Utility functions

@@ -174,7 +174,7 @@ namespace covered
         else if (message_type == MessageType::kCoveredFastDirectoryLookupResponse) // Directory lookup response with fast-path placement
         {
             // Get directory information from the control response message
-            const CoveredFastDirectoryLookupResponse* const covered_fast_directory_lookup_response_ptr = static_cast<const CoveredFastDirectoryLookupResponse*>(control_response_ptr);
+            const CoveredFastpathDirectoryLookupResponse* const covered_fast_directory_lookup_response_ptr = static_cast<const CoveredFastpathDirectoryLookupResponse*>(control_response_ptr);
             is_being_written = covered_fast_directory_lookup_response_ptr->isBeingWritten();
             is_valid_directory_exist = covered_fast_directory_lookup_response_ptr->isValidDirectoryExist();
             directory_info = covered_fast_directory_lookup_response_ptr->getDirectoryInfo();
@@ -196,7 +196,7 @@ namespace covered
         else if (message_type == MessageType::kCoveredPlacementDirectoryLookupResponse) // Directory lookup response with hybrid data fetching
         {
             // Get directory information from the control response message
-            const CoveredPlacementDirectoryLookupResponse* const covered_placement_directory_lookup_response_ptr = static_cast<const CoveredPlacementDirectoryLookupResponse*>(control_response_ptr);
+            const CoveredFghybridDirectoryLookupResponse* const covered_placement_directory_lookup_response_ptr = static_cast<const CoveredFghybridDirectoryLookupResponse*>(control_response_ptr);
             is_being_written = covered_placement_directory_lookup_response_ptr->isBeingWritten();
             is_valid_directory_exist = covered_placement_directory_lookup_response_ptr->isValidDirectoryExist();
             directory_info = covered_placement_directory_lookup_response_ptr->getDirectoryInfo();
@@ -669,7 +669,7 @@ namespace covered
         }
         else if (message_type == MessageType::kCoveredPlacementReleaseWritelockResponse) // Release writelock response with hybrid data fetching
         {
-            const CoveredPlacementReleaseWritelockResponse* covered_placement_release_writelock_response_ptr = static_cast<const CoveredPlacementReleaseWritelockResponse*>(control_response_ptr);
+            const CoveredFghybridReleaseWritelockResponse* covered_placement_release_writelock_response_ptr = static_cast<const CoveredFghybridReleaseWritelockResponse*>(control_response_ptr);
             tmp_key = covered_placement_release_writelock_response_ptr->getKey();
             neighbor_victim_syncset = covered_placement_release_writelock_response_ptr->getVictimSyncsetRef();
 
@@ -692,7 +692,7 @@ namespace covered
         UpdateCacheManagerForNeighborVictimSyncsetFuncParam tmp_param(source_edge_idx, neighbor_victim_syncset);
         tmp_edge_wrapper_ptr->constCustomFunc(UpdateCacheManagerForNeighborVictimSyncsetFuncParam::FUNCNAME, &tmp_param);
 
-        // Do nothing for CoveredReleaseWritelockResponse, yet notify beacon for non-blocking placement notification for CoveredPlacementReleaseWritelockResponse after hybrid data fetching
+        // Do nothing for CoveredReleaseWritelockResponse, yet notify beacon for non-blocking placement notification for CoveredFghybridReleaseWritelockResponse after hybrid data fetching
         if (need_hybrid_fetching)
         {
             // Trigger placement notification remotely at the beacon edge node

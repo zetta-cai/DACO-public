@@ -31,7 +31,6 @@ namespace covered
 
         virtual uint32_t getTopkEdgecntForPlacement() const override;
         virtual CoveredCacheManager* getCoveredCacheManagerPtr() const override;
-        virtual BackgroundCounter& getEdgeBackgroundCounterForBeaconServerRef() override;
         virtual WeightTuner& getWeightTunerRef() override;
 
         // (2) Utility functions
@@ -107,7 +106,6 @@ namespace covered
         // (ii) COVERED uses beacon background counter to track background events and bandwidth usage for non-blocking placement deployment (NOTE: NOT count events for non-blocking data fetching from local edge cache and non-blocking metadata releasing, due to limited computation overhead and NO bandwidth usage)
         // (iii) COVERED uses weight tuner to track weight info to calculate reward (for local reward calculation and trade-off-aware placement calculation) with online parameter tuning
         CoveredCacheManager* covered_cache_manager_ptr_; // CoveredCacheManager for cooperative-caching-aware cache management (thread safe)
-        mutable BackgroundCounter edge_background_counter_for_beacon_server_; // Update and load by beacon server (thread safe)
         WeightTuner weight_tuner_; // Update and load by cache server and beacon server (thread safe)
     };
 }

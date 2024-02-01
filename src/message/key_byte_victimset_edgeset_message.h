@@ -1,7 +1,7 @@
 /*
  * KeyByteVictimsetEdgesetMessage: the base class for messages each with a key, a single byte, a victim syncset, and an edgeset for COVERED.
  *
- * For CoveredPlacementDirectoryEvictResponse, the byte is a write flag.
+ * For CoveredFghybridDirectoryEvictResponse, the byte is a write flag.
  * 
  * By Siyuan Sheng (2023.10.11).
  */

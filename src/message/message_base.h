@@ -96,6 +96,8 @@ namespace covered
         kCoveredFinishBlockResponse,
         kCoveredFastDirectoryLookupResponse,
         kCoveredMetadataUpdateRequest,
+        // ONLY used by BestGuess
+        kBestGuessPlacementTriggerRequest,
     };
 
     enum Hitflag

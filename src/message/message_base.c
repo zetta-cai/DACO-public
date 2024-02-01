@@ -323,6 +323,11 @@ namespace covered
                 message_type_str = "kCoveredMetadataUpdateRequest";
                 break;
             }
+            case MessageType::kBestGuessPlacementTriggerRequest:
+            {
+                message_type_str = "kBestGuessPlacementTriggerRequest";
+                break;
+            }
             default:
             {
                 message_type_str = std::to_string(static_cast<uint32_t>(message_type));
@@ -569,34 +574,34 @@ namespace covered
             }
             case MessageType::kCoveredPlacementRedirectedGetRequest:
             {
-                message_ptr = new CoveredPlacementRedirectedGetRequest(msg_payload);
+                message_ptr = new CoveredBgfetchRedirectedGetRequest(msg_payload);
                 break;
             }
             case MessageType::kCoveredPlacementRedirectedGetResponse: // NOTE: this is a special case for COVERED to process directed get response by beacon server recvreq port for non-blocking placement deployment
             {
-                message_ptr = new CoveredPlacementRedirectedGetResponse(msg_payload);
+                message_ptr = new CoveredBgfetchRedirectedGetResponse(msg_payload);
                 special_case = true;
                 break;
             }
             case MessageType::kCoveredPlacementGlobalGetRequest:
             {
-                message_ptr = new CoveredPlacementGlobalGetRequest(msg_payload);
+                message_ptr = new CoveredBgfetchGlobalGetRequest(msg_payload);
                 break;
             }
             case MessageType::kCoveredPlacementGlobalGetResponse: // NOTE: this is a special case for COVERED to process global get response by beacon server recvreq port for non-blocking placement deployment
             {
-                message_ptr = new CoveredPlacementGlobalGetResponse(msg_payload);
+                message_ptr = new CoveredBgfetchGlobalGetResponse(msg_payload);
                 special_case = true;
                 break;
             }
             case MessageType::kCoveredPlacementNotifyRequest:
             {
-                message_ptr = new CoveredPlacementNotifyRequest(msg_payload);
+                message_ptr = new CoveredBgplacePlacementNotifyRequest(msg_payload);
                 break;
             }
             case MessageType::kCoveredPlacementDirectoryUpdateRequest:
             {
-                message_ptr = new CoveredPlacementDirectoryUpdateRequest(msg_payload);
+                message_ptr = new CoveredBgplaceDirectoryUpdateRequest(msg_payload);
                 break;
             }
             case MessageType::kCoveredVictimFetchRequest:
@@ -606,12 +611,12 @@ namespace covered
             }
             case MessageType::kCoveredPlacementHybridFetchedRequest:
             {
-                message_ptr = new CoveredPlacementHybridFetchedRequest(msg_payload);
+                message_ptr = new CoveredFghybridHybridFetchedRequest(msg_payload);
                 break;
             }
             case MessageType::kCoveredPlacementDirectoryAdmitRequest:
             {
-                message_ptr = new CoveredPlacementDirectoryAdmitRequest(msg_payload);
+                message_ptr = new CoveredFghybridDirectoryAdmitRequest(msg_payload);
                 break;
             }
             case MessageType::kCoveredInvalidationRequest:
@@ -627,6 +632,11 @@ namespace covered
             case MessageType::kCoveredMetadataUpdateRequest:
             {
                 message_ptr = new CoveredMetadataUpdateRequest(msg_payload);
+                break;
+            }
+            case MessageType::kBestGuessPlacementTriggerRequest:
+            {
+                message_ptr = new BestGuessPlacementTriggerRequest(msg_payload);
                 break;
             }
             default:
@@ -779,17 +789,17 @@ namespace covered
             }
             case MessageType::kCoveredPlacementRedirectedGetResponse:
             {
-                message_ptr = new CoveredPlacementRedirectedGetResponse(msg_payload);
+                message_ptr = new CoveredBgfetchRedirectedGetResponse(msg_payload);
                 break;
             }
             case MessageType::kCoveredPlacementGlobalGetResponse:
             {
-                message_ptr = new CoveredPlacementGlobalGetResponse(msg_payload);
+                message_ptr = new CoveredBgfetchGlobalGetResponse(msg_payload);
                 break;
             }
             case MessageType::kCoveredPlacementDirectoryUpdateResponse:
             {
-                message_ptr = new CoveredPlacementDirectoryUpdateResponse(msg_payload);
+                message_ptr = new CoveredBgplaceDirectoryUpdateResponse(msg_payload);
                 break;
             }
             case MessageType::kCoveredVictimFetchResponse:
@@ -799,27 +809,27 @@ namespace covered
             }
             case MessageType::kCoveredPlacementDirectoryLookupResponse:
             {
-                message_ptr = new CoveredPlacementDirectoryLookupResponse(msg_payload);
+                message_ptr = new CoveredFghybridDirectoryLookupResponse(msg_payload);
                 break;
             }
             case MessageType::kCoveredPlacementDirectoryEvictResponse:
             {
-                message_ptr = new CoveredPlacementDirectoryEvictResponse(msg_payload);
+                message_ptr = new CoveredFghybridDirectoryEvictResponse(msg_payload);
                 break;
             }
             case MessageType::kCoveredPlacementReleaseWritelockResponse:
             {
-                message_ptr = new CoveredPlacementReleaseWritelockResponse(msg_payload);
+                message_ptr = new CoveredFghybridReleaseWritelockResponse(msg_payload);
                 break;
             }
             case MessageType::kCoveredPlacementHybridFetchedResponse:
             {
-                message_ptr = new CoveredPlacementHybridFetchedResponse(msg_payload);
+                message_ptr = new CoveredFghybridHybridFetchedResponse(msg_payload);
                 break;
             }
             case MessageType::kCoveredPlacementDirectoryAdmitResponse:
             {
-                message_ptr = new CoveredPlacementDirectoryAdmitResponse(msg_payload);
+                message_ptr = new CoveredFghybridDirectoryAdmitResponse(msg_payload);
                 break;
             }
             case MessageType::kCoveredInvalidationResponse:
@@ -834,7 +844,7 @@ namespace covered
             }
             case MessageType::kCoveredFastDirectoryLookupResponse:
             {
-                message_ptr = new CoveredFastDirectoryLookupResponse(msg_payload);
+                message_ptr = new CoveredFastpathDirectoryLookupResponse(msg_payload);
                 break;
             }
             default:
@@ -1038,73 +1048,73 @@ namespace covered
         }
         else if (message_ptr->message_type_ == MessageType::kCoveredPlacementRedirectedGetRequest)
         {
-            const CoveredPlacementRedirectedGetRequest* const covered_placement_redirected_get_request_ptr = static_cast<const CoveredPlacementRedirectedGetRequest*>(message_ptr);
+            const CoveredBgfetchRedirectedGetRequest* const covered_placement_redirected_get_request_ptr = static_cast<const CoveredBgfetchRedirectedGetRequest*>(message_ptr);
             tmp_key = covered_placement_redirected_get_request_ptr->getKey();
         }
         else if (message_ptr->message_type_ == MessageType::kCoveredPlacementRedirectedGetResponse)
         {
-            const CoveredPlacementRedirectedGetResponse* const covered_placement_redirected_get_response_ptr = static_cast<const CoveredPlacementRedirectedGetResponse*>(message_ptr);
+            const CoveredBgfetchRedirectedGetResponse* const covered_placement_redirected_get_response_ptr = static_cast<const CoveredBgfetchRedirectedGetResponse*>(message_ptr);
             tmp_key = covered_placement_redirected_get_response_ptr->getKey();
         }
         else if (message_ptr->message_type_ == MessageType::kCoveredPlacementGlobalGetRequest)
         {
-            const CoveredPlacementGlobalGetRequest* const covered_placement_global_get_request_ptr = static_cast<const CoveredPlacementGlobalGetRequest*>(message_ptr);
+            const CoveredBgfetchGlobalGetRequest* const covered_placement_global_get_request_ptr = static_cast<const CoveredBgfetchGlobalGetRequest*>(message_ptr);
             tmp_key = covered_placement_global_get_request_ptr->getKey();
         }
         else if (message_ptr->message_type_ == MessageType::kCoveredPlacementGlobalGetResponse)
         {
-            const CoveredPlacementGlobalGetResponse* const covered_placement_global_get_response_ptr = static_cast<const CoveredPlacementGlobalGetResponse*>(message_ptr);
+            const CoveredBgfetchGlobalGetResponse* const covered_placement_global_get_response_ptr = static_cast<const CoveredBgfetchGlobalGetResponse*>(message_ptr);
             tmp_key = covered_placement_global_get_response_ptr->getKey();
         }
         else if (message_ptr->message_type_ == MessageType::kCoveredPlacementNotifyRequest)
         {
-            const CoveredPlacementNotifyRequest* const covered_placement_notify_request_ptr = static_cast<const CoveredPlacementNotifyRequest*>(message_ptr);
+            const CoveredBgplacePlacementNotifyRequest* const covered_placement_notify_request_ptr = static_cast<const CoveredBgplacePlacementNotifyRequest*>(message_ptr);
             tmp_key = covered_placement_notify_request_ptr->getKey();
         }
         else if (message_ptr->message_type_ == MessageType::kCoveredPlacementDirectoryUpdateRequest)
         {
-            const CoveredPlacementDirectoryUpdateRequest* const covered_placement_directory_update_request_ptr = static_cast<const CoveredPlacementDirectoryUpdateRequest*>(message_ptr);
+            const CoveredBgplaceDirectoryUpdateRequest* const covered_placement_directory_update_request_ptr = static_cast<const CoveredBgplaceDirectoryUpdateRequest*>(message_ptr);
             tmp_key = covered_placement_directory_update_request_ptr->getKey();
         }
         else if (message_ptr->message_type_ == MessageType::kCoveredPlacementDirectoryUpdateResponse)
         {
-            const CoveredPlacementDirectoryUpdateResponse* const covered_placement_directory_update_response_ptr = static_cast<const CoveredPlacementDirectoryUpdateResponse*>(message_ptr);
+            const CoveredBgplaceDirectoryUpdateResponse* const covered_placement_directory_update_response_ptr = static_cast<const CoveredBgplaceDirectoryUpdateResponse*>(message_ptr);
             tmp_key = covered_placement_directory_update_response_ptr->getKey();
         }
         else if (message_ptr->message_type_ == MessageType::kCoveredPlacementDirectoryLookupResponse)
         {
-            const CoveredPlacementDirectoryLookupResponse* const covered_placement_directory_lookup_response_ptr = static_cast<const CoveredPlacementDirectoryLookupResponse*>(message_ptr);
+            const CoveredFghybridDirectoryLookupResponse* const covered_placement_directory_lookup_response_ptr = static_cast<const CoveredFghybridDirectoryLookupResponse*>(message_ptr);
             tmp_key = covered_placement_directory_lookup_response_ptr->getKey();
         }
         else if (message_ptr->message_type_ == MessageType::kCoveredPlacementDirectoryEvictResponse)
         {
-            const CoveredPlacementDirectoryEvictResponse* const covered_placement_directory_evict_response_ptr = static_cast<const CoveredPlacementDirectoryEvictResponse*>(message_ptr);
+            const CoveredFghybridDirectoryEvictResponse* const covered_placement_directory_evict_response_ptr = static_cast<const CoveredFghybridDirectoryEvictResponse*>(message_ptr);
             tmp_key = covered_placement_directory_evict_response_ptr->getKey();
         
         }
         else if (message_ptr->message_type_ == MessageType::kCoveredPlacementReleaseWritelockResponse)
         {
-            const CoveredPlacementReleaseWritelockResponse* const covered_placement_release_writelock_response_ptr = static_cast<const CoveredPlacementReleaseWritelockResponse*>(message_ptr);
+            const CoveredFghybridReleaseWritelockResponse* const covered_placement_release_writelock_response_ptr = static_cast<const CoveredFghybridReleaseWritelockResponse*>(message_ptr);
             tmp_key = covered_placement_release_writelock_response_ptr->getKey();
         }
         else if (message_ptr->message_type_ == MessageType::kCoveredPlacementHybridFetchedRequest)
         {
-            const CoveredPlacementHybridFetchedRequest* const covered_placement_hybrid_fetched_request_ptr = static_cast<const CoveredPlacementHybridFetchedRequest*>(message_ptr);
+            const CoveredFghybridHybridFetchedRequest* const covered_placement_hybrid_fetched_request_ptr = static_cast<const CoveredFghybridHybridFetchedRequest*>(message_ptr);
             tmp_key = covered_placement_hybrid_fetched_request_ptr->getKey();
         }
         else if (message_ptr->message_type_ == MessageType::kCoveredPlacementHybridFetchedResponse)
         {
-            const CoveredPlacementHybridFetchedResponse* const covered_placement_hybrid_fetched_response_ptr = static_cast<const CoveredPlacementHybridFetchedResponse*>(message_ptr);
+            const CoveredFghybridHybridFetchedResponse* const covered_placement_hybrid_fetched_response_ptr = static_cast<const CoveredFghybridHybridFetchedResponse*>(message_ptr);
             tmp_key = covered_placement_hybrid_fetched_response_ptr->getKey();
         }
         else if (message_ptr->message_type_ == MessageType::kCoveredPlacementDirectoryAdmitRequest)
         {
-            const CoveredPlacementDirectoryAdmitRequest* const covered_placement_directory_admit_request_ptr = static_cast<const CoveredPlacementDirectoryAdmitRequest*>(message_ptr);
+            const CoveredFghybridDirectoryAdmitRequest* const covered_placement_directory_admit_request_ptr = static_cast<const CoveredFghybridDirectoryAdmitRequest*>(message_ptr);
             tmp_key = covered_placement_directory_admit_request_ptr->getKey();
         }
         else if (message_ptr->message_type_ == MessageType::kCoveredPlacementDirectoryAdmitResponse)
         {
-            const CoveredPlacementDirectoryAdmitResponse* const covered_placement_directory_admit_response_ptr = static_cast<const CoveredPlacementDirectoryAdmitResponse*>(message_ptr);
+            const CoveredFghybridDirectoryAdmitResponse* const covered_placement_directory_admit_response_ptr = static_cast<const CoveredFghybridDirectoryAdmitResponse*>(message_ptr);
             tmp_key = covered_placement_directory_admit_response_ptr->getKey();
         }
         else if (message_ptr->message_type_ == MessageType::kCoveredInvalidationRequest)
@@ -1129,13 +1139,18 @@ namespace covered
         }
         else if (message_ptr->message_type_ == MessageType::kCoveredFastDirectoryLookupResponse)
         {
-            const CoveredFastDirectoryLookupResponse* const covered_fast_directory_lookup_response_ptr = static_cast<const CoveredFastDirectoryLookupResponse*>(message_ptr);
+            const CoveredFastpathDirectoryLookupResponse* const covered_fast_directory_lookup_response_ptr = static_cast<const CoveredFastpathDirectoryLookupResponse*>(message_ptr);
             tmp_key = covered_fast_directory_lookup_response_ptr->getKey();
         }
         else if (message_ptr->message_type_ == MessageType::kCoveredMetadataUpdateRequest)
         {
             const CoveredMetadataUpdateRequest* const covered_metadata_update_request_ptr = static_cast<const CoveredMetadataUpdateRequest*>(message_ptr);
             tmp_key = covered_metadata_update_request_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kBestGuessPlacementTriggerRequest)
+        {
+            const BestGuessPlacementTriggerRequest* const best_guess_placement_trigger_request_ptr = static_cast<const BestGuessPlacementTriggerRequest*>(message_ptr);
+            tmp_key = best_guess_placement_trigger_request_ptr->getKey();
         }
         else
         {
@@ -1400,7 +1415,7 @@ namespace covered
     bool MessageBase::isCooperationControlRequest() const
     {
         checkIsValid_();
-        if (message_type_ == MessageType::kAcquireWritelockRequest || message_type_ == MessageType::kDirectoryLookupRequest || message_type_ == MessageType::kDirectoryUpdateRequest || message_type_ == MessageType::kFinishBlockRequest || message_type_ == MessageType::kInvalidationRequest || message_type_ == MessageType::kReleaseWritelockRequest || message_type_ == MessageType::kCoveredDirectoryLookupRequest || message_type_ == MessageType::kCoveredDirectoryUpdateRequest || message_type_ == MessageType::kCoveredAcquireWritelockRequest || message_type_ == MessageType::kCoveredReleaseWritelockRequest || message_type_ == MessageType::kCoveredPlacementDirectoryUpdateRequest || message_type_ == MessageType::kCoveredPlacementNotifyRequest || message_type_ == MessageType::kCoveredVictimFetchRequest || message_type_ == MessageType::kCoveredPlacementHybridFetchedRequest || message_type_ == MessageType::kCoveredPlacementDirectoryAdmitRequest || message_type_ == MessageType::kCoveredInvalidationRequest || message_type_ == MessageType::kCoveredFinishBlockRequest || message_type_ == MessageType::kCoveredMetadataUpdateRequest)
+        if (message_type_ == MessageType::kAcquireWritelockRequest || message_type_ == MessageType::kDirectoryLookupRequest || message_type_ == MessageType::kDirectoryUpdateRequest || message_type_ == MessageType::kFinishBlockRequest || message_type_ == MessageType::kInvalidationRequest || message_type_ == MessageType::kReleaseWritelockRequest || message_type_ == MessageType::kCoveredDirectoryLookupRequest || message_type_ == MessageType::kCoveredDirectoryUpdateRequest || message_type_ == MessageType::kCoveredAcquireWritelockRequest || message_type_ == MessageType::kCoveredReleaseWritelockRequest || message_type_ == MessageType::kCoveredPlacementDirectoryUpdateRequest || message_type_ == MessageType::kCoveredPlacementNotifyRequest || message_type_ == MessageType::kCoveredVictimFetchRequest || message_type_ == MessageType::kCoveredPlacementHybridFetchedRequest || message_type_ == MessageType::kCoveredPlacementDirectoryAdmitRequest || message_type_ == MessageType::kCoveredInvalidationRequest || message_type_ == MessageType::kCoveredFinishBlockRequest || message_type_ == MessageType::kCoveredMetadataUpdateRequest || message_type_ == MessageType::kBestGuessPlacementTriggerRequest)
         {
             return true;
         }

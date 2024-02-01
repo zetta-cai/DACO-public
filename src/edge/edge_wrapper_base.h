@@ -75,10 +75,10 @@ namespace covered
         PropagationSimulatorParam* getEdgeToedgePropagationSimulatorParamPtr() const;
         PropagationSimulatorParam* getEdgeTocloudPropagationSimulatorParamPtr() const;
         RingBuffer<LocalCacheAdmissionItem>* getLocalCacheAdmissionBufferPtr() const;
+        BackgroundCounter& getEdgeBackgroundCounterForBeaconServerRef();
 
         virtual uint32_t getTopkEdgecntForPlacement() const = 0;
         virtual CoveredCacheManager* getCoveredCacheManagerPtr() const = 0;
-        virtual BackgroundCounter& getEdgeBackgroundCounterForBeaconServerRef() = 0;
         virtual WeightTuner& getWeightTunerRef() = 0;
 
         // (2) Utility functions
@@ -174,6 +174,9 @@ namespace covered
         // -> Popped by cache server placement processor
         // NOTE: we CANNOT expose CacheServerBase* in EdgeWrapper, as CacheServer and BeaconServer have shorter life span than EdgeWrapper -> if we expose CacheServerBase* in EdgeWrapper, BeaconServer may still access CacheServer, which has already been released by cache server thread yet
         RingBuffer<LocalCacheAdmissionItem>* local_cache_admission_buffer_ptr_; // thread safe (local cached admission + eviction)
+
+        // Shared variables
+        mutable BackgroundCounter edge_background_counter_for_beacon_server_; // Update and load by beacon server (thread safe; used by COVERED and BestGuess)
     };
 }
 

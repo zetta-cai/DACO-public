@@ -31,7 +31,6 @@ namespace covered
 
         virtual uint32_t getTopkEdgecntForPlacement() const override;
         virtual CoveredCacheManager* getCoveredCacheManagerPtr() const override;
-        virtual BackgroundCounter& getEdgeBackgroundCounterForBeaconServerRef() override;
         virtual WeightTuner& getWeightTunerRef() override;
 
         // (3) Invalidate and unblock for MSI protocol

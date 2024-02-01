@@ -165,7 +165,7 @@ namespace covered
             }
             case MessageType::kCoveredPlacementGlobalGetRequest: // ONLY used by COVERED
             {
-                const CoveredPlacementGlobalGetRequest* const covered_placement_global_get_request_ptr = static_cast<const CoveredPlacementGlobalGetRequest*>(global_request_ptr);
+                const CoveredBgfetchGlobalGetRequest* const covered_placement_global_get_request_ptr = static_cast<const CoveredBgfetchGlobalGetRequest*>(global_request_ptr);
                 tmp_key = covered_placement_global_get_request_ptr->getKey();
                 tmp_placement_edgeset = covered_placement_global_get_request_ptr->getEdgesetRef();
 
@@ -231,7 +231,7 @@ namespace covered
                 //assert(tmp_placement_edgeset.size() <= topk_edgecnt_); // At most k placement edge nodes each time
 
                 // Prepare covered placement global get response message
-                global_response_ptr = new CoveredPlacementGlobalGetResponse(tmp_key, tmp_value, tmp_placement_edgeset, cloud_idx, cloud_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+                global_response_ptr = new CoveredBgfetchGlobalGetResponse(tmp_key, tmp_value, tmp_placement_edgeset, cloud_idx, cloud_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
                 assert(global_response_ptr != NULL);
                 break;
             }

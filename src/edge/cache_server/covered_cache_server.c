@@ -69,8 +69,8 @@ namespace covered
         }
         else // Background remote directory admission triggered by remote placement notification
         {
-            // NOTE: use background event names by sending CoveredPlacementDirectoryUpdateRequest (NOT DISABLE recursive cache placement due to is_admit = true)
-            directory_update_request_ptr = new CoveredPlacementDirectoryUpdateRequest(key, is_admit, directory_info, victim_syncset, edge_idx, source_addr, skip_propagation_latency);
+            // NOTE: use background event names by sending CoveredBgplaceDirectoryUpdateRequest (NOT DISABLE recursive cache placement due to is_admit = true)
+            directory_update_request_ptr = new CoveredBgplaceDirectoryUpdateRequest(key, is_admit, directory_info, victim_syncset, edge_idx, source_addr, skip_propagation_latency);
         }
         assert(directory_update_request_ptr != NULL);
 
@@ -103,7 +103,7 @@ namespace covered
             assert(control_response_ptr->getMessageType() == MessageType::kCoveredPlacementDirectoryUpdateResponse);
 
             // Get is_being_written and victim syncset from control response message
-            const CoveredPlacementDirectoryUpdateResponse* const covered_placement_directory_update_response_ptr = static_cast<const CoveredPlacementDirectoryUpdateResponse*>(control_response_ptr);
+            const CoveredBgplaceDirectoryUpdateResponse* const covered_placement_directory_update_response_ptr = static_cast<const CoveredBgplaceDirectoryUpdateResponse*>(control_response_ptr);
             is_being_written = covered_placement_directory_update_response_ptr->isBeingWritten();
             is_neighbor_cached = covered_placement_directory_update_response_ptr->isNeighborCached();
             neighbor_victim_syncset = covered_placement_directory_update_response_ptr->getVictimSyncsetRef();
@@ -203,8 +203,8 @@ namespace covered
         }
         else // Background remote directory eviction (triggered by remote placement nofication and local placement notification at local/remote beacon edge node)
         {
-            // NOTE: use background event names and DISABLE recursive cache placement by sending CoveredPlacementDirectoryUpdateRequest
-            directory_update_request_ptr = new CoveredPlacementDirectoryUpdateRequest(key, is_admit, directory_info, tmp_param.getCollectedPopularityConstRef(), victim_syncset, edge_idx, source_addr, skip_propagation_latency);
+            // NOTE: use background event names and DISABLE recursive cache placement by sending CoveredBgplaceDirectoryUpdateRequest
+            directory_update_request_ptr = new CoveredBgplaceDirectoryUpdateRequest(key, is_admit, directory_info, tmp_param.getCollectedPopularityConstRef(), victim_syncset, edge_idx, source_addr, skip_propagation_latency);
         }
 
         // NOTE: key MUST NOT have any cached directory, as key is local cached before eviction (even if key may be local uncached and tracked by local uncached metadata due to metadata preservation after eviction, we have NOT lookuped remote directory yet from beacon node)
@@ -247,7 +247,7 @@ namespace covered
             }
             else if (message_type == MessageType::kCoveredPlacementDirectoryEvictResponse) // Directory eviction response with hybrid data fetching
             {
-                const CoveredPlacementDirectoryEvictResponse* const covered_placement_directory_evict_response_ptr = static_cast<const CoveredPlacementDirectoryEvictResponse*>(control_response_ptr);
+                const CoveredFghybridDirectoryEvictResponse* const covered_placement_directory_evict_response_ptr = static_cast<const CoveredFghybridDirectoryEvictResponse*>(control_response_ptr);
 
                 // Get is_being_written (UNUSED) and best placement edgeset from control response message
                 is_being_written = covered_placement_directory_evict_response_ptr->isBeingWritten();
@@ -274,7 +274,7 @@ namespace covered
             assert(control_response_ptr->getMessageType() == MessageType::kCoveredPlacementDirectoryUpdateResponse);
 
             // Get is_being_written (UNUSED) from control response message
-            const CoveredPlacementDirectoryUpdateResponse* covered_placement_directory_update_response_ptr = static_cast<const CoveredPlacementDirectoryUpdateResponse*>(control_response_ptr);
+            const CoveredBgplaceDirectoryUpdateResponse* covered_placement_directory_update_response_ptr = static_cast<const CoveredBgplaceDirectoryUpdateResponse*>(control_response_ptr);
             is_being_written = covered_placement_directory_update_response_ptr->isBeingWritten();
         }
 
@@ -353,21 +353,21 @@ namespace covered
             MessageBase* control_request_ptr = NULL;
             if (!current_need_placement) // Current edge node does NOT need placement
             {
-                // Prepare CoveredPlacementHybridFetchedRequest
-                control_request_ptr = new CoveredPlacementHybridFetchedRequest(key, value, victim_syncset, tmp_best_placement_edgest, current_edge_idx, recvrsp_source_addr, skip_propagation_latency);
+                // Prepare CoveredFghybridHybridFetchedRequest
+                control_request_ptr = new CoveredFghybridHybridFetchedRequest(key, value, victim_syncset, tmp_best_placement_edgest, current_edge_idx, recvrsp_source_addr, skip_propagation_latency);
             }
             else
             {
                 // NOTE: we cannot optimistically admit valid object into local edge cache first before issuing dirinfo admission request, as clients may get incorrect value if key is being written
                 if (!current_is_only_placement) // Current edge node is NOT the only placement
                 {
-                    // Prepare CoveredPlacementDirectoryAdmitRequest (also equivalent to directory admission request)
-                    control_request_ptr = new CoveredPlacementDirectoryAdmitRequest(key, value, DirectoryInfo(current_edge_idx), victim_syncset, tmp_best_placement_edgest, current_edge_idx, recvrsp_source_addr, skip_propagation_latency);
+                    // Prepare CoveredFghybridDirectoryAdmitRequest (also equivalent to directory admission request)
+                    control_request_ptr = new CoveredFghybridDirectoryAdmitRequest(key, value, DirectoryInfo(current_edge_idx), victim_syncset, tmp_best_placement_edgest, current_edge_idx, recvrsp_source_addr, skip_propagation_latency);
                 }
                 else // Current edge node is the only placement
                 {
                     // Prepare CoveredDirectoryUpdateRequest (NOT trigger placement notification; also equivalent to directory admission request)
-                    // NOTE: unlike CoveredPlacementDirectoryUpdateRequest, CoveredDirectoryUpdateRequest is a foreground message with foreground events and bandwidth usage
+                    // NOTE: unlike CoveredBgplaceDirectoryUpdateRequest, CoveredDirectoryUpdateRequest is a foreground message with foreground events and bandwidth usage
                     const bool is_admit = true;
                     control_request_ptr = new CoveredDirectoryUpdateRequest(key, is_admit, DirectoryInfo(current_edge_idx), victim_syncset, current_edge_idx, recvrsp_source_addr, skip_propagation_latency);
                 }
@@ -409,7 +409,7 @@ namespace covered
                 {
                     assert(control_response_ptr->getMessageType() == MessageType::kCoveredPlacementHybridFetchedResponse);
                     UNUSED(is_being_written); // NOTE: is_being_written will NOT be used as the current edge node (sender) is NOT a placement
-                    const CoveredPlacementHybridFetchedResponse* const covered_placement_hybrid_fetched_response_ptr = static_cast<const CoveredPlacementHybridFetchedResponse*>(control_response_ptr);
+                    const CoveredFghybridHybridFetchedResponse* const covered_placement_hybrid_fetched_response_ptr = static_cast<const CoveredFghybridHybridFetchedResponse*>(control_response_ptr);
                     received_beacon_victim_syncset = covered_placement_hybrid_fetched_response_ptr->getVictimSyncsetRef();
                 }
                 else
@@ -417,7 +417,7 @@ namespace covered
                     if (!current_is_only_placement) // Current edge node is NOT the only placement
                     {
                         assert(control_response_ptr->getMessageType() == MessageType::kCoveredPlacementDirectoryAdmitResponse);
-                        const CoveredPlacementDirectoryAdmitResponse* const covered_placement_directory_admit_response_ptr = static_cast<const CoveredPlacementDirectoryAdmitResponse*>(control_response_ptr);
+                        const CoveredFghybridDirectoryAdmitResponse* const covered_placement_directory_admit_response_ptr = static_cast<const CoveredFghybridDirectoryAdmitResponse*>(control_response_ptr);
                         is_being_written = covered_placement_directory_admit_response_ptr->isBeingWritten(); // Used by local edge cache admission later
                         received_beacon_victim_syncset = covered_placement_directory_admit_response_ptr->getVictimSyncsetRef();
 

@@ -134,12 +134,12 @@ namespace covered
         EventList event_list;
         const bool is_background = true;
 
-        const CoveredPlacementNotifyRequest* const covered_placement_notify_request_ptr = static_cast<const CoveredPlacementNotifyRequest*>(data_request_ptr);
+        const CoveredBgplacePlacementNotifyRequest* const covered_placement_notify_request_ptr = static_cast<const CoveredBgplacePlacementNotifyRequest*>(data_request_ptr);
         total_bandwidth_usage.update(BandwidthUsage(0, covered_placement_notify_request_ptr->getMsgPayloadSize(), 0, 0, 1, 0));
 
         struct timespec placement_notify_start_timestamp = Util::getCurrentTimespec();
 
-        // NOTE: CoveredPlacementNotifyRequest does NOT need placement edgeset, as placement notification has already been triggered
+        // NOTE: CoveredBgplacePlacementNotifyRequest does NOT need placement edgeset, as placement notification has already been triggered
         //PlacementEdgeset tmp_placement_edgeset = covered_placement_notify_request_ptr->getEdgesetRef();
         //assert(tmp_placement_edgeset.size() <= tmp_edge_wrapper_ptr->getTopkEdgecntForPlacement()); // At most k placement edge nodes each time
 
