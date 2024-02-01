@@ -8,7 +8,7 @@ namespace covered
 
     const std::string TriggerBestGuessPlacementFuncParam::FUNCNAME("trigger_best_guess_placement");
 
-    TriggerBestGuessPlacementFuncParam::TriggerBestGuessPlacementFuncParam(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) : key_const_ref_(key), value_const_ref_(value), bandwidth_usage_ref_(total_bandwidth_usage), event_list_ref_(event_list), skip_propagation_latency_(skip_propagation_latency)
+    TriggerBestGuessPlacementFuncParam::TriggerBestGuessPlacementFuncParam(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) : EdgeCustomFuncParamBase(), key_const_ref_(key), value_const_ref_(value), bandwidth_usage_ref_(total_bandwidth_usage), event_list_ref_(event_list), skip_propagation_latency_(skip_propagation_latency)
     {
         is_finish_ = false;
     }
@@ -51,5 +51,39 @@ namespace covered
     {
         is_finish_ = is_finish;
         return;
+    }
+
+    // ProcessPlacementTriggerRequestForBestGuessFuncParam for edge beacon server of BestGuess
+
+    const std::string ProcessPlacementTriggerRequestForBestGuessFuncParam::kClassName("ProcessPlacementTriggerRequestForBestGuessFuncParam");
+
+    const std::string ProcessPlacementTriggerRequestForBestGuessFuncParam::FUNCNAME("process_placement_trigger_request_for_best_guess");
+
+    ProcessPlacementTriggerRequestForBestGuessFuncParam::ProcessPlacementTriggerRequestForBestGuessFuncParam(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr) : EdgeCustomFuncParamBase(), control_request_ptr_(control_request_ptr), edge_cache_server_worker_recvrsp_dst_addr_const_ref_(edge_cache_server_worker_recvrsp_dst_addr)
+    {
+        is_finish_ = false;
+    }
+
+    ProcessPlacementTriggerRequestForBestGuessFuncParam::~ProcessPlacementTriggerRequestForBestGuessFuncParam()
+    {}
+
+    MessageBase* ProcessPlacementTriggerRequestForBestGuessFuncParam::getControlRequestPtr() const
+    {
+        return control_request_ptr_;
+    }
+
+    const NetworkAddr& ProcessPlacementTriggerRequestForBestGuessFuncParam::getEdgeCacheServerWorkerRecvRspDstAddrConstRef() const
+    {
+        return edge_cache_server_worker_recvrsp_dst_addr_const_ref_;
+    }
+
+    bool& ProcessPlacementTriggerRequestForBestGuessFuncParam::isFinishRef()
+    {
+        return is_finish_;
+    }
+
+    const bool& ProcessPlacementTriggerRequestForBestGuessFuncParam::isFinishConstRef() const
+    {
+        return is_finish_;
     }
 }

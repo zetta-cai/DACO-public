@@ -48,6 +48,30 @@ namespace covered
 
         bool is_finish_;
     };
+
+    // ProcessPlacementTriggerRequestForBestGuessFuncParam for edge beacon server of BestGuess
+
+    class ProcessPlacementTriggerRequestForBestGuessFuncParam : public EdgeCustomFuncParamBase
+    {
+    public:
+        static const std::string FUNCNAME; // process placement trigger request for best-guess placement/replacement policy
+
+        ProcessPlacementTriggerRequestForBestGuessFuncParam(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr);
+        ~ProcessPlacementTriggerRequestForBestGuessFuncParam();
+
+        MessageBase* getControlRequestPtr() const;
+        const NetworkAddr& getEdgeCacheServerWorkerRecvRspDstAddrConstRef() const;
+
+        bool& isFinishRef();
+        const bool& isFinishConstRef() const;
+    private:
+        static const std::string kClassName;
+
+        MessageBase* control_request_ptr_;
+        const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr_const_ref_;
+
+        bool is_finish_;
+    };
 }
 
 #endif

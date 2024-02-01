@@ -5,6 +5,7 @@
 #include "common/bandwidth_usage.h"
 #include "common/config.h"
 #include "common/util.h"
+#include "edge/basic_edge_custom_func_param.h"
 #include "edge/covered_edge_custom_func_param.h"
 #include "edge/beacon_server/basic_beacon_server.h"
 #include "edge/beacon_server/covered_beacon_server.h"
@@ -197,6 +198,12 @@ namespace covered
         else if (message_type == MessageType::kReleaseWritelockRequest || message_type == MessageType::kCoveredReleaseWritelockRequest)
         {
             is_finish = processReleaseWritelockRequest_(control_request_ptr, edge_cache_server_worker_recvrsp_dst_addr);
+        }
+        else if (message_type == MessageType::kBestGuessPlacementTriggerRequest)
+        {
+            ProcessPlacementTriggerRequestForBestGuessFuncParam tmp_param(control_request_ptr, edge_cache_server_worker_recvrsp_dst_addr);
+            customFunc(ProcessPlacementTriggerRequestForBestGuessFuncParam::FUNCNAME, &tmp_param);
+            is_finish = tmp_param.isFinishConstRef();
         }
         else
         {

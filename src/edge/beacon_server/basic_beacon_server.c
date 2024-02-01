@@ -7,6 +7,7 @@
 #include "common/config.h"
 #include "common/util.h"
 #include "cooperation/basic_cooperation_custom_func_param.h"
+#include "edge/basic_edge_custom_func_param.h"
 #include "event/event.h"
 #include "event/event_list.h"
 #include "message/control_message.h"
@@ -229,10 +230,22 @@ namespace covered
 
     void BasicBeaconServer::customFunc(const std::string& funcname, EdgeCustomFuncParamBase* func_param_ptr)
     {
-        std::ostringstream oss;
-        oss << "Invalid funcname " << funcname << " for BasicBeaconServer::customFunc()";
-        Util::dumpErrorMsg(instance_name_, oss.str());
-        exit(1);
+        assert(func_param_ptr != NULL);
+
+        if (funcname == ProcessPlacementTriggerRequestForBestGuessFuncParam::FUNCNAME)
+        {
+            ProcessPlacementTriggerRequestForBestGuessFuncParam* tmp_param_ptr = static_cast<ProcessPlacementTriggerRequestForBestGuessFuncParam*>(func_param_ptr);
+
+            bool& is_finish_ref = tmp_param_ptr->isFinishRef();
+            is_finish_ref = processPlacementTriggerRequestForBestGuess_(tmp_param_ptr->getControlRequestPtr(), tmp_param_ptr->getEdgeCacheServerWorkerRecvRspDstAddrConstRef());
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "Invalid funcname " << funcname << " for BasicBeaconServer::customFunc()";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
 
         return;
     }
