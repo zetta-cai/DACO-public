@@ -466,7 +466,7 @@ namespace covered
         {
             // (OBSOLETE) NOTE: we do NOT need to notify placement processor of the current sender/closest edge node for local placement, because sender is NOT beacon and waiting for response will NOT block subsequent local/remote placement calculation
 
-            // NOTE: we need to notify placement processor of the current sender/closest edge node for local placement, because we need to use the background directory update requests to DISABLE recursive cache placement and also avoid blocking cache server worker which may serve subsequent placement calculation if sender is beacon (similar as EdgeWrapperBase::nonblockNotifyForPlacementInternal_() invoked by local/remote beacon edge node)
+            // NOTE: we need to notify placement processor of the current sender/closest edge node for local placement, because we need to use the background directory update requests to DISABLE recursive cache placement and also avoid blocking cache server worker which may serve subsequent placement calculation if sender is beacon (similar as CoveredEdgeWrapper::nonblockNotifyForPlacementInternal_() invoked by local/remote beacon edge node)
 
             // Notify placement processor to admit local edge cache (NOTE: NO need to admit directory) and trigger local cache eviciton, to avoid blocking cache server worker which may serve subsequent placement calculation if sender is beacon
             const bool is_valid = !is_being_written;

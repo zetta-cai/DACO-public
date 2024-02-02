@@ -1,27 +1,43 @@
-#include "edge/cache_server/cache_server_placement_processor.h"
+#include "edge/cache_server/cache_server_placement_processor_base.h"
 
 #include <assert.h>
 
 #include "common/config.h"
+#include "edge/cache_server/basic_cache_server_placement_processor.h"
+#include "edge/cache_server/covered_cache_server_placement_processor.h"
 #include "edge/covered_edge_custom_func_param.h"
 #include "message/control_message.h"
 
 namespace covered
 {
-    const std::string CacheServerPlacementProcessor::kClassName = "CacheServerPlacementProcessor";
+    const std::string CacheServerPlacementProcessorBase::kClassName = "CacheServerPlacementProcessorBase";
 
-    void* CacheServerPlacementProcessor::launchCacheServerPlacementProcessor(void* cache_server_placement_processor_param_ptr)
+    void* CacheServerPlacementProcessorBase::launchCacheServerPlacementProcessor(void* cache_server_placement_processor_param_ptr)
     {
         assert(cache_server_placement_processor_param_ptr != NULL);
 
-        CacheServerPlacementProcessor cache_server_placement_processor((CacheServerProcessorParam*)cache_server_placement_processor_param_ptr);
-        cache_server_placement_processor.start();
+        CacheServerProcessorParam* tmp_cache_server_processor_param_ptr = (CacheServerProcessorParam*)cache_server_placement_processor_param_ptr;
+        const std::string cache_name = tmp_cache_server_processor_param_ptr->getCacheServerPtr()->getEdgeWrapperPtr()->getCacheName();
+        CacheServerPlacementProcessorBase* cache_server_placement_processor_ptr = NULL;
+        if (cache_name == Util::COVERED_CACHE_NAME)
+        {
+            cache_server_placement_processor_ptr = new CoveredCacheServerPlacementProcessor(tmp_cache_server_processor_param_ptr);
+        }
+        else
+        {
+            cache_server_placement_processor_ptr = new BasicCacheServerPlacementProcessor(tmp_cache_server_processor_param_ptr);
+        }
+        assert(cache_server_placement_processor_ptr != NULL);
+        cache_server_placement_processor_ptr->start();
+
+        delete cache_server_placement_processor_ptr;
+        cache_server_placement_processor_ptr = NULL;
 
         pthread_exit(NULL);
         return NULL;
     }
 
-    CacheServerPlacementProcessor::CacheServerPlacementProcessor(CacheServerProcessorParam* cache_server_placement_processor_param_ptr) : cache_server_placement_processor_param_ptr_(cache_server_placement_processor_param_ptr)
+    CacheServerPlacementProcessorBase::CacheServerPlacementProcessorBase(CacheServerProcessorParam* cache_server_placement_processor_param_ptr) : cache_server_placement_processor_param_ptr_(cache_server_placement_processor_param_ptr)
     {
         assert(cache_server_placement_processor_param_ptr != NULL);
 
@@ -32,7 +48,7 @@ namespace covered
         // Differentiate cache servers of different edge nodes
         std::ostringstream oss;
         oss << kClassName << " edge" << edge_idx << "-placement-processor";
-        instance_name_ = oss.str();
+        base_instance_name_ = oss.str();
 
         // For receiving control responses
 
@@ -49,9 +65,9 @@ namespace covered
         assert(edge_cache_server_placement_processor_recvrsp_socket_server_ptr_ != NULL);
     }
 
-    CacheServerPlacementProcessor::~CacheServerPlacementProcessor()
+    CacheServerPlacementProcessorBase::~CacheServerPlacementProcessorBase()
     {
-        // NOTE: no need to release cache_server_placement_processor_param_ptr_, which will be released outside CacheServerPlacementProcessor (by CacheServer)
+        // NOTE: no need to release cache_server_placement_processor_param_ptr_, which will be released outside CacheServerPlacementProcessorBase (by CacheServer)
 
         // Release the socket server to receive control responses,
         assert(edge_cache_server_placement_processor_recvrsp_socket_server_ptr_ != NULL);
@@ -59,7 +75,7 @@ namespace covered
         edge_cache_server_placement_processor_recvrsp_socket_server_ptr_ = NULL;
     }
 
-    void CacheServerPlacementProcessor::start()
+    void CacheServerPlacementProcessorBase::start()
     {
         checkPointers_();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_placement_processor_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -84,7 +100,7 @@ namespace covered
                 {
                     std::ostringstream oss;
                     oss << "invalid message type " << MessageBase::messageTypeToString(data_request_ptr->getMessageType()) << " for start()!";
-                    Util::dumpErrorMsg(instance_name_, oss.str());
+                    Util::dumpErrorMsg(base_instance_name_, oss.str());
                     exit(1);
                 }
 
@@ -117,7 +133,7 @@ namespace covered
         return;
     }
 
-    bool CacheServerPlacementProcessor::processPlacementNotifyRequest_(MessageBase* data_request_ptr, const NetworkAddr& recvrsp_dst_addr)
+    bool CacheServerPlacementProcessorBase::processPlacementNotifyRequest_(MessageBase* data_request_ptr, const NetworkAddr& recvrsp_dst_addr)
     {
         assert(data_request_ptr != NULL);
         assert(data_request_ptr->getMessageType() == MessageType::kCoveredPlacementNotifyRequest);
@@ -192,22 +208,16 @@ namespace covered
         return is_finish;
     }
 
-    bool CacheServerPlacementProcessor::processLocalCacheAdmission_(const LocalCacheAdmissionItem& local_cache_admission_item)
+    bool CacheServerPlacementProcessorBase::processLocalCacheAdmissionInternal_(const LocalCacheAdmissionItem& local_cache_admission_item)
     {
         checkPointers_();
         CacheServerBase* tmp_cache_server_ptr = cache_server_placement_processor_param_ptr_->getCacheServerPtr();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
 
-        assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME);
-
         bool is_finish = false;
         BandwidthUsage total_bandwidth_usage;
         EventList event_list;
         const bool is_background = true;
-
-        // NOTE: NO need victim synchronization here (local placement notification from cache server worker (local beacon node) or beacon server (remote beacon node) has NO directory update request&response and hence NO victim synchronization -> see EdgeWrapperBase::nonblockNotifyForPlacementInternal_(); cache server worker (sender node) has finished victim synchronization when notifying results of hybrid data fetching to beacon node -> see CoveredCacheServer::notifyBeaconForPlacementAfterHybridFetchInternal_())
-
-        // NOTE: NO need to issue directory udpate requests (local placement notification from cache server worker (local beacon node) or beacon server (remote beacon node) does NOT need directory update request as the current edge node is beacon -> see EdgeWrapperBase::nonblockNotifyForPlacementInternal_(); cache server worker (sender node) has finished remote directory admission when notifying results of hybrid data fetching to beacon node -> see CoveredCacheServer::notifyBeaconForPlacementAfterHybridFetchInternal_())
 
         struct timespec admission_start_timestamp = Util::getCurrentTimespec();
 
@@ -234,7 +244,7 @@ namespace covered
         return is_finish;
     }
 
-    void CacheServerPlacementProcessor::checkPointers_() const
+    void CacheServerPlacementProcessorBase::checkPointers_() const
     {
         assert(cache_server_placement_processor_param_ptr_ != NULL);
         assert(edge_cache_server_placement_processor_recvrsp_socket_server_ptr_ != NULL);

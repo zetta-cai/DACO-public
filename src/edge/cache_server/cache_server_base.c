@@ -8,7 +8,7 @@
 #include "common/util.h"
 #include "edge/cache_server/cache_server_invalidation_processor_base.h"
 #include "edge/cache_server/cache_server_metadata_update_processor.h"
-#include "edge/cache_server/cache_server_placement_processor.h"
+#include "edge/cache_server/cache_server_placement_processor_base.h"
 #include "edge/cache_server/cache_server_redirection_processor_base.h"
 #include "edge/cache_server/cache_server_victim_fetch_processor.h"
 #include "edge/cache_server/cache_server_worker_base.h"
@@ -227,7 +227,7 @@ namespace covered
         ThreadLauncher::pthreadCreateHighPriority(ThreadLauncher::EDGE_THREAD_ROLE, tmp_thread_name, &cache_server_redirection_processor_thread, CacheServerRedirectionProcessorBase::launchCacheServerRedirectionProcessor, (void*)(cache_server_redirection_processor_param_ptr_));
 
         // Launch cache server placement processor
-        //pthread_returncode = pthread_create(&cache_server_placement_processor_thread, NULL, CacheServerPlacementProcessor::launchCacheServerPlacementProcessor, (void*)(cache_server_placement_processor_param_ptr_));
+        //pthread_returncode = pthread_create(&cache_server_placement_processor_thread, NULL, CacheServerPlacementProcessorBase::launchCacheServerPlacementProcessor, (void*)(cache_server_placement_processor_param_ptr_));
         // if (pthread_returncode != 0)
         // {
         //     std::ostringstream oss;
@@ -238,11 +238,11 @@ namespace covered
         tmp_thread_name = "edge-cache-server-placement-processor-" + std::to_string(edge_idx);
         if (IS_HIGH_PRIORITY_FOR_CACHE_PLACEMENT)
         {
-            ThreadLauncher::pthreadCreateHighPriority(ThreadLauncher::EDGE_THREAD_ROLE, tmp_thread_name, &cache_server_placement_processor_thread, CacheServerPlacementProcessor::launchCacheServerPlacementProcessor, (void*)(cache_server_placement_processor_param_ptr_));
+            ThreadLauncher::pthreadCreateHighPriority(ThreadLauncher::EDGE_THREAD_ROLE, tmp_thread_name, &cache_server_placement_processor_thread, CacheServerPlacementProcessorBase::launchCacheServerPlacementProcessor, (void*)(cache_server_placement_processor_param_ptr_));
         }
         else
         {
-            ThreadLauncher::pthreadCreateLowPriority(tmp_thread_name, &cache_server_placement_processor_thread, CacheServerPlacementProcessor::launchCacheServerPlacementProcessor, (void*)(cache_server_placement_processor_param_ptr_));
+            ThreadLauncher::pthreadCreateLowPriority(tmp_thread_name, &cache_server_placement_processor_thread, CacheServerPlacementProcessorBase::launchCacheServerPlacementProcessor, (void*)(cache_server_placement_processor_param_ptr_));
         }
 
         // Launch cache server invalidation processor
