@@ -55,7 +55,9 @@ class SubprocessUtil:
         need_upgrade = False
         current_version = ""
         if checkversion_subprocess.returncode != 0:
-            LogUtil.die(scriptname, "failed to get the current version of {} (errmsg: {})".format(software_name, cls.getSubprocessErrstr(checkversion_subprocess)))
+            LogUtil.warn(scriptname, "failed to get the current version of {} (errmsg: {})".format(software_name, cls.getSubprocessErrstr(checkversion_subprocess)))
+            need_upgrade = True
+            current_version = None
         else:
             checkversion_outputstr = cls.getSubprocessOutputstr(checkversion_subprocess)
 
@@ -104,16 +106,16 @@ class SubprocessUtil:
         return new_canonical_filepath
 
     @classmethod
-    def checkOldAlternative(cls, scriptname, software_name, canonical_filepath):
-        LogUtil.prompt(scriptname, "check if old {} is preserved...".format(software_name))
-        check_old_alternative_cmd = "sudo update-alternatives --query {} | grep {}".format(software_name, canonical_filepath)
-        check_old_alternative_subprocess = cls.runCmd(check_old_alternative_cmd)
-        need_preserve_old_alternative = True;
-        if check_old_alternative_subprocess.returncode == 0:
-            check_old_alternative_outputstr = cls.getSubprocessOutputstr(check_old_alternative_subprocess)
-            if check_old_alternative_outputstr != "":
-                need_preserve_old_alternative = False
-        return need_preserve_old_alternative
+    def checkAlternative(cls, scriptname, software_name, canonical_filepath):
+        LogUtil.prompt(scriptname, "check if alternative {} is already preserved...".format(software_name))
+        check_alternative_cmd = "sudo update-alternatives --query {} | grep {}".format(software_name, canonical_filepath)
+        check_alternative_subprocess = cls.runCmd(check_alternative_cmd)
+        need_preserve_alternative = True;
+        if check_alternative_subprocess.returncode == 0:
+            check_alternative_outputstr = cls.getSubprocessOutputstr(check_alternative_subprocess)
+            if check_alternative_outputstr != "":
+                need_preserve_alternative = False
+        return need_preserve_alternative
 
     @classmethod
     def preserveOldAlternative(cls, scriptname, software_name, canonical_filepath, preferred_binpath):

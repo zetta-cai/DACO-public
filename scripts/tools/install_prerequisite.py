@@ -15,57 +15,69 @@ is_upgrade_gcc = True
 is_link_cpp = True
 is_upgrade_cmake = True
 
-# (0) Install some pre-requisites
-
-LogUtil.prompt(Common.scriptname, "install pre-requisites...")
-install_prerequisite_cmd = "sudo apt-get -y install python3-pip software-properties-common"
-install_prerequisite_subprocess = SubprocessUtil.runCmd(install_prerequisite_cmd)
-if install_prerequisite_subprocess.returncode != 0:
-    LogUtil.die(Common.scriptname, "failed to install pre-requisites (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(install_prerequisite_subprocess)))
-
 # (1) Upgrade python3 if necessary
-
-# For python3
-python3_preferred_binpath = PathUtil.getPreferredDirpathForTarget(Common.scriptname, "python3") # e.g., /usr/local/bin
-python3_installpath = os.path.dirname(python3_preferred_binpath) # e.g., /usr/local
-python3_install_binpath = "{}/bin".format(python3_installpath) # e.g., /usr/local/bin
 
 if is_upgrade_python3:
     python3_software_name = "python3"
-    python3_target_version = "3.7.5"
+    python3_target_version = "3.5.2"
     python3_checkversion_cmd = "python3 --version"
     need_upgrade_python3, python3_old_version = SubprocessUtil.checkVersion(Common.scriptname, python3_software_name, python3_target_version, python3_checkversion_cmd)
 
     if need_upgrade_python3:
-        python3_old_canonical_filepath = SubprocessUtil.getCanonicalFilepath(Common.scriptname, python3_software_name, python3_old_version)
-        need_preserve_old_python3 = SubprocessUtil.checkOldAlternative(Common.scriptname, python3_software_name, python3_old_canonical_filepath)
+        if python3_old_version != None: # Already with python3
+            python3_preferred_binpath = PathUtil.getPreferredDirpathForTarget(Common.scriptname, "python3") # e.g., /usr/local/bin
 
-        if need_preserve_old_python3:
-            SubprocessUtil.preserveOldAlternative(Common.scriptname, python3_software_name, python3_old_canonical_filepath, python3_preferred_binpath)
-        else:
-            LogUtil.dump(Common.scriptname, "old python3 has been preserved")
+            python3_old_canonical_filepath = SubprocessUtil.getCanonicalFilepath(Common.scriptname, python3_software_name, python3_old_version)
+            need_preserve_old_python3 = SubprocessUtil.checkAlternative(Common.scriptname, python3_software_name, python3_old_canonical_filepath)
 
-        python3_download_filepath = "{}/Python-3.7.5.tgz".format(Common.lib_dirpath)
-        python3_download_url = "https://www.python.org/ftp/python/3.7.5/Python-3.7.5.tgz"
-        SubprocessUtil.downloadTarball(Common.scriptname, python3_download_filepath, python3_download_url)
+            if need_preserve_old_python3:
+                SubprocessUtil.preserveOldAlternative(Common.scriptname, python3_software_name, python3_old_canonical_filepath, python3_preferred_binpath)
+            else:
+                LogUtil.dump(Common.scriptname, "old python3 has been preserved")
 
-        python3_decompress_dirpath = "{}/Python-3.7.5".format(Common.lib_dirpath)
-        python3_decompress_tool = "tar -xvf"
-        SubprocessUtil.decompressTarball(Common.scriptname, python3_download_filepath, python3_decompress_dirpath, python3_decompress_tool)
+            python3_upgrade_cmd = "sudo apt-get -y upgrade python3"
+            python3_upgrade_process = SubprocessUtil.runCmd(python3_upgrade_cmd)
+            if python3_upgrade_process.returncode != 0:
+                LogUtil.die(Common.scriptname, "failed to upgrade python3 (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(python3_upgrade_process)))
 
-        python3_install_filepath = "{}/python3.7".format(python3_install_binpath)
-        python3_install_tool = "./configure --enable-optimizations --prefix={0} --exec_prefix={0} && sudo make altinstall".format(python3_installpath)
-        SubprocessUtil.installDecompressedTarball(Common.scriptname, python3_decompress_dirpath, python3_install_filepath, python3_install_tool)
+            # Double-check version after upgrade
+            still_need_upgrade, python3_new_version = SubprocessUtil.checkVersion(Common.scriptname, python3_software_name, python3_target_version, python3_checkversion_cmd)
+            if still_need_upgrade:
+                LogUtil.die(Common.scriptname, "failed to upgrade python3 which is still {} < {}!".format(python3_new_version, python3_target_version))
+            else:
+                LogUtil.dump(Common.scriptname, "python3 has been upgraded to {} >= {} successfully!".format(python3_new_version, python3_target_version))
 
-        SubprocessUtil.preserveNewAlternative(Common.scriptname, python3_software_name, python3_preferred_binpath, python3_install_filepath)
+            python3_new_canonical_filepath = SubprocessUtil.getCanonicalFilepath(Common.scriptname, python3_software_name, python3_new_version)
+            need_preserve_new_python3 = SubprocessUtil.checkAlternative(Common.scriptname, python3_software_name, python3_new_canonical_filepath)
 
-        if is_clear_tarball:
-            SubprocessUtil.clearTarball(Common.scriptname, python3_download_filepath)
+            if need_preserve_new_python3:
+                SubprocessUtil.preserveNewAlternative(Common.scriptname, python3_software_name, python3_preferred_binpath, python3_new_canonical_filepath)
+            else:
+                LogUtil.dump(Common.scriptname, "new python3 has been preserved")
+        else: # No python3
+            python3_install_cmd = "sudo apt-get -y install python3"
+            python3_install_process = SubprocessUtil.runCmd(python3_install_cmd)
+            if python3_install_process.returncode != 0:
+                LogUtil.die(Common.scriptname, "failed to install python3 (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(python3_install_process)))
+            
+            # Double-check version after upgrade
+            still_need_upgrade, python3_new_version = SubprocessUtil.checkVersion(Common.scriptname, python3_software_name, python3_target_version, python3_checkversion_cmd)
+            if still_need_upgrade:
+                LogUtil.die(Common.scriptname, "failed to install python3 which is still {} < {}!".format(python3_new_version, python3_target_version))
+            else:
+                LogUtil.dump(Common.scriptname, "python3 has been installed to {} >= {} successfully!".format(python3_new_version, python3_target_version))
     print("")
 
-# (2) Install python libraries (some required by scripts/common.py)
+# (2) Install pip3 and python libraries (some required by scripts/common.py)
 
 if is_install_pylib:
+    # Install python3-pip for pip install
+    LogUtil.prompt(Common.scriptname, "install python3-pip...")
+    install_prerequisite_cmd = "sudo apt-get -y install software-properties-common python3-pip"
+    install_prerequisite_subprocess = SubprocessUtil.runCmd(install_prerequisite_cmd)
+    if install_prerequisite_subprocess.returncode != 0:
+        LogUtil.die(Common.scriptname, "failed to install python3-pip (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(install_prerequisite_subprocess)))
+
     pylib_requirement_filepath = "scripts/requirements.txt"
     LogUtil.prompt(Common.scriptname, "install python libraries based on {}...".format(pylib_requirement_filepath))
     pylib_install_cmd = "python3 -m pip install -r {}".format(pylib_requirement_filepath)
@@ -86,6 +98,13 @@ compiler_install_binpath = "{}/bin".format(compiler_installpath) # /usr/bin
 
 compiler_target_version = "9.4.0"
 if is_upgrade_gcc:
+    # Install software-properties-common for add-apt-repository
+    LogUtil.prompt(Common.scriptname, "install software-properties-common...")
+    install_prerequisite_cmd = "sudo apt-get -y install software-properties-common"
+    install_prerequisite_subprocess = SubprocessUtil.runCmd(install_prerequisite_cmd)
+    if install_prerequisite_subprocess.returncode != 0:
+        LogUtil.die(Common.scriptname, "failed to install software-properties-common (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(install_prerequisite_subprocess)))
+
     is_add_apt_repo_for_compiler = False
     for compiler_name in ["gcc", "g++"]:
         compiler_checkversion_cmd = "{} --version".format(compiler_name)
@@ -93,7 +112,7 @@ if is_upgrade_gcc:
         
         if need_upgrade_compiler:
             compiler_old_canonical_filepath = SubprocessUtil.getCanonicalFilepath(Common.scriptname, compiler_name, compiler_old_version)
-            need_preserve_old_compiler = SubprocessUtil.checkOldAlternative(Common.scriptname, compiler_name, compiler_old_canonical_filepath)
+            need_preserve_old_compiler = SubprocessUtil.checkAlternative(Common.scriptname, compiler_name, compiler_old_canonical_filepath)
             if need_preserve_old_compiler:
                 SubprocessUtil.preserveOldAlternative(Common.scriptname, compiler_name, compiler_old_canonical_filepath, compiler_preferred_binpaths[compiler_name])
             else:
@@ -144,7 +163,7 @@ if is_upgrade_cmake:
         cmake_preferred_binpath = PathUtil.getPreferredDirpathForTarget(Common.scriptname, cmake_software_name) # e.g., /usr/local/bin
 
         cmake_old_canonical_filepath = SubprocessUtil.getCanonicalFilepath(Common.scriptname, cmake_software_name, cmake_old_version)
-        need_preserve_old_cmake = SubprocessUtil.checkOldAlternative(Common.scriptname, cmake_software_name, cmake_old_canonical_filepath)
+        need_preserve_old_cmake = SubprocessUtil.checkAlternative(Common.scriptname, cmake_software_name, cmake_old_canonical_filepath)
         if need_preserve_old_cmake:
             SubprocessUtil.preserveOldAlternative(Common.scriptname, cmake_software_name, cmake_old_canonical_filepath, cmake_preferred_binpath)
         else:
