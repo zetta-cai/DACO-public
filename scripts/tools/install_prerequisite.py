@@ -19,7 +19,7 @@ is_upgrade_cmake = True
 
 if is_upgrade_python3:
     python3_software_name = "python3"
-    python3_target_version = "3.5.2" # NOTE: we just need python3 (e.g., python 3.5.2 for Ubuntu 16.04, python 3.6.9 for Ubuntu 18.04, and python 3.7.5 for Ubuntu 20.04)
+    python3_target_version = "3.6.9" # NOTE: we just need python3 (e.g., python 3.6.9 for Ubuntu 18.04 and python 3.7.5 for Ubuntu 20.04)
     python3_checkversion_cmd = "python3 --version"
     need_upgrade_python3, python3_old_version = SubprocessUtil.checkVersion(Common.scriptname, python3_software_name, python3_target_version, python3_checkversion_cmd)
 
@@ -141,7 +141,7 @@ if is_link_cpp:
 
 if is_upgrade_cmake:
     cmake_software_name = "cmake"
-    cmake_target_version = "3.20.5" # NOTE: we just need cmake >= 3.12 (e.g., cmake 3.20.5 for Ubuntu 16.04, cmake 3.25.2 for Ubuntu 18.04, and cmake 3.28.2 for Ubuntu 20.04)
+    cmake_target_version = "3.25.2" # NOTE: we just need cmake >= 3.12 (e.g., cmake 3.25.2 for Ubuntu 18.04 and cmake 3.28.2 for Ubuntu 20.04)
     cmake_checkversion_cmd = "cmake --version"
     need_upgrade_cmake, cmake_old_version = SubprocessUtil.checkVersion(Common.scriptname, cmake_software_name, cmake_target_version, cmake_checkversion_cmd)
 

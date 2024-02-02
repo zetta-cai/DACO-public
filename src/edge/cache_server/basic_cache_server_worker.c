@@ -414,7 +414,23 @@ namespace covered
             return is_finish;
         }
 
-        // TODO: END HERE
+        // Perform local cache admission if triggered (i.e., the first placement trigger) and sender is placement node
+        if (is_triggered && placement_edge_idx == tmp_edge_wrapper_ptr->getNodeIdx())
+        {
+            // Admit local/remote beacon directory
+            bool is_being_written = false;
+            bool is_finish = admitDirectory_(key, is_being_written, total_bandwidth_usage, event_list, skip_propagation_latency);
+            if (is_finish)
+            {
+                return is_finish;
+            }
+
+            // Notify placement processor to admit local edge cache (NOTE: NO need to admit directory) and trigger local cache eviciton in the background
+            const bool is_neighbor_cached = false; // (i) MUST be false due to is_triggered = true (i.e., the first placement trigger for the global uncached object); (ii) is_neighbor_cached will NOT be used by BestGuess local edge cachce
+            const bool is_valid = !is_being_written;
+            bool is_successful = tmp_edge_wrapper_ptr->getLocalCacheAdmissionBufferPtr()->push(LocalCacheAdmissionItem(key, value, is_neighbor_cached, is_valid, skip_propagation_latency));
+            assert(is_successful);
+        }
 
         return is_finish;
     }

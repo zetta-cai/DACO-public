@@ -270,23 +270,33 @@ namespace covered
         // Process received request
         assert(control_request_ptr->getMessageType() == MessageType::kBestGuessPlacementTriggerRequest);
         const BestGuessPlacementTriggerRequest* const best_guess_placement_trigger_request_ptr = static_cast<BestGuessPlacementTriggerRequest*>(control_request_ptr);
+        const uint32_t source_edge_idx = best_guess_placement_trigger_request_ptr->getSourceIndex();
         const Key key = best_guess_placement_trigger_request_ptr->getKey();
         const Value value = best_guess_placement_trigger_request_ptr->getValue();
         const BestGuessPlaceinfo placeinfo = best_guess_placement_trigger_request_ptr->getPlaceinfo();
         const BestGuessSyncinfo syncinfo = best_guess_placement_trigger_request_ptr->getSyncinfo();
         const bool skip_propagation_latency = best_guess_placement_trigger_request_ptr->isSkipPropagationLatency();
 
+        // Vtime synchronization
+        UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(source_edge_idx, syncinfo.getVtime());
+        edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
+
         // Try to preserve invalid dirinfo in directory table for trigger flag
         PreserveDirectoryTableIfGlobalUncachedFuncParam tmp_param_for_preserve(key, DirectoryInfo(placeinfo.getPlacementEdgeIdx()));
         edge_wrapper_ptr_->getCooperationWrapperPtr()->customFunc(PreserveDirectoryTableIfGlobalUncachedFuncParam::FUNCNAME, &tmp_param_for_preserve);
         const bool is_triggered = tmp_param_for_preserve.isSuccessfulPreservationConstRef();
 
+        if (is_triggered)
+        {
+            // TODO: Issue placement notification to placement node with key and value
+        }
+
         embedBackgroundCounterIfNotEmpty_(total_bandwidth_usage, event_list); // Embed background events/bandwidth if any into control response message
 
         // Get local victim vtime for vtime synchronization
-        GetLocalVictimVtimeFuncParam tmp_param_for_vtimesync;
-        edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
-        const uint64_t& local_victim_vtime = tmp_param_for_vtimesync.getLocalVictimVtimeRef();
+        GetLocalVictimVtimeFuncParam tmp_param_for_localvtime;
+        edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_localvtime);
+        const uint64_t& local_victim_vtime = tmp_param_for_localvtime.getLocalVictimVtimeRef();
 
         // Generate response
         BestGuessPlacementTriggerResponse* best_guess_placement_trigger_response_ptr = new BestGuessPlacementTriggerResponse(key, is_triggered, BestGuessSyncinfo(local_victim_vtime), edge_wrapper_ptr_->getNodeIdx(), edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
