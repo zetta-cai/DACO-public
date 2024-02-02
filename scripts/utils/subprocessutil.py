@@ -60,17 +60,21 @@ class SubprocessUtil:
             current_version = None
         else:
             checkversion_outputstr = cls.getSubprocessOutputstr(checkversion_subprocess)
-
-            current_version = checkversion_outputstr.splitlines()[0].split(" ")[-1]
+            # Filter out unnecessary elements
+            checkversion_firstline_elements = []
+            for tmp_element in checkversion_outputstr.splitlines()[0].split(" "):
+                if "." in tmp_element: # Contain dots
+                    checkversion_firstline_elements.append(tmp_element)
+            current_version = checkversion_firstline_elements[-1]
             current_version_tuple = cls.versionToTuple_(current_version)
             target_version_tuple = cls.versionToTuple_(target_version)
             if current_version_tuple == target_version_tuple:
                 LogUtil.dump(scriptname, "current {} version is the same as the target {}".format(software_name, target_version))
             elif current_version_tuple > target_version_tuple:
-                LogUtil.dump(scriptname, "current {} version {} > target version {} (please check if with any issue in subsequent steps)".format(software_name, checkversion_outputstr, target_version))
+                LogUtil.dump(scriptname, "current {} version {} > target version {} (please check if with any issue in subsequent steps)".format(software_name, current_version, target_version))
             else:
                 need_upgrade = True
-                LogUtil.warn(scriptname, "current {} version {} < target version {} (need to upgrade {})".format(software_name, checkversion_outputstr, target_version, software_name))
+                LogUtil.warn(scriptname, "current {} version {} < target version {} (need to upgrade {})".format(software_name, current_version, target_version, software_name))
         return need_upgrade, current_version
 
     @classmethod
@@ -118,7 +122,7 @@ class SubprocessUtil:
         return need_preserve_alternative
 
     @classmethod
-    def preserveOldAlternative(cls, scriptname, software_name, canonical_filepath, preferred_binpath):
+    def preserveOldAlternative(cls, scriptname, software_name, preferred_binpath, canonical_filepath):
         LogUtil.prompt(scriptname, "preserve old {}...".format(software_name))
         preserve_old_cmd = "sudo update-alternatives --install {0}/{1} {1} {2} {3}".format(preferred_binpath, software_name, canonical_filepath, cls.old_alternative_priority_)
         preserve_old_subprocess = cls.runCmd(preserve_old_cmd)
@@ -203,6 +207,14 @@ class SubprocessUtil:
         install_subprocess = cls.runCmd(install_cmd, is_capture_output=False)
         if install_subprocess.returncode != 0:
             LogUtil.die(scriptname, "failed to install {} (errmsg: {})".format(apt_target_fullname, cls.getSubprocessErrstr(install_subprocess)))
+    
+    @classmethod
+    def upgradeByApt(cls, scriptname, software_name, apt_targetname):
+        LogUtil.prompt(scriptname, "upgrade {} by apt...".format(software_name))
+        upgrade_cmd = "sudo apt-get upgrade -y {}".format(apt_targetname)
+        upgrade_subprocess = cls.runCmd(upgrade_cmd, is_capture_output=False)
+        if upgrade_subprocess.returncode != 0:
+            LogUtil.die(scriptname, "failed to upgrade {} (errmsg: {})".format(apt_target_fullname, cls.getSubprocessErrstr(upgrade_subprocess)))
 
     @classmethod
     def preserveNewAlternative(cls, scriptname, software_name, preferred_binpath, install_filepath):

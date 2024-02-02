@@ -19,26 +19,23 @@ is_upgrade_cmake = True
 
 if is_upgrade_python3:
     python3_software_name = "python3"
-    python3_target_version = "3.5.2"
+    python3_target_version = "3.5.2" # NOTE: we just need python3 (e.g., python 3.5.2 for Ubuntu 16.04, python 3.6.9 for Ubuntu 18.04, and python 3.7.5 for Ubuntu 20.04)
     python3_checkversion_cmd = "python3 --version"
     need_upgrade_python3, python3_old_version = SubprocessUtil.checkVersion(Common.scriptname, python3_software_name, python3_target_version, python3_checkversion_cmd)
 
     if need_upgrade_python3:
         if python3_old_version != None: # Already with python3
-            python3_preferred_binpath = PathUtil.getPreferredDirpathForTarget(Common.scriptname, "python3") # e.g., /usr/local/bin
+            python3_preferred_binpath = PathUtil.getPreferredDirpathForTarget(Common.scriptname, python3_software_name) # e.g., /usr/local/bin
 
             python3_old_canonical_filepath = SubprocessUtil.getCanonicalFilepath(Common.scriptname, python3_software_name, python3_old_version)
             need_preserve_old_python3 = SubprocessUtil.checkAlternative(Common.scriptname, python3_software_name, python3_old_canonical_filepath)
 
             if need_preserve_old_python3:
-                SubprocessUtil.preserveOldAlternative(Common.scriptname, python3_software_name, python3_old_canonical_filepath, python3_preferred_binpath)
+                SubprocessUtil.preserveOldAlternative(Common.scriptname, python3_software_name, python3_preferred_binpath, python3_old_canonical_filepath)
             else:
                 LogUtil.dump(Common.scriptname, "old python3 has been preserved")
 
-            python3_upgrade_cmd = "sudo apt-get -y upgrade python3"
-            python3_upgrade_process = SubprocessUtil.runCmd(python3_upgrade_cmd)
-            if python3_upgrade_process.returncode != 0:
-                LogUtil.die(Common.scriptname, "failed to upgrade python3 (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(python3_upgrade_process)))
+            SubprocessUtil.upgradeByApt(Common.scriptname, python3_software_name, python3_software_name)
 
             # Double-check version after upgrade
             still_need_upgrade, python3_new_version = SubprocessUtil.checkVersion(Common.scriptname, python3_software_name, python3_target_version, python3_checkversion_cmd)
@@ -55,10 +52,7 @@ if is_upgrade_python3:
             else:
                 LogUtil.dump(Common.scriptname, "new python3 has been preserved")
         else: # No python3
-            python3_install_cmd = "sudo apt-get -y install python3"
-            python3_install_process = SubprocessUtil.runCmd(python3_install_cmd)
-            if python3_install_process.returncode != 0:
-                LogUtil.die(Common.scriptname, "failed to install python3 (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(python3_install_process)))
+            SubprocessUtil.installByApt(Common.scriptname, python3_software_name, python3_software_name)
             
             # Double-check version after upgrade
             still_need_upgrade, python3_new_version = SubprocessUtil.checkVersion(Common.scriptname, python3_software_name, python3_target_version, python3_checkversion_cmd)
@@ -72,11 +66,8 @@ if is_upgrade_python3:
 
 if is_install_pylib:
     # Install python3-pip for pip install
-    LogUtil.prompt(Common.scriptname, "install python3-pip...")
-    install_prerequisite_cmd = "sudo apt-get -y install software-properties-common python3-pip"
-    install_prerequisite_subprocess = SubprocessUtil.runCmd(install_prerequisite_cmd)
-    if install_prerequisite_subprocess.returncode != 0:
-        LogUtil.die(Common.scriptname, "failed to install python3-pip (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(install_prerequisite_subprocess)))
+    pip3_software_name = "python3-pip"
+    SubprocessUtil.installByApt(Common.scriptname, pip3_software_name, pip3_software_name)
 
     pylib_requirement_filepath = "scripts/requirements.txt"
     LogUtil.prompt(Common.scriptname, "install python libraries based on {}...".format(pylib_requirement_filepath))
@@ -99,11 +90,8 @@ compiler_install_binpath = "{}/bin".format(compiler_installpath) # /usr/bin
 compiler_target_version = "9.4.0"
 if is_upgrade_gcc:
     # Install software-properties-common for add-apt-repository
-    LogUtil.prompt(Common.scriptname, "install software-properties-common...")
-    install_prerequisite_cmd = "sudo apt-get -y install software-properties-common"
-    install_prerequisite_subprocess = SubprocessUtil.runCmd(install_prerequisite_cmd)
-    if install_prerequisite_subprocess.returncode != 0:
-        LogUtil.die(Common.scriptname, "failed to install software-properties-common (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(install_prerequisite_subprocess)))
+    common_properties_software_name = "software-properties-common"
+    SubprocessUtil.installByApt(Common.scriptname, common_properties_software_name, common_properties_software_name)
 
     is_add_apt_repo_for_compiler = False
     for compiler_name in ["gcc", "g++"]:
@@ -114,7 +102,7 @@ if is_upgrade_gcc:
             compiler_old_canonical_filepath = SubprocessUtil.getCanonicalFilepath(Common.scriptname, compiler_name, compiler_old_version)
             need_preserve_old_compiler = SubprocessUtil.checkAlternative(Common.scriptname, compiler_name, compiler_old_canonical_filepath)
             if need_preserve_old_compiler:
-                SubprocessUtil.preserveOldAlternative(Common.scriptname, compiler_name, compiler_old_canonical_filepath, compiler_preferred_binpaths[compiler_name])
+                SubprocessUtil.preserveOldAlternative(Common.scriptname, compiler_name, compiler_preferred_binpaths[compiler_name], compiler_old_canonical_filepath)
             else:
                 LogUtil.dump(Common.scriptname, "old {} has been preserved".format(compiler_name))
 
@@ -122,7 +110,7 @@ if is_upgrade_gcc:
             if not is_add_apt_repo_for_compiler:
                 LogUtil.prompt(Common.scriptname, "add apt repo for {}...".format(compiler_name))
                 compiler_addrepo_cmd = "sudo add-apt-repository ppa:ubuntu-toolchain-r/test && sudo apt update"
-                compiler_addrepo_subprocess = SubprocessUtil.runCmd(compiler_addrepo_cmd)
+                compiler_addrepo_subprocess = SubprocessUtil.runCmd(compiler_addrepo_cmd, is_capture_output = False)
                 if compiler_addrepo_subprocess.returncode != 0:
                     LogUtil.die(Common.scriptname, "failed to add apt repo for {} (errmsg: {})".format(compiler_name, SubprocessUtil.getSubprocessErrstr(compiler_addrepo_subprocess)))
                 is_add_apt_repo_for_compiler = True
@@ -131,7 +119,7 @@ if is_upgrade_gcc:
             SubprocessUtil.installByApt(Common.scriptname, compiler_name, compiler_apt_targetname)
 
             compiler_install_filepath = "{}/{}".format(compiler_install_binpath, compiler_apt_targetname)
-            SubprocessUtil.preserveNewAlternative(Common.scriptname, compiler_preferred_binpaths[compiler_name], compiler_name, compiler_install_filepath)
+            SubprocessUtil.preserveNewAlternative(Common.scriptname, compiler_name, compiler_preferred_binpaths[compiler_name], compiler_install_filepath)
     print("")
     
 # (4) Link g++ to c++ for cachelib to compile libfolly
@@ -153,21 +141,24 @@ if is_link_cpp:
 
 if is_upgrade_cmake:
     cmake_software_name = "cmake"
-    cmake_target_version = "3.25.2"
+    cmake_target_version = "3.20.5" # NOTE: we just need cmake >= 3.12 (e.g., cmake 3.20.5 for Ubuntu 16.04, cmake 3.25.2 for Ubuntu 18.04, and cmake 3.28.2 for Ubuntu 20.04)
     cmake_checkversion_cmd = "cmake --version"
     need_upgrade_cmake, cmake_old_version = SubprocessUtil.checkVersion(Common.scriptname, cmake_software_name, cmake_target_version, cmake_checkversion_cmd)
 
     if need_upgrade_cmake:
-        cmake_installpath = "/usr" # Installed by apt
-        cmake_install_binpath = "{}/bin".format(cmake_installpath) # /usr/bin
-        cmake_preferred_binpath = PathUtil.getPreferredDirpathForTarget(Common.scriptname, cmake_software_name) # e.g., /usr/local/bin
+        cmake_preferred_binpath = None
 
-        cmake_old_canonical_filepath = SubprocessUtil.getCanonicalFilepath(Common.scriptname, cmake_software_name, cmake_old_version)
-        need_preserve_old_cmake = SubprocessUtil.checkAlternative(Common.scriptname, cmake_software_name, cmake_old_canonical_filepath)
-        if need_preserve_old_cmake:
-            SubprocessUtil.preserveOldAlternative(Common.scriptname, cmake_software_name, cmake_old_canonical_filepath, cmake_preferred_binpath)
-        else:
-            LogUtil.dump(Common.scriptname, "old {} has been preserved".format(cmake_software_name))
+        if cmake_old_version != None: # Already with cmake
+            if cmake_preferred_binpath is None:
+                cmake_preferred_binpath = PathUtil.getPreferredDirpathForTarget(Common.scriptname, cmake_software_name) # e.g., /usr/local/bin
+
+            # Preserve old cmake if necessary
+            cmake_old_canonical_filepath = SubprocessUtil.getCanonicalFilepath(Common.scriptname, cmake_software_name, cmake_old_version)
+            need_preserve_old_cmake = SubprocessUtil.checkAlternative(Common.scriptname, cmake_software_name, cmake_old_canonical_filepath)
+            if need_preserve_old_cmake:
+                SubprocessUtil.preserveOldAlternative(Common.scriptname, cmake_software_name, cmake_preferred_binpath, cmake_old_canonical_filepath)
+            else:
+                LogUtil.dump(Common.scriptname, "old {} has been preserved".format(cmake_software_name))
 
         LogUtil.prompt(Common.scriptname, "check apt repo for CMake...")
         is_add_apt_repo_for_cmake = True
@@ -203,8 +194,15 @@ if is_upgrade_cmake:
         tmp_need_upgrade_cmake, cmake_new_version = SubprocessUtil.checkVersion(Common.scriptname, cmake_software_name, cmake_target_version, cmake_checkversion_cmd)
         if tmp_need_upgrade_cmake:
             LogUtil.die(Common.scriptname, "cmake {} has NOT been upgraded to >= {} successfully!".format(cmake_new_version, cmake_target_version))
-        cmake_new_canonical_filepath = SubprocessUtil.getCanonicalFilepath(Common.scriptname, cmake_software_name, cmake_new_version) # /usr/bin/cmake-3.25.2
-        SubprocessUtil.preserveNewAlternative(Common.scriptname, cmake_software_name, cmake_preferred_binpath, cmake_new_canonical_filepath)
+        else:
+            if cmake_new_version is None:
+                LogUtil.die(Common.scriptname, "cmake has NOT been installed successfully!")
+            else:
+                if cmake_preferred_binpath is None:
+                    cmake_preferred_binpath = PathUtil.getPreferredDirpathForTarget(Common.scriptname, cmake_software_name) # e.g., /usr/local/bin
+                
+                cmake_new_canonical_filepath = SubprocessUtil.getCanonicalFilepath(Common.scriptname, cmake_software_name, cmake_new_version) # /usr/bin/cmake-3.25.2
+                SubprocessUtil.preserveNewAlternative(Common.scriptname, cmake_software_name, cmake_preferred_binpath, cmake_new_canonical_filepath)
     print("")
 
 # (6) Change system settings
