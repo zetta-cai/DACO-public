@@ -34,6 +34,14 @@ namespace covered
             bool& is_successful_preservation_ref = tmp_param_ptr->isSuccessfulPreservationRef();
             is_successful_preservation_ref = preserveDirectoryTableIfGlobalUncachedInternal_(tmp_param_ptr->getKey(), tmp_param_ptr->getDirectoryInfo());
         }
+        else if (funcname == ValidateDirectoryTableForPreservedDirinfoFuncParam::FUNCNAME)
+        {
+            ValidateDirectoryTableForPreservedDirinfoFuncParam* tmp_param_ptr = dynamic_cast<ValidateDirectoryTableForPreservedDirinfoFuncParam*>(func_param_ptr);
+            assert(tmp_param_ptr != NULL);
+
+            bool& is_successful_validation_ref = tmp_param_ptr->isSuccessfulValidationRef();
+            is_successful_validation_ref = validateDirectoryTableForPreservedDirinfoInternal_(tmp_param_ptr->getKey(), tmp_param_ptr->getDirectoryInfo());
+        }
         else
         {
             std::ostringstream oss;
@@ -84,5 +92,23 @@ namespace covered
         cooperation_wrapper_perkey_rwlock_ptr_->unlock(key, context_name);
 
         return is_successful_preservation;
+    }
+
+    bool BasicCooperationWrapper::validateDirectoryTableForPreservedDirinfoInternal_(const Key& key, const DirectoryInfo& directory_info)
+    {
+        checkPointers_();
+
+        // Acquire a write lock
+        std::string context_name = "BasicCooperationWrapper::validateDirectoryTableForPreservedDirinfoInternal_()";
+        cooperation_wrapper_perkey_rwlock_ptr_->acquire_lock(key, context_name);
+
+        MYASSERT(dht_wrapper_ptr_->getBeaconEdgeIdx(key) == edge_idx_); // Current edge node MUST be beacon for the given key
+
+        bool is_successful_validation = directory_table_ptr_->validateDirinfoForKeyIfExist(key, directory_info);
+
+        // Release a write lock
+        cooperation_wrapper_perkey_rwlock_ptr_->unlock(key, context_name);
+
+        return is_successful_validation;
     }
 }

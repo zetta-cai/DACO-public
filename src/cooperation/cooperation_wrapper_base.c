@@ -367,7 +367,8 @@ namespace covered
         std::unordered_set<NetworkAddr, NetworkAddrHasher> blocked_edges = block_tracker_ptr_->unblockAllEdgesAndFinishWriteForKeyIfExist(key);
 
         // Validate content directory if any for the closest edge node releasing the write lock
-        directory_table_ptr_->validateDirinfoForKeyIfExist(key, sender_dirinfo);
+        bool is_exist = directory_table_ptr_->validateDirinfoForKeyIfExist(key, sender_dirinfo);
+        assert(is_exist); // Key and dirinfo should exist when releasing the writelock
 
         is_source_cached = directory_table_ptr_->isCachedByGivenEdge(key, source_edge_idx);
 

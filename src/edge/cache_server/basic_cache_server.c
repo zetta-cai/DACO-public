@@ -44,6 +44,8 @@ namespace covered
         const uint32_t dst_beacon_edge_idx_for_compression = edge_wrapper_ptr_->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
         assert(dst_beacon_edge_idx_for_compression != edge_idx);
 
+        // TODO: END HERE
+
         MessageBase* directory_update_request_ptr = NULL;
         directory_update_request_ptr = new DirectoryUpdateRequest(key, is_admit, directory_info, edge_idx, source_addr, skip_propagation_latency);
         assert(directory_update_request_ptr != NULL);

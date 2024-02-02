@@ -39,6 +39,30 @@ namespace covered
 
         bool is_successful_preservation_;
     };
+
+    // ValidateDirectoryTableForPreservedDirinfoFuncParam
+
+    class ValidateDirectoryTableForPreservedDirinfoFuncParam : public CooperationCustomFuncParamBase
+    {
+    public:
+        static const std::string FUNCNAME; // validate dirinfo in directory table if exists
+
+        ValidateDirectoryTableForPreservedDirinfoFuncParam(const Key& key, const DirectoryInfo& directory_info);
+        virtual ~ValidateDirectoryTableForPreservedDirinfoFuncParam();
+
+        Key getKey() const;
+        DirectoryInfo getDirectoryInfo() const;
+
+        bool& isSuccessfulValidationRef();
+        const bool& isSuccessfulValidationConstRef() const;
+    private:
+        static const std::string kClassName;
+
+        const Key key_;
+        const DirectoryInfo directory_info_;
+
+        bool is_successful_validation_;
+    };
 }
 
 #endif

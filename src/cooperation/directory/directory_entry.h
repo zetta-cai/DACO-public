@@ -55,6 +55,7 @@ namespace covered
         struct ValidateMetadataForDirinfoIfExistParam
         {
             const DirectoryInfo& directory_info;
+            bool is_dirinfo_exist;
         };
 
         static const std::string GET_ALL_DIRINFO_FUNCNAME;
@@ -74,7 +75,7 @@ namespace covered
         bool addDirinfo(const DirectoryInfo& directory_info, const DirectoryMetadata& directory_metadata, MetadataUpdateRequirement& metadata_update_requirement); // return is_directory_already_exist
         bool removeDirinfo(const DirectoryInfo& directory_info, MetadataUpdateRequirement& metadata_update_requirement); // return is_directory_already_exist
         void invalidateMetadataForAllDirinfoIfExist(DirinfoSet& all_dirinfo); // Invalidate all metadatas only if dirinfos exist (NOT add invalid metadata)
-        void validateMetadataForDirinfoIfExist(const DirectoryInfo& directory_info); // Validate metadata only if dirinfo exists (NOT add invalid metadata)
+        bool validateMetadataForDirinfoIfExist(const DirectoryInfo& directory_info); // Validate metadata only if dirinfo exists (NOT add invalid metadata) (return if dirinfo exists)
 
         // (2) For ConcurrentHashtable
 

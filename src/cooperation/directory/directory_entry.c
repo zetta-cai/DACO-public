@@ -147,14 +147,16 @@ namespace covered
         return;
     }
 
-    void DirectoryEntry::validateMetadataForDirinfoIfExist(const DirectoryInfo& directory_info)
+    bool DirectoryEntry::validateMetadataForDirinfoIfExist(const DirectoryInfo& directory_info)
     {
+        bool is_dirinfo_exist = false;
         dirinfo_entry_t::iterator iter = directory_entry_.find(directory_info);
         if (iter != directory_entry_.end())
         {
             iter->second.validateMetadata();
+            is_dirinfo_exist = true;
         }
-        return;
+        return is_dirinfo_exist;
     }
 
     // (2) For ConcurrentHashtable
@@ -205,7 +207,7 @@ namespace covered
         else if (function_name == VALIDATE_METADATA_FOR_DIRINFO_IF_EXIST_FUNCNAME)
         {
             ValidateMetadataForDirinfoIfExistParam* tmp_param_ptr = static_cast<ValidateMetadataForDirinfoIfExistParam*>(param_ptr);
-            validateMetadataForDirinfoIfExist(tmp_param_ptr->directory_info);
+            tmp_param_ptr->is_dirinfo_exist = validateMetadataForDirinfoIfExist(tmp_param_ptr->directory_info);
         }
         else
         {
