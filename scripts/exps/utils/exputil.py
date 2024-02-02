@@ -15,9 +15,9 @@ class ExpUtil:
             ssh_cmd = ""
             if with_background:
                 # NOTE: use -f to move SSH connection into background in target machine after launching the background command, such that current machine will NOT get stuck
-                ssh_cmd = "ssh -f -i ~/.ssh/{} {}@{}".format(Common.sshkey_name, Common.username, cls.physical_machines_[remote_machine_idx]["public_ipstr"])
+                ssh_cmd = "ssh -f -i {} {}@{}".format(Common.sshkey_filepath, Common.username, cls.physical_machines_[remote_machine_idx]["public_ipstr"])
             else:
-                ssh_cmd = "ssh -i ~/.ssh/{} {}@{}".format(Common.sshkey_name, Common.username, cls.physical_machines_[remote_machine_idx]["public_ipstr"])
+                ssh_cmd = "ssh -i {} {}@{}".format(Common.sshkey_filepath, Common.username, cls.physical_machines_[remote_machine_idx]["public_ipstr"])
             remote_cmd = "{} \"source /home/{}/.bashrc_non_interactive && cd {} && {}\"".format(ssh_cmd, Common.username, Common.proj_dirname, internal_cmd)
         return remote_cmd
 

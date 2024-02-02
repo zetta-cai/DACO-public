@@ -16,7 +16,7 @@ def checkDuplicateMachine(machine_idx, machine_ip):
             return
     return
 
-# (0) Load config.json for preparation
+# (0) Load config.json and mkdir for preparation
 
 physical_machines = JsonUtil.getValueForKeystr(Common.scriptname, "physical_machines")
 
@@ -29,18 +29,31 @@ for tmp_machine_idx in range(len(physical_machines)):
     physical_machine_ips.append(tmp_machine_ip)
 print("")
 
+# Mkdir for preparation
+sshkey_dirpath = os.path.dirname(Common.sshkey_filepath)
+LogUtil.prompt(Common.scriptname, "create {} if not exist for preparation".format(sshkey_dirpath))
+for tmp_machine_idx in range(len(physical_machines)):
+    tmp_machine_public_ip = physical_machines[tmp_machine_idx]["public_ipstr"]
+    if tmp_machine_idx == Common.cur_machine_idx:
+        mkdir_cmd = "mkdir -p {}".format(sshkey_dirpath)
+    else:
+        mkdir_cmd = "ssh -i {} {}@{} 'mkdir -p {}'".format(Common.sshkey_filepath, Common.username, tmp_machine_public_ip, sshkey_dirpath)
+    mkdir_subprocess = SubprocessUtil.runCmd(mkdir_cmd)
+    if mkdir_subprocess.returncode != 0:
+        LogUtil.die(Common.scriptname, SubprocessUtil.getSubprocessErrstr(mkdir_subprocess))
+print("")
+
 # (1) Generate SSH key pair
 
 # Generate passfree SSH key pair if not exist to prepare for connection building
-sshkey_filepath = "/home/{}/.ssh/{}".format(Common.username, Common.sshkey_name)
-if not os.path.exists(sshkey_filepath):
-    LogUtil.prompt(Common.scriptname, "generate passfree SSH key pair into {}".format(sshkey_filepath))
-    generate_passfree_sshkey_cmd = "ssh-keygen -t rsa -P '' -f {}".format(sshkey_filepath)
+if not os.path.exists(Common.sshkey_filepath):
+    LogUtil.prompt(Common.scriptname, "generate passfree SSH key pair into {}".format(Common.sshkey_filepath))
+    generate_passfree_sshkey_cmd = "ssh-keygen -t rsa -P '' -f {}".format(Common.sshkey_filepath)
     generate_passfree_sshkey_subprocess = SubprocessUtil.runCmd(generate_passfree_sshkey_cmd)
     if generate_passfree_sshkey_subprocess.returncode != 0:
         LogUtil.die(Common.scriptname, SubprocessUtil.getSubprocessErrstr(generate_passfree_sshkey_subprocess))
 else:
-    LogUtil.prompt(Common.scriptname, "passfree SSH key pair already exist in {}".format(sshkey_filepath))
+    LogUtil.prompt(Common.scriptname, "passfree SSH key pair already exist in {}".format(Common.sshkey_filepath))
 print("")
 
 # (2) Copy SSH private key
@@ -51,7 +64,7 @@ for tmp_machine_idx in range(len(physical_machines)):
         continue
     tmp_machine_public_ip = physical_machines[tmp_machine_idx]["public_ipstr"]
     LogUtil.prompt(Common.scriptname, "copy passfree SSH private key to machine {}".format(tmp_machine_idx))
-    copy_private_sshkey_cmd = "scp {} {}@{}:{}".format(sshkey_filepath, Common.username, tmp_machine_public_ip, sshkey_filepath)
+    copy_private_sshkey_cmd = "scp -i {} {} {}@{}:{}".format(Common.sshkey_filepath, Common.sshkey_filepath, Common.username, tmp_machine_public_ip, Common.sshkey_filepath)
     copy_private_sshkey_subprocess = SubprocessUtil.runCmd(copy_private_sshkey_cmd)
     if copy_private_sshkey_subprocess.returncode != 0:
         LogUtil.die(Common.scriptname, SubprocessUtil.getSubprocessErrstr(copy_private_sshkey_subprocess))
@@ -61,7 +74,7 @@ print("")
 
 # Get SSH public key content
 LogUtil.prompt(Common.scriptname, "get SSH public key content")
-get_public_sshkey_cmd = "cat {}.pub".format(sshkey_filepath)
+get_public_sshkey_cmd = "cat {}.pub".format(Common.sshkey_filepath)
 get_public_sshkey_subprocess = SubprocessUtil.runCmd(get_public_sshkey_cmd)
 if get_public_sshkey_subprocess.returncode != 0:
     LogUtil.die(Common.scriptname, SubprocessUtil.getSubprocessErrstr(get_public_sshkey_subprocess))
@@ -79,7 +92,7 @@ for tmp_machine_idx in range(len(physical_machines)):
     if tmp_machine_idx == Common.cur_machine_idx:
         check_authorized_keys_filepath_cmd = "ls {}".format(authorized_keys_filepath)
     else:
-        check_authorized_keys_filepath_cmd = "ssh {}@{} 'ls {}'".format(Common.username, tmp_machine_public_ip, authorized_keys_filepath)
+        check_authorized_keys_filepath_cmd = "ssh -i {} {}@{} 'ls {}'".format(Common.sshkey_filepath, Common.username, tmp_machine_public_ip, authorized_keys_filepath)
     need_create_authorized_keys = False
     check_authorized_keys_filepath_subprocess = SubprocessUtil.runCmd(check_authorized_keys_filepath_cmd)
     if check_authorized_keys_filepath_subprocess.returncode != 0: # authorized_keys_filepath not found
@@ -89,36 +102,38 @@ for tmp_machine_idx in range(len(physical_machines)):
     else: # authorized_keys_filepath is found
         need_create_authorized_keys = False
     
-    # Create authorized_keys if not exist
     if need_create_authorized_keys:
+        # Create authorized_keys if not exist
         LogUtil.dump(Common.scriptname, "create {} in machine {}".format(authorized_keys_filepath, tmp_machine_idx))
         create_authorized_keys_cmd = ""
         if tmp_machine_idx == Common.cur_machine_idx:
             create_authorized_keys_cmd = "touch {}".format(authorized_keys_filepath)
         else:
-            create_authorized_keys_cmd = "ssh {}@{} 'touch {}'".format(Common.username, tmp_machine_public_ip, authorized_keys_filepath)
+            create_authorized_keys_cmd = "ssh -i {} {}@{} 'touch {}'".format(Common.sshkey_filepath, Common.username, tmp_machine_public_ip, authorized_keys_filepath)
         create_authorized_keys_subprocess = SubprocessUtil.runCmd(create_authorized_keys_cmd)
         if create_authorized_keys_subprocess.returncode != 0:
             LogUtil.die(Common.scriptname, SubprocessUtil.getSubprocessErrstr(create_authorized_keys_subprocess))
-
-    # Check SSH public key in authorized_keys
-    LogUtil.dump(Common.scriptname, "check SSH public key in {} of machine {}".format(authorized_keys_filepath, tmp_machine_idx))
-    check_public_sshkey_in_authorized_keys_cmd = ""
-    if tmp_machine_idx == Common.cur_machine_idx:
-        check_public_sshkey_in_authorized_keys_cmd = "grep -w '{}' {}".format(public_sshkey_content, authorized_keys_filepath)
-    else:
-        check_public_sshkey_in_authorized_keys_cmd = "ssh {}@{} 'grep -w \"{}\" {}'".format(Common.username, tmp_machine_public_ip, public_sshkey_content, authorized_keys_filepath)
-    need_append_public_sshkey = False
-    check_public_sshkey_in_authorized_keys_subprocess = SubprocessUtil.runCmd(check_public_sshkey_in_authorized_keys_cmd)
-    if check_public_sshkey_in_authorized_keys_subprocess.returncode != 0: # Error of public_sshkey_content not found
-        if SubprocessUtil.getSubprocessErrstr(check_public_sshkey_in_authorized_keys_subprocess) != "": # Error
-            LogUtil.die(Common.scriptname, SubprocessUtil.getSubprocessErrstr(check_public_sshkey_in_authorized_keys_subprocess))
-        else: # public_sshkey_content not found
-            need_append_public_sshkey = True
-    elif SubprocessUtil.getSubprocessOutputstr(check_public_sshkey_in_authorized_keys_subprocess) == "": # public_sshkey_content not found
+        
         need_append_public_sshkey = True
-    else: # public_sshkey_content is found
+    else:
+        # Check SSH public key in authorized_keys
+        LogUtil.dump(Common.scriptname, "check SSH public key in {} of machine {}".format(authorized_keys_filepath, tmp_machine_idx))
+        check_public_sshkey_in_authorized_keys_cmd = ""
+        if tmp_machine_idx == Common.cur_machine_idx:
+            check_public_sshkey_in_authorized_keys_cmd = "grep -w '{}' {}".format(public_sshkey_content, authorized_keys_filepath)
+        else:
+            check_public_sshkey_in_authorized_keys_cmd = "ssh -i {} {}@{} 'grep -w \"{}\" {}'".format(Common.sshkey_filepath, Common.username, tmp_machine_public_ip, public_sshkey_content, authorized_keys_filepath)
         need_append_public_sshkey = False
+        check_public_sshkey_in_authorized_keys_subprocess = SubprocessUtil.runCmd(check_public_sshkey_in_authorized_keys_cmd)
+        if check_public_sshkey_in_authorized_keys_subprocess.returncode != 0: # Error of public_sshkey_content not found
+            if SubprocessUtil.getSubprocessErrstr(check_public_sshkey_in_authorized_keys_subprocess) != "": # Error
+                LogUtil.die(Common.scriptname, SubprocessUtil.getSubprocessErrstr(check_public_sshkey_in_authorized_keys_subprocess))
+            else: # public_sshkey_content not found
+                need_append_public_sshkey = True
+        elif SubprocessUtil.getSubprocessOutputstr(check_public_sshkey_in_authorized_keys_subprocess) == "": # public_sshkey_content not found
+            need_append_public_sshkey = True
+        else: # public_sshkey_content is found
+            need_append_public_sshkey = False
 
     # Append SSH public key to authorized_keys
     if need_append_public_sshkey:
@@ -127,7 +142,7 @@ for tmp_machine_idx in range(len(physical_machines)):
         if tmp_machine_idx == Common.cur_machine_idx:
             append_public_sshkey_cmd = "echo {} >> {}".format(public_sshkey_content, authorized_keys_filepath)
         else:
-            append_public_sshkey_cmd = "ssh {}@{} 'echo {} >> {}'".format(Common.username, tmp_machine_public_ip, public_sshkey_content, authorized_keys_filepath)
+            append_public_sshkey_cmd = "ssh -i {} {}@{} 'echo {} >> {}'".format(Common.sshkey_filepath, Common.username, tmp_machine_public_ip, public_sshkey_content, authorized_keys_filepath)
         append_public_sshkey_subprocess = SubprocessUtil.runCmd(append_public_sshkey_cmd)
         if append_public_sshkey_subprocess.returncode != 0:
             LogUtil.die(Common.scriptname, SubprocessUtil.getSubprocessErrstr(append_public_sshkey_subprocess))

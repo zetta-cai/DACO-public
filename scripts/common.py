@@ -18,6 +18,7 @@ class Common:
     if username is None: # SUDO_USER is None if sudo is not used
         username = os.getenv("USER") # Get username if sudo is not used (NOTE: USER will be root if sudo is used)
     sshkey_name = "id_rsa_for_covered"
+    sshkey_filepath = "/home/{}/.ssh/{}".format(username, sshkey_name)
 
     kernel_codename = ""
     tmp_get_kernel_codename_cmd = "lsb_release -c"
