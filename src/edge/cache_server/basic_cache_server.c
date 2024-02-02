@@ -1,5 +1,6 @@
 #include "edge/cache_server/basic_cache_server.h"
 
+#include "cache/basic_cache_custom_func_param.h"
 #include "common/util.h"
 #include "message/control_message.h"
 
@@ -44,10 +45,21 @@ namespace covered
         const uint32_t dst_beacon_edge_idx_for_compression = edge_wrapper_ptr_->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
         assert(dst_beacon_edge_idx_for_compression != edge_idx);
 
-        // TODO: END HERE
-
+        const std::string cache_name = edge_wrapper_ptr_->getCacheName();
         MessageBase* directory_update_request_ptr = NULL;
-        directory_update_request_ptr = new DirectoryUpdateRequest(key, is_admit, directory_info, edge_idx, source_addr, skip_propagation_latency);
+        if (cache_name != Util::BESTGUESS_CACHE_NAME) // other baselines
+        {
+            directory_update_request_ptr = new DirectoryUpdateRequest(key, is_admit, directory_info, edge_idx, source_addr, skip_propagation_latency);
+        }
+        else // BestGuess
+        {
+            // Get local victim vtime for vtime synchronization
+            GetLocalVictimVtimeFuncParam tmp_param_for_vtimesync;
+            edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
+            const uint64_t& local_victim_vtime = tmp_param_for_vtimesync.getLocalVictimVtimeRef();
+
+            directory_update_request_ptr = new BestGuessDirectoryAdmitRequest(key, is_admit, directory_info, BestGuessSyncinfo(local_victim_vtime), edge_idx, source_addr, skip_propagation_latency);
+        }
         assert(directory_update_request_ptr != NULL);
 
         return directory_update_request_ptr;
@@ -58,11 +70,29 @@ namespace covered
         checkPointers_();
         assert(control_response_ptr != NULL);
 
-        assert(control_response_ptr->getMessageType() == MessageType::kDirectoryUpdateResponse);
+        const MessageType message_type = control_response_ptr->getMessageType();
+        if (message_type == MessageType::kDirectoryUpdateResponse)
+        {
+            // Get is_being_written from control response message
+            const DirectoryUpdateResponse* const directory_update_response_ptr = static_cast<const DirectoryUpdateResponse*>(control_response_ptr);
+            is_being_written = directory_update_response_ptr->isBeingWritten();
+        }
+        else if (message_type == MessageType::kBestGuessDirectoryAdmitResponse)
+        {
+            // Get is_being_written and is_neighbor_cached from control response message
+            const BestGuessDirectoryAdmitResponse* const bestguess_directory_admit_response_ptr = static_cast<const BestGuessDirectoryAdmitResponse*>(control_response_ptr);
+            is_being_written = bestguess_directory_admit_response_ptr->isBeingWritten();
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "Invalid message type " << static_cast<uint32_t>(message_type) << " in processRspToAdmitBeaconDirectory_()";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
 
-        // Get is_being_written from control response message
-        const DirectoryUpdateResponse* const directory_update_response_ptr = static_cast<const DirectoryUpdateResponse*>(control_response_ptr);
-        is_being_written = directory_update_response_ptr->isBeingWritten();
+        UNUSED(is_neighbor_cached);
+        UNUSED(is_background);
 
         return;
     }

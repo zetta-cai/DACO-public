@@ -91,7 +91,7 @@ namespace covered
                 MessageBase* data_request_ptr = tmp_cache_server_item.getRequestPtr();
                 assert(data_request_ptr != NULL);
 
-                if (data_request_ptr->getMessageType() == MessageType::kCoveredPlacementNotifyRequest) // Placement notification
+                if (data_request_ptr->getMessageType() == MessageType::kCoveredBgplacePlacementNotifyRequest) // Placement notification
                 {
                     NetworkAddr recvrsp_dst_addr = data_request_ptr->getSourceAddr(); // A beacon edge node
                     is_finish = processPlacementNotifyRequest_(data_request_ptr, recvrsp_dst_addr);
@@ -136,7 +136,7 @@ namespace covered
     bool CacheServerPlacementProcessorBase::processPlacementNotifyRequest_(MessageBase* data_request_ptr, const NetworkAddr& recvrsp_dst_addr)
     {
         assert(data_request_ptr != NULL);
-        assert(data_request_ptr->getMessageType() == MessageType::kCoveredPlacementNotifyRequest);
+        assert(data_request_ptr->getMessageType() == MessageType::kCoveredBgplacePlacementNotifyRequest);
 
         checkPointers_();
         CacheServerBase* tmp_cache_server_ptr = cache_server_placement_processor_param_ptr_->getCacheServerPtr();

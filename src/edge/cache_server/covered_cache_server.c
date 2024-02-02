@@ -100,7 +100,7 @@ namespace covered
         }
         else
         {
-            assert(control_response_ptr->getMessageType() == MessageType::kCoveredPlacementDirectoryUpdateResponse);
+            assert(control_response_ptr->getMessageType() == MessageType::kCoveredBgplaceDirectoryUpdateResponse);
 
             // Get is_being_written and victim syncset from control response message
             const CoveredBgplaceDirectoryUpdateResponse* const covered_placement_directory_update_response_ptr = static_cast<const CoveredBgplaceDirectoryUpdateResponse*>(control_response_ptr);
@@ -238,14 +238,14 @@ namespace covered
         {
             // NOTE: ONLY foreground directory eviction could trigger hybrid data fetching
             const MessageType message_type = control_response_ptr->getMessageType();
-            //assert(message_type == MessageType::kCoveredDirectoryUpdateResponse || message_type == MessageType::kCoveredPlacementDirectoryEvictResponse);
+            //assert(message_type == MessageType::kCoveredDirectoryUpdateResponse || message_type == MessageType::kCoveredFghybridDirectoryEvictResponse);
             if (message_type == MessageType::kCoveredDirectoryUpdateResponse) // Normal directory eviction response
             {
                 // Get is_being_written (UNUSED) from control response message
                 const CoveredDirectoryUpdateResponse* covered_directory_update_response_ptr = static_cast<const CoveredDirectoryUpdateResponse*>(control_response_ptr);
                 is_being_written = covered_directory_update_response_ptr->isBeingWritten();
             }
-            else if (message_type == MessageType::kCoveredPlacementDirectoryEvictResponse) // Directory eviction response with hybrid data fetching
+            else if (message_type == MessageType::kCoveredFghybridDirectoryEvictResponse) // Directory eviction response with hybrid data fetching
             {
                 const CoveredFghybridDirectoryEvictResponse* const covered_placement_directory_evict_response_ptr = static_cast<const CoveredFghybridDirectoryEvictResponse*>(control_response_ptr);
 
@@ -271,7 +271,7 @@ namespace covered
         }
         else // Background remote directory eviction (triggered by remote placement nofication and local placement notification at local/remote beacon edge node)
         {
-            assert(control_response_ptr->getMessageType() == MessageType::kCoveredPlacementDirectoryUpdateResponse);
+            assert(control_response_ptr->getMessageType() == MessageType::kCoveredBgplaceDirectoryUpdateResponse);
 
             // Get is_being_written (UNUSED) from control response message
             const CoveredBgplaceDirectoryUpdateResponse* covered_placement_directory_update_response_ptr = static_cast<const CoveredBgplaceDirectoryUpdateResponse*>(control_response_ptr);
@@ -407,7 +407,7 @@ namespace covered
 
                 if (!current_need_placement)
                 {
-                    assert(control_response_ptr->getMessageType() == MessageType::kCoveredPlacementHybridFetchedResponse);
+                    assert(control_response_ptr->getMessageType() == MessageType::kCoveredFghybridHybridFetchedResponse);
                     UNUSED(is_being_written); // NOTE: is_being_written will NOT be used as the current edge node (sender) is NOT a placement
                     const CoveredFghybridHybridFetchedResponse* const covered_placement_hybrid_fetched_response_ptr = static_cast<const CoveredFghybridHybridFetchedResponse*>(control_response_ptr);
                     received_beacon_victim_syncset = covered_placement_hybrid_fetched_response_ptr->getVictimSyncsetRef();
@@ -416,7 +416,7 @@ namespace covered
                 {
                     if (!current_is_only_placement) // Current edge node is NOT the only placement
                     {
-                        assert(control_response_ptr->getMessageType() == MessageType::kCoveredPlacementDirectoryAdmitResponse);
+                        assert(control_response_ptr->getMessageType() == MessageType::kCoveredFghybridDirectoryAdmitResponse);
                         const CoveredFghybridDirectoryAdmitResponse* const covered_placement_directory_admit_response_ptr = static_cast<const CoveredFghybridDirectoryAdmitResponse*>(control_response_ptr);
                         is_being_written = covered_placement_directory_admit_response_ptr->isBeingWritten(); // Used by local edge cache admission later
                         received_beacon_victim_syncset = covered_placement_directory_admit_response_ptr->getVictimSyncsetRef();

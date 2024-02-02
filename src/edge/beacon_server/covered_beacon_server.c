@@ -135,7 +135,7 @@ namespace covered
         bool with_extra_hybrid_fetching_result = false; // If with extra hybrid fetching result (except/besides sender) to trigger non-blocking placement notification
         Value tmp_value; // ONLY used if  with_extra_hybrid_fetching_result = true
         Edgeset extra_placement_edgeset; // ONLY used if with_extra_hybrid_fetching_result = true
-        if (message_type == MessageType::kCoveredPlacementDirectoryUpdateRequest) // Background directory updates w/o hybrid data fetching for COVERED
+        if (message_type == MessageType::kCoveredBgplaceDirectoryUpdateRequest) // Background directory updates w/o hybrid data fetching for COVERED
         {
             // Get key, is_admit, directory info, victim syncset, and collected popularity (if any) from directory update request
             const CoveredBgplaceDirectoryUpdateRequest* const covered_placement_directory_update_request_ptr = static_cast<const CoveredBgplaceDirectoryUpdateRequest*>(control_request_ptr);
@@ -152,7 +152,7 @@ namespace covered
 
             with_extra_hybrid_fetching_result = false; // NO hybrid data fetching result
         }
-        else if (message_type == kCoveredPlacementHybridFetchedRequest) // Foreground request to notify the result of excluding-sender hybrid data fetching for COVERED (NO directory update)
+        else if (message_type == kCoveredFghybridHybridFetchedRequest) // Foreground request to notify the result of excluding-sender hybrid data fetching for COVERED (NO directory update)
         {
             const CoveredFghybridHybridFetchedRequest* const covered_placement_hybrid_fetched_request_ptr = static_cast<const CoveredFghybridHybridFetchedRequest*>(control_request_ptr);
             tmp_key = covered_placement_hybrid_fetched_request_ptr->getKey();
@@ -164,7 +164,7 @@ namespace covered
             tmp_value = covered_placement_hybrid_fetched_request_ptr->getValue();
             extra_placement_edgeset = covered_placement_hybrid_fetched_request_ptr->getEdgesetRef();
         }
-        else if (message_type == MessageType::kCoveredPlacementDirectoryAdmitRequest) // Foreground directory admission with including-sender hybrid data fetching for COVERED
+        else if (message_type == MessageType::kCoveredFghybridDirectoryAdmitRequest) // Foreground directory admission with including-sender hybrid data fetching for COVERED
         {
             // Get key, is_admit, directory info, victim syncset, and collected popularity (if any) from directory update request
             const CoveredFghybridDirectoryAdmitRequest* const covered_placement_directory_admit_request_ptr = static_cast<const CoveredFghybridDirectoryAdmitRequest*>(control_request_ptr);
@@ -295,20 +295,20 @@ namespace covered
         MessageType message_type = control_request_ptr->getMessageType();
         uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
         MessageBase* control_response_ptr = NULL;
-        if (message_type == MessageType::kCoveredPlacementDirectoryUpdateRequest) // Background directory updates w/o hybrid data fetching for COVERED
+        if (message_type == MessageType::kCoveredBgplaceDirectoryUpdateRequest) // Background directory updates w/o hybrid data fetching for COVERED
         {
             assert(!need_hybrid_fetching); // NOTE: ONLY foreground directory eviction could trigger hybrid data fetching
 
             control_response_ptr = new CoveredBgplaceDirectoryUpdateResponse(tmp_key, is_being_written, is_neighbor_cached, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         }
-        else if (message_type == MessageType::kCoveredPlacementHybridFetchedRequest) // Foreground request to notify the result of excluding-sender hybrid data fetching for COVERED (NO directory update)
+        else if (message_type == MessageType::kCoveredFghybridHybridFetchedRequest) // Foreground request to notify the result of excluding-sender hybrid data fetching for COVERED (NO directory update)
         {
             assert(!need_hybrid_fetching); // NOTE: ONLY foreground directory eviction could trigger hybrid data fetching
 
             UNUSED(is_neighbor_cached); // NOTE: excluding-sender hybrid data fetching does NOT need t provide is_neighbor_cached for sender due to NO placement
             control_response_ptr = new CoveredFghybridHybridFetchedResponse(tmp_key, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         }
-        else if (message_type == MessageType::kCoveredPlacementDirectoryAdmitRequest) // Foreground directory admission with including-sender hybrid data fetching for COVERED
+        else if (message_type == MessageType::kCoveredFghybridDirectoryAdmitRequest) // Foreground directory admission with including-sender hybrid data fetching for COVERED
         {
             assert(!need_hybrid_fetching); // NOTE: ONLY foreground directory eviction could trigger hybrid data fetching
 

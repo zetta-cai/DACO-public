@@ -171,7 +171,7 @@ namespace covered
             need_hybrid_fetching = false;
         }
         #ifdef ENABLE_FAST_PATH_PLACEMENT
-        else if (message_type == MessageType::kCoveredFastDirectoryLookupResponse) // Directory lookup response with fast-path placement
+        else if (message_type == MessageType::kCoveredFastpathDirectoryLookupResponse) // Directory lookup response with fast-path placement
         {
             // Get directory information from the control response message
             const CoveredFastpathDirectoryLookupResponse* const covered_fast_directory_lookup_response_ptr = static_cast<const CoveredFastpathDirectoryLookupResponse*>(control_response_ptr);
@@ -193,7 +193,7 @@ namespace covered
             assert(fast_path_hint.isValid());
         }
         #endif
-        else if (message_type == MessageType::kCoveredPlacementDirectoryLookupResponse) // Directory lookup response with hybrid data fetching
+        else if (message_type == MessageType::kCoveredFghybridDirectoryLookupResponse) // Directory lookup response with hybrid data fetching
         {
             // Get directory information from the control response message
             const CoveredFghybridDirectoryLookupResponse* const covered_placement_directory_lookup_response_ptr = static_cast<const CoveredFghybridDirectoryLookupResponse*>(control_response_ptr);
@@ -667,7 +667,7 @@ namespace covered
             tmp_key = covered_release_writelock_response_ptr->getKey();
             neighbor_victim_syncset = covered_release_writelock_response_ptr->getVictimSyncsetRef();
         }
-        else if (message_type == MessageType::kCoveredPlacementReleaseWritelockResponse) // Release writelock response with hybrid data fetching
+        else if (message_type == MessageType::kCoveredFghybridReleaseWritelockResponse) // Release writelock response with hybrid data fetching
         {
             const CoveredFghybridReleaseWritelockResponse* covered_placement_release_writelock_response_ptr = static_cast<const CoveredFghybridReleaseWritelockResponse*>(control_response_ptr);
             tmp_key = covered_placement_release_writelock_response_ptr->getKey();

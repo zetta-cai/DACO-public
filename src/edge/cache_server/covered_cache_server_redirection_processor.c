@@ -32,7 +32,7 @@ namespace covered
         EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_redirection_processor_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
         const bool is_redirected = true;
-        assert(redirected_request_ptr->getMessageType() == MessageType::kCoveredRedirectedGetRequest || redirected_request_ptr->getMessageType() == MessageType::kCoveredPlacementRedirectedGetRequest);
+        assert(redirected_request_ptr->getMessageType() == MessageType::kCoveredRedirectedGetRequest || redirected_request_ptr->getMessageType() == MessageType::kCoveredBgfetchRedirectedGetRequest);
         // CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
         // Get key and victim syncset from redirected get request
@@ -45,7 +45,7 @@ namespace covered
             tmp_key = covered_redirected_get_request_ptr->getKey();
             neighbor_victim_syncset = covered_redirected_get_request_ptr->getVictimSyncsetRef();
         }
-        else if (redirected_request_ptr->getMessageType() == MessageType::kCoveredPlacementRedirectedGetRequest)
+        else if (redirected_request_ptr->getMessageType() == MessageType::kCoveredBgfetchRedirectedGetRequest)
         {
             const CoveredBgfetchRedirectedGetRequest* const covered_placement_redirected_get_request_ptr = static_cast<const CoveredBgfetchRedirectedGetRequest*>(redirected_request_ptr);
             tmp_key = covered_placement_redirected_get_request_ptr->getKey();
@@ -83,7 +83,7 @@ namespace covered
         NetworkAddr edge_cache_server_recvreq_source_addr = tmp_cache_server_ptr->getEdgeCacheServerRecvreqPublicSourceAddr(); // NOTE: cross-edge communication for request redirection uses public IP address
 
         MessageBase* redirected_get_response_ptr = NULL;
-        assert(redirected_request_ptr->getMessageType() == MessageType::kCoveredRedirectedGetRequest || redirected_request_ptr->getMessageType() == MessageType::kCoveredPlacementRedirectedGetRequest);
+        assert(redirected_request_ptr->getMessageType() == MessageType::kCoveredRedirectedGetRequest || redirected_request_ptr->getMessageType() == MessageType::kCoveredBgfetchRedirectedGetRequest);
         CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
         // Get key (and placement edgeset) from redirected get request
@@ -95,7 +95,7 @@ namespace covered
             const CoveredRedirectedGetRequest* const covered_redirected_get_request_ptr = static_cast<const CoveredRedirectedGetRequest*>(redirected_request_ptr);
             tmp_key = covered_redirected_get_request_ptr->getKey();
         }
-        else if (redirected_request_ptr->getMessageType() == MessageType::kCoveredPlacementRedirectedGetRequest)
+        else if (redirected_request_ptr->getMessageType() == MessageType::kCoveredBgfetchRedirectedGetRequest)
         {
             const CoveredBgfetchRedirectedGetRequest* const covered_placement_redirected_get_request_ptr = static_cast<const CoveredBgfetchRedirectedGetRequest*>(redirected_request_ptr);
             tmp_key = covered_placement_redirected_get_request_ptr->getKey();

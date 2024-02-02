@@ -128,13 +128,13 @@ namespace covered
                 {
                     is_finish = processControlRequest_(control_request_ptr, edge_cache_server_worker_recvrsp_dst_addr);
                 }
-                else if (control_request_ptr->getMessageType() == MessageType::kCoveredPlacementRedirectedGetResponse) // Non-blocking placement deployment
+                else if (control_request_ptr->getMessageType() == MessageType::kCoveredBgfetchRedirectedGetResponse) // Non-blocking placement deployment
                 {
                     // NOTE: NOT embed background events/bandwidth-usage into CoveredBgfetchRedirectedGetResponse even if it is received by beacon server, as we need to embed such information into foreground messages to be tracked by clients
                     ProcessRspToRedirectGetForPlacementFuncParam tmp_param(control_request_ptr);
                     customFunc(ProcessRspToRedirectGetForPlacementFuncParam::FUNCNAME, &tmp_param);
                 }
-                else if (control_request_ptr->getMessageType() == MessageType::kCoveredPlacementGlobalGetResponse) // Non-blocking placement deployment
+                else if (control_request_ptr->getMessageType() == MessageType::kCoveredBgfetchGlobalGetResponse) // Non-blocking placement deployment
                 {
                     // NOTE: NOT embed background events/bandwidth-usage into CoveredBgfetchRedirectedGetResponse even if it is received by beacon server, as we need to embed such information into foreground messages to be tracked by clients
                     ProcessRspToAccessCloudForPlacementFuncParam tmp_param(control_request_ptr);
@@ -187,7 +187,7 @@ namespace covered
         // CoveredFghybridHybridFetchedRequest: foreground request to notify the result of excluding-sender hybrid data fetching for COVERED (NO directory update)
         // CoveredFghybridDirectoryAdmitRequest: foreground directory admission with including-sender hybrid data fetching for COVERED
         // CoveredDirectoryUpdateRequest: foreground directory updates (with only-sender hybrid data fetching for COVERED if is_admit = true)
-        else if (message_type == MessageType::kDirectoryUpdateRequest || message_type == MessageType::kCoveredPlacementDirectoryUpdateRequest || message_type == MessageType::kCoveredPlacementHybridFetchedRequest || message_type == MessageType::kCoveredPlacementDirectoryAdmitRequest || message_type == MessageType::kCoveredDirectoryUpdateRequest)
+        else if (message_type == MessageType::kDirectoryUpdateRequest || message_type == MessageType::kCoveredBgplaceDirectoryUpdateRequest || message_type == MessageType::kCoveredFghybridHybridFetchedRequest || message_type == MessageType::kCoveredFghybridDirectoryAdmitRequest || message_type == MessageType::kCoveredDirectoryUpdateRequest || message_type == MessageType::kBestGuessDirectoryAdmitRequest)
         {
             is_finish = processDirectoryUpdateRequest_(control_request_ptr, edge_cache_server_worker_recvrsp_dst_addr);
         }

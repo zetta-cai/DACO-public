@@ -108,7 +108,7 @@ namespace covered
         bool is_finish = false; // Mark if local edge node is finished
 
         MessageType message_type = redirected_request_ptr->getMessageType();
-        if (message_type == MessageType::kRedirectedGetRequest || message_type == MessageType::kCoveredRedirectedGetRequest || message_type == MessageType::kCoveredPlacementRedirectedGetRequest)
+        if (message_type == MessageType::kRedirectedGetRequest || message_type == MessageType::kCoveredRedirectedGetRequest || message_type == MessageType::kCoveredBgfetchRedirectedGetRequest)
         {
             is_finish = processRedirectedGetRequest_(redirected_request_ptr, recvrsp_dst_addr);
         }

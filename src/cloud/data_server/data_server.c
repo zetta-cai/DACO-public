@@ -163,7 +163,7 @@ namespace covered
                 event_name = Event::CLOUD_DEL_ROCKSDB_EVENT_NAME;
                 break;
             }
-            case MessageType::kCoveredPlacementGlobalGetRequest: // ONLY used by COVERED
+            case MessageType::kCoveredBgfetchGlobalGetRequest: // ONLY used by COVERED
             {
                 const CoveredBgfetchGlobalGetRequest* const covered_placement_global_get_request_ptr = static_cast<const CoveredBgfetchGlobalGetRequest*>(global_request_ptr);
                 tmp_key = covered_placement_global_get_request_ptr->getKey();
@@ -225,7 +225,7 @@ namespace covered
                 assert(global_response_ptr != NULL);
                 break;
             }
-            case MessageType::kCoveredPlacementGlobalGetRequest: // ONLY used by COVERED
+            case MessageType::kCoveredBgfetchGlobalGetRequest: // ONLY used by COVERED
             {
                 // NOTE: NOT assert here as cloud does NOT need to know topk_edgecnt_
                 //assert(tmp_placement_edgeset.size() <= topk_edgecnt_); // At most k placement edge nodes each time

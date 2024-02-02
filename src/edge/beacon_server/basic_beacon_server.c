@@ -84,21 +84,54 @@ namespace covered
     {
         // Foreground directory updates for baselines
         assert(control_request_ptr != NULL);
-        assert(control_request_ptr->getMessageType() == MessageType::kDirectoryUpdateRequest);
-        const DirectoryUpdateRequest* const directory_update_request_ptr = static_cast<const DirectoryUpdateRequest*>(control_request_ptr);
-        Key tmp_key = directory_update_request_ptr->getKey();
-        bool is_admit = directory_update_request_ptr->isValidDirectoryExist();
-        DirectoryInfo directory_info = directory_update_request_ptr->getDirectoryInfo();
 
         bool is_finish = false;
 
-        // Update local directory information in cooperation wrapper
-        const uint32_t source_edge_idx = control_request_ptr->getSourceIndex();
-        is_being_written = false;
-        MetadataUpdateRequirement unused_metadata_update_requirement;
-        edge_wrapper_ptr_->getCooperationWrapperPtr()->updateDirectoryTable(tmp_key, source_edge_idx, is_admit, directory_info, is_being_written, is_neighbor_cached, unused_metadata_update_requirement);
-        UNUSED(unused_metadata_update_requirement); // ONLY used by COVERED
+        Key tmp_key;
+        bool is_admit = false;
+        DirectoryInfo directory_info;
+
+        const MessageType message_type = control_request_ptr->getMessageType();
+        if (message_type == MessageType::kDirectoryUpdateRequest)
+        {
+            const DirectoryUpdateRequest* const directory_update_request_ptr = static_cast<const DirectoryUpdateRequest*>(control_request_ptr);
+            tmp_key = directory_update_request_ptr->getKey();
+            is_admit = directory_update_request_ptr->isValidDirectoryExist();
+            directory_info = directory_update_request_ptr->getDirectoryInfo();
+
+            // Update local directory information in cooperation wrapper
+            const uint32_t source_edge_idx = control_request_ptr->getSourceIndex();
+            is_being_written = false;
+            MetadataUpdateRequirement unused_metadata_update_requirement;
+            edge_wrapper_ptr_->getCooperationWrapperPtr()->updateDirectoryTable(tmp_key, source_edge_idx, is_admit, directory_info, is_being_written, is_neighbor_cached, unused_metadata_update_requirement);
+            UNUSED(unused_metadata_update_requirement); // ONLY used by COVERED
+        }
+        else if (message_type == MessageType::kBestGuessDirectoryAdmitRequest)
+        {
+            const BestGuessDirectoryAdmitRequest* const bestguess_directory_update_request_ptr = static_cast<const BestGuessDirectoryAdmitRequest*>(control_request_ptr);
+            tmp_key = bestguess_directory_update_request_ptr->getKey();
+            is_admit = bestguess_directory_update_request_ptr->isValidDirectoryExist();
+            assert(is_admit == true);
+            directory_info = bestguess_directory_update_request_ptr->getDirectoryInfo();
+
+            // Vtime synchronization
+            UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(bestguess_directory_update_request_ptr->getSourceIndex(), bestguess_directory_update_request_ptr->getSyncinfo().getVtime());
+            edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
+
+            // Validate dirinfo preserved in directory table when triggering best-guess placement
+            ValidateDirectoryTableForPreservedDirinfoFuncParam tmp_param_for_validation(tmp_key, directory_info);
+            edge_wrapper_ptr_->getCooperationWrapperPtr()->customFunc(ValidateDirectoryTableForPreservedDirinfoFuncParam::FUNCNAME, &tmp_param_for_validation);
+            assert(tmp_param_for_validation.isSuccessfulValidationConstRef()); // NOTE: key and dirinfo MUST exist in directory table for validation
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "Invalid message type " << MessageBase::messageTypeToString(message_type) << " for BasicBeaconServer::processReqToUpdateLocalDirectory_()";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
         
+        // ONLY used by COVERED
         UNUSED(best_placement_edgeset);
         UNUSED(need_hybrid_fetching);
         UNUSED(total_bandwidth_usage);
@@ -109,16 +142,43 @@ namespace covered
     MessageBase* BasicBeaconServer::getRspToUpdateLocalDirectory_(MessageBase* control_request_ptr, const bool& is_being_written, const bool& is_neighbor_cached, const Edgeset& best_placement_edgeset, const bool& need_hybrid_fetching, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list) const
     {
         assert(control_request_ptr != NULL);
-        assert(control_request_ptr->getMessageType() == MessageType::kDirectoryUpdateRequest);
-        const DirectoryUpdateRequest* const directory_update_request_ptr = static_cast<const DirectoryUpdateRequest*>(control_request_ptr);
-
-        const Key tmp_key = directory_update_request_ptr->getKey();
-        const bool skip_propagation_latency = directory_update_request_ptr->isSkipPropagationLatency();
 
         checkPointers_();
+        const uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
 
-        uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
-        MessageBase* directory_update_response_ptr = new DirectoryUpdateResponse(tmp_key, is_being_written, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        Key tmp_key;
+        bool skip_propagation_latency = false;
+
+        const MessageType message_type = control_request_ptr->getMessageType();
+        MessageBase* directory_update_response_ptr = NULL;
+        if (message_type == MessageType::kDirectoryUpdateRequest)
+        {
+            const DirectoryUpdateRequest* const directory_update_request_ptr = static_cast<const DirectoryUpdateRequest*>(control_request_ptr);
+            tmp_key = directory_update_request_ptr->getKey();
+            skip_propagation_latency = directory_update_request_ptr->isSkipPropagationLatency();
+
+            directory_update_response_ptr = new DirectoryUpdateResponse(tmp_key, is_being_written, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        }
+        else if (message_type == MessageType::kBestGuessDirectoryAdmitRequest)
+        {
+            const BestGuessDirectoryAdmitRequest* const bestguess_directory_update_request_ptr = static_cast<const BestGuessDirectoryAdmitRequest*>(control_request_ptr);
+            tmp_key = bestguess_directory_update_request_ptr->getKey();
+            skip_propagation_latency = bestguess_directory_update_request_ptr->isSkipPropagationLatency();
+
+            // Get local victim vtime for vtime synchronization
+            GetLocalVictimVtimeFuncParam tmp_param_for_vtimesync;
+            edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
+            const uint64_t& local_victim_vtime = tmp_param_for_vtimesync.getLocalVictimVtimeRef();
+
+            directory_update_response_ptr = new BestGuessDirectoryAdmitResponse(tmp_key, is_being_written, BestGuessSyncinfo(local_victim_vtime), edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "Invalid message type " << MessageBase::messageTypeToString(message_type) << " for BasicBeaconServer::getRspToUpdateLocalDirectory_()";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
         assert(directory_update_response_ptr != NULL);
 
         UNUSED(is_neighbor_cached);

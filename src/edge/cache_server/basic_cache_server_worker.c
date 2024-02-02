@@ -504,6 +504,10 @@ namespace covered
                     BestGuessPlacementTriggerResponse* best_guess_placement_trigger_response_ptr = static_cast<BestGuessPlacementTriggerResponse*>(control_response_ptr);
                     is_triggered = best_guess_placement_trigger_response_ptr->isTriggered();
 
+                    // Vtime synchronization
+                    UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(best_guess_placement_trigger_response_ptr->getSourceIndex(), best_guess_placement_trigger_response_ptr->getSyncinfo().getVtime());
+                    tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
+
                     // Release the control response message
                     delete control_response_ptr;
                     control_response_ptr = NULL;
