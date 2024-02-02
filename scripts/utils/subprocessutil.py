@@ -22,7 +22,12 @@ class SubprocessUtil:
     @staticmethod
     def runCmd(cmdstr, is_capture_output=True):
         print("[shell] {}".format(cmdstr))
-        tmp_subprocess = subprocess.run(cmdstr, shell=True, capture_output=is_capture_output)
+        # Deprecated due to only supported by python >= 3.7
+        #tmp_subprocess = subprocess.run(cmdstr, shell=True, capture_output=is_capture_output)
+        if not is_capture_output:
+            tmp_subprocess = subprocess.run(cmdstr, shell=True)
+        else:
+            tmp_subprocess = subprocess.run(cmdstr, shell=True, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
         return tmp_subprocess
 
     @staticmethod

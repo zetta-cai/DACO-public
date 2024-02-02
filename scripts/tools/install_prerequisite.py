@@ -15,6 +15,14 @@ is_upgrade_gcc = True
 is_link_cpp = True
 is_upgrade_cmake = True
 
+# (0) Install some pre-requisites
+
+LogUtil.prompt(Common.scriptname, "install pre-requisites...")
+install_prerequisite_cmd = "sudo apt-get -y install python3-pip software-properties-common"
+install_prerequisite_subprocess = SubprocessUtil.runCmd(install_prerequisite_cmd)
+if install_prerequisite_subprocess.returncode != 0:
+    LogUtil.die(Common.scriptname, "failed to install pre-requisites (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(install_prerequisite_subprocess)))
+
 # (1) Upgrade python3 if necessary
 
 # For python3
