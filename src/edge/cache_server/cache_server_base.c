@@ -379,9 +379,8 @@ namespace covered
                 MessageBase* data_request_ptr = MessageBase::getRequestFromMsgPayload(data_request_msg_payload);
                 assert(data_request_ptr != NULL);
 
-                // TODO: END HERE
                 const MessageType message_type = data_request_ptr->getMessageType();
-                if (data_request_ptr->isDataRequest() || message_type == MessageType::kCoveredVictimFetchRequest || message_type == MessageType::kCoveredBgplacePlacementNotifyRequest || message_type == MessageType::kCoveredMetadataUpdateRequest || message_type == MessageType::kInvalidationRequest || message_type == MessageType::kCoveredInvalidationRequest) // Local data requests for cache server workers; redirected data requests for cache server redirection processor; lazy victim fetching for cache server victim fetch processor; placement notification for cache server placement processor; metadata update requests for cache server metadata update processor; invalidation requests for cache server invalidation processor
+                if (data_request_ptr->isDataRequest() || message_type == MessageType::kCoveredVictimFetchRequest || message_type == MessageType::kCoveredBgplacePlacementNotifyRequest || message_type == MessageType::kCoveredMetadataUpdateRequest || message_type == MessageType::kInvalidationRequest || message_type == MessageType::kCoveredInvalidationRequest || message_type == MessageType::kBestGuessBgplacePlacementNotifyRequest) // Local data requests for cache server workers; redirected data requests for cache server redirection processor; lazy victim fetching for cache server victim fetch processor; placement notification for cache server placement processor; metadata update requests for cache server metadata update processor; invalidation requests for cache server invalidation processor
                 {
                     // Pass received request and network address to corresponding cache server worker/processor by ring buffer
                     // NOTE: received request will be released by the corresponding cache server worker/processor
@@ -440,7 +439,7 @@ namespace covered
             bool is_successful = cache_server_victim_fetch_processor_param_ptr_->push(tmp_cache_server_item);
             assert(is_successful == true); // Ring buffer must NOT be full
         }
-        else if (data_requeset_ptr->getMessageType() == MessageType::kCoveredBgplacePlacementNotifyRequest) // Placement notification
+        else if (data_requeset_ptr->getMessageType() == MessageType::kCoveredBgplacePlacementNotifyRequest || data_requeset_ptr->getMessageType() == MessageType::kBestGuessBgplacePlacementNotifyRequest) // Placement notification
         {
             // Pass cache server item into ring buffer of the cache server placement processor
             CacheServerItem tmp_cache_server_item(data_requeset_ptr);

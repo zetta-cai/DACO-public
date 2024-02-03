@@ -58,7 +58,14 @@ namespace covered
             edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
             const uint64_t& local_victim_vtime = tmp_param_for_vtimesync.getLocalVictimVtimeRef();
 
-            directory_update_request_ptr = new BestGuessDirectoryUpdateRequest(key, is_admit, directory_info, BestGuessSyncinfo(local_victim_vtime), edge_idx, source_addr, skip_propagation_latency);
+            if (is_background) // Background admission issued by basic placement processor
+            {
+                directory_update_request_ptr = new BestGuessBgplaceDirectoryUpdateRequest(key, is_admit, directory_info, BestGuessSyncinfo(local_victim_vtime), edge_idx, source_addr, skip_propagation_latency);
+            }
+            else // Foreground admission triggered by local placement (sender is placement)
+            {
+                directory_update_request_ptr = new BestGuessDirectoryUpdateRequest(key, is_admit, directory_info, BestGuessSyncinfo(local_victim_vtime), edge_idx, source_addr, skip_propagation_latency);
+            }
         }
         assert(directory_update_request_ptr != NULL);
 
@@ -70,18 +77,35 @@ namespace covered
         checkPointers_();
         assert(control_response_ptr != NULL);
 
+        bool need_vtime_sync = false;
+        BestGuessSyncinfo bestguess_syncinfo;
+
         const MessageType message_type = control_response_ptr->getMessageType();
         if (message_type == MessageType::kDirectoryUpdateResponse)
         {
             // Get is_being_written from control response message
             const DirectoryUpdateResponse* const directory_update_response_ptr = static_cast<const DirectoryUpdateResponse*>(control_response_ptr);
             is_being_written = directory_update_response_ptr->isBeingWritten();
+
+            need_vtime_sync = false;
         }
         else if (message_type == MessageType::kBestGuessDirectoryUpdateResponse)
         {
             // Get is_being_written and is_neighbor_cached from control response message
             const BestGuessDirectoryUpdateResponse* const bestguess_directory_admit_response_ptr = static_cast<const BestGuessDirectoryUpdateResponse*>(control_response_ptr);
             is_being_written = bestguess_directory_admit_response_ptr->isBeingWritten();
+            bestguess_syncinfo = bestguess_directory_admit_response_ptr->getSyncinfo();
+
+            need_vtime_sync = true;
+        }
+        else if (message_type == MessageType::kBestGuessBgplaceDirectoryUpdateResponse)
+        {
+            // Get is_being_written and is_neighbor_cached from control response message
+            const BestGuessBgplaceDirectoryUpdateResponse* const bestguess_bgplace_directory_admit_response_ptr = static_cast<const BestGuessBgplaceDirectoryUpdateResponse*>(control_response_ptr);
+            is_being_written = bestguess_bgplace_directory_admit_response_ptr->isBeingWritten();
+            bestguess_syncinfo = bestguess_bgplace_directory_admit_response_ptr->getSyncinfo();
+
+            need_vtime_sync = true;
         }
         else
         {
@@ -89,6 +113,12 @@ namespace covered
             oss << "Invalid message type " << static_cast<uint32_t>(message_type) << " in processRspToAdmitBeaconDirectory_()";
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
+        }
+
+        if (need_vtime_sync) // Vtime synchronization for BestGuess
+        {
+            UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(control_response_ptr->getSourceIndex(), bestguess_syncinfo.getVtime());
+            edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
         }
 
         UNUSED(is_neighbor_cached);

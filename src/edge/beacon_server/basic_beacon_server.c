@@ -35,16 +35,38 @@ namespace covered
 
     bool BasicBeaconServer::processReqToLookupLocalDirectory_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvreq_dst_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, FastPathHint& fast_path_hint, BandwidthUsage& total_bandwidth_usage, EventList& event_list) const
     {
+        assert(control_request_ptr != NULL);
+        const uint32_t source_edge_idx = control_request_ptr->getSourceIndex();
+
         bool is_finish = false;
 
         // Get key from control request if any
-        assert(control_request_ptr != NULL);
-        assert(control_request_ptr->getMessageType() == MessageType::kDirectoryLookupRequest);
-        const DirectoryLookupRequest* const directory_lookup_request_ptr = static_cast<const DirectoryLookupRequest*>(control_request_ptr);
-        Key tmp_key = directory_lookup_request_ptr->getKey();
+        Key tmp_key;
+        const MessageType mesasge_type = control_request_ptr->getMessageType();
+        if (mesasge_type == MessageType::kDirectoryLookupRequest)
+        {
+            const DirectoryLookupRequest* const directory_lookup_request_ptr = static_cast<const DirectoryLookupRequest*>(control_request_ptr);
+            tmp_key = directory_lookup_request_ptr->getKey();
+        }
+        else if (mesasge_type == MessageType::kBestGuessDirectoryLookupRequest)
+        {
+            const BestGuessDirectoryLookupRequest* const bestguess_directory_lookup_request_ptr = static_cast<const BestGuessDirectoryLookupRequest*>(control_request_ptr);
+            tmp_key = bestguess_directory_lookup_request_ptr->getKey();
+            BestGuessSyncinfo syncinfo = bestguess_directory_lookup_request_ptr->getSyncinfo();
+
+            // Vtime synchronization
+            UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(source_edge_idx, syncinfo.getVtime());
+            edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "Invalid message type " << MessageBase::messageTypeToString(mesasge_type) << " for BasicBeaconServer::processReqToLookupLocalDirectory_()";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
 
         // Lookup local content directory
-        const uint32_t source_edge_idx = control_request_ptr->getSourceIndex();
         is_being_written = false;
         bool is_source_cached = false;
         edge_wrapper_ptr_->getCooperationWrapperPtr()->lookupDirectoryTableByBeaconServer(tmp_key, source_edge_idx, edge_cache_server_worker_recvreq_dst_addr, is_being_written, is_valid_directory_exist, directory_info, is_source_cached);
@@ -62,15 +84,41 @@ namespace covered
     {
         checkPointers_();
 
-        // Get key and skip_propagation_latency from control request if any
         assert(control_request_ptr != NULL);
-        assert(control_request_ptr->getMessageType() == MessageType::kDirectoryLookupRequest);
-        const DirectoryLookupRequest* const directory_lookup_request_ptr = static_cast<const DirectoryLookupRequest*>(control_request_ptr);
-        Key tmp_key = directory_lookup_request_ptr->getKey();
-        const bool skip_propagation_latency = directory_lookup_request_ptr->isSkipPropagationLatency();
-
+        
         uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
-        MessageBase* directory_lookup_response_ptr = new DirectoryLookupResponse(tmp_key, is_being_written, is_valid_directory_exist, directory_info, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        const MessageType message_type = control_request_ptr->getMessageType();
+        MessageBase* directory_lookup_response_ptr = NULL;
+        if (message_type == MessageType::kDirectoryLookupRequest)
+        {
+            // Get key and skip_propagation_latency from control request if any
+            const DirectoryLookupRequest* const directory_lookup_request_ptr = static_cast<const DirectoryLookupRequest*>(control_request_ptr);
+            Key tmp_key = directory_lookup_request_ptr->getKey();
+            const bool skip_propagation_latency = directory_lookup_request_ptr->isSkipPropagationLatency();
+
+            directory_lookup_response_ptr = new DirectoryLookupResponse(tmp_key, is_being_written, is_valid_directory_exist, directory_info, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        }
+        else if (message_type == MessageType::kBestGuessDirectoryLookupRequest)
+        {
+            // Get local victim vtime for vtime synchronization
+            GetLocalVictimVtimeFuncParam tmp_param_for_vtimesync;
+            edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
+            const uint64_t& local_victim_vtime = tmp_param_for_vtimesync.getLocalVictimVtimeRef();
+
+            // Get key and skip_propagation_latency from control request if any
+            const BestGuessDirectoryLookupRequest* const bestguess_directory_lookup_request_ptr = static_cast<const BestGuessDirectoryLookupRequest*>(control_request_ptr);
+            Key tmp_key = bestguess_directory_lookup_request_ptr->getKey();
+            const bool skip_propagation_latency = bestguess_directory_lookup_request_ptr->isSkipPropagationLatency();
+
+            directory_lookup_response_ptr = new BestGuessDirectoryLookupResponse(tmp_key, is_being_written, is_valid_directory_exist, directory_info, BestGuessSyncinfo(local_victim_vtime), edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "Invalid message type " << MessageBase::messageTypeToString(message_type) << " for BasicBeaconServer::getRspToLookupLocalDirectory_()";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
         assert(directory_lookup_response_ptr != NULL);
 
         UNUSED(best_placement_edgeset);
@@ -211,14 +259,36 @@ namespace covered
     bool BasicBeaconServer::processReqToAcquireLocalWritelock_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvreq_dst_addr, LockResult& lock_result, DirinfoSet& all_dirinfo, BandwidthUsage& total_bandwidth_usage, EventList& event_list)
     {
         assert(control_request_ptr != NULL);
-        assert(control_request_ptr->getMessageType() == MessageType::kAcquireWritelockRequest);
-        const AcquireWritelockRequest* const acquire_writelock_request_ptr = static_cast<const AcquireWritelockRequest*>(control_request_ptr);
-        Key tmp_key = acquire_writelock_request_ptr->getKey();
+        const uint32_t source_edge_idx = control_request_ptr->getSourceIndex();
 
         bool is_finish = false;
 
+        const MessageType message_type = control_request_ptr->getMessageType();
+        Key tmp_key;
+        if (message_type == MessageType::kAcquireWritelockRequest)
+        {
+            const AcquireWritelockRequest* const acquire_writelock_request_ptr = static_cast<const AcquireWritelockRequest*>(control_request_ptr);
+            tmp_key = acquire_writelock_request_ptr->getKey();
+        }
+        else if (message_type == MessageType::kBestGuessAcquireWritelockRequest)
+        {
+            const BestGuessAcquireWritelockRequest* const bestguess_acquire_writelock_request_ptr = static_cast<const BestGuessAcquireWritelockRequest*>(control_request_ptr);
+            tmp_key = bestguess_acquire_writelock_request_ptr->getKey();
+            BestGuessSyncinfo syncinfo = bestguess_acquire_writelock_request_ptr->getSyncinfo();
+
+            // Vtime synchronization
+            UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(source_edge_idx, syncinfo.getVtime());
+            edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "Invalid message type " << MessageBase::messageTypeToString(message_type) << " for BasicBeaconServer::processReqToAcquireLocalWritelock_()";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+
         // Get result of acquiring local write lock
-        const uint32_t source_edge_idx = control_request_ptr->getSourceIndex();
         bool is_source_cached = false;
         lock_result = edge_wrapper_ptr_->getCooperationWrapperPtr()->acquireLocalWritelockByBeaconServer(tmp_key, source_edge_idx, edge_cache_server_worker_recvreq_dst_addr, all_dirinfo, is_source_cached);
         UNUSED(is_source_cached);
@@ -231,15 +301,40 @@ namespace covered
     MessageBase* BasicBeaconServer::getRspToAcquireLocalWritelock_(MessageBase* control_request_ptr, const LockResult& lock_result, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list) const
     {
         checkPointers_();
+        uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
 
         assert(control_request_ptr != NULL);
-        assert(control_request_ptr->getMessageType() == MessageType::kAcquireWritelockRequest);
-        const AcquireWritelockRequest* const acquire_writelock_request_ptr = static_cast<const AcquireWritelockRequest*>(control_request_ptr);
-        Key tmp_key = acquire_writelock_request_ptr->getKey();
-        bool skip_propagation_latency = acquire_writelock_request_ptr->isSkipPropagationLatency();
 
-        uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
-        MessageBase* acquire_writelock_response_ptr = new AcquireWritelockResponse(tmp_key, lock_result, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        const MessageType message_type = control_request_ptr->getMessageType();
+        MessageBase* acquire_writelock_response_ptr = NULL;
+        if (message_type == MessageType::kAcquireWritelockRequest)
+        {
+            const AcquireWritelockRequest* const acquire_writelock_request_ptr = static_cast<const AcquireWritelockRequest*>(control_request_ptr);
+            Key tmp_key = acquire_writelock_request_ptr->getKey();
+            bool skip_propagation_latency = acquire_writelock_request_ptr->isSkipPropagationLatency();
+
+            acquire_writelock_response_ptr = new AcquireWritelockResponse(tmp_key, lock_result, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        }
+        else if (message_type == MessageType::kBestGuessAcquireWritelockRequest)
+        {
+            const BestGuessAcquireWritelockRequest* const bestguess_acquire_writelock_request_ptr = static_cast<const BestGuessAcquireWritelockRequest*>(control_request_ptr);
+            Key tmp_key = bestguess_acquire_writelock_request_ptr->getKey();
+            bool skip_propagation_latency = bestguess_acquire_writelock_request_ptr->isSkipPropagationLatency();
+
+            // Get local victim vtime for vtime synchronization
+            GetLocalVictimVtimeFuncParam tmp_param_for_vtimesync;
+            edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
+            const uint64_t& local_victim_vtime = tmp_param_for_vtimesync.getLocalVictimVtimeRef();
+
+            acquire_writelock_response_ptr = new BestGuessAcquireWritelockResponse(tmp_key, lock_result, BestGuessSyncinfo(local_victim_vtime), edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "Invalid message type " << MessageBase::messageTypeToString(message_type) << " for BasicBeaconServer::getRspToAcquireLocalWritelock_()";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
         assert(acquire_writelock_response_ptr != NULL);
 
         return acquire_writelock_response_ptr;

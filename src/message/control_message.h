@@ -74,5 +74,11 @@
 #include "message/control/cooperation/bestguess/bestguess_bgplace_directory_update_request.h"
 #include "message/control/cooperation/bestguess/bestguess_bgplace_directory_update_response.h"
 #include "message/control/cooperation/bestguess/bestguess_bgplace_placement_notify_request.h"
+#include "message/control/cooperation/bestguess/bestguess_directory_lookup_request.h"
+#include "message/control/cooperation/bestguess/bestguess_directory_lookup_response.h"
+#include "message/control/cooperation/bestguess/bestguess_finish_block_request.h"
+#include "message/control/cooperation/bestguess/bestguess_finish_block_response.h"
+#include "message/control/cooperation/bestguess/bestguess_acquire_writelock_request.h"
+#include "message/control/cooperation/bestguess/bestguess_acquire_writelock_response.h"
 
 #endif

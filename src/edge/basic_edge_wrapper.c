@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <sstream>
 
+#include "cache/basic_cache_custom_func_param.h"
 #include "common/util.h"
 #include "cooperation/basic_cooperation_custom_func_param.h"
 #include "message/control_message.h"
@@ -80,7 +81,20 @@ namespace covered
         uint32_t edge_idx = node_idx_;
 
         // Prepare finish block request to finish blocking for writes in all closest edge nodes
-        MessageBase* finish_block_request_ptr = new FinishBlockRequest(key, edge_idx, recvrsp_source_addr, skip_propagation_latency);
+        MessageBase* finish_block_request_ptr = NULL;
+        if (getCacheName() != Util::BESTGUESS_CACHE_NAME) // other baselines
+        {
+            finish_block_request_ptr = new FinishBlockRequest(key, edge_idx, recvrsp_source_addr, skip_propagation_latency);
+        }
+        else // BestGuess
+        {
+            // Get local victim vtime for vtime synchronization
+            GetLocalVictimVtimeFuncParam tmp_param_for_vtimesync;
+            getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
+            const uint64_t& local_victim_vtime = tmp_param_for_vtimesync.getLocalVictimVtimeRef();
+
+            finish_block_request_ptr = new BestGuessFinishBlockRequest(key, BestGuessSyncinfo(local_victim_vtime), edge_idx, recvrsp_source_addr, skip_propagation_latency);
+        }
         assert(finish_block_request_ptr != NULL);
 
         return finish_block_request_ptr;
@@ -89,7 +103,29 @@ namespace covered
     void BasicEdgeWrapper::processFinishBlockResponse_(MessageBase* finish_block_response_ptr) const
     {
         assert(finish_block_response_ptr != NULL);
-        assert(finish_block_response_ptr->getMessageType() == MessageType::kFinishBlockResponse);
+
+        const MessageType message_type = finish_block_response_ptr->getMessageType();
+        if (message_type == MessageType::kFinishBlockResponse)
+        {
+            // Do nothing
+        }
+        else if (message_type == MessageType::kBestGuessFinishBlockResponse)
+        {
+            BestGuessFinishBlockResponse* bestguess_finish_block_response_ptr = static_cast<BestGuessFinishBlockResponse*>(finish_block_response_ptr);
+            BestGuessSyncinfo syncinfo = bestguess_finish_block_response_ptr->getSyncinfo();
+
+            // Vtime synchronization
+            UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(bestguess_finish_block_response_ptr->getSourceIndex(), syncinfo.getVtime());
+            getEdgeCachePtr()->constCustomFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "Invalid message type: " << message_type << " for BasicEdgeWrapper::processFinishBlockResponse_()";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+
         return;
     }
 

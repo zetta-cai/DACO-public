@@ -5,7 +5,6 @@
 #include "common/config.h"
 #include "edge/cache_server/basic_cache_server_placement_processor.h"
 #include "edge/cache_server/covered_cache_server_placement_processor.h"
-#include "edge/covered_edge_custom_func_param.h"
 #include "message/control_message.h"
 
 namespace covered
@@ -91,7 +90,7 @@ namespace covered
                 MessageBase* data_request_ptr = tmp_cache_server_item.getRequestPtr();
                 assert(data_request_ptr != NULL);
 
-                if (data_request_ptr->getMessageType() == MessageType::kCoveredBgplacePlacementNotifyRequest) // Placement notification
+                if (data_request_ptr->getMessageType() == MessageType::kCoveredBgplacePlacementNotifyRequest || data_request_ptr->getMessageType() == MessageType::kBestGuessBgplacePlacementNotifyRequest) // Placement notification
                 {
                     NetworkAddr recvrsp_dst_addr = data_request_ptr->getSourceAddr(); // A beacon edge node
                     is_finish = processPlacementNotifyRequest_(data_request_ptr, recvrsp_dst_addr);
@@ -133,69 +132,45 @@ namespace covered
         return;
     }
 
-    bool CacheServerPlacementProcessorBase::processPlacementNotifyRequest_(MessageBase* data_request_ptr, const NetworkAddr& recvrsp_dst_addr)
+    bool CacheServerPlacementProcessorBase::processPlacementNotifyRequestInternal_(const Key& key, const Value& value, const bool& is_valid, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, const NetworkAddr& recvrsp_dst_addr)
     {
-        assert(data_request_ptr != NULL);
-        assert(data_request_ptr->getMessageType() == MessageType::kCoveredBgplacePlacementNotifyRequest);
-
         checkPointers_();
         CacheServerBase* tmp_cache_server_ptr = cache_server_placement_processor_param_ptr_->getCacheServerPtr();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
-        // CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
-
-        assert(tmp_edge_wrapper_ptr->getCacheName() == Util::COVERED_CACHE_NAME);
 
         bool is_finish = false;
-        BandwidthUsage total_bandwidth_usage;
-        EventList event_list;
         const bool is_background = true;
-
-        const CoveredBgplacePlacementNotifyRequest* const covered_placement_notify_request_ptr = static_cast<const CoveredBgplacePlacementNotifyRequest*>(data_request_ptr);
-        total_bandwidth_usage.update(BandwidthUsage(0, covered_placement_notify_request_ptr->getMsgPayloadSize(), 0, 0, 1, 0));
 
         struct timespec placement_notify_start_timestamp = Util::getCurrentTimespec();
 
-        // NOTE: CoveredBgplacePlacementNotifyRequest does NOT need placement edgeset, as placement notification has already been triggered
-        //PlacementEdgeset tmp_placement_edgeset = covered_placement_notify_request_ptr->getEdgesetRef();
-        //assert(tmp_placement_edgeset.size() <= tmp_edge_wrapper_ptr->getTopkEdgecntForPlacement()); // At most k placement edge nodes each time
-
         // Current edge node MUST NOT be the beacon node for the given key due to remote placement notification
-        const Key tmp_key = covered_placement_notify_request_ptr->getKey();
-        MYASSERT(!tmp_edge_wrapper_ptr->currentIsBeacon(tmp_key));
-
-        // Victim synchronization
-        const uint32_t source_edge_idx = covered_placement_notify_request_ptr->getSourceIndex();
-        const VictimSyncset& neighbor_victim_syncset = covered_placement_notify_request_ptr->getVictimSyncsetRef();
-        UpdateCacheManagerForNeighborVictimSyncsetFuncParam tmp_param(source_edge_idx, neighbor_victim_syncset);
-        tmp_edge_wrapper_ptr->constCustomFunc(UpdateCacheManagerForNeighborVictimSyncsetFuncParam::FUNCNAME, &tmp_param);
+        MYASSERT(!tmp_edge_wrapper_ptr->currentIsBeacon(key));
 
         // Issue directory update request with is_admit = true
         // NOTE: remote beacon edge node sends remote placement notification to notify the current edge node for edge cache admission, so we should use current edge index for directory admission instead of source edge index
-        // NOTE: we cannot optimistically admit valid object into local edge cache first before issuing dirinfo admission request, as clients may get incorrect value if key is being written
+        // NOTE: we cannot optimistically admit valid object into local edge cache first before issuing dirinfo admission request, as clients may get incorrect value if key is being written -> we admit object after directory admission to get is_being_written from beacon node
         const uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         bool is_being_written = false;
         bool is_neighbor_cached = false;
-        const bool& skip_propagation_latency = covered_placement_notify_request_ptr->isSkipPropagationLatency();
-        is_finish = tmp_cache_server_ptr->admitBeaconDirectory_(tmp_key, DirectoryInfo(current_edge_idx), is_being_written, is_neighbor_cached, edge_cache_server_placement_processor_recvrsp_source_addr_, edge_cache_server_placement_processor_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency, is_background);
+        is_finish = tmp_cache_server_ptr->admitBeaconDirectory_(key, DirectoryInfo(current_edge_idx), is_being_written, is_neighbor_cached, edge_cache_server_placement_processor_recvrsp_source_addr_, edge_cache_server_placement_processor_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency, is_background);
         if (is_finish)
         {
             return is_finish;
         }
 
-        bool is_valid = covered_placement_notify_request_ptr->isValid();
+        bool tmp_is_valid = is_valid;
         if (is_being_written) // Double-check is_being_written to udpate is_valid if necessary
         {
             // NOTE: ONLY update is_valid if is_being_written is true; if is_being_written is false (i.e., key is NOT being written now), we still keep original is_valid, as the value MUST be stale if is_being_written was true before
-            is_valid = false;
+            tmp_is_valid = false;
         }
 
         // Admit into local edge cache for the received remote placement notification
-        const Value tmp_value = covered_placement_notify_request_ptr->getValue();
-        tmp_cache_server_ptr->admitLocalEdgeCache_(tmp_key, tmp_value, is_neighbor_cached, is_valid); // May update local synced victims
+        tmp_cache_server_ptr->admitLocalEdgeCache_(key, value, is_neighbor_cached, is_valid); // May update local synced victims
 
         // Perform background cache eviction in a blocking manner for consistent directory information (note that cache eviction happens after non-blocking placement notification)
         // NOTE: we update aggregated uncached popularity yet DISABLE recursive cache placement for metadata preservation during cache eviction
-        is_finish = tmp_cache_server_ptr->evictForCapacity_(tmp_key, edge_cache_server_placement_processor_recvrsp_source_addr_, edge_cache_server_placement_processor_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency, is_background); // May update local synced victims
+        is_finish = tmp_cache_server_ptr->evictForCapacity_(key, edge_cache_server_placement_processor_recvrsp_source_addr_, edge_cache_server_placement_processor_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency, is_background); // May update local synced victims
 
         struct timespec placement_notify_end_timestamp = Util::getCurrentTimespec();
         uint32_t placement_notify_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(placement_notify_end_timestamp, placement_notify_start_timestamp));

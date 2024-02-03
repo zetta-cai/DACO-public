@@ -104,6 +104,12 @@ namespace covered
         kBestGuessBgplaceDirectoryUpdateRequest,
         kBestGuessBgplaceDirectoryUpdateResponse,
         kBestGuessBgplacePlacementNotifyRequest,
+        kBestGuessDirectoryLookupRequest,
+        kBestGuessDirectoryLookupResponse,
+        kBestGuessFinishBlockRequest,
+        kBestGuessFinishBlockResponse,
+        kBestGuessAcquireWritelockRequest,
+        kBestGuessAcquireWritelockResponse,
     };
 
     enum Hitflag

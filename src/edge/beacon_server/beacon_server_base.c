@@ -178,7 +178,7 @@ namespace covered
         bool is_finish = false; // Mark if edge node is finished
 
         MessageType message_type = control_request_ptr->getMessageType();
-        if (message_type == MessageType::kDirectoryLookupRequest || message_type == MessageType::kCoveredDirectoryLookupRequest)
+        if (message_type == MessageType::kDirectoryLookupRequest || message_type == MessageType::kCoveredDirectoryLookupRequest || message_type == MessageType::kBestGuessDirectoryLookupRequest)
         {
             is_finish = processDirectoryLookupRequest_(control_request_ptr, edge_cache_server_worker_recvrsp_dst_addr);
         }
@@ -191,7 +191,7 @@ namespace covered
         {
             is_finish = processDirectoryUpdateRequest_(control_request_ptr, edge_cache_server_worker_recvrsp_dst_addr);
         }
-        else if (message_type == MessageType::kAcquireWritelockRequest || message_type == MessageType::kCoveredAcquireWritelockRequest)
+        else if (message_type == MessageType::kAcquireWritelockRequest || message_type == MessageType::kCoveredAcquireWritelockRequest || message_type == MessageType::kBestGuessAcquireWritelockRequest)
         {
             is_finish = processAcquireWritelockRequest_(control_request_ptr, edge_cache_server_worker_recvrsp_dst_addr);
         }

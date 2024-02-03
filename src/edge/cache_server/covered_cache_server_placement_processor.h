@@ -21,6 +21,7 @@ namespace covered
     private:
         static const std::string kClassName;
 
+        virtual bool processPlacementNotifyRequest_(MessageBase* data_request_ptr, const NetworkAddr& recvrsp_dst_addr) override; // Process remote placement notification request (return if edge node is finished)
         virtual bool processLocalCacheAdmission_(const LocalCacheAdmissionItem& local_cache_admission_item) override; // Process local cache admission (return if edge node is finished)
 
         // Member variables

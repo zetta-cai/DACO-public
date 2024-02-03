@@ -26,15 +26,16 @@ namespace covered
         // Const variables
         CacheServerProcessorParam* cache_server_placement_processor_param_ptr_;
 
-        bool processLocalCacheAdmissionInternal_(const LocalCacheAdmissionItem& local_cache_admission_item); // Return if edge node is finished
+        bool processPlacementNotifyRequestInternal_(const Key& key, const Value& value, const bool& is_valid, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, const NetworkAddr& recvrsp_dst_addr); // Return if edge node is finished
+        bool processLocalCacheAdmissionInternal_(const LocalCacheAdmissionItem& local_cache_admission_item); // Return if edge node is finished        
+
+        void checkPointers_() const;
     private:
         static const std::string kClassName;
 
-        bool processPlacementNotifyRequest_(MessageBase* data_request_ptr, const NetworkAddr& recvrsp_dst_addr); // Process remote placement notification request (return if edge node is finished)
+        virtual bool processPlacementNotifyRequest_(MessageBase* data_request_ptr, const NetworkAddr& recvrsp_dst_addr) = 0; // Process remote placement notification request (return if edge node is finished)
 
         virtual bool processLocalCacheAdmission_(const LocalCacheAdmissionItem& local_cache_admission_item) = 0; // Process local cache admission (return if edge node is finished)
-
-        void checkPointers_() const;
 
         // Member variables
 

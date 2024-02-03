@@ -73,7 +73,21 @@ namespace covered
         assert(dst_beacon_edge_idx_for_compression != edge_idx);
 
         // Prepare directory lookup request to check directory information in beacon node
-        MessageBase* directory_lookup_request_ptr = new DirectoryLookupRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+        const std::string cache_name = tmp_edge_wrapper_ptr->getCacheName();
+        MessageBase* directory_lookup_request_ptr = NULL;
+        if (cache_name != Util::BESTGUESS_CACHE_NAME) // other baselines
+        {
+            directory_lookup_request_ptr = new DirectoryLookupRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+        }
+        else // BestGuess
+        {
+            // Get local victim vtime for vtime synchronization
+            GetLocalVictimVtimeFuncParam tmp_param_for_vtimesync;
+            tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
+            const uint64_t& local_victim_vtime = tmp_param_for_vtimesync.getLocalVictimVtimeRef();
+
+            directory_lookup_request_ptr = new BestGuessDirectoryLookupRequest(key, BestGuessSyncinfo(local_victim_vtime), edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+        }
         assert(directory_lookup_request_ptr != NULL);
 
         return directory_lookup_request_ptr;
@@ -81,14 +95,34 @@ namespace covered
 
     void BasicCacheServerWorker::processRspToLookupBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, FastPathHint& fast_path_hint, const uint32_t& content_discovery_cross_edge_latency_us) const
     {
-        assert(control_response_ptr != NULL);
-        assert(control_response_ptr->getMessageType() == MessageType::kDirectoryLookupResponse);
+        checkPointers_();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
-        // Get directory information from the control response message
-        const DirectoryLookupResponse* const directory_lookup_response_ptr = static_cast<const DirectoryLookupResponse*>(control_response_ptr);
-        is_being_written = directory_lookup_response_ptr->isBeingWritten();
-        is_valid_directory_exist = directory_lookup_response_ptr->isValidDirectoryExist();
-        directory_info = directory_lookup_response_ptr->getDirectoryInfo();
+        assert(control_response_ptr != NULL);
+        uint32_t source_edge_idx = control_response_ptr->getSourceIndex();
+
+        const MessageType message_type = control_response_ptr->getMessageType();
+        if (message_type == MessageType::kDirectoryLookupResponse)
+        {
+            // Get directory information from the control response message
+            const DirectoryLookupResponse* const directory_lookup_response_ptr = static_cast<const DirectoryLookupResponse*>(control_response_ptr);
+            is_being_written = directory_lookup_response_ptr->isBeingWritten();
+            is_valid_directory_exist = directory_lookup_response_ptr->isValidDirectoryExist();
+            directory_info = directory_lookup_response_ptr->getDirectoryInfo();
+        }
+        else if (message_type == MessageType::kBestGuessDirectoryLookupResponse)
+        {
+            // Get directory information from the control response message
+            const BestGuessDirectoryLookupResponse* const bestguess_directory_lookup_response_ptr = static_cast<const BestGuessDirectoryLookupResponse*>(control_response_ptr);
+            is_being_written = bestguess_directory_lookup_response_ptr->isBeingWritten();
+            is_valid_directory_exist = bestguess_directory_lookup_response_ptr->isValidDirectoryExist();
+            directory_info = bestguess_directory_lookup_response_ptr->getDirectoryInfo();
+            BestGuessSyncinfo syncinfo = bestguess_directory_lookup_response_ptr->getSyncinfo();
+
+            // Vtime synchronization
+            UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(source_edge_idx, syncinfo.getVtime());
+            tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
+        }
 
         UNUSED(best_placement_edgeset);
         UNUSED(need_hybrid_fetching);
@@ -237,7 +271,21 @@ namespace covered
         const uint32_t dst_beacon_edge_idx_for_compression = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
         assert(dst_beacon_edge_idx_for_compression != edge_idx);
 
-        MessageBase* acquire_writelock_request_ptr = new AcquireWritelockRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+        MessageBase* acquire_writelock_request_ptr = NULL;
+        const std::string cache_name = tmp_edge_wrapper_ptr->getCacheName();
+        if (cache_name != Util::BESTGUESS_CACHE_NAME) // other baselines
+        {
+            acquire_writelock_request_ptr = new AcquireWritelockRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+        }
+        else // BestGuess
+        {
+            // Get local victim vtime for vtime synchronization
+            GetLocalVictimVtimeFuncParam tmp_param_for_vtimesync;
+            tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
+            const uint64_t& local_victim_vtime = tmp_param_for_vtimesync.getLocalVictimVtimeRef();
+
+            acquire_writelock_request_ptr = new BestGuessAcquireWritelockRequest(key, BestGuessSyncinfo(local_victim_vtime), edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+        }
         assert(acquire_writelock_request_ptr != NULL);
 
         return acquire_writelock_request_ptr;
@@ -246,11 +294,31 @@ namespace covered
     void BasicCacheServerWorker::processRspToAcquireBeaconWritelock_(MessageBase* control_response_ptr, LockResult& lock_result) const
     {
         assert(control_response_ptr != NULL);
-        assert(control_response_ptr->getMessageType() == MessageType::kAcquireWritelockResponse);
 
         // Get result of acquiring write lock
-        const AcquireWritelockResponse* const acquire_writelock_response_ptr = static_cast<const AcquireWritelockResponse*>(control_response_ptr);
-        lock_result = acquire_writelock_response_ptr->getLockResult();
+        const MessageType messate_type = control_response_ptr->getMessageType();
+        if (messate_type == MessageType::kAcquireWritelockResponse)
+        {
+            const AcquireWritelockResponse* const acquire_writelock_response_ptr = static_cast<const AcquireWritelockResponse*>(control_response_ptr);
+            lock_result = acquire_writelock_response_ptr->getLockResult();
+        }
+        else if (messate_type == MessageType::kBestGuessAcquireWritelockResponse)
+        {
+            const BestGuessAcquireWritelockResponse* const bestguess_acquire_writelock_response_ptr = static_cast<const BestGuessAcquireWritelockResponse*>(control_response_ptr);
+            lock_result = bestguess_acquire_writelock_response_ptr->getLockResult();
+            BestGuessSyncinfo syncinfo = bestguess_acquire_writelock_response_ptr->getSyncinfo();
+
+            // Vtime synchronization
+            UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(bestguess_acquire_writelock_response_ptr->getSourceIndex(), syncinfo.getVtime());
+            cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr()->getEdgeCachePtr()->constCustomFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "Invalid message type: " << messate_type << " for BasicCacheServerWorker::processRspToAcquireBeaconWritelock_()";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
 
         return;
     }
@@ -258,7 +326,28 @@ namespace covered
     void BasicCacheServerWorker::processReqToFinishBlock_(MessageBase* control_request_ptr) const
     {
         assert(control_request_ptr != NULL);
-        assert(control_request_ptr->getMessageType() == MessageType::kFinishBlockRequest);
+
+        const MessageType message_type = control_request_ptr->getMessageType();
+        if (message_type == MessageType::kFinishBlockRequest)
+        {
+            // Do nothing
+        }
+        else if (message_type == MessageType::kBestGuessFinishBlockRequest)
+        {
+            BestGuessFinishBlockRequest* bestguess_finish_block_request_ptr = static_cast<BestGuessFinishBlockRequest*>(control_request_ptr);
+            BestGuessSyncinfo syncinfo = bestguess_finish_block_request_ptr->getSyncinfo();
+
+            // Vtime synchronization
+            UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(bestguess_finish_block_request_ptr->getSourceIndex(), syncinfo.getVtime());
+            cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr()->getEdgeCachePtr()->constCustomFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "Invalid message type: " << message_type << " for BasicCacheServerWorker::processReqToFinishBlock_()";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
 
         return;
     }
@@ -266,17 +355,42 @@ namespace covered
     MessageBase* BasicCacheServerWorker::getRspToFinishBlock_(MessageBase* control_request_ptr, const BandwidthUsage& tmp_bandwidth_usage) const
     {
         assert(control_request_ptr != NULL);
-        assert(control_request_ptr->getMessageType() == MessageType::kFinishBlockRequest);
-        
-        const FinishBlockRequest* const finish_block_request_ptr = static_cast<const FinishBlockRequest*>(control_request_ptr);
-        const Key tmp_key = finish_block_request_ptr->getKey();
-        const bool skip_propagation_latency = finish_block_request_ptr->isSkipPropagationLatency();
 
         checkPointers_();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
-
         uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
-        MessageBase* finish_block_response_ptr = new FinishBlockResponse(tmp_key, edge_idx, edge_cache_server_worker_recvreq_source_addr_, tmp_bandwidth_usage, EventList(), skip_propagation_latency); // NOTE: still use skip_propagation_latency of currently-blocked request rather than that of previous write request
+        
+        const MessageType message_type = control_request_ptr->getMessageType();
+        MessageBase* finish_block_response_ptr = NULL;
+        if (message_type == MessageType::kFinishBlockRequest)
+        {
+            const FinishBlockRequest* const finish_block_request_ptr = static_cast<const FinishBlockRequest*>(control_request_ptr);
+            const Key tmp_key = finish_block_request_ptr->getKey();
+            const bool skip_propagation_latency = finish_block_request_ptr->isSkipPropagationLatency();
+
+            finish_block_response_ptr = new FinishBlockResponse(tmp_key, edge_idx, edge_cache_server_worker_recvreq_source_addr_, tmp_bandwidth_usage, EventList(), skip_propagation_latency); // NOTE: still use skip_propagation_latency of currently-blocked request rather than that of previous write request
+        }
+        else if (message_type == MessageType::kBestGuessFinishBlockRequest)
+        {
+            const BestGuessFinishBlockRequest* const bestguess_finish_block_request_ptr = static_cast<const BestGuessFinishBlockRequest*>(control_request_ptr);
+            const Key tmp_key = bestguess_finish_block_request_ptr->getKey();
+            const bool skip_propagation_latency = bestguess_finish_block_request_ptr->isSkipPropagationLatency();
+
+            // Get local victim vtime for vtime synchronization
+            GetLocalVictimVtimeFuncParam tmp_param_for_vtimesync;
+            tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
+            const uint64_t& local_victim_vtime = tmp_param_for_vtimesync.getLocalVictimVtimeRef();
+
+            finish_block_response_ptr = new BestGuessFinishBlockResponse(tmp_key, BestGuessSyncinfo(local_victim_vtime), edge_idx, edge_cache_server_worker_recvreq_source_addr_, tmp_bandwidth_usage, EventList(), skip_propagation_latency); // NOTE: still use skip_propagation_latency of currently-blocked request rather than that of previous write request
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "Invalid message type: " << message_type << " for BasicCacheServerWorker::getRspToFinishBlock_()";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+        assert(finish_block_response_ptr != NULL);
 
         return finish_block_response_ptr;
     }
