@@ -58,7 +58,7 @@ namespace covered
             edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
             const uint64_t& local_victim_vtime = tmp_param_for_vtimesync.getLocalVictimVtimeRef();
 
-            directory_update_request_ptr = new BestGuessDirectoryAdmitRequest(key, is_admit, directory_info, BestGuessSyncinfo(local_victim_vtime), edge_idx, source_addr, skip_propagation_latency);
+            directory_update_request_ptr = new BestGuessDirectoryUpdateRequest(key, is_admit, directory_info, BestGuessSyncinfo(local_victim_vtime), edge_idx, source_addr, skip_propagation_latency);
         }
         assert(directory_update_request_ptr != NULL);
 
@@ -77,10 +77,10 @@ namespace covered
             const DirectoryUpdateResponse* const directory_update_response_ptr = static_cast<const DirectoryUpdateResponse*>(control_response_ptr);
             is_being_written = directory_update_response_ptr->isBeingWritten();
         }
-        else if (message_type == MessageType::kBestGuessDirectoryAdmitResponse)
+        else if (message_type == MessageType::kBestGuessDirectoryUpdateResponse)
         {
             // Get is_being_written and is_neighbor_cached from control response message
-            const BestGuessDirectoryAdmitResponse* const bestguess_directory_admit_response_ptr = static_cast<const BestGuessDirectoryAdmitResponse*>(control_response_ptr);
+            const BestGuessDirectoryUpdateResponse* const bestguess_directory_admit_response_ptr = static_cast<const BestGuessDirectoryUpdateResponse*>(control_response_ptr);
             is_being_written = bestguess_directory_admit_response_ptr->isBeingWritten();
         }
         else
@@ -138,9 +138,29 @@ namespace covered
         const uint32_t dst_beacon_edge_idx_for_compression = edge_wrapper_ptr_->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
         assert(dst_beacon_edge_idx_for_compression != edge_idx);
     
-        directory_update_request_ptr = new DirectoryUpdateRequest(key, is_admit, directory_info, edge_idx, source_addr, skip_propagation_latency);
+        const std::string cache_name = edge_wrapper_ptr_->getCacheName();
+        if (cache_name != Util::BESTGUESS_CACHE_NAME) // other baselines
+        {
+            directory_update_request_ptr = new DirectoryUpdateRequest(key, is_admit, directory_info, edge_idx, source_addr, skip_propagation_latency);
+        }
+        else // BestGuess
+        {
+            // Get local victim vtime for vtime synchronization
+            GetLocalVictimVtimeFuncParam tmp_param_for_vtimesync;
+            edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
+            const uint64_t& local_victim_vtime = tmp_param_for_vtimesync.getLocalVictimVtimeRef();
 
+            if (is_background) // Background eviction issued by basic placement processor
+            {
+                directory_update_request_ptr = new BestGuessBgplaceDirectoryUpdateRequest(key, is_admit, directory_info, BestGuessSyncinfo(local_victim_vtime), edge_idx, source_addr, skip_propagation_latency);
+            }
+            else // Foreground eviction triggered by value update
+            {
+                directory_update_request_ptr = new BestGuessDirectoryUpdateRequest(key, is_admit, directory_info, BestGuessSyncinfo(local_victim_vtime), edge_idx, source_addr, skip_propagation_latency);
+            }
+        }
         assert(directory_update_request_ptr != NULL);
+
         return directory_update_request_ptr;
     }
     
@@ -151,11 +171,42 @@ namespace covered
 
         bool is_finish = false;
 
-        assert(control_response_ptr->getMessageType() == MessageType::kDirectoryUpdateResponse);
+        bool need_vtime_sync = false;
+        BestGuessSyncinfo bestguess_syncinfo;
 
-        // Get is_being_written (UNUSED) from control response message
-        const DirectoryUpdateResponse* const directory_update_response_ptr = static_cast<const DirectoryUpdateResponse*>(control_response_ptr);
-        is_being_written = directory_update_response_ptr->isBeingWritten();
+        const MessageType message_type = control_response_ptr->getMessageType();
+        if (message_type == MessageType::kDirectoryUpdateResponse)
+        {
+            // Get is_being_written (UNUSED) from control response message
+            const DirectoryUpdateResponse* const directory_update_response_ptr = static_cast<const DirectoryUpdateResponse*>(control_response_ptr);
+            is_being_written = directory_update_response_ptr->isBeingWritten();
+
+            need_vtime_sync = false;
+        }
+        else if (message_type == MessageType::kBestGuessDirectoryUpdateResponse)
+        {
+            // Get is_being_written (UNUSED) from control response message
+            const BestGuessDirectoryUpdateResponse* const bestguess_directory_evict_response_ptr = static_cast<const BestGuessDirectoryUpdateResponse*>(control_response_ptr);
+            is_being_written = bestguess_directory_evict_response_ptr->isBeingWritten();
+            bestguess_syncinfo = bestguess_directory_evict_response_ptr->getSyncinfo();
+
+            need_vtime_sync = true;
+        }
+        else if (message_type == MessageType::kBestGuessBgplaceDirectoryUpdateResponse)
+        {
+            // Get is_being_written (UNUSED) from control response message
+            const BestGuessBgplaceDirectoryUpdateResponse* const bestguess_bgplace_directory_evict_response_ptr = static_cast<const BestGuessBgplaceDirectoryUpdateResponse*>(control_response_ptr);
+            is_being_written = bestguess_bgplace_directory_evict_response_ptr->isBeingWritten();
+            bestguess_syncinfo = bestguess_bgplace_directory_evict_response_ptr->getSyncinfo();
+
+            need_vtime_sync = true;
+        }
+
+        if (need_vtime_sync) // Vtime synchronization for BestGuess
+        {
+            UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(control_response_ptr->getSourceIndex(), bestguess_syncinfo.getVtime());
+            edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
+        }
 
         UNUSED(recvrsp_source_addr);
         UNUSED(recvrsp_socket_server_ptr);

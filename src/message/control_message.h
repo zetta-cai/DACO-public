@@ -69,7 +69,9 @@
 // ONLY used by BestGuess
 #include "message/control/cooperation/bestguess/bestguess_placement_trigger_request.h"
 #include "message/control/cooperation/bestguess/bestguess_placement_trigger_response.h"
-#include "message/control/cooperation/bestguess/bestguess_directory_admit_request.h"
-#include "message/control/cooperation/bestguess/bestguess_directory_admit_response.h"
+#include "message/control/cooperation/bestguess/bestguess_directory_update_request.h"
+#include "message/control/cooperation/bestguess/bestguess_directory_update_response.h"
+#include "message/control/cooperation/bestguess/bestguess_bgplace_directory_update_request.h"
+#include "message/control/cooperation/bestguess/bestguess_bgplace_directory_update_response.h"
 
 #endif

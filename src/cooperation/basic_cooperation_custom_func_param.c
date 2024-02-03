@@ -43,7 +43,7 @@ namespace covered
 
     const std::string ValidateDirectoryTableForPreservedDirinfoFuncParam::FUNCNAME("validate_directory_table_for_preserved_dirinfo");
 
-    ValidateDirectoryTableForPreservedDirinfoFuncParam::ValidateDirectoryTableForPreservedDirinfoFuncParam(const Key& key, const DirectoryInfo& directory_info) : CooperationCustomFuncParamBase(), key_(key), directory_info_(directory_info)
+    ValidateDirectoryTableForPreservedDirinfoFuncParam::ValidateDirectoryTableForPreservedDirinfoFuncParam(const Key& key, const uint32_t& source_edge_idx, const DirectoryInfo& directory_info, bool& is_being_written, bool& is_neighbor_cached) : CooperationCustomFuncParamBase(), key_(key), source_edge_idx_(source_edge_idx), directory_info_(directory_info), is_being_written_ref_(is_being_written), is_neighbor_cached_ref_(is_neighbor_cached)
     {
         is_successful_validation_ = false;
     }
@@ -57,9 +57,24 @@ namespace covered
         return key_;
     }
 
+    uint32_t ValidateDirectoryTableForPreservedDirinfoFuncParam::getSourceEdgeIdx() const
+    {
+        return source_edge_idx_;
+    }
+
     DirectoryInfo ValidateDirectoryTableForPreservedDirinfoFuncParam::getDirectoryInfo() const
     {
         return directory_info_;
+    }
+
+    bool& ValidateDirectoryTableForPreservedDirinfoFuncParam::isBeingWrittenRef() const
+    {
+        return is_being_written_ref_;
+    }
+
+    bool& ValidateDirectoryTableForPreservedDirinfoFuncParam::isNeighborCachedRef() const
+    {
+        return is_neighbor_cached_ref_;
     }
 
     bool& ValidateDirectoryTableForPreservedDirinfoFuncParam::isSuccessfulValidationRef()

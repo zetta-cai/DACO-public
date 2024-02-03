@@ -47,11 +47,14 @@ namespace covered
     public:
         static const std::string FUNCNAME; // validate dirinfo in directory table if exists
 
-        ValidateDirectoryTableForPreservedDirinfoFuncParam(const Key& key, const DirectoryInfo& directory_info);
+        ValidateDirectoryTableForPreservedDirinfoFuncParam(const Key& key, const uint32_t& source_edge_idx, const DirectoryInfo& directory_info, bool& is_being_written, bool& is_neighbor_cached);
         virtual ~ValidateDirectoryTableForPreservedDirinfoFuncParam();
 
         Key getKey() const;
+        uint32_t getSourceEdgeIdx() const;
         DirectoryInfo getDirectoryInfo() const;
+        bool& isBeingWrittenRef() const;
+        bool& isNeighborCachedRef() const;
 
         bool& isSuccessfulValidationRef();
         const bool& isSuccessfulValidationConstRef() const;
@@ -59,7 +62,10 @@ namespace covered
         static const std::string kClassName;
 
         const Key key_;
+        const uint32_t source_edge_idx_;
         const DirectoryInfo directory_info_;
+        bool& is_being_written_ref_;
+        bool& is_neighbor_cached_ref_;
 
         bool is_successful_validation_;
     };

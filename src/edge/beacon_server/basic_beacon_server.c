@@ -90,6 +90,7 @@ namespace covered
         Key tmp_key;
         bool is_admit = false;
         DirectoryInfo directory_info;
+        const uint32_t source_edge_idx = control_request_ptr->getSourceIndex();
 
         const MessageType message_type = control_request_ptr->getMessageType();
         if (message_type == MessageType::kDirectoryUpdateRequest)
@@ -100,28 +101,38 @@ namespace covered
             directory_info = directory_update_request_ptr->getDirectoryInfo();
 
             // Update local directory information in cooperation wrapper
-            const uint32_t source_edge_idx = control_request_ptr->getSourceIndex();
             is_being_written = false;
             MetadataUpdateRequirement unused_metadata_update_requirement;
             edge_wrapper_ptr_->getCooperationWrapperPtr()->updateDirectoryTable(tmp_key, source_edge_idx, is_admit, directory_info, is_being_written, is_neighbor_cached, unused_metadata_update_requirement);
             UNUSED(unused_metadata_update_requirement); // ONLY used by COVERED
         }
-        else if (message_type == MessageType::kBestGuessDirectoryAdmitRequest)
+        else if (message_type == MessageType::kBestGuessDirectoryUpdateRequest || message_type == MessageType::kBestGuessBgplaceDirectoryUpdateRequest)
         {
-            const BestGuessDirectoryAdmitRequest* const bestguess_directory_update_request_ptr = static_cast<const BestGuessDirectoryAdmitRequest*>(control_request_ptr);
+            const BestGuessDirectoryUpdateRequest* const bestguess_directory_update_request_ptr = static_cast<const BestGuessDirectoryUpdateRequest*>(control_request_ptr);
             tmp_key = bestguess_directory_update_request_ptr->getKey();
             is_admit = bestguess_directory_update_request_ptr->isValidDirectoryExist();
-            assert(is_admit == true);
             directory_info = bestguess_directory_update_request_ptr->getDirectoryInfo();
 
             // Vtime synchronization
             UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(bestguess_directory_update_request_ptr->getSourceIndex(), bestguess_directory_update_request_ptr->getSyncinfo().getVtime());
             edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
 
-            // Validate dirinfo preserved in directory table when triggering best-guess placement
-            ValidateDirectoryTableForPreservedDirinfoFuncParam tmp_param_for_validation(tmp_key, directory_info);
-            edge_wrapper_ptr_->getCooperationWrapperPtr()->customFunc(ValidateDirectoryTableForPreservedDirinfoFuncParam::FUNCNAME, &tmp_param_for_validation);
-            assert(tmp_param_for_validation.isSuccessfulValidationConstRef()); // NOTE: key and dirinfo MUST exist in directory table for validation
+            if (is_admit) // Foreground/background directory admission (i.e., validation for BestGuess) by local/remote placement notification
+            {
+                // Validate dirinfo preserved in directory table when triggering best-guess placement
+                ValidateDirectoryTableForPreservedDirinfoFuncParam tmp_param_for_validation(tmp_key, source_edge_idx, directory_info, is_being_written, is_neighbor_cached);
+                edge_wrapper_ptr_->getCooperationWrapperPtr()->customFunc(ValidateDirectoryTableForPreservedDirinfoFuncParam::FUNCNAME, &tmp_param_for_validation);
+                assert(!tmp_param_for_validation.isNeighborCachedRef()); // NOTE: sender MUST be the single placement of the object
+                assert(tmp_param_for_validation.isSuccessfulValidationConstRef()); // NOTE: key and dirinfo MUST exist in directory table for validation
+            }
+            else // Foreground/background directory eviction by value update or remote placement notification
+            {
+                // Update local directory information in cooperation wrapper
+                is_being_written = false;
+                MetadataUpdateRequirement unused_metadata_update_requirement;
+                edge_wrapper_ptr_->getCooperationWrapperPtr()->updateDirectoryTable(tmp_key, source_edge_idx, is_admit, directory_info, is_being_written, is_neighbor_cached, unused_metadata_update_requirement);
+                UNUSED(unused_metadata_update_requirement); // ONLY used by COVERED
+            }
         }
         else
         {
@@ -159,9 +170,9 @@ namespace covered
 
             directory_update_response_ptr = new DirectoryUpdateResponse(tmp_key, is_being_written, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         }
-        else if (message_type == MessageType::kBestGuessDirectoryAdmitRequest)
+        else if (message_type == MessageType::kBestGuessDirectoryUpdateRequest || message_type == MessageType::kBestGuessBgplaceDirectoryUpdateRequest)
         {
-            const BestGuessDirectoryAdmitRequest* const bestguess_directory_update_request_ptr = static_cast<const BestGuessDirectoryAdmitRequest*>(control_request_ptr);
+            const BestGuessDirectoryUpdateRequest* const bestguess_directory_update_request_ptr = static_cast<const BestGuessDirectoryUpdateRequest*>(control_request_ptr);
             tmp_key = bestguess_directory_update_request_ptr->getKey();
             skip_propagation_latency = bestguess_directory_update_request_ptr->isSkipPropagationLatency();
 
@@ -170,7 +181,14 @@ namespace covered
             edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
             const uint64_t& local_victim_vtime = tmp_param_for_vtimesync.getLocalVictimVtimeRef();
 
-            directory_update_response_ptr = new BestGuessDirectoryAdmitResponse(tmp_key, is_being_written, BestGuessSyncinfo(local_victim_vtime), edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            if (message_type == MessageType::kBestGuessDirectoryUpdateRequest) // Foreground directory admission/eviction by local placement notification or value update
+            {
+                directory_update_response_ptr = new BestGuessDirectoryUpdateResponse(tmp_key, is_being_written, BestGuessSyncinfo(local_victim_vtime), edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            }
+            else // Background directory admission/eviction by remote placement notification
+            {
+                directory_update_response_ptr = new BestGuessBgplaceDirectoryUpdateResponse(tmp_key, is_being_written, BestGuessSyncinfo(local_victim_vtime), edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            }
         }
         else
         {

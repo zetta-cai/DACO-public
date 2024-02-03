@@ -29,7 +29,7 @@ namespace covered
         static const std::string kClassName;
 
         bool preserveDirectoryTableIfGlobalUncachedInternal_(const Key& key, const DirectoryInfo& directory_info); // Preserve local directory information to avoid duplicate updates (return if with successful preservation)
-        bool validateDirectoryTableForPreservedDirinfoInternal_(const Key& key, const DirectoryInfo& directory_info); // Validate local directory information (return if with successful validation)
+        bool validateDirectoryTableForPreservedDirinfoInternal_(const Key& key, const uint32_t& source_edge_idx, const DirectoryInfo& directory_info, bool& is_being_written, bool& is_neighbor_cached); // Validate local directory information (return if with successful validation)
 
         std::string instance_name_;
     };

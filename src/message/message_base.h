@@ -99,8 +99,10 @@ namespace covered
         // ONLY used by BestGuess
         kBestGuessPlacementTriggerRequest,
         kBestGuessPlacementTriggerResponse,
-        kBestGuessDirectoryAdmitRequest,
-        kBestGuessDirectoryAdmitResponse,
+        kBestGuessDirectoryUpdateRequest,
+        kBestGuessDirectoryUpdateResponse,
+        kBestGuessBgplaceDirectoryUpdateRequest,
+        kBestGuessBgplaceDirectoryUpdateResponse,
     };
 
     enum Hitflag

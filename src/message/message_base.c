@@ -333,14 +333,24 @@ namespace covered
                 message_type_str = "kBestGuessPlacementTriggerResponse";
                 break;
             }
-            case MessageType::kBestGuessDirectoryAdmitRequest:
+            case MessageType::kBestGuessDirectoryUpdateRequest:
             {
-                message_type_str = "kBestGuessDirectoryAdmitRequest";
+                message_type_str = "kBestGuessDirectoryUpdateRequest";
                 break;
             }
-            case MessageType::kBestGuessDirectoryAdmitResponse:
+            case MessageType::kBestGuessDirectoryUpdateResponse:
             {
-                message_type_str = "kBestGuessDirectoryAdmitResponse";
+                message_type_str = "kBestGuessDirectoryUpdateResponse";
+                break;
+            }
+            case MessageType::kBestGuessBgplaceDirectoryUpdateRequest:
+            {
+                message_type_str = "kBestGuessBgplaceDirectoryUpdateRequest";
+                break;
+            }
+            case MessageType::kBestGuessBgplaceDirectoryUpdateResponse:
+            {
+                message_type_str = "kBestGuessBgplaceDirectoryUpdateResponse";
                 break;
             }
             default:
@@ -654,9 +664,14 @@ namespace covered
                 message_ptr = new BestGuessPlacementTriggerRequest(msg_payload);
                 break;
             }
-            case MessageType::kBestGuessDirectoryAdmitRequest:
+            case MessageType::kBestGuessDirectoryUpdateRequest:
             {
-                message_ptr = new BestGuessDirectoryAdmitRequest(msg_payload);
+                message_ptr = new BestGuessDirectoryUpdateRequest(msg_payload);
+                break;
+            }
+            case MessageType::kBestGuessBgplaceDirectoryUpdateRequest:
+            {
+                message_ptr = new BestGuessBgplaceDirectoryUpdateRequest(msg_payload);
                 break;
             }
             default:
@@ -872,9 +887,14 @@ namespace covered
                 message_ptr = new BestGuessPlacementTriggerResponse(msg_payload);
                 break;
             }
-            case MessageType::kBestGuessDirectoryAdmitResponse:
+            case MessageType::kBestGuessDirectoryUpdateResponse:
             {
-                message_ptr = new BestGuessDirectoryAdmitResponse(msg_payload);
+                message_ptr = new BestGuessDirectoryUpdateResponse(msg_payload);
+                break;
+            }
+            case MessageType::kBestGuessBgplaceDirectoryUpdateResponse:
+            {
+                message_ptr = new BestGuessBgplaceDirectoryUpdateResponse(msg_payload);
                 break;
             }
             default:
@@ -1187,21 +1207,26 @@ namespace covered
             const BestGuessPlacementTriggerResponse* const best_guess_placement_trigger_response_ptr = static_cast<const BestGuessPlacementTriggerResponse*>(message_ptr);
             tmp_key = best_guess_placement_trigger_response_ptr->getKey();
         }
-        else if (message_ptr->message_type_ == MessageType::kBestGuessDirectoryAdmitRequest)
+        else if (message_ptr->message_type_ == MessageType::kBestGuessDirectoryUpdateRequest)
         {
-            const BestGuessDirectoryAdmitRequest* const best_guess_directory_update_request_ptr = static_cast<const BestGuessDirectoryAdmitRequest*>(message_ptr);
+            const BestGuessDirectoryUpdateRequest* const best_guess_directory_update_request_ptr = static_cast<const BestGuessDirectoryUpdateRequest*>(message_ptr);
             tmp_key = best_guess_directory_update_request_ptr->getKey();
         }
-        else if (message_ptr->message_type_ == MessageType::kBestGuessDirectoryAdmitResponse)
+        else if (message_ptr->message_type_ == MessageType::kBestGuessDirectoryUpdateResponse)
         {
-            const BestGuessDirectoryAdmitResponse* const best_guess_directory_update_response_ptr = static_cast<const BestGuessDirectoryAdmitResponse*>(message_ptr);
+            const BestGuessDirectoryUpdateResponse* const best_guess_directory_update_response_ptr = static_cast<const BestGuessDirectoryUpdateResponse*>(message_ptr);
             tmp_key = best_guess_directory_update_response_ptr->getKey();
         }
-        // else if (message_ptr->message_type_ == MessageType::kBestGuessDirectoryUpdateResponse)
-        // {
-        //     const BestGuessDirectoryUpdateResponse* const best_guess_directory_update_response_ptr = static_cast<const BestGuessDirectoryUpdateResponse*>(message_ptr);
-        //     tmp_key = best_guess_directory_update_response_ptr->getKey();
-        // }
+        else if (message_ptr->message_type_ == MessageType::kBestGuessBgplaceDirectoryUpdateRequest)
+        {
+            const BestGuessBgplaceDirectoryUpdateRequest* const best_guess_bgplace_directory_update_request_ptr = static_cast<const BestGuessBgplaceDirectoryUpdateRequest*>(message_ptr);
+            tmp_key = best_guess_bgplace_directory_update_request_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kBestGuessBgplaceDirectoryUpdateResponse)
+        {
+            const BestGuessBgplaceDirectoryUpdateResponse* const best_guess_bgplace_directory_update_response_ptr = static_cast<const BestGuessBgplaceDirectoryUpdateResponse*>(message_ptr);
+            tmp_key = best_guess_bgplace_directory_update_response_ptr->getKey();
+        }
         else
         {
             std::ostringstream oss;
@@ -1465,7 +1490,7 @@ namespace covered
     bool MessageBase::isCooperationControlRequest() const
     {
         checkIsValid_();
-        if (message_type_ == MessageType::kAcquireWritelockRequest || message_type_ == MessageType::kDirectoryLookupRequest || message_type_ == MessageType::kDirectoryUpdateRequest || message_type_ == MessageType::kFinishBlockRequest || message_type_ == MessageType::kInvalidationRequest || message_type_ == MessageType::kReleaseWritelockRequest || message_type_ == MessageType::kCoveredDirectoryLookupRequest || message_type_ == MessageType::kCoveredDirectoryUpdateRequest || message_type_ == MessageType::kCoveredAcquireWritelockRequest || message_type_ == MessageType::kCoveredReleaseWritelockRequest || message_type_ == MessageType::kCoveredBgplaceDirectoryUpdateRequest || message_type_ == MessageType::kCoveredBgplacePlacementNotifyRequest || message_type_ == MessageType::kCoveredVictimFetchRequest || message_type_ == MessageType::kCoveredFghybridHybridFetchedRequest || message_type_ == MessageType::kCoveredFghybridDirectoryAdmitRequest || message_type_ == MessageType::kCoveredInvalidationRequest || message_type_ == MessageType::kCoveredFinishBlockRequest || message_type_ == MessageType::kCoveredMetadataUpdateRequest || message_type_ == MessageType::kBestGuessPlacementTriggerRequest || message_type_ == MessageType::kBestGuessDirectoryAdmitRequest)
+        if (message_type_ == MessageType::kAcquireWritelockRequest || message_type_ == MessageType::kDirectoryLookupRequest || message_type_ == MessageType::kDirectoryUpdateRequest || message_type_ == MessageType::kFinishBlockRequest || message_type_ == MessageType::kInvalidationRequest || message_type_ == MessageType::kReleaseWritelockRequest || message_type_ == MessageType::kCoveredDirectoryLookupRequest || message_type_ == MessageType::kCoveredDirectoryUpdateRequest || message_type_ == MessageType::kCoveredAcquireWritelockRequest || message_type_ == MessageType::kCoveredReleaseWritelockRequest || message_type_ == MessageType::kCoveredBgplaceDirectoryUpdateRequest || message_type_ == MessageType::kCoveredBgplacePlacementNotifyRequest || message_type_ == MessageType::kCoveredVictimFetchRequest || message_type_ == MessageType::kCoveredFghybridHybridFetchedRequest || message_type_ == MessageType::kCoveredFghybridDirectoryAdmitRequest || message_type_ == MessageType::kCoveredInvalidationRequest || message_type_ == MessageType::kCoveredFinishBlockRequest || message_type_ == MessageType::kCoveredMetadataUpdateRequest || message_type_ == MessageType::kBestGuessPlacementTriggerRequest || message_type_ == MessageType::kBestGuessDirectoryUpdateRequest || message_type_ == MessageType::kBestGuessBgplaceDirectoryUpdateRequest)
         {
             return true;
         }
@@ -1497,7 +1522,7 @@ namespace covered
     bool MessageBase::isCooperationControlResponse() const
     {
         checkIsValid_();
-        if (message_type_ == MessageType::kAcquireWritelockResponse || message_type_ == MessageType::kDirectoryLookupResponse || message_type_ == MessageType::kDirectoryUpdateResponse || message_type_ == MessageType::kFinishBlockResponse || message_type_ == MessageType::kInvalidationResponse || message_type_ == MessageType::kReleaseWritelockResponse || message_type_ == MessageType::kCoveredDirectoryLookupResponse || message_type_ == MessageType::kCoveredDirectoryUpdateResponse || message_type_ == MessageType::kCoveredAcquireWritelockResponse || message_type_ == MessageType::kCoveredReleaseWritelockResponse || message_type_ == MessageType::kCoveredBgplaceDirectoryUpdateResponse || message_type_ == MessageType::kCoveredVictimFetchResponse || message_type_ == MessageType::kCoveredFghybridDirectoryLookupResponse || message_type_ == MessageType::kCoveredFghybridDirectoryEvictResponse || message_type_ == MessageType::kCoveredFghybridReleaseWritelockResponse || message_type_ == MessageType::kCoveredFghybridHybridFetchedResponse || message_type_ == MessageType::kCoveredFghybridDirectoryAdmitResponse || message_type_ == MessageType::kCoveredInvalidationResponse || message_type_ == MessageType::kCoveredFinishBlockResponse || message_type_ == MessageType::kCoveredFastpathDirectoryLookupResponse || message_type_ == MessageType::kBestGuessPlacementTriggerResponse || message_type_ == MessageType::kBestGuessDirectoryAdmitResponse)
+        if (message_type_ == MessageType::kAcquireWritelockResponse || message_type_ == MessageType::kDirectoryLookupResponse || message_type_ == MessageType::kDirectoryUpdateResponse || message_type_ == MessageType::kFinishBlockResponse || message_type_ == MessageType::kInvalidationResponse || message_type_ == MessageType::kReleaseWritelockResponse || message_type_ == MessageType::kCoveredDirectoryLookupResponse || message_type_ == MessageType::kCoveredDirectoryUpdateResponse || message_type_ == MessageType::kCoveredAcquireWritelockResponse || message_type_ == MessageType::kCoveredReleaseWritelockResponse || message_type_ == MessageType::kCoveredBgplaceDirectoryUpdateResponse || message_type_ == MessageType::kCoveredVictimFetchResponse || message_type_ == MessageType::kCoveredFghybridDirectoryLookupResponse || message_type_ == MessageType::kCoveredFghybridDirectoryEvictResponse || message_type_ == MessageType::kCoveredFghybridReleaseWritelockResponse || message_type_ == MessageType::kCoveredFghybridHybridFetchedResponse || message_type_ == MessageType::kCoveredFghybridDirectoryAdmitResponse || message_type_ == MessageType::kCoveredInvalidationResponse || message_type_ == MessageType::kCoveredFinishBlockResponse || message_type_ == MessageType::kCoveredFastpathDirectoryLookupResponse || message_type_ == MessageType::kBestGuessPlacementTriggerResponse || message_type_ == MessageType::kBestGuessDirectoryUpdateResponse || message_type_ == MessageType::kBestGuessBgplaceDirectoryUpdateResponse)
         {
             return true;
         }
@@ -1529,7 +1554,7 @@ namespace covered
     bool MessageBase::isBackgroundRequest() const
     {
         checkIsValid_();
-        if (message_type_ == MessageType::kCoveredBgfetchRedirectedGetRequest || message_type_ == MessageType::kCoveredBgfetchGlobalGetRequest || message_type_ == MessageType::kCoveredBgplacePlacementNotifyRequest || message_type_ == MessageType::kCoveredBgplaceDirectoryUpdateRequest)
+        if (message_type_ == MessageType::kCoveredBgfetchRedirectedGetRequest || message_type_ == MessageType::kCoveredBgfetchGlobalGetRequest || message_type_ == MessageType::kCoveredBgplacePlacementNotifyRequest || message_type_ == MessageType::kCoveredBgplaceDirectoryUpdateRequest || message_type_ == MessageType::kBestGuessBgplaceDirectoryUpdateRequest)
         {
             return true;
         }
@@ -1542,7 +1567,7 @@ namespace covered
     bool MessageBase::isBackgroundResponse() const
     {
         checkIsValid_();
-        if (message_type_ == MessageType::kCoveredBgfetchRedirectedGetResponse || message_type_ == MessageType::kCoveredBgfetchGlobalGetResponse || message_type_ == MessageType::kCoveredBgplaceDirectoryUpdateResponse)
+        if (message_type_ == MessageType::kCoveredBgfetchRedirectedGetResponse || message_type_ == MessageType::kCoveredBgfetchGlobalGetResponse || message_type_ == MessageType::kCoveredBgplaceDirectoryUpdateResponse || message_type_ == MessageType::kBestGuessBgplaceDirectoryUpdateResponse)
         {
             return true;
         }

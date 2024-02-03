@@ -187,7 +187,7 @@ namespace covered
         // CoveredFghybridHybridFetchedRequest: foreground request to notify the result of excluding-sender hybrid data fetching for COVERED (NO directory update)
         // CoveredFghybridDirectoryAdmitRequest: foreground directory admission with including-sender hybrid data fetching for COVERED
         // CoveredDirectoryUpdateRequest: foreground directory updates (with only-sender hybrid data fetching for COVERED if is_admit = true)
-        else if (message_type == MessageType::kDirectoryUpdateRequest || message_type == MessageType::kCoveredBgplaceDirectoryUpdateRequest || message_type == MessageType::kCoveredFghybridHybridFetchedRequest || message_type == MessageType::kCoveredFghybridDirectoryAdmitRequest || message_type == MessageType::kCoveredDirectoryUpdateRequest || message_type == MessageType::kBestGuessDirectoryAdmitRequest)
+        else if (message_type == MessageType::kDirectoryUpdateRequest || message_type == MessageType::kCoveredBgplaceDirectoryUpdateRequest || message_type == MessageType::kCoveredFghybridHybridFetchedRequest || message_type == MessageType::kCoveredFghybridDirectoryAdmitRequest || message_type == MessageType::kCoveredDirectoryUpdateRequest || message_type == MessageType::kBestGuessDirectoryUpdateRequest || message_type == MessageType::kBestGuessBgplaceDirectoryUpdateRequest)
         {
             is_finish = processDirectoryUpdateRequest_(control_request_ptr, edge_cache_server_worker_recvrsp_dst_addr);
         }

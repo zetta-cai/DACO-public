@@ -1,5 +1,7 @@
 /*
  * BackgroundCounter: count background events and bandwidth usage for debugging and measurement (thread safe).
+ *
+ * NOTE: background events and bandwidth usage will be updated by receiver of background messages, and embedded into some foreground messages (yet may NOT be related with the objects accessed by the foreground messages; JUST used for counting network overhead).
  * 
  * By Siyuan Sheng (2023.09.26).
  */
