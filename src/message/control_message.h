@@ -73,5 +73,6 @@
 #include "message/control/cooperation/bestguess/bestguess_directory_update_response.h"
 #include "message/control/cooperation/bestguess/bestguess_bgplace_directory_update_request.h"
 #include "message/control/cooperation/bestguess/bestguess_bgplace_directory_update_response.h"
+#include "message/control/cooperation/bestguess/bestguess_bgplace_placement_notify_request.h"
 
 #endif

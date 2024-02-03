@@ -130,16 +130,16 @@ namespace covered
 
         checkPointers_();
 
+        uint32_t current_edge_idx = getNodeIdx();
         if (getCacheName() != Util::BESTGUESS_CACHE_NAME) // Admit local directory for other baselines
         {
-            uint32_t current_edge_idx = getNodeIdx();
             const bool is_admit = true; // Admit content directory
             MetadataUpdateRequirement metadata_update_requirement;
             cooperation_wrapper_ptr_->updateDirectoryTable(key, current_edge_idx, is_admit, directory_info, is_being_written, is_neighbor_cached, metadata_update_requirement);
         }
         else // Validate dirinfo preserved when triggering best-guess placement for BestGuess
         {
-            ValidateDirectoryTableForPreservedDirinfoFuncParam tmp_param(key, directory_info);
+            ValidateDirectoryTableForPreservedDirinfoFuncParam tmp_param(key, current_edge_idx, directory_info, is_being_written, is_neighbor_cached);
             cooperation_wrapper_ptr_->customFunc(ValidateDirectoryTableForPreservedDirinfoFuncParam::FUNCNAME, &tmp_param);
             assert(tmp_param.isSuccessfulValidationConstRef()); // NOTE: key and dirinfo MUST exist in directory table for validation
         }

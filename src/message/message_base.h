@@ -103,6 +103,7 @@ namespace covered
         kBestGuessDirectoryUpdateResponse,
         kBestGuessBgplaceDirectoryUpdateRequest,
         kBestGuessBgplaceDirectoryUpdateResponse,
+        kBestGuessBgplacePlacementNotifyRequest,
     };
 
     enum Hitflag

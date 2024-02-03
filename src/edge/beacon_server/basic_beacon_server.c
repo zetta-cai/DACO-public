@@ -336,6 +336,7 @@ namespace covered
         checkPointers_();
 
         assert(edge_wrapper_ptr_->getCacheName() == Util::BESTGUESS_CACHE_NAME);
+        const uint32_t current_beacon_edge_idx = edge_wrapper_ptr_->getNodeIdx();
 
         bool is_finish = false;
         BandwidthUsage total_bandwidth_usage;
@@ -352,6 +353,7 @@ namespace covered
         const Key key = best_guess_placement_trigger_request_ptr->getKey();
         const Value value = best_guess_placement_trigger_request_ptr->getValue();
         const BestGuessPlaceinfo placeinfo = best_guess_placement_trigger_request_ptr->getPlaceinfo();
+        const uint32_t placement_edge_idx = placeinfo.getPlacementEdgeIdx();
         const BestGuessSyncinfo syncinfo = best_guess_placement_trigger_request_ptr->getSyncinfo();
         const bool skip_propagation_latency = best_guess_placement_trigger_request_ptr->isSkipPropagationLatency();
 
@@ -360,24 +362,53 @@ namespace covered
         edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
 
         // Try to preserve invalid dirinfo in directory table for trigger flag
-        PreserveDirectoryTableIfGlobalUncachedFuncParam tmp_param_for_preserve(key, DirectoryInfo(placeinfo.getPlacementEdgeIdx()));
+        PreserveDirectoryTableIfGlobalUncachedFuncParam tmp_param_for_preserve(key, DirectoryInfo(placement_edge_idx));
         edge_wrapper_ptr_->getCooperationWrapperPtr()->customFunc(PreserveDirectoryTableIfGlobalUncachedFuncParam::FUNCNAME, &tmp_param_for_preserve);
         const bool is_triggered = tmp_param_for_preserve.isSuccessfulPreservationConstRef();
-
-        if (is_triggered)
-        {
-            // TODO: Issue placement notification to placement node with key and value
-        }
-
-        embedBackgroundCounterIfNotEmpty_(total_bandwidth_usage, event_list); // Embed background events/bandwidth if any into control response message
 
         // Get local victim vtime for vtime synchronization
         GetLocalVictimVtimeFuncParam tmp_param_for_localvtime;
         edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_localvtime);
         const uint64_t& local_victim_vtime = tmp_param_for_localvtime.getLocalVictimVtimeRef();
 
+        if (is_triggered) // The first placement trigger of global uncached object
+        {
+            if (placement_edge_idx == current_beacon_edge_idx) // Local placement
+            {
+                assert(edge_wrapper_ptr_->getCooperationWrapperPtr()->getBeaconEdgeIdx(key) == current_beacon_edge_idx); // Current MUST be the beacon node of the key
+
+                // Admit local beacon directory
+                bool is_being_written = false;
+                bool unused_is_neighbor_cached = false; // ONLY used by COVERED for local cached reward calculation
+                edge_wrapper_ptr_->admitLocalDirectory_(key, DirectoryInfo(placement_edge_idx), is_being_written, unused_is_neighbor_cached, skip_propagation_latency);
+                assert(!unused_is_neighbor_cached); // (i) MUST be false due to ONLY preserving dirinfo for the first placement trigger of global miss; (ii) is_neighbor_cached will NOT be used by BestGuess local edge cachce
+
+                // Notify placement processor to admit local edge cache (NOTE: NO need to admit directory) and trigger local cache eviciton in the background
+                const bool is_valid = !is_being_written;
+                bool is_successful = edge_wrapper_ptr_->getLocalCacheAdmissionBufferPtr()->push(LocalCacheAdmissionItem(key, value, unused_is_neighbor_cached, is_valid, skip_propagation_latency));
+                assert(is_successful);
+            }
+            else // Remote placement notification
+            {
+                // Prepare BestGuess placement notify request
+                const bool is_being_written = edge_wrapper_ptr_->getCooperationWrapperPtr()->isBeingWritten(key);
+                const bool is_valid = !is_being_written;
+                BestGuessBgplacePlacementNotifyRequest* bestguess_placement_notify_request_ptr = new BestGuessBgplacePlacementNotifyRequest(key, value, is_valid, BestGuessSyncinfo(local_victim_vtime), current_beacon_edge_idx, edge_beacon_server_recvreq_source_addr_, skip_propagation_latency);
+                assert(bestguess_placement_notify_request_ptr != NULL);
+
+                // Issue remote placement notification to placement node with key and value
+                NetworkAddr placement_edge_cache_server_recvreq_dst_addr = edge_wrapper_ptr_->getTargetDstaddr(DirectoryInfo(placement_edge_idx)); // Send to cache server of the placement edge node for cache server placement processor
+                bool is_successful = edge_wrapper_ptr_->getEdgeToedgePropagationSimulatorParamPtr()->push(bestguess_placement_notify_request_ptr, placement_edge_cache_server_recvreq_dst_addr);
+                assert(is_successful);
+
+                bestguess_placement_notify_request_ptr = NULL; // NOTE: bestguess_placement_notify_request_ptr will be released by edge-to-edge propagation simulator
+            }
+        }
+
+        embedBackgroundCounterIfNotEmpty_(total_bandwidth_usage, event_list); // Embed background events/bandwidth if any into control response message
+
         // Generate response
-        BestGuessPlacementTriggerResponse* best_guess_placement_trigger_response_ptr = new BestGuessPlacementTriggerResponse(key, is_triggered, BestGuessSyncinfo(local_victim_vtime), edge_wrapper_ptr_->getNodeIdx(), edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        BestGuessPlacementTriggerResponse* best_guess_placement_trigger_response_ptr = new BestGuessPlacementTriggerResponse(key, is_triggered, BestGuessSyncinfo(local_victim_vtime), current_beacon_edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         assert(best_guess_placement_trigger_response_ptr != NULL);
 
         // Push the response into edge-to-edge propagation simulator to cache server worker

@@ -379,6 +379,7 @@ namespace covered
                 MessageBase* data_request_ptr = MessageBase::getRequestFromMsgPayload(data_request_msg_payload);
                 assert(data_request_ptr != NULL);
 
+                // TODO: END HERE
                 const MessageType message_type = data_request_ptr->getMessageType();
                 if (data_request_ptr->isDataRequest() || message_type == MessageType::kCoveredVictimFetchRequest || message_type == MessageType::kCoveredBgplacePlacementNotifyRequest || message_type == MessageType::kCoveredMetadataUpdateRequest || message_type == MessageType::kInvalidationRequest || message_type == MessageType::kCoveredInvalidationRequest) // Local data requests for cache server workers; redirected data requests for cache server redirection processor; lazy victim fetching for cache server victim fetch processor; placement notification for cache server placement processor; metadata update requests for cache server metadata update processor; invalidation requests for cache server invalidation processor
                 {

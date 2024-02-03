@@ -38,7 +38,7 @@ namespace covered
 
     uint32_t KeyByteSyncinfoMessage::getMsgPayloadSizeInternal_() const
     {
-        // key payload + value payload + placeinfo + syncinfo
+        // key payload + byte + syncinfo
         uint32_t msg_payload_size = key_.getKeyPayloadSize() + sizeof(bool) + syncinfo_.getSyncinfoPayloadSize();
         return msg_payload_size;
     }
