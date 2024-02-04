@@ -453,7 +453,7 @@ namespace covered
             bool is_successful = cache_server_metadata_update_processor_param_ptr_->push(tmp_cache_server_item);
             assert(is_successful == true); // Ring buffer must NOT be full
         }
-        else if (data_requeset_ptr->getMessageType() == MessageType::kInvalidationRequest || data_requeset_ptr->getMessageType() == MessageType::kCoveredInvalidationRequest) // Cache invalidation for MSI protocol
+        else if (data_requeset_ptr->getMessageType() == MessageType::kInvalidationRequest || data_requeset_ptr->getMessageType() == MessageType::kCoveredInvalidationRequest || data_requeset_ptr->getMessageType() == MessageType::kBestGuessInvalidationRequest) // Cache invalidation for MSI protocol
         {
             // Pass cache server item into ring buffer of the cache server invalidation processor
             CacheServerItem tmp_cache_server_item(data_requeset_ptr);

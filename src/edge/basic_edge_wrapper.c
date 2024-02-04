@@ -61,7 +61,21 @@ namespace covered
         uint32_t edge_idx = node_idx_;
 
         // Prepare invalidation request to invalidate the cache copy
-        MessageBase* invalidation_request_ptr = new InvalidationRequest(key, edge_idx, recvrsp_source_addr, skip_propagation_latency);
+        const std::string cache_name = getCacheName();
+        MessageBase* invalidation_request_ptr = NULL;
+        if (cache_name != Util::BESTGUESS_CACHE_NAME) // other baselines
+        {
+            invalidation_request_ptr = new InvalidationRequest(key, edge_idx, recvrsp_source_addr, skip_propagation_latency);
+        }
+        else // BestGuess
+        {
+            // Get local victim vtime for vtime synchronization
+            GetLocalVictimVtimeFuncParam tmp_param_for_vtimesync;
+            getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
+            const uint64_t& local_victim_vtime = tmp_param_for_vtimesync.getLocalVictimVtimeRef();
+
+            invalidation_request_ptr = new BestGuessInvalidationRequest(key, BestGuessSyncinfo(local_victim_vtime), edge_idx, recvrsp_source_addr, skip_propagation_latency);
+        }
         assert(invalidation_request_ptr != NULL);
 
         return invalidation_request_ptr;
@@ -70,7 +84,29 @@ namespace covered
     void BasicEdgeWrapper::processInvalidationResponse_(MessageBase* invalidation_response_ptr) const
     {
         assert(invalidation_response_ptr != NULL);
-        assert(invalidation_response_ptr->getMessageType() == MessageType::kInvalidationResponse);
+
+        const MessageType message_type = invalidation_response_ptr->getMessageType();
+        if (message_type == MessageType::kInvalidationResponse)
+        {
+            // Do nothing
+        }
+        else if (message_type == MessageType::kBestGuessInvalidationResponse)
+        {
+            BestGuessInvalidationResponse* bestguess_invalidation_response_ptr = static_cast<BestGuessInvalidationResponse*>(invalidation_response_ptr);
+            BestGuessSyncinfo syncinfo = bestguess_invalidation_response_ptr->getSyncinfo();
+
+            // Vtime synchronization
+            UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(bestguess_invalidation_response_ptr->getSourceIndex(), syncinfo.getVtime());
+            getEdgeCachePtr()->constCustomFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "Invalid message type: " << message_type << " for BasicEdgeWrapper::processInvalidationResponse_()";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+
         return;
     }
 

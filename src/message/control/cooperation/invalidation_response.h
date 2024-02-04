@@ -1,5 +1,5 @@
 /*
- * InvalidationResponse: a response issued by each involved edge node to closest edge node or beacon edge node to acknowledge InvalidationResponse.
+ * InvalidationResponse: a response issued by each involved edge node to closest edge node or beacon edge node to acknowledge InvalidationRequest.
  * 
  * By Siyuan Sheng (2023.06.24).
  */
