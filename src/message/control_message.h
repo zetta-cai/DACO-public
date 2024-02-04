@@ -82,5 +82,7 @@
 #include "message/control/cooperation/bestguess/bestguess_acquire_writelock_response.h"
 #include "message/control/cooperation/bestguess/bestguess_invalidation_request.h"
 #include "message/control/cooperation/bestguess/bestguess_invalidation_response.h"
+#include "message/control/cooperation/bestguess/bestguess_release_writelock_request.h"
+#include "message/control/cooperation/bestguess/bestguess_release_writelock_response.h"
 
 #endif

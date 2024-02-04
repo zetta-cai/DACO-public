@@ -112,6 +112,10 @@ namespace covered
         kBestGuessAcquireWritelockResponse,
         kBestGuessInvalidationRequest,
         kBestGuessInvalidationResponse,
+        kBestGuessReleaseWritelockRequest,
+        kBestGuessReleaseWritelockResponse,
+        kBestGuessRedirectedGetRequest,
+        kBestGuessRedirectedGetResponse,
     };
 
     enum Hitflag

@@ -1,4 +1,4 @@
-#include "message/data/redirected/covered_redirected_get_response.h"
+#include "message/data/redirected/covered/covered_redirected_get_response.h"
 
 #include <assert.h>
 

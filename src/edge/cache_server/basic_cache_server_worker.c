@@ -136,12 +136,26 @@ namespace covered
     {
         checkPointers_();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+        uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
 
         UNUSED(dst_edge_idx_for_compression);
 
         // Prepare redirected get request to fetch data from other edge nodes
-        uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
-        MessageBase* redirected_get_request_ptr = new RedirectedGetRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+        const std::string cache_name = tmp_edge_wrapper_ptr->getCacheName();
+        MessageBase* redirected_get_request_ptr = NULL;
+        if (cache_name != Util::BESTGUESS_CACHE_NAME) // other baselines
+        {
+            redirected_get_request_ptr = new RedirectedGetRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+        }
+        else // BestGuess
+        {
+            // Get local victim vtime for vtime synchronization
+            GetLocalVictimVtimeFuncParam tmp_param_for_vtimesync;
+            tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
+            const uint64_t& local_victim_vtime = tmp_param_for_vtimesync.getLocalVictimVtimeRef();
+
+            redirected_get_request_ptr = new BestGuessRedirectedGetRequest(key, BestGuessSyncinfo(local_victim_vtime), edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+        }
         assert(redirected_get_request_ptr != NULL);
 
         return redirected_get_request_ptr;
@@ -150,12 +164,33 @@ namespace covered
     void BasicCacheServerWorker::processRspToRedirectGet_(MessageBase* redirected_response_ptr, Value& value, Hitflag& hitflag, const uint32_t& request_redirection_cross_edge_latency_us) const
     {
         assert(redirected_response_ptr != NULL);
-        assert(redirected_response_ptr->getMessageType() == MessageType::kRedirectedGetResponse);
+        const MessageType message_type = redirected_response_ptr->getMessageType();
 
         // Get value and hitflag from redirected response message
-        const RedirectedGetResponse* const redirected_get_response_ptr = static_cast<const RedirectedGetResponse*>(redirected_response_ptr);
-        value = redirected_get_response_ptr->getValue();
-        hitflag = redirected_get_response_ptr->getHitflag();
+        if (message_type == MessageType::kRedirectedGetResponse)
+        {
+            const RedirectedGetResponse* const redirected_get_response_ptr = static_cast<const RedirectedGetResponse*>(redirected_response_ptr);
+            value = redirected_get_response_ptr->getValue();
+            hitflag = redirected_get_response_ptr->getHitflag();
+        }
+        else if (message_type == MessageType::kBestGuessRedirectedGetResponse)
+        {
+            const BestGuessRedirectedGetResponse* const bestguess_redirected_get_response_ptr = static_cast<const BestGuessRedirectedGetResponse*>(redirected_response_ptr);
+            value = bestguess_redirected_get_response_ptr->getValue();
+            hitflag = bestguess_redirected_get_response_ptr->getHitflag();
+            BestGuessSyncinfo syncinfo = bestguess_redirected_get_response_ptr->getSyncinfo();
+
+            // Vtime synchronization
+            UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(bestguess_redirected_get_response_ptr->getSourceIndex(), syncinfo.getVtime());
+            cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr()->getEdgeCachePtr()->constCustomFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "Invalid message type: " << message_type << " for BasicCacheServerWorker::processRspToRedirectGet_()";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
 
         UNUSED(request_redirection_cross_edge_latency_us);
 
@@ -453,7 +488,21 @@ namespace covered
         const uint32_t dst_beacon_edge_idx_for_compression = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
         assert(dst_beacon_edge_idx_for_compression != edge_idx);
 
-        MessageBase* release_writelock_request_ptr = new ReleaseWritelockRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+        const std::string cache_name = tmp_edge_wrapper_ptr->getCacheName();
+        MessageBase* release_writelock_request_ptr = NULL;
+        if (cache_name != Util::BESTGUESS_CACHE_NAME) // other baselines
+        {
+            release_writelock_request_ptr = new ReleaseWritelockRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+        }
+        else // BestGuess
+        {
+            // Get local victim vtime for vtime synchronization
+            GetLocalVictimVtimeFuncParam tmp_param_for_vtimesync;
+            tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
+            const uint64_t& local_victim_vtime = tmp_param_for_vtimesync.getLocalVictimVtimeRef();
+
+            release_writelock_request_ptr = new BestGuessReleaseWritelockRequest(key, BestGuessSyncinfo(local_victim_vtime), edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+        }
         assert(release_writelock_request_ptr != NULL);
 
         return release_writelock_request_ptr;
@@ -462,11 +511,30 @@ namespace covered
     bool BasicCacheServerWorker::processRspToReleaseBeaconWritelock_(MessageBase* control_response_ptr, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
     {
         assert(control_response_ptr != NULL);
-        assert(control_response_ptr->getMessageType() == MessageType::kReleaseWritelockResponse);
+        const MessageType message_type = control_response_ptr->getMessageType();
 
         bool is_finish = false;
 
-        // Do nothing for ReleaseWritelockResponse
+        if (message_type == MessageType::kReleaseWritelockResponse)
+        {
+            // Do nothing for ReleaseWritelockResponse
+        }
+        else if (message_type == MessageType::kBestGuessReleaseWritelockResponse)
+        {
+            const BestGuessReleaseWritelockResponse* const bestguess_release_writelock_response_ptr = static_cast<const BestGuessReleaseWritelockResponse*>(control_response_ptr);
+            const BestGuessSyncinfo syncinfo = bestguess_release_writelock_response_ptr->getSyncinfo();
+
+            // Vtime synchronization
+            UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(bestguess_release_writelock_response_ptr->getSourceIndex(), syncinfo.getVtime());
+            cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr()->getEdgeCachePtr()->constCustomFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "Invalid message type: " << message_type << " for BasicCacheServerWorker::processRspToReleaseBeaconWritelock_()";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
 
         UNUSED(total_bandwidth_usage);
         UNUSED(event_list);

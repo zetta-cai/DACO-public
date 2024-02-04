@@ -195,7 +195,7 @@ namespace covered
         {
             is_finish = processAcquireWritelockRequest_(control_request_ptr, edge_cache_server_worker_recvrsp_dst_addr);
         }
-        else if (message_type == MessageType::kReleaseWritelockRequest || message_type == MessageType::kCoveredReleaseWritelockRequest)
+        else if (message_type == MessageType::kReleaseWritelockRequest || message_type == MessageType::kCoveredReleaseWritelockRequest || message_type == MessageType::kBestGuessReleaseWritelockRequest)
         {
             is_finish = processReleaseWritelockRequest_(control_request_ptr, edge_cache_server_worker_recvrsp_dst_addr);
         }

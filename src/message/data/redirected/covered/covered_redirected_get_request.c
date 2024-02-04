@@ -1,4 +1,4 @@
-#include "message/data/redirected/covered_redirected_get_request.h"
+#include "message/data/redirected/covered/covered_redirected_get_request.h"
 
 namespace covered
 {

@@ -343,14 +343,37 @@ namespace covered
     bool BasicBeaconServer::processReqToReleaseLocalWritelock_(MessageBase* control_request_ptr, std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, BandwidthUsage& total_bandwidth_usage, EventList& event_list)
     {
         assert(control_request_ptr != NULL);
-        assert(control_request_ptr->getMessageType() == MessageType::kReleaseWritelockRequest);
-        const ReleaseWritelockRequest* const release_writelock_request_ptr = static_cast<const ReleaseWritelockRequest*>(control_request_ptr);
-        Key tmp_key = release_writelock_request_ptr->getKey();
+        const MessageType message_type = control_request_ptr->getMessageType();
+        uint32_t sender_edge_idx = control_request_ptr->getSourceIndex();
 
         bool is_finish = false;
 
+        // Get key from request
+        Key tmp_key;
+        if (message_type == MessageType::kReleaseWritelockRequest)
+        {
+            const ReleaseWritelockRequest* const release_writelock_request_ptr = static_cast<const ReleaseWritelockRequest*>(control_request_ptr);
+            tmp_key = release_writelock_request_ptr->getKey();
+        }
+        else if (message_type == MessageType::kBestGuessReleaseWritelockRequest)
+        {
+            const BestGuessReleaseWritelockRequest* const bestguess_release_writelock_request_ptr = static_cast<const BestGuessReleaseWritelockRequest*>(control_request_ptr);
+            tmp_key = bestguess_release_writelock_request_ptr->getKey();
+            BestGuessSyncinfo syncinfo = bestguess_release_writelock_request_ptr->getSyncinfo();
+
+            // Vtime synchronization
+            UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(sender_edge_idx, syncinfo.getVtime());
+            edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "Invalid message type " << MessageBase::messageTypeToString(message_type) << " for BasicBeaconServer::processReqToReleaseLocalWritelock_()";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+
         // Release local write lock and validate sender directory info if any
-        uint32_t sender_edge_idx = release_writelock_request_ptr->getSourceIndex();
         DirectoryInfo sender_directory_info(sender_edge_idx);
         bool is_source_cached = false;
         blocked_edges = edge_wrapper_ptr_->getCooperationWrapperPtr()->releaseLocalWritelock(tmp_key, sender_edge_idx, sender_directory_info, is_source_cached);
@@ -368,13 +391,39 @@ namespace covered
         checkPointers_();
 
         assert(control_request_ptr != NULL);
-        assert(control_request_ptr->getMessageType() == MessageType::kReleaseWritelockRequest);
-        const ReleaseWritelockRequest* const release_writelock_request_ptr = static_cast<const ReleaseWritelockRequest*>(control_request_ptr);
-        Key tmp_key = release_writelock_request_ptr->getKey();
-        bool skip_propagation_latency = release_writelock_request_ptr->isSkipPropagationLatency();
+        const MessageType message_type = control_request_ptr->getMessageType();
 
-        uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
-        MessageBase* release_writelock_response_ptr = new ReleaseWritelockResponse(tmp_key, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        MessageBase* release_writelock_response_ptr = NULL;
+        if (message_type == MessageType::kReleaseWritelockRequest)
+        {
+            const ReleaseWritelockRequest* const release_writelock_request_ptr = static_cast<const ReleaseWritelockRequest*>(control_request_ptr);
+            Key tmp_key = release_writelock_request_ptr->getKey();
+            bool skip_propagation_latency = release_writelock_request_ptr->isSkipPropagationLatency();
+
+            uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
+            release_writelock_response_ptr = new ReleaseWritelockResponse(tmp_key, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        }
+        else if (message_type == MessageType::kBestGuessReleaseWritelockRequest)
+        {
+            const BestGuessReleaseWritelockRequest* const bestguess_release_writelock_request_ptr = static_cast<const BestGuessReleaseWritelockRequest*>(control_request_ptr);
+            Key tmp_key = bestguess_release_writelock_request_ptr->getKey();
+            bool skip_propagation_latency = bestguess_release_writelock_request_ptr->isSkipPropagationLatency();
+
+            // Get local victim vtime for vtime synchronization
+            GetLocalVictimVtimeFuncParam tmp_param_for_vtimesync;
+            edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
+            const uint64_t& local_victim_vtime = tmp_param_for_vtimesync.getLocalVictimVtimeRef();
+
+            uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
+            release_writelock_response_ptr = new BestGuessReleaseWritelockResponse(tmp_key, BestGuessSyncinfo(local_victim_vtime), edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "Invalid message type " << MessageBase::messageTypeToString(message_type) << " for BasicBeaconServer::getRspToReleaseLocalWritelock_()";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
         assert(release_writelock_response_ptr != NULL);
 
         UNUSED(best_placement_edgeset);
