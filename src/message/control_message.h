@@ -65,6 +65,10 @@
 #include "message/control/cooperation/covered/covered_fastpath_directory_lookup_response.h"
 // For beacon-based cached metadata update
 #include "message/control/cooperation/covered/covered_metadata_update_request.h"
+// To trigger trade-off-aware placement for writes on global uncached objects (w/o release writelock requests)
+#include "message/control/cooperation/covered/covered_placement_trigger_request.h"
+#include "message/control/cooperation/covered/covered_placement_trigger_response.h"
+#include "message/control/cooperation/covered/covered_fghybrid_placement_trigger_response.h"
 
 // ONLY used by BestGuess
 #include "message/control/cooperation/bestguess/bestguess_placement_trigger_request.h"

@@ -574,7 +574,7 @@ namespace covered
 
     // (2.4) Release write lock for MSI protocol
 
-    bool CoveredCacheServerWorker::releaseLocalWritelock_(const Key& key, const Value& value, std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, BandwidthUsage& total_bandwidth_usgae, EventList& event_list, const bool& skip_propagation_latency)
+    bool CoveredCacheServerWorker::releaseLocalWritelock_(const Key& key, const Value& value, std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency)
     {
         checkPointers_();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -601,7 +601,7 @@ namespace covered
         // Selective popularity aggregation after local release writelock
         Edgeset best_placement_edgeset; // Used for non-blocking placement notification if need hybrid data fetching for COVERED
         bool need_hybrid_fetching = false;
-        AfterWritelockReleaseHelperFuncParam tmp_param_after_releaselock(key, current_edge_idx, tmp_param_for_popcollect.getCollectedPopularityConstRef(), is_source_cached, best_placement_edgeset, need_hybrid_fetching, edge_cache_server_worker_recvrsp_socket_server_ptr_, edge_cache_server_worker_recvrsp_source_addr_, total_bandwidth_usgae, event_list, skip_propagation_latency);
+        AfterWritelockReleaseHelperFuncParam tmp_param_after_releaselock(key, current_edge_idx, tmp_param_for_popcollect.getCollectedPopularityConstRef(), is_source_cached, best_placement_edgeset, need_hybrid_fetching, edge_cache_server_worker_recvrsp_socket_server_ptr_, edge_cache_server_worker_recvrsp_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         tmp_edge_wrapper_ptr->constCustomFunc(AfterWritelockReleaseHelperFuncParam::FUNCNAME, &tmp_param_after_releaselock);
         is_finish = tmp_param_after_releaselock.isFinishConstRef();
         if (is_finish)
@@ -704,6 +704,157 @@ namespace covered
                 return is_finish;
             }
         }
+
+        return is_finish;
+    }
+
+    // (2.5) After writing value into cloud and local edge cache if any
+
+    bool CoveredCacheServerWorker::afterWritingValue_(const Key& key, const Value& value, const LockResult& lock_result, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
+    {
+        checkPointers_();
+        CacheServerBase* tmp_cache_server_ptr = cache_server_worker_param_ptr_->getCacheServerPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
+        CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
+        const uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
+
+        // NOTE: COVERED can also trigger placement in beacon by directory lookup requests, directory eviction requests, and release writelock requests (normal / hybrid fetching / fast-path), while global uncached objects do NOT have release writelock reqs due to NO need of write lock -> so we need explicty placement trigger requests here
+
+        // NOTE: we MUST trigger placement (remote trade-off-aware placement triggered by edge cache server worker via explicit placement trigger request if NO need of writelock, or via CoveredReleaseWritelockRequest if need writelock) after releasing writelock if any -> otherwise the newly-admited object MUST be invalid!!!
+
+        bool is_finish = false;
+
+        // NOTE: if need writelock, CacheServerWorkerBase::releaseWritelock_() has already triggered placement calculation if necessary before this function -> so we only consider the case of NO need writelock here
+        if (lock_result == LockResult::kNoneed) // No need of writelock (i.e., global uncached)
+        {
+            const bool is_source_cached = false; // Global uncached object
+
+            // Prepare local uncached popularity of key for popularity aggregation
+            GetCollectedPopularityParam tmp_param_for_popcollect(key);
+            tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param_for_popcollect); // collected_popularity.is_tracked_ is false if the given key is local cached or the key is local uncached yet NOT tracked in local uncached metadata
+
+            // Issue local/remote placement trigger request explicitly
+            const uint32_t dst_beacon_edge_idx = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
+            const bool current_is_beacon = (current_edge_idx == dst_beacon_edge_idx);
+            Edgeset best_placement_edgeset; // Used for non-blocking placement notification if need hybrid data fetching for COVERED
+            bool need_hybrid_fetching = false;
+            if (current_is_beacon) // Local placement trigger (no matter if key is tracked by local uncached metadata or not -> update/remove local uncached popularity into/from local aggregated popularity)
+            {
+                // NOTE: NOT need piggyacking-based popularity collection and victim synchronization for local release write lock
+
+                // NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation (note that we have updated victim tracker in updateLocalEdgeCache_() or removeLocalEdgeCache_() before this function)
+
+                // Selective popularity aggregation (NO need to writelock is similar as after releasing writelock; see CoveredEdgeWrapper::afterWritelockReleaseHelperInternal_())
+                AfterWritelockReleaseHelperFuncParam tmp_param_after_releaselock(key, current_edge_idx, tmp_param_for_popcollect.getCollectedPopularityConstRef(), is_source_cached, best_placement_edgeset, need_hybrid_fetching, edge_cache_server_worker_recvrsp_socket_server_ptr_, edge_cache_server_worker_recvrsp_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+                tmp_edge_wrapper_ptr->constCustomFunc(AfterWritelockReleaseHelperFuncParam::FUNCNAME, &tmp_param_after_releaselock);
+                is_finish = tmp_param_after_releaselock.isFinishConstRef();
+                if (is_finish)
+                {
+                    return is_finish; // Edge node is NOT running now
+                }
+            } // End of sender is beacon
+            else // Remote placement trigger (no matter if key is tracked by local uncached metadata or not -> update/remove local uncached popularity into/from remote aggregated popularity)
+            {
+                // NOTE: the extra message overhead of remote placement trigger requests for COVERED is limited!
+                // -> (1) geo-distributed tiered storage is read-intensive (e.g., edge caching workloads), so writes just occupy a small proportion
+                // -> (2) even for the writes, most requests target hot objects which are global cached and hence NO need of explicit placement trigger requests (placement will be  triggered by existing release writelock requests)
+
+                // Issue placement trigger request to remote beacon node
+                while (true) // Timeout-and-retry mechanism
+                {
+                    // Prepare victim syncset for piggybacking-based victim synchronization
+                    VictimSyncset local_victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_beacon_edge_idx, tmp_edge_wrapper_ptr->getCacheMarginBytes());
+
+                    // Prepare placement trigger request
+                    MessageBase* covered_placement_trigger_request_ptr = new CoveredPlacementTriggerRequest(key, tmp_param_for_popcollect.getCollectedPopularityConstRef(), local_victim_syncset, current_edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+                    assert(covered_placement_trigger_request_ptr != NULL);
+
+                    // Push the control request into edge-to-edge propagation simulator to send to beacon node
+                    NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = tmp_edge_wrapper_ptr->getBeaconDstaddr_(key);
+                    bool is_successful = tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(covered_placement_trigger_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
+                    assert(is_successful);
+
+                    // NOTE: covered_placement_trigger_request_ptr will be released by edge-to-edge propagation simulator
+                    covered_placement_trigger_request_ptr = NULL;
+
+                    // Receive the control repsonse from the beacon node
+                    DynamicArray control_response_msg_payload;
+                    bool is_timeout = edge_cache_server_worker_recvrsp_socket_server_ptr_->recv(control_response_msg_payload);
+                    if (is_timeout)
+                    {
+                        if (!tmp_edge_wrapper_ptr->isNodeRunning())
+                        {
+                            is_finish = true;
+                            break; // Edge is NOT running
+                        }
+                        else
+                        {
+                            std::ostringstream oss;
+                            oss << "edge timeout to wait for DirectoryLookupResponse for key " << key.getKeystr();
+                            Util::dumpWarnMsg(instance_name_, oss.str());
+                            continue; // Resend the control request message
+                        }
+                    } // End of (is_timeout == true)
+                    else
+                    {
+                        // Receive the control response message successfully
+                        MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
+                        assert(control_response_ptr != NULL);
+
+                        // Get victim syncset and hybrid fetching info if any
+                        const MessageType message_type = control_response_ptr->getMessageType();
+                        VictimSyncset neighbor_victim_syncset;
+                        if (message_type == MessageType::kCoveredPlacementTriggerResponse)
+                        {
+                            const CoveredPlacementTriggerResponse* covered_placement_trigger_response_ptr = static_cast<const CoveredPlacementTriggerResponse*>(control_response_ptr);
+                            neighbor_victim_syncset = covered_placement_trigger_response_ptr->getVictimSyncsetRef();
+
+                            need_hybrid_fetching = false;
+                        }
+                        else if (message_type == MessageType::kCoveredFghybridPlacementTriggerResponse)
+                        {
+                            const CoveredFghybridPlacementTriggerResponse* covered_fghybrid_placement_trigger_response_ptr = static_cast<const CoveredFghybridPlacementTriggerResponse*>(control_response_ptr);
+                            neighbor_victim_syncset = covered_fghybrid_placement_trigger_response_ptr->getVictimSyncsetRef();
+
+                            best_placement_edgeset = covered_fghybrid_placement_trigger_response_ptr->getEdgesetRef();
+                            need_hybrid_fetching = true;
+                        }
+                        else
+                        {
+                            std::ostringstream oss;
+                            oss << "Invalid message type: " << message_type << " for afterWritingValue_()";
+                            Util::dumpErrorMsg(instance_name_, oss.str());
+                            exit(1);
+                        }
+
+                        // Victim synchronization
+                        UpdateCacheManagerForNeighborVictimSyncsetFuncParam tmp_param_for_victimsync(control_response_ptr->getSourceIndex(), neighbor_victim_syncset);
+                        tmp_edge_wrapper_ptr->constCustomFunc(UpdateCacheManagerForNeighborVictimSyncsetFuncParam::FUNCNAME, &tmp_param_for_victimsync);
+                    } // End of (is_timeout == false)
+                } // End of while(true)
+            } // End of sender is not beacon
+
+            // Trigger placement deployment after hybrid fetching if necessary
+            if (need_hybrid_fetching)
+            {
+                if (current_is_beacon) // Sender is beacon
+                {
+                    NonblockNotifyForPlacementFuncParam tmp_param_for_placement_notify(key, value, best_placement_edgeset, skip_propagation_latency);
+                    tmp_edge_wrapper_ptr->constCustomFunc(NonblockNotifyForPlacementFuncParam::FUNCNAME, &tmp_param_for_placement_notify);
+                }
+                else // Sender is not beacon
+                {
+                    // Trigger placement notification remotely at the beacon edge node
+                    NotifyBeaconForPlacementAfterHybridFetchFuncParam tmp_param_for_hybridfetch(key, value, best_placement_edgeset, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+                    tmp_cache_server_ptr->constCustomFunc(NotifyBeaconForPlacementAfterHybridFetchFuncParam::FUNCNAME, &tmp_param_for_hybridfetch);
+                    is_finish = tmp_param_for_hybridfetch.isFinishConstRef();
+                    if (is_finish)
+                    {
+                        return is_finish;
+                    }
+                }
+            } // End of need_hybrid_fetching
+        } // End of (local_result == LockResult::kNoneed)
 
         return is_finish;
     }

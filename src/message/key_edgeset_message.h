@@ -1,5 +1,5 @@
 /*
- * KeyEdgesetMessage: the base class for messages each with a key.
+ * KeyEdgesetMessage: the base class for messages each with a key and an edgeset.
  * 
  * By Siyuan Sheng (2023.09.27).
  */

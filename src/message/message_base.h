@@ -96,6 +96,9 @@ namespace covered
         kCoveredFinishBlockResponse,
         kCoveredFastpathDirectoryLookupResponse,
         kCoveredMetadataUpdateRequest,
+        kCoveredPlacementTriggerRequest,
+        kCoveredPlacementTriggerResponse,
+        kCoveredFghybridPlacementTriggerResponse,
         // ONLY used by BestGuess
         kBestGuessPlacementTriggerRequest,
         kBestGuessPlacementTriggerResponse,

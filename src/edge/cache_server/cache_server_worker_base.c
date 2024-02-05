@@ -896,17 +896,6 @@ namespace covered
             return is_finish;
         }
 
-        // Trigger independent cache admission for local/global cache miss if necessary
-        struct timespec independent_admission_start_timestamp = Util::getCurrentTimespec();
-        is_finish = tryToTriggerIndependentAdmission_(tmp_key, tmp_value, total_bandwidth_usage, event_list, skip_propagation_latency);
-        if (is_finish) // Edge node is NOT running
-        {
-            return is_finish;
-        }
-        struct timespec independent_admission_end_timestamp = Util::getCurrentTimespec();
-        uint32_t independent_admission_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(independent_admission_end_timestamp, independent_admission_start_timestamp));
-        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_INDEPENDENT_ADMISSION_EVENT_NAME, independent_admission_latency_us); // Add intermediate event if with event tracking
-
         // Notify beacon node to finish writes if acquiring write lock successfully
         if (lock_result == LockResult::kSuccess)
         {
@@ -919,6 +908,13 @@ namespace covered
             uint32_t release_writelock_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(release_writelock_end_timestamp, release_writelock_start_timestamp));
             event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_RELEASE_WRITELOCK_EVENT_NAME, release_writelock_latency_us);
         }
+        if (is_finish) // Edge node is NOT running
+        {
+            return is_finish;
+        }
+
+        // After writing value into cloud and local edge cache if any
+        is_finish = afterWritingValue_(tmp_key, tmp_value, lock_result, total_bandwidth_usage, event_list, skip_propagation_latency);
         if (is_finish) // Edge node is NOT running
         {
             return is_finish;

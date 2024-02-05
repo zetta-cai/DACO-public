@@ -261,7 +261,7 @@ namespace covered
         uint32_t independent_admission_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(independent_admission_end_timestamp, independent_admission_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_INDEPENDENT_ADMISSION_EVENT_NAME, independent_admission_latency_us); // Add intermediate event if with event tracking
 
-        // Trigger best-guess placement/replacement
+        // Trigger best-guess placement/replacement for BestGuess
         if (tmp_edge_wrapper_ptr->getCacheName() == Util::BESTGUESS_CACHE_NAME && !tmp_edge_wrapper_ptr->getEdgeCachePtr()->isLocalCached(key) && !is_cooperative_cached) // Local uncached and cooperative uncached (i.e., global uncached)
         {
             TriggerBestGuessPlacementFuncParam tmp_param(key, value, total_bandwidth_usage, event_list, skip_propagation_latency);
@@ -458,7 +458,7 @@ namespace covered
 
     // (2.4) Release write lock for MSI protocol
 
-    bool BasicCacheServerWorker::releaseLocalWritelock_(const Key& key, const Value& value, std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, BandwidthUsage& total_bandwidth_usgae, EventList& event_list, const bool& skip_propagation_latency)
+    bool BasicCacheServerWorker::releaseLocalWritelock_(const Key& key, const Value& value, std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency)
     {
         checkPointers_();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -471,7 +471,7 @@ namespace covered
         blocked_edges = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->releaseLocalWritelock(key, current_edge_idx, current_directory_info, is_source_cached);
 
         UNUSED(value);
-        UNUSED(total_bandwidth_usgae);
+        UNUSED(total_bandwidth_usage);
         UNUSED(event_list);
         UNUSED(skip_propagation_latency);
 
@@ -539,6 +539,45 @@ namespace covered
         UNUSED(total_bandwidth_usage);
         UNUSED(event_list);
         UNUSED(skip_propagation_latency);
+
+        return is_finish;
+    }
+
+    // (2.5) After writing value into cloud and local edge cache if any
+
+    bool BasicCacheServerWorker::afterWritingValue_(const Key& key, const Value& value, const LockResult& lock_result, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
+    {
+        checkPointers_();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
+
+        // NOTE: we MUST trigger placement (local independent admission of other baselines, or remote best-guess placement triggered by edge cache server worker of BestGuess via explicit placement trigger request) after releasing writelock if any -> otherwise the newly-admited object MUST be invalid!!!
+
+        bool is_finish = false;
+
+        // Trigger independent cache admission for local/global cache miss if necessary
+        // NOTE: for COVERED, beacon node will tell the edge node whether to admit or not, w/o independent decision
+        // NOTE: for BestGuess, the closest node will trigger best-guess placement via beacon node, w/o independent decision
+        struct timespec independent_admission_start_timestamp = Util::getCurrentTimespec();
+        is_finish = tryToTriggerIndependentAdmission_(key, value, total_bandwidth_usage, event_list, skip_propagation_latency);
+        if (is_finish) // Edge node is NOT running
+        {
+            return is_finish;
+        }
+        struct timespec independent_admission_end_timestamp = Util::getCurrentTimespec();
+        uint32_t independent_admission_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(independent_admission_end_timestamp, independent_admission_start_timestamp));
+        event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_INDEPENDENT_ADMISSION_EVENT_NAME, independent_admission_latency_us); // Add intermediate event if with event tracking
+
+        // Trigger best-guess placement/replacement for BestGuess
+        if (tmp_edge_wrapper_ptr->getCacheName() == Util::BESTGUESS_CACHE_NAME && lock_result == LockResult::kNoneed) // No need of writelock (i.e., global uncached)
+        {
+            TriggerBestGuessPlacementFuncParam tmp_param(key, value, total_bandwidth_usage, event_list, skip_propagation_latency);
+            constCustomFunc(TriggerBestGuessPlacementFuncParam::FUNCNAME, &tmp_param);
+            is_finish = tmp_param.isFinish();
+            if (is_finish)
+            {
+                return is_finish;
+            }
+        }
 
         return is_finish;
     }

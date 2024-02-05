@@ -150,10 +150,14 @@ namespace covered
 
         // Return if edge node is finished
         bool releaseWritelock_(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency); // NOTE: value is used for COVERED's non-blocking placement notification after hybrid data fetching
-        virtual bool releaseLocalWritelock_(const Key& key, const Value& value, std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, BandwidthUsage& total_bandwidth_usgae, EventList& event_list, const bool& skip_propagation_latency) = 0; // Return if edge node is finished (NOTE: value is used for COVERED's non-blocking placement notification after hybrid data fetching)
+        virtual bool releaseLocalWritelock_(const Key& key, const Value& value, std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) = 0; // Return if edge node is finished (NOTE: value is used for COVERED's non-blocking placement notification after hybrid data fetching)
         bool releaseBeaconWritelock_(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency); // Notify beacon node to finish writes
         virtual MessageBase* getReqToReleaseBeaconWritelock_(const Key& key, const bool& skip_propagation_latency) const = 0;
         virtual bool processRspToReleaseBeaconWritelock_(MessageBase* control_response_ptr, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const = 0;
+
+        // (2.5) After writing value into cloud and local edge cache if any
+
+        virtual bool afterWritingValue_(const Key& key, const Value& value, const LockResult& lock_result, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const = 0; // Return if edge is finished
 
         // (3) Process redirected requests (see src/cache_server/cache_server_redirection_processor.*)
 

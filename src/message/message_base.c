@@ -323,6 +323,21 @@ namespace covered
                 message_type_str = "kCoveredMetadataUpdateRequest";
                 break;
             }
+            case MessageType::kCoveredPlacementTriggerRequest:
+            {
+                message_type_str = "kCoveredPlacementTriggerRequest";
+                break;
+            }
+            case MessageType::kCoveredPlacementTriggerResponse:
+            {
+                message_type_str = "kCoveredPlacementTriggerResponse";
+                break;
+            }
+            case MessageType::kCoveredFghybridPlacementTriggerResponse:
+            {
+                message_type_str = "kCoveredFghybridPlacementTriggerResponse";
+                break;
+            }
             case MessageType::kBestGuessPlacementTriggerRequest:
             {
                 message_type_str = "kBestGuessPlacementTriggerRequest";
@@ -724,6 +739,11 @@ namespace covered
                 message_ptr = new CoveredMetadataUpdateRequest(msg_payload);
                 break;
             }
+            case MessageType::kCoveredPlacementTriggerRequest:
+            {
+                message_ptr = new CoveredPlacementTriggerRequest(msg_payload);
+                break;
+            }
             case MessageType::kBestGuessPlacementTriggerRequest:
             {
                 message_ptr = new BestGuessPlacementTriggerRequest(msg_payload);
@@ -980,6 +1000,16 @@ namespace covered
             case MessageType::kCoveredFastpathDirectoryLookupResponse:
             {
                 message_ptr = new CoveredFastpathDirectoryLookupResponse(msg_payload);
+                break;
+            }
+            case MessageType::kCoveredPlacementTriggerResponse:
+            {
+                message_ptr = new CoveredPlacementTriggerResponse(msg_payload);
+                break;
+            }
+            case MessageType::kCoveredFghybridPlacementTriggerResponse:
+            {
+                message_ptr = new CoveredFghybridPlacementTriggerResponse(msg_payload);
                 break;
             }
             case MessageType::kBestGuessPlacementTriggerResponse:
@@ -1326,6 +1356,21 @@ namespace covered
         {
             const CoveredMetadataUpdateRequest* const covered_metadata_update_request_ptr = static_cast<const CoveredMetadataUpdateRequest*>(message_ptr);
             tmp_key = covered_metadata_update_request_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kCoveredPlacementTriggerRequest)
+        {
+            const CoveredPlacementTriggerRequest* const covered_placement_trigger_request_ptr = static_cast<const CoveredPlacementTriggerRequest*>(message_ptr);
+            tmp_key = covered_placement_trigger_request_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kCoveredPlacementTriggerResponse)
+        {
+            const CoveredPlacementTriggerResponse* const covered_placement_trigger_response_ptr = static_cast<const CoveredPlacementTriggerResponse*>(message_ptr);
+            tmp_key = covered_placement_trigger_response_ptr->getKey();
+        }
+        else if (message_ptr->message_type_ == MessageType::kCoveredFghybridPlacementTriggerResponse)
+        {
+            const CoveredFghybridPlacementTriggerResponse* const covered_placement_trigger_response_ptr = static_cast<const CoveredFghybridPlacementTriggerResponse*>(message_ptr);
+            tmp_key = covered_placement_trigger_response_ptr->getKey();
         }
         else if (message_ptr->message_type_ == MessageType::kBestGuessPlacementTriggerRequest)
         {
@@ -1685,7 +1730,7 @@ namespace covered
     bool MessageBase::isCooperationControlRequest() const
     {
         checkIsValid_();
-        if (message_type_ == MessageType::kAcquireWritelockRequest || message_type_ == MessageType::kDirectoryLookupRequest || message_type_ == MessageType::kDirectoryUpdateRequest || message_type_ == MessageType::kFinishBlockRequest || message_type_ == MessageType::kInvalidationRequest || message_type_ == MessageType::kReleaseWritelockRequest || message_type_ == MessageType::kCoveredDirectoryLookupRequest || message_type_ == MessageType::kCoveredDirectoryUpdateRequest || message_type_ == MessageType::kCoveredAcquireWritelockRequest || message_type_ == MessageType::kCoveredReleaseWritelockRequest || message_type_ == MessageType::kCoveredBgplaceDirectoryUpdateRequest || message_type_ == MessageType::kCoveredBgplacePlacementNotifyRequest || message_type_ == MessageType::kCoveredVictimFetchRequest || message_type_ == MessageType::kCoveredFghybridHybridFetchedRequest || message_type_ == MessageType::kCoveredFghybridDirectoryAdmitRequest || message_type_ == MessageType::kCoveredInvalidationRequest || message_type_ == MessageType::kCoveredFinishBlockRequest || message_type_ == MessageType::kCoveredMetadataUpdateRequest || message_type_ == MessageType::kBestGuessPlacementTriggerRequest || message_type_ == MessageType::kBestGuessDirectoryUpdateRequest || message_type_ == MessageType::kBestGuessBgplaceDirectoryUpdateRequest || message_type_ == MessageType::kBestGuessBgplacePlacementNotifyRequest || message_type_ == MessageType::kBestGuessDirectoryLookupRequest || message_type_ == MessageType::kBestGuessFinishBlockRequest || message_type_ == MessageType::kBestGuessAcquireWritelockRequest || message_type_ == MessageType::kBestGuessInvalidationRequest || message_type_ == MessageType::kBestGuessReleaseWritelockRequest)
+        if (message_type_ == MessageType::kAcquireWritelockRequest || message_type_ == MessageType::kDirectoryLookupRequest || message_type_ == MessageType::kDirectoryUpdateRequest || message_type_ == MessageType::kFinishBlockRequest || message_type_ == MessageType::kInvalidationRequest || message_type_ == MessageType::kReleaseWritelockRequest || message_type_ == MessageType::kCoveredDirectoryLookupRequest || message_type_ == MessageType::kCoveredDirectoryUpdateRequest || message_type_ == MessageType::kCoveredAcquireWritelockRequest || message_type_ == MessageType::kCoveredReleaseWritelockRequest || message_type_ == MessageType::kCoveredBgplaceDirectoryUpdateRequest || message_type_ == MessageType::kCoveredBgplacePlacementNotifyRequest || message_type_ == MessageType::kCoveredVictimFetchRequest || message_type_ == MessageType::kCoveredFghybridHybridFetchedRequest || message_type_ == MessageType::kCoveredFghybridDirectoryAdmitRequest || message_type_ == MessageType::kCoveredInvalidationRequest || message_type_ == MessageType::kCoveredFinishBlockRequest || message_type_ == MessageType::kCoveredMetadataUpdateRequest || message_type_ == MessageType::kBestGuessPlacementTriggerRequest || message_type_ == MessageType::kBestGuessDirectoryUpdateRequest || message_type_ == MessageType::kBestGuessBgplaceDirectoryUpdateRequest || message_type_ == MessageType::kBestGuessBgplacePlacementNotifyRequest || message_type_ == MessageType::kBestGuessDirectoryLookupRequest || message_type_ == MessageType::kBestGuessFinishBlockRequest || message_type_ == MessageType::kBestGuessAcquireWritelockRequest || message_type_ == MessageType::kBestGuessInvalidationRequest || message_type_ == MessageType::kBestGuessReleaseWritelockRequest || message_type_ == MessageType::kCoveredPlacementTriggerRequest)
         {
             return true;
         }
@@ -1717,7 +1762,7 @@ namespace covered
     bool MessageBase::isCooperationControlResponse() const
     {
         checkIsValid_();
-        if (message_type_ == MessageType::kAcquireWritelockResponse || message_type_ == MessageType::kDirectoryLookupResponse || message_type_ == MessageType::kDirectoryUpdateResponse || message_type_ == MessageType::kFinishBlockResponse || message_type_ == MessageType::kInvalidationResponse || message_type_ == MessageType::kReleaseWritelockResponse || message_type_ == MessageType::kCoveredDirectoryLookupResponse || message_type_ == MessageType::kCoveredDirectoryUpdateResponse || message_type_ == MessageType::kCoveredAcquireWritelockResponse || message_type_ == MessageType::kCoveredReleaseWritelockResponse || message_type_ == MessageType::kCoveredBgplaceDirectoryUpdateResponse || message_type_ == MessageType::kCoveredVictimFetchResponse || message_type_ == MessageType::kCoveredFghybridDirectoryLookupResponse || message_type_ == MessageType::kCoveredFghybridDirectoryEvictResponse || message_type_ == MessageType::kCoveredFghybridReleaseWritelockResponse || message_type_ == MessageType::kCoveredFghybridHybridFetchedResponse || message_type_ == MessageType::kCoveredFghybridDirectoryAdmitResponse || message_type_ == MessageType::kCoveredInvalidationResponse || message_type_ == MessageType::kCoveredFinishBlockResponse || message_type_ == MessageType::kCoveredFastpathDirectoryLookupResponse || message_type_ == MessageType::kBestGuessPlacementTriggerResponse || message_type_ == MessageType::kBestGuessDirectoryUpdateResponse || message_type_ == MessageType::kBestGuessBgplaceDirectoryUpdateResponse || message_type_ == MessageType::kBestGuessDirectoryLookupResponse || message_type_ == MessageType::kBestGuessFinishBlockResponse || message_type_ == MessageType::kBestGuessAcquireWritelockResponse || message_type_ == MessageType::kBestGuessInvalidationResponse || message_type_ == MessageType::kBestGuessReleaseWritelockResponse)
+        if (message_type_ == MessageType::kAcquireWritelockResponse || message_type_ == MessageType::kDirectoryLookupResponse || message_type_ == MessageType::kDirectoryUpdateResponse || message_type_ == MessageType::kFinishBlockResponse || message_type_ == MessageType::kInvalidationResponse || message_type_ == MessageType::kReleaseWritelockResponse || message_type_ == MessageType::kCoveredDirectoryLookupResponse || message_type_ == MessageType::kCoveredDirectoryUpdateResponse || message_type_ == MessageType::kCoveredAcquireWritelockResponse || message_type_ == MessageType::kCoveredReleaseWritelockResponse || message_type_ == MessageType::kCoveredBgplaceDirectoryUpdateResponse || message_type_ == MessageType::kCoveredVictimFetchResponse || message_type_ == MessageType::kCoveredFghybridDirectoryLookupResponse || message_type_ == MessageType::kCoveredFghybridDirectoryEvictResponse || message_type_ == MessageType::kCoveredFghybridReleaseWritelockResponse || message_type_ == MessageType::kCoveredFghybridHybridFetchedResponse || message_type_ == MessageType::kCoveredFghybridDirectoryAdmitResponse || message_type_ == MessageType::kCoveredInvalidationResponse || message_type_ == MessageType::kCoveredFinishBlockResponse || message_type_ == MessageType::kCoveredFastpathDirectoryLookupResponse || message_type_ == MessageType::kBestGuessPlacementTriggerResponse || message_type_ == MessageType::kBestGuessDirectoryUpdateResponse || message_type_ == MessageType::kBestGuessBgplaceDirectoryUpdateResponse || message_type_ == MessageType::kBestGuessDirectoryLookupResponse || message_type_ == MessageType::kBestGuessFinishBlockResponse || message_type_ == MessageType::kBestGuessAcquireWritelockResponse || message_type_ == MessageType::kBestGuessInvalidationResponse || message_type_ == MessageType::kBestGuessReleaseWritelockResponse || message_type_ == MessageType::kCoveredPlacementTriggerResponse || message_type_ == MessageType::kCoveredFghybridPlacementTriggerResponse)
         {
             return true;
         }
