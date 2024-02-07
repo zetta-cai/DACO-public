@@ -82,7 +82,12 @@ DEPS += $(HASH_SRCFILES:.c=.d)
 CLEANS += $(HASH_OBJECTS) $(HASH_SHARED_OBJECTS)
 
 # message module
-MESSAGE_SRCFILES := $(wildcard $(COVERED_DIRPATH)/message/*.c) $(wildcard $(COVERED_DIRPATH)/message/data/global/*.c) $(wildcard $(COVERED_DIRPATH)/message/data/global/covered/*.c) $(wildcard $(COVERED_DIRPATH)/message/data/local/*.c) $(wildcard $(COVERED_DIRPATH)/message/data/redirected/*.c) $(wildcard $(COVERED_DIRPATH)/message/data/redirected/covered/*.c) $(wildcard $(COVERED_DIRPATH)/message/data/warmup/*.c) $(wildcard $(COVERED_DIRPATH)/message/control/cooperation/*.c) $(wildcard $(COVERED_DIRPATH)/message/control/cooperation/bestguess/*.c) $(wildcard $(COVERED_DIRPATH)/message/control/cooperation/covered/*.c) $(wildcard $(COVERED_DIRPATH)/message/control/benchmark/*.c)
+MESSAGE_SRCFILES = $(wildcard $(COVERED_DIRPATH)/message/*.c)
+MESSAGE_SRCFILES += $(wildcard $(COVERED_DIRPATH)/message/data/global/*.c) $(wildcard $(COVERED_DIRPATH)/message/data/global/covered/*.c)
+MESSAGE_SRCFILES += $(wildcard $(COVERED_DIRPATH)/message/data/local/*.c)
+MESSAGE_SRCFILES += $(wildcard $(COVERED_DIRPATH)/message/data/redirected/*.c) $(wildcard $(COVERED_DIRPATH)/message/data/redirected/covered/*.c) $(wildcard $(COVERED_DIRPATH)/message/data/redirected/bestguess/*.c)
+MESSAGE_SRCFILES += $(wildcard $(COVERED_DIRPATH)/message/control/benchmark/*.c)
+MESSAGE_SRCFILES += $(wildcard $(COVERED_DIRPATH)/message/control/cooperation/*.c) $(wildcard $(COVERED_DIRPATH)/message/control/cooperation/bestguess/*.c) $(wildcard $(COVERED_DIRPATH)/message/control/cooperation/covered/*.c)
 MESSAGE_OBJECTS += $(MESSAGE_SRCFILES:.c=.o)
 MESSAGE_SHARED_OBJECTS += $(MESSAGE_SRCFILES:.c=.shared.o)
 DEPS += $(MESSAGE_SRCFILES:.c=.d)

@@ -629,7 +629,7 @@ namespace covered
 
         // Get trigger flag from local/remote beacon node if this is the first cache miss of the globally uncached object
         bool is_triggered = false;
-        bool is_finish = getBestGuessTriggerFlag_(key, value, placement_edge_idx, skip_propagation_latency, is_triggered);
+        is_finish = getBestGuessTriggerFlag_(key, value, placement_edge_idx, skip_propagation_latency, is_triggered);
         if (is_finish)
         {
             return is_finish;

@@ -159,14 +159,14 @@ namespace covered
         }
 
         bool tmp_is_valid = is_valid;
-        if (is_being_written) // Double-check is_being_written to udpate is_valid if necessary
+        if (is_being_written) // Double-check is_being_written to update is_valid if necessary
         {
             // NOTE: ONLY update is_valid if is_being_written is true; if is_being_written is false (i.e., key is NOT being written now), we still keep original is_valid, as the value MUST be stale if is_being_written was true before
             tmp_is_valid = false;
         }
 
         // Admit into local edge cache for the received remote placement notification
-        tmp_cache_server_ptr->admitLocalEdgeCache_(key, value, is_neighbor_cached, is_valid); // May update local synced victims
+        tmp_cache_server_ptr->admitLocalEdgeCache_(key, value, is_neighbor_cached, tmp_is_valid); // May update local synced victims
 
         // Perform background cache eviction in a blocking manner for consistent directory information (note that cache eviction happens after non-blocking placement notification)
         // NOTE: we update aggregated uncached popularity yet DISABLE recursive cache placement for metadata preservation during cache eviction
