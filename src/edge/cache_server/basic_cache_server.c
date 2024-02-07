@@ -118,7 +118,7 @@ namespace covered
         if (need_vtime_sync) // Vtime synchronization for BestGuess
         {
             UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(control_response_ptr->getSourceIndex(), bestguess_syncinfo.getVtime());
-            edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
+            edge_wrapper_ptr_->getEdgeCachePtr()->customFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
         }
 
         UNUSED(is_neighbor_cached);
@@ -235,7 +235,7 @@ namespace covered
         if (need_vtime_sync) // Vtime synchronization for BestGuess
         {
             UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(control_response_ptr->getSourceIndex(), bestguess_syncinfo.getVtime());
-            edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
+            edge_wrapper_ptr_->getEdgeCachePtr()->customFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
         }
 
         UNUSED(recvrsp_source_addr);

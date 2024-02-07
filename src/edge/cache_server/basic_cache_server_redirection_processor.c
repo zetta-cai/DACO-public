@@ -49,7 +49,7 @@ namespace covered
 
             // Vtime synchronization
             UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(best_guess_redirected_get_request_ptr->getSourceIndex(), syncinfo.getVtime());
-            tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
+            tmp_edge_wrapper_ptr->getEdgeCachePtr()->customFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
         }
         else
         {

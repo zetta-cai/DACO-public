@@ -121,7 +121,7 @@ namespace covered
 
             // Vtime synchronization
             UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(source_edge_idx, syncinfo.getVtime());
-            tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
+            tmp_edge_wrapper_ptr->getEdgeCachePtr()->customFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
         }
 
         UNUSED(best_placement_edgeset);
@@ -182,7 +182,7 @@ namespace covered
 
             // Vtime synchronization
             UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(bestguess_redirected_get_response_ptr->getSourceIndex(), syncinfo.getVtime());
-            cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr()->getEdgeCachePtr()->constCustomFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
+            cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr()->getEdgeCachePtr()->customFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
         }
         else
         {
@@ -345,7 +345,7 @@ namespace covered
 
             // Vtime synchronization
             UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(bestguess_acquire_writelock_response_ptr->getSourceIndex(), syncinfo.getVtime());
-            cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr()->getEdgeCachePtr()->constCustomFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
+            cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr()->getEdgeCachePtr()->customFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
         }
         else
         {
@@ -374,7 +374,7 @@ namespace covered
 
             // Vtime synchronization
             UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(bestguess_finish_block_request_ptr->getSourceIndex(), syncinfo.getVtime());
-            cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr()->getEdgeCachePtr()->constCustomFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
+            cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr()->getEdgeCachePtr()->customFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
         }
         else
         {
@@ -526,7 +526,7 @@ namespace covered
 
             // Vtime synchronization
             UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(bestguess_release_writelock_response_ptr->getSourceIndex(), syncinfo.getVtime());
-            cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr()->getEdgeCachePtr()->constCustomFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
+            cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr()->getEdgeCachePtr()->customFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
         }
         else
         {
@@ -727,7 +727,7 @@ namespace covered
 
                     // Vtime synchronization
                     UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(best_guess_placement_trigger_response_ptr->getSourceIndex(), best_guess_placement_trigger_response_ptr->getSyncinfo().getVtime());
-                    tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
+                    tmp_edge_wrapper_ptr->getEdgeCachePtr()->customFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
 
                     // Release the control response message
                     delete control_response_ptr;

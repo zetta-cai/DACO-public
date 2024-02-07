@@ -56,7 +56,7 @@ namespace covered
 
             // Vtime synchronization
             UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(source_edge_idx, syncinfo.getVtime());
-            edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
+            edge_wrapper_ptr_->getEdgeCachePtr()->customFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
         }
         else
         {
@@ -163,7 +163,7 @@ namespace covered
 
             // Vtime synchronization
             UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(bestguess_directory_update_request_ptr->getSourceIndex(), bestguess_directory_update_request_ptr->getSyncinfo().getVtime());
-            edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
+            edge_wrapper_ptr_->getEdgeCachePtr()->customFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
 
             if (is_admit) // Foreground/background directory admission (i.e., validation for BestGuess) by local/remote placement notification
             {
@@ -278,7 +278,7 @@ namespace covered
 
             // Vtime synchronization
             UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(source_edge_idx, syncinfo.getVtime());
-            edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
+            edge_wrapper_ptr_->getEdgeCachePtr()->customFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
         }
         else
         {
@@ -363,7 +363,7 @@ namespace covered
 
             // Vtime synchronization
             UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(sender_edge_idx, syncinfo.getVtime());
-            edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
+            edge_wrapper_ptr_->getEdgeCachePtr()->customFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
         }
         else
         {
@@ -503,7 +503,7 @@ namespace covered
 
         // Vtime synchronization
         UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(source_edge_idx, syncinfo.getVtime());
-        edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
+        edge_wrapper_ptr_->getEdgeCachePtr()->customFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
 
         // Try to preserve invalid dirinfo in directory table for trigger flag
         PreserveDirectoryTableIfGlobalUncachedFuncParam tmp_param_for_preserve(key, DirectoryInfo(placement_edge_idx));

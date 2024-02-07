@@ -45,7 +45,7 @@ namespace covered
         const uint32_t source_edge_idx = bestguess_placement_notify_request_ptr->getSourceIndex();
         const BestGuessSyncinfo syncinfo = bestguess_placement_notify_request_ptr->getSyncinfo();
         UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(source_edge_idx, syncinfo.getVtime());
-        tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
+        tmp_edge_wrapper_ptr->getEdgeCachePtr()->customFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
 
         const Key key = bestguess_placement_notify_request_ptr->getKey();
         const Value value = bestguess_placement_notify_request_ptr->getValue();

@@ -97,7 +97,7 @@ namespace covered
 
             // Vtime synchronization
             UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(bestguess_invalidation_response_ptr->getSourceIndex(), syncinfo.getVtime());
-            getEdgeCachePtr()->constCustomFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
+            getEdgeCachePtr()->customFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
         }
         else
         {
@@ -152,7 +152,7 @@ namespace covered
 
             // Vtime synchronization
             UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(bestguess_finish_block_response_ptr->getSourceIndex(), syncinfo.getVtime());
-            getEdgeCachePtr()->constCustomFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
+            getEdgeCachePtr()->customFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
         }
         else
         {

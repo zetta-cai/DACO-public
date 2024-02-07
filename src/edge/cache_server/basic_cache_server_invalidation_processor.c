@@ -51,7 +51,7 @@ namespace covered
             // Vtime synchronization
             const BestGuessSyncinfo syncinfo = best_guess_invalidation_request_ptr->getSyncinfo();
             UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(source_edge_idx, syncinfo.getVtime());
-            tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
+            tmp_edge_wrapper_ptr->getEdgeCachePtr()->customFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
         }
         else
         {
