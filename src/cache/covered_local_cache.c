@@ -384,7 +384,7 @@ namespace covered
             // Remove from local cached metadata for eviction
             local_cached_metadata_.removeForExistingKey(key, value);
 
-            is_evict = true;   
+            is_evict = true;
         }
 
         return is_evict;

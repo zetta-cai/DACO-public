@@ -1231,15 +1231,39 @@ namespace covered
         assert(client_machine_idxes_.size() > 0);
         for (uint32_t i = 0; i < client_machine_idxes_.size(); i++)
         {
-            assert(client_machine_idxes_[i] < physical_machines_.size());
+            if (client_machine_idxes_[i] >= physical_machines_.size())
+            {
+                std::ostringstream oss;
+                oss << "invalid client_machine_idxes_[" << i << "] " << client_machine_idxes_[i] << " >= physical_machines_.size() " << physical_machines_.size();
+                Util::dumpErrorMsg(kClassName, oss.str());
+                exit(1);
+            }
         }
         assert(edge_machine_idxes_.size() > 0);
         for (uint32_t i = 0; i < edge_machine_idxes_.size(); i++)
         {
-            assert(edge_machine_idxes_[i] < physical_machines_.size());
+            if (edge_machine_idxes_[i] >= physical_machines_.size())
+            {
+                std::ostringstream oss;
+                oss << "invalid edge_machine_idxes_[" << i << "] " << edge_machine_idxes_[i] << " >= physical_machines_.size() " << physical_machines_.size();
+                Util::dumpErrorMsg(kClassName, oss.str());
+                exit(1);
+            }
         }
-        assert(cloud_machine_idx_ < physical_machines_.size());
-        assert(evaluator_machine_idx_ < physical_machines_.size());
+        if (cloud_machine_idx_ >= physical_machines_.size())
+        {
+            std::ostringstream oss;
+            oss << "invalid cloud_machine_idx_ " << cloud_machine_idx_ << " >= physical_machines_.size() " << physical_machines_.size();
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
+        if (evaluator_machine_idx_ >= physical_machines_.size())
+        {
+            std::ostringstream oss;
+            oss << "invalid evaluator_machine_idx_ " << evaluator_machine_idx_ << " >= physical_machines_.size() " << physical_machines_.size();
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
 
         // (vi) client/edge/cloud/evaluator MUST be current machine idx if under single-node simulation
         if (main_class_name_ == Util::SIMULATOR_MAIN_NAME)
@@ -1258,7 +1282,14 @@ namespace covered
     PhysicalMachine Config::getPhysicalMachine_(const uint32_t& physial_machine_idx)
     {
         checkIsValid_();
-        assert(physial_machine_idx < physical_machines_.size());
+        
+        if (physial_machine_idx >= physical_machines_.size())
+        {
+            std::ostringstream oss;
+            oss << "invalid physial_machine_idx " << physial_machine_idx << " >= physical_machines_.size() " << physical_machines_.size();
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
 
         return physical_machines_[physial_machine_idx];
     }

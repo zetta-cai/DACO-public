@@ -235,6 +235,8 @@ namespace covered
 
             // Update cache size usage for removed lookup entry
             size_ = Util::uint64Minus(size_, key.getKeyLength() + sizeof(list_iterator_t));
+
+            is_evict = true;
         }
 
         return is_evict;
