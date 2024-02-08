@@ -517,7 +517,13 @@ namespace covered
 
         if (is_triggered) // The first placement trigger of global uncached object
         {
-            if (placement_edge_idx == current_beacon_edge_idx) // Local placement
+            if (placement_edge_idx == source_edge_idx) // Sender is placement
+            {
+                // NOTE: sender will perform local placement after receiving BestGuessTriggerPlacementResponse
+                
+                // Do nothing
+            }
+            else if (placement_edge_idx == current_beacon_edge_idx) // Local placement
             {
                 assert(edge_wrapper_ptr_->getCooperationWrapperPtr()->getBeaconEdgeIdx(key) == current_beacon_edge_idx); // Current MUST be the beacon node of the key
 
