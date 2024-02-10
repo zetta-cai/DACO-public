@@ -475,7 +475,16 @@ namespace covered
 
     bool CoveredBeaconServer::processOtherControlRequest_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr)
     {
-        return false;
+        assert(control_request_ptr != NULL);
+
+        bool is_finish = false;
+
+        std::ostringstream oss;
+        oss << "control request " << MessageBase::messageTypeToString(control_request_ptr->getMessageType()) << " is not supported!";
+        Util::dumpErrorMsg(instance_name_, oss.str());
+        exit(1);
+
+        return is_finish;
     }
 
     // (5) Cache-method-specific custom functions
@@ -485,7 +494,12 @@ namespace covered
         checkPointers_();
         assert(func_param_ptr != NULL);
 
-        if (funcname == ProcessRspToRedirectGetForPlacementFuncParam::FUNCNAME)
+        if (funcname == ProcessPlacementTriggerRequestForCoveredFuncParam::FUNCNAME)
+        {
+            ProcessPlacementTriggerRequestForCoveredFuncParam* tmp_param = static_cast<ProcessPlacementTriggerRequestForCoveredFuncParam*>(func_param_ptr);
+            processPlacementTriggerRequestForCoveredInternal_(tmp_param->getMessagePtr(), tmp_param->getEdgeCacheServerWorkerRecvrspDstAddrConstRef());
+        }
+        else if (funcname == ProcessRspToRedirectGetForPlacementFuncParam::FUNCNAME)
         {
             ProcessRspToRedirectGetForPlacementFuncParam* tmp_param = static_cast<ProcessRspToRedirectGetForPlacementFuncParam*>(func_param_ptr);
             processRspToRedirectGetForPlacementInternal_(tmp_param->getMessagePtr());
@@ -502,6 +516,78 @@ namespace covered
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }
+
+        return;
+    }
+
+    void CoveredBeaconServer::processPlacementTriggerRequestForCoveredInternal_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr)
+    {
+        assert(control_request_ptr != NULL);
+        assert(control_request_ptr->getMessageType() == MessageType::kCoveredPlacementTriggerRequest);
+
+        bool is_finish = false;
+        BandwidthUsage total_bandwidth_usage;
+        EventList event_list;
+
+        // Update total bandwidth usage for received placement trigger request
+        uint32_t cross_edge_placement_trigger_req_bandwidth_bytes = control_request_ptr->getMsgPayloadSize();
+        total_bandwidth_usage.update(BandwidthUsage(0, cross_edge_placement_trigger_req_bandwidth_bytes, 0, 0, 1, 0));
+
+        // (i) NOTE: JUST similar as processing release writelock request
+
+        // Process received request
+        CoveredPlacementTriggerRequest* covered_placement_trigger_request_ptr = static_cast<CoveredPlacementTriggerRequest*>(control_request_ptr);
+        const uint32_t sender_edge_idx = covered_placement_trigger_request_ptr->getSourceIndex();
+        const Key& tmp_key = covered_placement_trigger_request_ptr->getKey();
+        const CollectedPopularity& collected_popularity = covered_placement_trigger_request_ptr->getCollectedPopularityRef();
+        const VictimSyncset& neighbor_victim_syncset = covered_placement_trigger_request_ptr->getVictimSyncsetRef();
+        const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
+
+        // Victim synchronization
+        UpdateCacheManagerForNeighborVictimSyncsetFuncParam tmp_param_for_victimsync(sender_edge_idx, neighbor_victim_syncset);
+        edge_wrapper_ptr_->constCustomFunc(UpdateCacheManagerForNeighborVictimSyncsetFuncParam::FUNCNAME, &tmp_param_for_victimsync);
+
+        // Selective popularity aggregation after remote placement trigger
+        bool is_global_cached = false;
+        bool is_source_cached = false;
+        Edgeset best_placement_edgeset;
+        bool need_hybrid_fetching = false;
+        edge_wrapper_ptr_->getCooperationWrapperPtr()->isGlobalAndSourceCached(tmp_key, sender_edge_idx, is_global_cached, is_source_cached);
+        AfterWritelockReleaseHelperFuncParam tmp_param_after_releaselock(tmp_key, sender_edge_idx, collected_popularity, is_source_cached, best_placement_edgeset, need_hybrid_fetching, edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        edge_wrapper_ptr_->constCustomFunc(AfterWritelockReleaseHelperFuncParam::FUNCNAME, &tmp_param_after_releaselock);
+        is_finish = tmp_param_after_releaselock.isFinishConstRef();
+        if (is_finish)
+        {
+            return is_finish; // Edge node is finished
+        }
+
+        // (ii) NOTE: JUST similar as getting release writelock response
+
+        // Prepare victim syncset for piggybacking-based victim synchronization
+        const uint32_t dst_edge_idx_for_compression = sender_edge_idx;
+        VictimSyncset local_victim_syncset = covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx_for_compression, edge_wrapper_ptr_->getCacheMarginBytes());
+
+        // Generate response
+        uint32_t current_edge_idx = edge_wrapper_ptr_->getNodeIdx();
+        MessageBase* covered_placement_trigger_response_ptr = NULL;
+        if (need_hybrid_fetching) // Placement trigger response w/ hybrid fetching
+        {
+            covered_placement_trigger_response_ptr = new CoveredFghybridPlacementTriggerResponse(tmp_key, local_victim_syncset, best_placement_edgeset, current_edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        }
+        else // Normal placement trigger response
+        {
+            covered_placement_trigger_response_ptr = new CoveredPlacementTriggerResponse(tmp_key, local_victim_syncset, current_edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        }
+        assert(covered_placement_trigger_response_ptr != NULL);
+
+        // Push the response into edge-to-edge propagation simulator to cache server worker
+        bool is_successful = edge_wrapper_ptr_->getEdgeToedgePropagationSimulatorParamPtr()->push(covered_placement_trigger_response_ptr, edge_cache_server_worker_recvrsp_dst_addr);
+        assert(is_successful);
+
+        // NOTE: covered_placement_trigger_response_ptr will be released by edge-to-edge propagation simulator
+        covered_placement_trigger_response_ptr = NULL;
+
+        return is_finish;
     }
 
     void CoveredBeaconServer::processRspToRedirectGetForPlacementInternal_(MessageBase* redirected_get_response_ptr)

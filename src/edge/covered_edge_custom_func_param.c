@@ -4,6 +4,42 @@ namespace covered
 {
     // (1) For edge beacon server
 
+    // ProcessPlacementTriggerRequestForCovered
+
+    const std::string ProcessPlacementTriggerRequestForCoveredFuncParam::kClassName("ProcessPlacementTriggerRequestForCoveredFuncParam");
+
+    const std::string ProcessPlacementTriggerRequestForCoveredFuncParam::FUNCNAME("process_placement_trigger_request_for_covered");
+
+    ProcessPlacementTriggerRequestForCoveredFuncParam::ProcessPlacementTriggerRequestForCoveredFuncParam(MessageBase* message_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr) : EdgeCustomFuncParamBase(), edge_cache_server_worker_recvrsp_dst_addr_const_ref_(edge_cache_server_worker_recvrsp_dst_addr)
+    {
+        message_ptr_ = message_ptr;
+
+        is_finish_ = false;
+    }
+
+    ProcessPlacementTriggerRequestForCoveredFuncParam::~ProcessPlacementTriggerRequestForCoveredFuncParam()
+    {}
+
+    MessageBase* ProcessPlacementTriggerRequestForCoveredFuncParam::getMessagePtr() const
+    {
+        return message_ptr_;
+    }
+
+    const NetworkAddr& ProcessPlacementTriggerRequestForCoveredFuncParam::getEdgeCacheServerWorkerRecvrspDstAddrConstRef() const
+    {
+        return edge_cache_server_worker_recvrsp_dst_addr_const_ref_;
+    }
+
+    bool& ProcessPlacementTriggerRequestForCoveredFuncParam::isFinishRef()
+    {
+        return is_finish_;
+    }
+
+    const bool& ProcessPlacementTriggerRequestForCoveredFuncParam::isFinishConstRef() const
+    {
+        return is_finish_;
+    }
+
     // ProcessRspToRedirectGetForPlacementFuncParam
 
     const std::string ProcessRspToRedirectGetForPlacementFuncParam::kClassName("ProcessRspToRedirectGetForPlacementFuncParam");

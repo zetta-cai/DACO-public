@@ -45,6 +45,8 @@ namespace covered
         // (5) Cache-method-specific custom functions
 
         virtual void customFunc(const std::string& funcname, EdgeCustomFuncParamBase* func_param_ptr) override;
+        // Process placement trigger request for writes on global uncached objects
+        bool processPlacementTriggerRequestForCoveredInternal_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr);
         // Process redirected/global get response for non-blocking placement deployment
         void processRspToRedirectGetForPlacementInternal_(MessageBase* redirected_get_response_ptr);
         void processRspToAccessCloudForPlacementInternal_(MessageBase* global_get_response_ptr);

@@ -205,6 +205,12 @@ namespace covered
             customFunc(ProcessPlacementTriggerRequestForBestGuessFuncParam::FUNCNAME, &tmp_param);
             is_finish = tmp_param.isFinishConstRef();
         }
+        else if (message_type == MessageType::kCoveredPlacementTriggerRequest)
+        {
+            ProcessPlacementTriggerRequestForCoveredFuncParam tmp_param(control_request_ptr, edge_cache_server_worker_recvrsp_dst_addr);
+            customFunc(ProcessPlacementTriggerRequestForCoveredFuncParam::FUNCNAME, &tmp_param);
+            is_finish = tmp_param.isFinishConstRef();
+        }
         else
         {
             // NOTE: only COVERED has other control requests to process

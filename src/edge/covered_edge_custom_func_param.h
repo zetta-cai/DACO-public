@@ -23,6 +23,30 @@ namespace covered
 {
     // (1) For edge beacon server
 
+    // ProcessPlacementTriggerRequestForCoveredFuncParam
+
+    class ProcessPlacementTriggerRequestForCoveredFuncParam : public EdgeCustomFuncParamBase
+    {
+    public:
+        static const std::string FUNCNAME; // process placement trigger request for writes on global uncached objects
+
+        ProcessPlacementTriggerRequestForCoveredFuncParam(MessageBase* message_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr);
+        virtual ~ProcessPlacementTriggerRequestForCoveredFuncParam();
+
+        MessageBase* getMessagePtr() const;
+        const NetworkAddr& getEdgeCacheServerWorkerRecvrspDstAddrConstRef() const;
+
+        bool& isFinishRef();
+        const bool& isFinishConstRef() const;
+    private:
+        static const std::string kClassName;
+
+        MessageBase* message_ptr_;
+        const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr_const_ref_;
+
+        bool is_finish_;
+    };
+
     // ProcessRspToRedirectGetForPlacementFuncParam
 
     class ProcessRspToRedirectGetForPlacementFuncParam : public EdgeCustomFuncParamBase

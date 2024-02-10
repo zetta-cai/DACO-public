@@ -739,7 +739,7 @@ namespace covered
             Edgeset best_placement_edgeset; // Used for non-blocking placement notification if need hybrid data fetching for COVERED
             bool need_hybrid_fetching = false;
             if (current_is_beacon) // Local placement trigger (no matter if key is tracked by local uncached metadata or not -> update/remove local uncached popularity into/from local aggregated popularity)
-            {
+            { // NOTE: JUST similar as release local writelock
                 // NOTE: NOT need piggyacking-based popularity collection and victim synchronization for local release write lock
 
                 // NOTE: we always perform victim synchronization before popularity aggregation, as we need the latest synced victim information for placement calculation (note that we have updated victim tracker in updateLocalEdgeCache_() or removeLocalEdgeCache_() before this function)
@@ -754,7 +754,7 @@ namespace covered
                 }
             } // End of sender is beacon
             else // Remote placement trigger (no matter if key is tracked by local uncached metadata or not -> update/remove local uncached popularity into/from remote aggregated popularity)
-            {
+            { // NOTE: JUST similar as release remote writelock
                 // NOTE: the extra message overhead of remote placement trigger requests for COVERED is limited!
                 // -> (1) geo-distributed tiered storage is read-intensive (e.g., edge caching workloads), so writes just occupy a small proportion
                 // -> (2) even for the writes, most requests target hot objects which are global cached and hence NO need of explicit placement trigger requests (placement will be  triggered by existing release writelock requests)
@@ -790,7 +790,7 @@ namespace covered
                         else
                         {
                             std::ostringstream oss;
-                            oss << "edge timeout to wait for DirectoryLookupResponse for key " << key.getKeystr();
+                            oss << "edge timeout to wait for CoveredPlacementTriggerResponse for key " << key.getKeystr();
                             Util::dumpWarnMsg(instance_name_, oss.str());
                             continue; // Resend the control request message
                         }
