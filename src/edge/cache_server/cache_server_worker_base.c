@@ -823,6 +823,11 @@ namespace covered
         }
         const bool skip_propagation_latency = local_request_ptr->isSkipPropagationLatency();
 
+        // TMPDEBUG24
+        std::ostringstream tmposs0;
+        tmposs0 << "process local write of key " << tmp_key.getKeystr();
+        Util::dumpWarnMsg(base_instance_name_, tmposs0.str());
+
         #ifdef DEBUG_CACHE_SERVER_WORKER
         Util::dumpVariablesForDebug(base_instance_name_, 9, "receive a local write request;", "type:", MessageBase::messageTypeToString(local_request_ptr->getMessageType()).c_str(), "keystr:", tmp_key.getKeystr().c_str(), "valuesize:", std::to_string(tmp_value.getValuesize()).c_str(), "is deleted:", Util::toString(tmp_value.isDeleted()).c_str());
         #endif
@@ -855,6 +860,11 @@ namespace covered
         struct timespec acquire_writelock_end_timestamp = Util::getCurrentTimespec();
         uint32_t acquire_writelock_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(acquire_writelock_end_timestamp, acquire_writelock_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_ACQUIRE_WRITELOCK_EVENT_NAME, acquire_writelock_latency_us); // Add intermediate event if with event tracking
+
+        // TMPDEBUG24
+        std::ostringstream tmposs1;
+        tmposs1 << "acquire writelock of key " << tmp_key.getKeystr() << "; lock result: " << lock_result;
+        Util::dumpWarnMsg(base_instance_name_, tmposs1.str());
 
         // Send request to cloud for write-through policy
         struct timespec write_cloud_start_timestamp = Util::getCurrentTimespec();
@@ -907,6 +917,11 @@ namespace covered
             struct timespec release_writelock_end_timestamp = Util::getCurrentTimespec();
             uint32_t release_writelock_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(release_writelock_end_timestamp, release_writelock_start_timestamp));
             event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_RELEASE_WRITELOCK_EVENT_NAME, release_writelock_latency_us);
+
+            // TMPDEBUG24
+            std::ostringstream tmposs2;
+            tmposs2 << "release writelock of key " << tmp_key.getKeystr() << "; lock result: " << lock_result;
+            Util::dumpWarnMsg(base_instance_name_, tmposs2.str());
         }
         if (is_finish) // Edge node is NOT running
         {
@@ -1473,6 +1488,11 @@ namespace covered
             #endif
 
             is_finish = admitObject_(key, value, total_bandwidth_usage, event_list, skip_propagation_latency);
+
+            // TMPDEBUG24
+            std::ostringstream tmposs3;
+            tmposs3 << "independent admit of key " << key.getKeystr();
+            Util::dumpWarnMsg(base_instance_name_, tmposs3.str());
         }
 
         return is_finish;

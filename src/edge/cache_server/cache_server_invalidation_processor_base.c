@@ -73,7 +73,7 @@ namespace covered
                 MessageBase* control_request_ptr = tmp_cache_server_item.getRequestPtr();
                 assert(control_request_ptr != NULL);
 
-                if (control_request_ptr->getMessageType() == MessageType::kInvalidationRequest || control_request_ptr->getMessageType() == MessageType::kCoveredInvalidationRequest) // Invalidation request
+                if (control_request_ptr->getMessageType() == MessageType::kInvalidationRequest || control_request_ptr->getMessageType() == MessageType::kCoveredInvalidationRequest || control_request_ptr->getMessageType() == MessageType::kBestGuessInvalidationRequest) // Invalidation request
                 {
                     NetworkAddr recvrsp_dst_addr = control_request_ptr->getSourceAddr(); // A beacon edge node
                     is_finish = processInvalidationRequest_(control_request_ptr, recvrsp_dst_addr);
@@ -104,7 +104,7 @@ namespace covered
     bool CacheServerInvalidationProcessorBase::processInvalidationRequest_(MessageBase* control_request_ptr, const NetworkAddr& recvrsp_dst_addr)
     {
         assert(control_request_ptr != NULL);
-        assert(control_request_ptr->getMessageType() == MessageType::kInvalidationRequest || control_request_ptr->getMessageType() == MessageType::kCoveredInvalidationRequest);
+        assert(control_request_ptr->getMessageType() == MessageType::kInvalidationRequest || control_request_ptr->getMessageType() == MessageType::kCoveredInvalidationRequest || control_request_ptr->getMessageType() == MessageType::kBestGuessInvalidationRequest);
 
         checkPointers_();
         CacheServerBase* tmp_cache_server_ptr = cache_server_invalidation_processor_param_ptr_->getCacheServerPtr();

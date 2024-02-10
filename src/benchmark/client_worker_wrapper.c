@@ -119,6 +119,9 @@ namespace covered
             // Generate key-value request based on a specific workload
             WorkloadItem workload_item = workload_generator_ptr->generateWorkloadItem(*client_worker_item_randgen_ptr_);
 
+            // TMPDEBUG24 (100% PUT)
+            workload_item = WorkloadItem(workload_item.getKey(), workload_item.getValue(), WorkloadItemType::kWorkloadItemPut);
+
             // TMPDEBUG
             //WorkloadItem workload_item(Key("123"), Value(200), WorkloadItemType::kWorkloadItemGet);
             //if (tmp_client_wrapper_ptr->node_idx_ != 0)

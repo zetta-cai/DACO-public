@@ -364,11 +364,21 @@ namespace covered
 
         MYASSERT(dht_wrapper_ptr_->getBeaconEdgeIdx(key) == edge_idx_); // Current edge node MUST be beacon for the given key
 
+        // Release write lock
         std::unordered_set<NetworkAddr, NetworkAddrHasher> blocked_edges = block_tracker_ptr_->unblockAllEdgesAndFinishWriteForKeyIfExist(key);
 
         // Validate content directory if any for the closest edge node releasing the write lock
-        bool is_exist = directory_table_ptr_->validateDirinfoForKeyIfExist(key, sender_dirinfo);
-        assert(is_exist); // Key and dirinfo should exist when releasing the writelock
+        bool is_key_exist = false;
+        bool unused_is_dirinfo_exist = false;
+        directory_table_ptr_->validateDirinfoForKeyIfExist(key, sender_dirinfo, is_key_exist, unused_is_dirinfo_exist);
+        UNUSED(unused_is_dirinfo_exist); // Also okay if dirinfo of sender does not exist
+        if (!is_key_exist) // Key and dirinfo should exist when releasing the writelock
+        {
+            std::ostringstream oss;
+            oss << "key " << key.getKeystr() << " does not exist in CooperationWrapperBase::releaseLocalWritelock()";
+            Util::dumpErrorMsg(base_instance_name_, oss.str());
+            exit(1);
+        }
 
         is_source_cached = directory_table_ptr_->isCachedByGivenEdge(key, source_edge_idx);
 

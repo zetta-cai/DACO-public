@@ -355,9 +355,22 @@ namespace covered
         std::unordered_map<uint32_t, NetworkAddr> percachecopy_dstaddr;
         for (std::list<DirectoryInfo>::const_iterator iter = tmp_all_dirinfo_list.begin(); iter != tmp_all_dirinfo_list.end(); iter++)
         {
+            // NOTE: we only issue invalidation requests to neighbors
+            uint32_t tmp_edgeidx = iter->getTargetEdgeIdx();
+            if (tmp_edgeidx == node_idx_) // Skip the current edge node
+            {
+                // Invalidate cached object in local edge cache
+                bool is_local_cached = edge_cache_ptr_->isLocalCached(key);
+                if (is_local_cached)
+                {
+                    edge_cache_ptr_->invalidateKeyForLocalCachedObject(key);
+                }
+
+                continue;
+            }
+            
             const bool is_private_edge_ipstr = false; // NOTE: cross-edge communication for cache invalidation uses public IP address
             const bool is_launch_edge = false; // Just connect neighbor to invalidate cache copies instead of launching the neighbor
-            uint32_t tmp_edgeidx = iter->getTargetEdgeIdx();
             std::string tmp_edge_ipstr = Config::getEdgeIpstr(tmp_edgeidx, node_cnt_, is_private_edge_ipstr, is_launch_edge);
             uint16_t tmp_edge_cache_server_recvreq_port = Util::getEdgeCacheServerRecvreqPort(tmp_edgeidx, node_cnt_);
             NetworkAddr tmp_edge_cache_server_recvreq_dst_addr(tmp_edge_ipstr, tmp_edge_cache_server_recvreq_port);

@@ -237,22 +237,20 @@ namespace covered
         return;
     }
 
-    bool DirectoryTable::validateDirinfoForKeyIfExist(const Key& key, const DirectoryInfo& directory_info)
+    void DirectoryTable::validateDirinfoForKeyIfExist(const Key& key, const DirectoryInfo& directory_info, bool& is_key_exist, bool& is_dirinfo_exist)
     {
         // Prepare ValidateMetadataForDirinfoIfExistParam
         DirectoryEntry::ValidateMetadataForDirinfoIfExistParam tmp_param = {directory_info};
 
-        bool is_key_exist = false;
-        bool is_dirinfo_exist = false;
+        is_key_exist = false;
+        is_dirinfo_exist = false;
         directory_hashtable_.callIfExist(key, is_key_exist, DirectoryEntry::VALIDATE_METADATA_FOR_DIRINFO_IF_EXIST_FUNCNAME, &tmp_param);
         if (is_key_exist)
         {
             is_dirinfo_exist = tmp_param.is_dirinfo_exist;
         }
 
-        bool is_exist = is_key_exist && is_dirinfo_exist;
-
-        return is_exist;
+        return;
     }
 
     uint64_t DirectoryTable::getSizeForCapacity() const

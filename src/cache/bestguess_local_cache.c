@@ -275,8 +275,15 @@ namespace covered
 
     void BestGuessLocalCache::updateNeighborVictimVtimeInternal_(const uint32_t& neighbor_edge_idx, const uint64_t& neighbor_victim_vtime)
     {
+        if (neighbor_edge_idx == edge_idx_)
+        {
+            std::ostringstream oss;
+            oss << "Neighbor edge idx " << neighbor_edge_idx << " should NOT be the same as current edge idx " << edge_idx_;
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+
         // Update neighbor victim vtime
-        assert(neighbor_edge_idx != edge_idx_);
         std::unordered_map<uint32_t, uint64_t>::iterator peredge_victim_vtime_iter = peredge_victim_vtime_.find(neighbor_edge_idx);
         if (peredge_victim_vtime_iter == peredge_victim_vtime_.end())
         {

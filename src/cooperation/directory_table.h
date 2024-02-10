@@ -40,7 +40,7 @@ namespace covered
         bool isNeighborCached(const Key& key, const uint32_t& edge_idx) const;
 
         void invalidateAllDirinfoForKeyIfExist(const Key& key, DirinfoSet& all_dirinfo); // Invalidate all dirinfos only if key exists (NOT add an empty direntry)
-        bool validateDirinfoForKeyIfExist(const Key& key, const DirectoryInfo& directory_info); // Validate only if key and dirinfo exist (NOT add a valid dirinfo) (return if key and dirinfo exist)
+        void validateDirinfoForKeyIfExist(const Key& key, const DirectoryInfo& directory_info, bool& is_key_exist, bool& is_dirinfo_exist); // Validate only if key and dirinfo exist (NOT add a valid dirinfo)
 
         uint64_t getSizeForCapacity() const;
     private:

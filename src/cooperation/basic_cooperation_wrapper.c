@@ -110,7 +110,10 @@ namespace covered
         // Directory validation MUST be admission for BestGuess
         is_being_written = block_tracker_ptr_->isBeingWrittenForKey(key);
 
-        bool is_successful_validation = directory_table_ptr_->validateDirinfoForKeyIfExist(key, directory_info);
+        bool is_key_exist = false;
+        bool is_dirinfo_exist = false;
+        directory_table_ptr_->validateDirinfoForKeyIfExist(key, directory_info, is_key_exist, is_dirinfo_exist);
+        bool is_successful_validation = is_key_exist && is_dirinfo_exist; // Dirinfo of sender should exist, as sender must be the placement node preserved before when triggering placement
 
         // Return if key is cached by any other edge node except the source edge node
         is_neighbor_cached = directory_table_ptr_->isNeighborCached(key, source_edge_idx);
