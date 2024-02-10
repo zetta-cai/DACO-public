@@ -627,11 +627,6 @@ namespace covered
         const uint32_t& placement_edge_idx = tmp_param_for_placementidx.getPlacementEdgeIdxConstRef();
         assert(placement_edge_idx < tmp_edge_wrapper_ptr->getNodeCnt());
 
-        // TMPDEBUG24
-        std::ostringstream tmposs0;
-        tmposs0 << "before triggering placement of key " << key.getKeystr();
-        Util::dumpWarnMsg(instance_name_, tmposs0.str());
-
         // Get trigger flag from local/remote beacon node if this is the first cache miss of the globally uncached object
         bool is_triggered = false;
         is_finish = getBestGuessTriggerFlag_(key, value, placement_edge_idx, skip_propagation_latency, is_triggered);
@@ -639,11 +634,6 @@ namespace covered
         {
             return is_finish;
         }
-
-        // TMPDEBUG24
-        std::ostringstream tmposs1;
-        tmposs1 << "trigger placement of key " << key.getKeystr() << "; is_triggered: " << is_triggered;
-        Util::dumpWarnMsg(instance_name_, tmposs1.str());
 
         // Perform local cache admission if triggered (i.e., the first placement trigger) and sender is placement node
         if (is_triggered && placement_edge_idx == tmp_edge_wrapper_ptr->getNodeIdx())
@@ -719,7 +709,7 @@ namespace covered
                     else
                     {
                         std::ostringstream oss;
-                        oss << "edge timeout to wait for BestGuessPlacementTriggerResponse for key " << key.getKeystr();
+                        oss << "edge timeout to wait for BestGuessPlacementTriggerResponse for key " << key.getKeystr() << "from beacon " << dst_beacon_edge_idx_to_trigger_placement;
                         Util::dumpWarnMsg(instance_name_, oss.str());
                         continue; // Resend the control request message
                     }

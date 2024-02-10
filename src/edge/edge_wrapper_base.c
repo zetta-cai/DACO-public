@@ -344,6 +344,7 @@ namespace covered
         bool with_complete_dirinfo_set = all_dirinfo.getDirinfoSetIfComplete(tmp_all_dirinfo_list);
         assert(with_complete_dirinfo_set); // NOTE: dirinfo set from local directory table MUST be complete
 
+        // Check if exist any dirinfo to invalidate
         uint32_t invalidate_edgecnt = tmp_all_dirinfo_list.size();
         if (invalidate_edgecnt == 0)
         {
@@ -355,22 +356,9 @@ namespace covered
         std::unordered_map<uint32_t, NetworkAddr> percachecopy_dstaddr;
         for (std::list<DirectoryInfo>::const_iterator iter = tmp_all_dirinfo_list.begin(); iter != tmp_all_dirinfo_list.end(); iter++)
         {
-            // NOTE: we only issue invalidation requests to neighbors
-            uint32_t tmp_edgeidx = iter->getTargetEdgeIdx();
-            if (tmp_edgeidx == node_idx_) // Skip the current edge node
-            {
-                // Invalidate cached object in local edge cache
-                bool is_local_cached = edge_cache_ptr_->isLocalCached(key);
-                if (is_local_cached)
-                {
-                    edge_cache_ptr_->invalidateKeyForLocalCachedObject(key);
-                }
-
-                continue;
-            }
-            
             const bool is_private_edge_ipstr = false; // NOTE: cross-edge communication for cache invalidation uses public IP address
             const bool is_launch_edge = false; // Just connect neighbor to invalidate cache copies instead of launching the neighbor
+            uint32_t tmp_edgeidx = iter->getTargetEdgeIdx();
             std::string tmp_edge_ipstr = Config::getEdgeIpstr(tmp_edgeidx, node_cnt_, is_private_edge_ipstr, is_launch_edge);
             uint16_t tmp_edge_cache_server_recvreq_port = Util::getEdgeCacheServerRecvreqPort(tmp_edgeidx, node_cnt_);
             NetworkAddr tmp_edge_cache_server_recvreq_dst_addr(tmp_edge_ipstr, tmp_edge_cache_server_recvreq_port);
@@ -396,17 +384,35 @@ namespace covered
                     continue;
                 }
 
-                const uint32_t& tmp_dst_edge_idx = iter_for_request->first;   
-                MessageBase* invalidation_request_ptr = getInvalidationRequest_(key, recvrsp_source_addr, tmp_dst_edge_idx, skip_propagation_latency);
-                assert(invalidation_request_ptr != NULL);
+                // NOTE: we only issue invalidation requests to neighbors
+                const uint32_t& tmp_dst_edge_idx = iter_for_request->first;
+                if (tmp_dst_edge_idx == node_idx_) // Invalidat local cache
+                {
+                    // Invalidate cached object in local edge cache
+                    bool is_local_cached = edge_cache_ptr_->isLocalCached(key);
+                    if (is_local_cached)
+                    {
+                        edge_cache_ptr_->invalidateKeyForLocalCachedObject(key);
+                    }
 
-                // Push invalidation request into edge-to-edge propagation simulator to send to neighbor edge node
-                const NetworkAddr& tmp_edge_cache_server_recvreq_dst_addr = percachecopy_dstaddr[tmp_dst_edge_idx]; // cache server address of a blocked closest edge node
-                bool is_successful = edge_toedge_propagation_simulator_param_ptr_->push(invalidation_request_ptr, tmp_edge_cache_server_recvreq_dst_addr);
-                assert(is_successful);
+                    // Update ack information
+                    assert(acked_flags[tmp_dst_edge_idx] == false);
+                    acked_flags[tmp_dst_edge_idx] = true;
+                    acked_edgecnt += 1;
+                }
+                else // Issue request to invalidate remote cache
+                {
+                    MessageBase* invalidation_request_ptr = getInvalidationRequest_(key, recvrsp_source_addr, tmp_dst_edge_idx, skip_propagation_latency);
+                    assert(invalidation_request_ptr != NULL);
 
-                // NOTE: invalidation_request_ptr will be released by edge-to-edge propagation simulator
-                invalidation_request_ptr = NULL;
+                    // Push invalidation request into edge-to-edge propagation simulator to send to neighbor edge node
+                    const NetworkAddr& tmp_edge_cache_server_recvreq_dst_addr = percachecopy_dstaddr[tmp_dst_edge_idx]; // cache server address of a blocked closest edge node
+                    bool is_successful = edge_toedge_propagation_simulator_param_ptr_->push(invalidation_request_ptr, tmp_edge_cache_server_recvreq_dst_addr);
+                    assert(is_successful);
+
+                    // NOTE: invalidation_request_ptr will be released by edge-to-edge propagation simulator
+                    invalidation_request_ptr = NULL;
+                }
             } // End of edgeidx_for_request
 
             // Receive (invalidate_edgecnt - acked_edgecnt) control repsonses from involved edge nodes
@@ -424,7 +430,16 @@ namespace covered
                     }
                     else
                     {
-                        Util::dumpWarnMsg(base_instance_name_, "edge timeout to wait for InvalidationResponse");
+                        std::ostringstream oss;
+                        oss << "edge timeout to wait for InvalidationResponse for key " << key.getKeystr() << " from";
+                        for (std::unordered_map<uint32_t, bool>::const_iterator tmp_iter_for_debug = acked_flags.begin(); tmp_iter_for_debug != acked_flags.end(); tmp_iter_for_debug++)
+                        {
+                            if (!tmp_iter_for_debug->second)
+                            {
+                                oss << " edge " << tmp_iter_for_debug->first;
+                            }
+                        }
+                        Util::dumpWarnMsg(base_instance_name_, oss.str());
                         break; // Break to resend the remaining control requests not acked yet
                     }
                 } // End of (is_timeout == true)
