@@ -497,7 +497,9 @@ namespace covered
         if (funcname == ProcessPlacementTriggerRequestForCoveredFuncParam::FUNCNAME)
         {
             ProcessPlacementTriggerRequestForCoveredFuncParam* tmp_param = static_cast<ProcessPlacementTriggerRequestForCoveredFuncParam*>(func_param_ptr);
-            processPlacementTriggerRequestForCoveredInternal_(tmp_param->getMessagePtr(), tmp_param->getEdgeCacheServerWorkerRecvrspDstAddrConstRef());
+
+            bool& is_finish_ref = tmp_param->isFinishRef();
+            is_finish_ref = processPlacementTriggerRequestForCoveredInternal_(tmp_param->getMessagePtr(), tmp_param->getEdgeCacheServerWorkerRecvrspDstAddrConstRef());
         }
         else if (funcname == ProcessRspToRedirectGetForPlacementFuncParam::FUNCNAME)
         {
@@ -520,7 +522,7 @@ namespace covered
         return;
     }
 
-    void CoveredBeaconServer::processPlacementTriggerRequestForCoveredInternal_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr)
+    bool CoveredBeaconServer::processPlacementTriggerRequestForCoveredInternal_(MessageBase* control_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr)
     {
         assert(control_request_ptr != NULL);
         assert(control_request_ptr->getMessageType() == MessageType::kCoveredPlacementTriggerRequest);
@@ -565,7 +567,7 @@ namespace covered
 
         // Prepare victim syncset for piggybacking-based victim synchronization
         const uint32_t dst_edge_idx_for_compression = sender_edge_idx;
-        VictimSyncset local_victim_syncset = covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx_for_compression, edge_wrapper_ptr_->getCacheMarginBytes());
+        VictimSyncset local_victim_syncset = edge_wrapper_ptr_->getCoveredCacheManagerPtr()->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx_for_compression, edge_wrapper_ptr_->getCacheMarginBytes());
 
         // Generate response
         uint32_t current_edge_idx = edge_wrapper_ptr_->getNodeIdx();

@@ -375,9 +375,8 @@ namespace covered
         if (!is_key_exist) // Key and dirinfo should exist when releasing the writelock
         {
             std::ostringstream oss;
-            oss << "key " << key.getKeystr() << " does not exist in CooperationWrapperBase::releaseLocalWritelock()";
-            Util::dumpErrorMsg(base_instance_name_, oss.str());
-            exit(1);
+            oss << "key " << key.getKeystr() << " does not exist in CooperationWrapperBase::releaseLocalWritelock(), which may be evicted during the write";
+            Util::dumpWarnMsg(base_instance_name_, oss.str());
         }
 
         is_source_cached = directory_table_ptr_->isCachedByGivenEdge(key, source_edge_idx);

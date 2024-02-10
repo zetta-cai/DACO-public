@@ -362,6 +362,9 @@ namespace covered
         need_hybrid_fetching = false;
         while (true) // Wait for valid directory after writes by polling or interruption
         {
+            is_cooperative_cached = false;
+            is_cooperative_valid = false;
+
             if (!tmp_edge_wrapper_ptr->isNodeRunning()) // edge node is NOT running
             {
                 is_finish = true;
@@ -439,8 +442,6 @@ namespace covered
                 }
 
                 // Get data from the target edge node if any and update is_cooperative_cached_and_valid
-                is_cooperative_cached = false;
-                is_cooperative_valid = false;
                 is_finish = redirectGetToTarget_(directory_info, key, value, is_cooperative_cached, is_cooperative_valid, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermediate responses if with event tracking
                 if (is_finish) // Edge is NOT running
                 {

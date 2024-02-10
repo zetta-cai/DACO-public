@@ -847,7 +847,7 @@ namespace covered
                 message_ptr = new GlobalPutResponse(msg_payload);
                 break;
             }
-            case MessageType::kGlobalDelRequest:
+            case MessageType::kGlobalDelResponse:
             {
                 message_ptr = new GlobalDelResponse(msg_payload);
                 break;

@@ -830,6 +830,8 @@ namespace covered
                         // Victim synchronization
                         UpdateCacheManagerForNeighborVictimSyncsetFuncParam tmp_param_for_victimsync(control_response_ptr->getSourceIndex(), neighbor_victim_syncset);
                         tmp_edge_wrapper_ptr->constCustomFunc(UpdateCacheManagerForNeighborVictimSyncsetFuncParam::FUNCNAME, &tmp_param_for_victimsync);
+
+                        break;
                     } // End of (is_timeout == false)
                 } // End of while(true)
             } // End of sender is not beacon
