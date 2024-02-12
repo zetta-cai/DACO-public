@@ -102,6 +102,26 @@ namespace covered
         static const std::string WTINYLFU_CACHE_NAME;
         static const std::string COVERED_CACHE_NAME;
 
+        // Extend cache names (e.g.., ARC+)
+        static const std::string EXTENDED_ARC_CACHE_NAME;
+        static const std::string EXTENDED_CACHELIB_CACHE_NAME;
+        static const std::string EXTENDED_FIFO_CACHE_NAME;
+        static const std::string EXTENDED_FROZENHOT_CACHE_NAME;
+        static const std::string EXTENDED_GLCACHE_CACHE_NAME;
+        static const std::string EXTENDED_GDSF_CACHE_NAME; // Greedy dual
+        static const std::string EXTENDED_GDSIZE_CACHE_NAME; // Greedy dual
+        static const std::string EXTENDED_LFUDA_CACHE_NAME; // Greedy dual
+        static const std::string EXTENDED_LRUK_CACHE_NAME; // Greedy dual
+        static const std::string EXTENDED_LFU_CACHE_NAME;
+        static const std::string EXTENDED_LHD_CACHE_NAME;
+        static const std::string EXTENDED_LRB_CACHE_NAME;
+        static const std::string EXTENDED_LRU_CACHE_NAME; // The same as Shark
+        static const std::string EXTENDED_S3FIFO_CACHE_NAME;
+        static const std::string EXTENDED_SEGCACHE_CACHE_NAME;
+        static const std::string EXTENDED_SIEVE_CACHE_NAME;
+        static const std::string EXTENDED_SLRU_CACHE_NAME;
+        static const std::string EXTENDED_WTINYLFU_CACHE_NAME;
+
         // Hash name
         static const std::string MMH3_HASH_NAME;
 
@@ -133,6 +153,10 @@ namespace covered
         static const uint32_t SECOND_PRECISION; // # of digits after decimal point of second shown in time string
         // Charset
         static const std::string CHARSET;
+
+        // (0) Cache names
+
+        static bool isSingleNodeCache(const std::string cache_name);
 
         // (1) I/O
 
