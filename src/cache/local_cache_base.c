@@ -29,7 +29,7 @@ namespace covered
     LocalCacheBase* LocalCacheBase::getLocalCacheByCacheName(const EdgeWrapperBase* edge_wrapper_ptr, const std::string& cache_name, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint64_t& local_uncached_capacity_bytes, const uint32_t& peredge_synced_victimcnt)
     {
         LocalCacheBase* local_cache_ptr = NULL;
-        if (cache_name == Util::ARC_CACHE_NAME)
+        if (cache_name == Util::ARC_CACHE_NAME || cache_name == Util::EXTENDED_ARC_CACHE_NAME)
         {
             local_cache_ptr = new ArcLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
         }
@@ -37,59 +37,59 @@ namespace covered
         {
             local_cache_ptr = new BestGuessLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
         }
-        else if (cache_name == Util::CACHELIB_CACHE_NAME)
+        else if (cache_name == Util::CACHELIB_CACHE_NAME || cache_name == Util::EXTENDED_CACHELIB_CACHE_NAME)
         {
             local_cache_ptr = new CachelibLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
         }
-        else if (cache_name == Util::FIFO_CACHE_NAME)
+        else if (cache_name == Util::FIFO_CACHE_NAME || cache_name == Util::EXTENDED_FIFO_CACHE_NAME)
         {
             local_cache_ptr = new FifoLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
         }
-        else if (cache_name == Util::FROZENHOT_CACHE_NAME)
+        else if (cache_name == Util::FROZENHOT_CACHE_NAME || cache_name == Util::EXTENDED_FROZENHOT_CACHE_NAME)
         {
             local_cache_ptr = new FrozenhotLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
         }
-        else if (cache_name == Util::GLCACHE_CACHE_NAME)
+        else if (cache_name == Util::GLCACHE_CACHE_NAME || cache_name == Util::EXTENDED_GLCACHE_CACHE_NAME)
         {
             local_cache_ptr = new GLCacheLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
         }
-        else if (cache_name == Util::LRUK_CACHE_NAME || cache_name == Util::GDSIZE_CACHE_NAME || cache_name == Util::GDSF_CACHE_NAME || cache_name == Util::LFUDA_CACHE_NAME) // Greedy dual
+        else if (cache_name == Util::LRUK_CACHE_NAME || cache_name == Util::GDSIZE_CACHE_NAME || cache_name == Util::GDSF_CACHE_NAME || cache_name == Util::LFUDA_CACHE_NAME || cache_name == Util::EXTENDED_LRUK_CACHE_NAME || cache_name == Util::EXTENDED_GDSIZE_CACHE_NAME || cache_name == Util::EXTENDED_GDSF_CACHE_NAME || cache_name == Util::EXTENDED_LFUDA_CACHE_NAME) // Greedy dual
         {
             local_cache_ptr = new GreedyDualLocalCache(edge_wrapper_ptr, cache_name, edge_idx, capacity_bytes);
         }
-        else if (cache_name == Util::LFU_CACHE_NAME)
+        else if (cache_name == Util::LFU_CACHE_NAME || cache_name == Util::EXTENDED_LFU_CACHE_NAME)
         {
             local_cache_ptr = new LfuLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
         }
-        else if (cache_name == Util::LHD_CACHE_NAME)
+        else if (cache_name == Util::LHD_CACHE_NAME || cache_name == Util::EXTENDED_LHD_CACHE_NAME)
         {
             local_cache_ptr = new LhdLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
         }
-        else if (cache_name == Util::LRB_CACHE_NAME)
+        else if (cache_name == Util::LRB_CACHE_NAME || cache_name == Util::EXTENDED_LRB_CACHE_NAME)
         {
             local_cache_ptr = new LrbLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
         }
-        else if (cache_name == Util::LRU_CACHE_NAME)
+        else if (cache_name == Util::LRU_CACHE_NAME || cache_name == Util::EXTENDED_LRU_CACHE_NAME)
         {
             local_cache_ptr = new LruLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
         }
-        else if (cache_name == Util::S3FIFO_CACHE_NAME)
+        else if (cache_name == Util::S3FIFO_CACHE_NAME || cache_name == Util::EXTENDED_S3FIFO_CACHE_NAME)
         {
             local_cache_ptr = new S3fifoLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
         }
-        else if (cache_name == Util::SEGCACHE_CACHE_NAME)
+        else if (cache_name == Util::SEGCACHE_CACHE_NAME || cache_name == Util::EXTENDED_SEGCACHE_CACHE_NAME)
         {
             local_cache_ptr = new SegcacheLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
         }
-        else if (cache_name == Util::SIEVE_CACHE_NAME)
+        else if (cache_name == Util::SIEVE_CACHE_NAME || cache_name == Util::EXTENDED_SIEVE_CACHE_NAME)
         {
             local_cache_ptr = new SieveLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
         }
-        else if (cache_name == Util::SLRU_CACHE_NAME)
+        else if (cache_name == Util::SLRU_CACHE_NAME || cache_name == Util::EXTENDED_SLRU_CACHE_NAME)
         {
             local_cache_ptr = new SlruLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
         }
-        else if (cache_name == Util::WTINYLFU_CACHE_NAME)
+        else if (cache_name == Util::WTINYLFU_CACHE_NAME || cache_name == Util::EXTENDED_WTINYLFU_CACHE_NAME)
         {
             local_cache_ptr = new WTinylfuLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
         }

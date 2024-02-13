@@ -246,7 +246,8 @@ namespace covered
         Edgeset best_placement_edgeset; // Used for non-blocking placement notification if need hybrid data fetching for COVERED
         bool need_hybrid_fetching = false;
         FastPathHint fast_path_hint;
-        if (!is_local_cached_and_valid) // not local cached or invalid
+        // NOTE: disable cooperative caching for single-node caches
+        if (!Util::isSingleNodeCache(tmp_edge_wrapper_ptr->getCacheName()) && !is_local_cached_and_valid) // not local cached or invalid
         {
             struct timespec get_cooperative_cache_start_timestamp = Util::getCurrentTimespec();
 

@@ -21,19 +21,19 @@ namespace covered
         instance_name_ = oss.str();
 
         uint64_t over_provisioned_capacity_bytes = capacity_bytes + COMMON_ENGINE_INTERNAL_UNUSED_CAPACITY_BYTES; // Just avoid internal eviction yet NOT affect cooperative edge caching
-        if (cache_name == Util::GDSF_CACHE_NAME)
+        if (cache_name == Util::GDSF_CACHE_NAME || cache_name == Util::EXTENDED_GDSF_CACHE_NAME)
         {
             greedy_dual_cache_ptr_ = new GDSFCache(over_provisioned_capacity_bytes);
         }
-        else if (cache_name == Util::GDSIZE_CACHE_NAME)
+        else if (cache_name == Util::GDSIZE_CACHE_NAME || cache_name == Util::EXTENDED_GDSIZE_CACHE_NAME)
         {
             greedy_dual_cache_ptr_ = new GDSizeCache(over_provisioned_capacity_bytes);
         }
-        else if (cache_name == Util::LFUDA_CACHE_NAME)
+        else if (cache_name == Util::LFUDA_CACHE_NAME || cache_name == Util::EXTENDED_LFUDA_CACHE_NAME)
         {
             greedy_dual_cache_ptr_ = new LfuDACache(over_provisioned_capacity_bytes);
         }
-        else if (cache_name == Util::LRUK_CACHE_NAME)
+        else if (cache_name == Util::LRUK_CACHE_NAME || cache_name == Util::EXTENDED_LRUK_CACHE_NAME)
         {
             greedy_dual_cache_ptr_ = new LRUKCache(over_provisioned_capacity_bytes);
         }
