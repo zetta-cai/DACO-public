@@ -87,7 +87,7 @@ namespace covered
         static const std::string IS_TRACK_EVENT_KEYSTR;
         static const std::string LATENCY_HISTOGRAM_SIZE_KEYSTR;
         //static const std::string MIN_CAPACITY_MB_KEYSTR;
-        static const std::string OUTPUT_BASEDIR_KEYSTR;
+        static const std::string OUTPUT_DIRPATH_KEYSTR;
         static const std::string PROPAGATION_ITEM_BUFFER_SIZE_CLIENT_TOEDGE_KEYSTR;
         static const std::string PROPAGATION_ITEM_BUFFER_SIZE_EDGE_TOCLIENT_KEYSTR;
         static const std::string PROPAGATION_ITEM_BUFFER_SIZE_EDGE_TOEDGE_KEYSTR;
@@ -142,7 +142,7 @@ namespace covered
         static bool isTrackEvent();
         static uint32_t getLatencyHistogramSize();
         //static uint64_t getMinCapacityMB();
-        static std::string getOutputBasedir();
+        static std::string getOutputDirpath();
         static uint32_t getPropagationItemBufferSizeClientToedge();
         static uint32_t getPropagationItemBufferSizeEdgeToclient();
         static uint32_t getPropagationItemBufferSizeEdgeToedge();
@@ -228,7 +228,7 @@ namespace covered
         static bool is_track_event_; // Whether to track per-message events for debugging -> NOT affect evaluation results and NOT changed during evaluation
         static uint32_t latency_histogram_size_; // Size of latency histogram
         //static uint64_t min_capacity_mb_; // Size of minimum capacity in units of MiB (avoid too small cache capacity which cannot work due to large-value objects and necessary memory usage of CacheLib engine)
-        static std::string output_basedir_; // Base directory for output files
+        static std::string output_dirpath_; // Dirpath for output files
         static uint32_t propagation_item_buffer_size_client_toedge_; // Buffer size for client-to-edge propagated messages
         static uint32_t propagation_item_buffer_size_edge_toclient_; // Buffer size for edge-to-client propagated messages
         static uint32_t propagation_item_buffer_size_edge_toedge_; // Buffer size for edge-to-edge propagated messages

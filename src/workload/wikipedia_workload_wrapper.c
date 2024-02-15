@@ -1,76 +1,76 @@
-#include "workload/facebook_workload_wrapper.h"
+#include "workload/wikipedia_workload_wrapper.h"
 
 #include <memory> // std::make_unique
 #include <random> // std::mt19937_64, std::discrete_distribution
-
-#include <cachelib/cachebench/workload/KVReplayGenerator.h>
-#include <cachelib/cachebench/workload/OnlineGenerator.h>
-#include <cachelib/cachebench/workload/PieceWiseReplayGenerator.h>
+#include <unordered_set>
 
 #include "common/config.h"
 #include "common/util.h"
-#include "workload/cachebench/workload_generator.h"
 
 namespace covered
 {
-    const std::string FacebookWorkloadWrapper::kClassName("FacebookWorkloadWrapper");
+    const std::string WikipediaWorkloadWrapper::kClassName("WikipediaWorkloadWrapper");
 
-    FacebookWorkloadWrapper::FacebookWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt) : WorkloadWrapperBase(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt)
+    WikipediaWorkloadWrapper::WikipediaWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const WikipediaWorkloadExtraParam& workload_extra_param) : WorkloadWrapperBase(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt), workload_extra_param_(workload_extra_param)
     {
         // Differentiate facebook workload generator in different clients
         std::ostringstream oss;
         oss << kClassName << " client" << client_idx;
         instance_name_ = oss.str();
 
-        last_reqid_ = std::nullopt; // Not used by WorkloadGenerator for Facebook CDN trace
-
-        client_worker_item_randgen_ptrs_.resize(perclient_workercnt, NULL);
-        for (uint32_t tmp_local_client_worker_idx = 0; tmp_local_client_worker_idx < perclient_workercnt; tmp_local_client_worker_idx++)
-        {
-            uint32_t tmp_global_client_worker_idx = Util::getGlobalClientWorkerIdx(client_idx, tmp_local_client_worker_idx, perclient_workercnt);
-
-            // Each per-client worker uses worker_idx as deterministic seed to create a random generator and get different requests
-            // NOTE: we use global_client_worker_idx to randomly generate requests from workload items
-            std::mt19937_64* tmp_client_worker_item_randgen_ptr_ = new std::mt19937_64(tmp_global_client_worker_idx);
-            // (OBSOLETE: homogeneous cache access patterns is a WRONG assumption -> we should ONLY follow homogeneous workload distribution yet still with heterogeneous cache access patterns) NOTE: we use WORKLOAD_KVPAIR_GENERATION_SEED to generate requests with homogeneous cache access patterns
-            //std::mt19937_64* tmp_client_worker_item_randgen_ptr_ = new std::mt19937_64(Util::WORKLOAD_KVPAIR_GENERATION_SEED);
-            if (tmp_client_worker_item_randgen_ptr_ == NULL)
-            {
-                Util::dumpErrorMsg(instance_name_, "failed to create a random generator for requests!");
-                exit(1);
-            }
-
-            client_worker_item_randgen_ptrs_[tmp_local_client_worker_idx] = tmp_client_worker_item_randgen_ptr_;
-        }
+        dataset_kvpairs_.clear();
+        workload_key_indices_.clear();
+        workload_value_sizes_.clear();
     }
 
-    FacebookWorkloadWrapper::~FacebookWorkloadWrapper()
+    WikipediaWorkloadWrapper::~WikipediaWorkloadWrapper()
     {
-        if (op_pool_dist_ptr_ != NULL)
-        {
-            delete op_pool_dist_ptr_;
-            op_pool_dist_ptr_ = NULL;
-        }
-        workload_generator_->markFinish();
-        workload_generator_->markShutdown();
-
-        // Release random generator for each client worker
-        for (uint32_t i = 0; i < client_worker_item_randgen_ptrs_.size(); i++)
-        {
-            assert(client_worker_item_randgen_ptrs_[i] != NULL);
-            delete client_worker_item_randgen_ptrs_[i];
-            client_worker_item_randgen_ptrs_[i] = NULL;
-        }
     }
 
-    uint32_t FacebookWorkloadWrapper::getPracticalKeycnt() const
+    uint32_t WikipediaWorkloadWrapper::getPracticalKeycnt() const
     {
-        // NOTE: CacheLib CDN generator will remove redundant keys, so the number of generated key-value pairs will be slightly smaller than keycnt -> we do NOT fix CacheLib as the keycnt gap is very limited and we aim to avoid changing its workload distribution.
-        return static_cast<uint32_t>(workload_generator_->getAllKeys().size());
+        return dataset_kvpairs_.size();
     }
 
-    void FacebookWorkloadWrapper::initWorkloadParameters_()
+    void WikipediaWorkloadWrapper::initWorkloadParameters_()
     {
+        const std::string wiki_trace_type = workload_extra_param_.getWikiTraceType();
+
+        uint32_t column_cnt = 0;
+        uint32_t key_column_idx = 0;
+        uint32_t value_column_idx = 0;
+        std::vector<std::string> trace_filepaths; // NOTE: follow the trace order
+        if (wiki_trace_type == WikipediaWorkloadExtraParam::WIKI_TRACE_IMAGE_TYPE)
+        {
+            column_cnt = 5;
+            key_column_idx = 1; // 2nd column
+            value_column_idx = 3; // 4th column
+
+            // TODO: Update by Config module
+        }
+        else if (wiki_trace_type == WikipediaWorkloadExtraParam::WIKI_TRACE_TEXT_TYPE)
+        {
+            column_cnt = 4;
+            key_column_idx = 1; // 2nd column
+            value_column_idx = 2; // 3rd column
+
+            // TODO: Update by Config module
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "Wikipedia trace type " << wiki_trace_type << " is not supported now!";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+
+        const uint32_t trace_filecnt = trace_filepaths.size();
+        assert(trace_filecnt > 0);
+
+        // TODO: END HERE
+
+        // TODO: use std::unordered_set<Key> to build dataset_kvpairs_
+
         // Load workload config file for Facebook CDN trace
         CacheBenchConfig facebook_config(Config::getFacebookConfigFilepath());
         //facebook_cache_config_ = facebook_config.getCacheConfig();
@@ -105,15 +105,10 @@ namespace covered
 
     WorkloadItem FacebookWorkloadWrapper::generateWorkloadItemInternal_(const uint32_t& local_client_worker_idx)
     {
-        assert(local_client_worker_idx < client_worker_item_randgen_ptrs_.size());
-
-        std::mt19937_64* request_randgen_ptr = client_worker_item_randgen_ptrs_[local_client_worker_idx];
-        assert(request_randgen_ptr != NULL);
-
         // Must be 0 for Facebook CDN trace due to only a single operation pool (cachelib::PoolId = int8_t)
-        const uint8_t tmp_poolid = static_cast<uint8_t>((*op_pool_dist_ptr_)(*request_randgen_ptr));
+        const uint8_t tmp_poolid = static_cast<uint8_t>((*op_pool_dist_ptr_)(request_randgen));
 
-        const facebook::cachelib::cachebench::Request& tmp_facebook_req(workload_generator_->getReq(tmp_poolid, *request_randgen_ptr, last_reqid_));
+        const facebook::cachelib::cachebench::Request& tmp_facebook_req(workload_generator_->getReq(tmp_poolid, request_randgen, last_reqid_));
 
         // Convert facebook::cachelib::cachebench::Request to covered::Request
         const Key tmp_covered_key(tmp_facebook_req.key);

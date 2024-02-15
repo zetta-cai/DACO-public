@@ -50,17 +50,6 @@ namespace covered
         oss << kClassName << " client" << client_idx << "-worker" << local_client_worker_idx << "-global" << global_client_worker_idx;
         instance_name_ = oss.str();
 
-        // Each per-client worker uses worker_idx as deterministic seed to create a random generator and get different requests
-        // NOTE: we use global_client_worker_idx to randomly generate requests from workload items
-        client_worker_item_randgen_ptr_ = new std::mt19937_64(global_client_worker_idx);
-        // (OBSOLETE: homogeneous cache access patterns is a WRONG assumption -> we should ONLY follow homogeneous workload distribution yet still with heterogeneous cache access patterns) NOTE: we use WORKLOAD_KVPAIR_GENERATION_SEED to generate requests with homogeneous cache access patterns
-        //client_worker_item_randgen_ptr_ = new std::mt19937_64(Util::WORKLOAD_KVPAIR_GENERATION_SEED);
-        if (client_worker_item_randgen_ptr_ == NULL)
-        {
-            Util::dumpErrorMsg(instance_name_, "failed to create a random generator for requests!");
-            exit(1);
-        }
-
         // For sending local requests
 
         // Get closest edge network address to send local requests
@@ -87,11 +76,6 @@ namespace covered
     {
         // NOTE: no need to delete client_worker_param_ptr_, as it is maintained outside ClientWorkerWrapper
 
-        // Release random generator
-        assert(client_worker_item_randgen_ptr_ != NULL);
-        delete client_worker_item_randgen_ptr_;
-        client_worker_item_randgen_ptr_ = NULL;
-
         // Release socket server
         assert(client_worker_recvrsp_socket_server_ptr_ != NULL);
         delete client_worker_recvrsp_socket_server_ptr_;
@@ -102,6 +86,7 @@ namespace covered
     {
         checkPointers_();
         ClientWrapper* tmp_client_wrapper_ptr = client_worker_param_ptr_->getClientWrapperPtr();
+        const uint32_t local_client_worker_idx = client_worker_param_ptr_->getLocalClientWorkerIdx();
         
         WorkloadWrapperBase* workload_generator_ptr = tmp_client_wrapper_ptr->getWorkloadWrapperPtr();
 
@@ -118,7 +103,7 @@ namespace covered
             bool is_stresstest_phase = !is_warmup_phase;
 
             // Generate key-value request based on a specific workload
-            WorkloadItem workload_item = workload_generator_ptr->generateWorkloadItem(*client_worker_item_randgen_ptr_);
+            WorkloadItem workload_item = workload_generator_ptr->generateWorkloadItem(local_client_worker_idx);
 
             // TMPDEBUG (50% PUT)
             // if (tmp_i % 2 == 0)
@@ -364,7 +349,6 @@ namespace covered
     void ClientWorkerWrapper::checkPointers_() const
     {
         assert(client_worker_param_ptr_ != NULL);
-        assert(client_worker_item_randgen_ptr_ != NULL);
         assert(client_worker_recvrsp_socket_server_ptr_ != NULL);
 
         return;

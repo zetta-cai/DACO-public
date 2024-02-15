@@ -30,6 +30,8 @@ namespace covered
 
     // Workload name
     const std::string Util::FACEBOOK_WORKLOAD_NAME("facebook");
+    const std::string Util::WIKIPEDIA_IMAGE_WORKLOAD_NAME("wikiimage");
+    const std::string Util::WIKIPEDIA_TEXT_WORKLOAD_NAME("wikitext");
 
     // Cloud storage
     const std::string Util::HDD_NAME = "hdd";
@@ -894,7 +896,7 @@ namespace covered
         assert(evaluator_cli_ptr != NULL);
 
         std::ostringstream oss;
-        oss << Config::getOutputBasedir() << "/" << getInfixForEvaluatorStatisticsFilepath_(evaluator_cli_ptr);
+        oss << Config::getOutputDirpath() << "/" << getInfixForEvaluatorStatisticsFilepath_(evaluator_cli_ptr);
         std::string client_statistics_dirpath = oss.str();
         return client_statistics_dirpath;
     }

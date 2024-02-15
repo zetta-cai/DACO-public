@@ -126,7 +126,7 @@ namespace covered
 
     void WorkloadCLI::checkWorkloadName_() const
     {
-        if (workload_name_ != Util::FACEBOOK_WORKLOAD_NAME)
+        if (workload_name_ != Util::FACEBOOK_WORKLOAD_NAME || workload_name_ != Util::WIKIPEDIA_IMAGE_WORKLOAD_NAME || workload_name_ != Util::WIKIPEDIA_TEXT_WORKLOAD_NAME)
         {
             std::ostringstream oss;
             oss << "workload name " << workload_name_ << " is not supported!";

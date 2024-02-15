@@ -34,7 +34,7 @@
     "latency_histogram_size": 1000000,
     "library_dirpath": "lib",
     "library_dirpath_relative_facebook_config_filepath": "CacheLib/cachelib/cachebench/test_configs/hit_ratio/cdn/config.json",
-    "output_basedir": "output",
+    "output_dirpath": "output",
     "propagation_item_buffer_size_client_toedge": 1000,
     "propagation_item_buffer_size_edge_toclient": 1000,
     "propagation_item_buffer_size_edge_toedge": 1000,

@@ -104,6 +104,7 @@ void WorkloadGenerator::generateKeys() {
     std::uniform_int_distribution<char> charDis('a', 'z');
     //std::mt19937_64 gen(folly::Random::rand64());
     // Siyuan: use Util::DATASET_KVPAIR_GENERATION_SEED as the deterministic seed to ensure that multiple clients generate the same set of key-value pairs
+    assert(local_thread_idx == 0); // Siyuan: local_thread_idx MUST be 0
     std::mt19937_64 gen(Util::DATASET_KVPAIR_GENERATION_SEED + local_thread_idx);
     for (uint64_t i = start; i < end; i++) {
       size_t keySize =
@@ -124,8 +125,12 @@ void WorkloadGenerator::generateKeys() {
     size_t numKeysForPool =
         firstKeyIndexForPool_[i + 1] - firstKeyIndexForPool_[i];
     totalKeys += numKeysForPool;
+    // Siyuan: use 1 thread to generate dataset keys to avoid perclient_workercnt/dataset_loadercnt affecting dataset
+    size_t tmp_num_threads = 1;
     keyGenDuration += covered::executeParallel(
-        fn, config_.numThreads, numKeysForPool, firstKeyIndexForPool_[i]);
+        fn, tmp_num_threads, numKeysForPool, firstKeyIndexForPool_[i]);
+    //keyGenDuration += covered::executeParallel(
+    //    fn, config_.numThreads, numKeysForPool, firstKeyIndexForPool_[i]);
   }
 
   auto startTime = std::chrono::steady_clock::now();
@@ -264,12 +269,16 @@ void WorkloadGenerator::generateKeyDistributions() {
         0, facebook::cachelib::util::narrow_cast<uint32_t>(numOpsForPool) - 1));
     keyIndicesForPool_.push_back(std::vector<uint32_t>(numOpsForPool));
 
+    // Siyuan: use 1 thread to generate workload indices to avoid perclient_workercnt/dataset_loadercnt affecting workloads
+    size_t tmp_num_threads = 1;
     duration += covered::executeParallel(
         [&, this](size_t start, size_t end, size_t local_thread_idx) {
           //std::mt19937_64 gen(folly::Random::rand64());
           // Siyuan: use global_thread_idx as the deterministic seed to ensure that multiple clients generate different sets of requests/workload-items
-          // Siyuan: we need this->config_.numThreads + 1, as Parallel may create an extra thread to generate remaining requests
-          uint32_t global_thread_idx = this->client_idx_ * (this->config_.numThreads + 1) + local_thread_idx;
+          // (OBSOLETE) Siyuan: we need this->config_.numThreads + 1, as Parallel may create an extra thread to generate remaining requests
+          //uint32_t global_thread_idx = this->client_idx_ * (this->config_.numThreads + 1) + local_thread_idx;
+          assert(local_thread_idx == 0); // Siyuan: local_thread_idx MUST be 0
+          uint32_t global_thread_idx = this->client_idx_ + local_thread_idx;
           // (OBSOLETE: homogeneous cache access patterns is a WRONG assumption -> we should ONLY follow homogeneous workload distribution yet still with heterogeneous cache access patterns) NOTE: we use WORKLOAD_KVPAIR_GENERATION_SEED to generate workload items with homogeneous cache access patterns
           //uint32_t global_thread_idx = Util::WORKLOAD_KVPAIR_GENERATION_SEED + local_thread_idx;
           std::mt19937_64 gen(global_thread_idx);
@@ -279,7 +288,8 @@ void WorkloadGenerator::generateKeyDistributions() {
                 facebook::cachelib::util::narrow_cast<uint32_t>((*popDist)(gen));
           }
         },
-        config_.numThreads, numOpsForPool);
+        tmp_num_threads, numOpsForPool);
+        //config_.numThreads, numOpsForPool);
   }
 
   // Siyuan: disable unnecessary outputs

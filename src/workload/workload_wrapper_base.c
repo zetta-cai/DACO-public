@@ -5,6 +5,7 @@
 
 #include "common/util.h"
 #include "workload/facebook_workload_wrapper.h"
+#include "workload/wikipedia_workload_wrapper.h"
 
 namespace covered
 {
@@ -16,6 +17,16 @@ namespace covered
         if (workload_name == Util::FACEBOOK_WORKLOAD_NAME)
         {
             workload_ptr = new FacebookWorkloadWrapper(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt);
+        }
+        else if (workload_name == Util::WIKIPEDIA_IMAGE_WORKLOAD_NAME)
+        {
+            WikipediaWorkloadExtraParam tmp_param(Util::WIKIPEDIA_IMAGE_WORKLOAD_NAME);
+            workload_ptr = new WikipediaWorkloadWrapper(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, tmp_param);
+        }
+        else if (workload_name == Util::WIKIPEDIA_TEXT_WORKLOAD_NAME)
+        {
+            WikipediaWorkloadExtraParam tmp_param(Util::WIKIPEDIA_TEXT_WORKLOAD_NAME);
+            workload_ptr = new WikipediaWorkloadWrapper(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, tmp_param);
         }
         else
         {
@@ -65,6 +76,10 @@ namespace covered
     {
         if (!is_valid_)
         {
+            std::ostringstream oss;
+            oss << "validate workload wrapper...";
+            Util::dumpNormalMsg(base_instance_name_, oss.str());
+
             initWorkloadParameters_();
             overwriteWorkloadParameters_();
             createWorkloadGenerator_();
@@ -78,10 +93,10 @@ namespace covered
         return;
     }
 
-    WorkloadItem WorkloadWrapperBase::generateWorkloadItem(std::mt19937_64& request_randgen)
+    WorkloadItem WorkloadWrapperBase::generateWorkloadItem(const uint32_t& local_client_worker_idx)
     {
         checkIsValid_();
-        return generateWorkloadItemInternal_(request_randgen);
+        return generateWorkloadItemInternal_(local_client_worker_idx);
     }
 
     WorkloadItem WorkloadWrapperBase::getDatasetItem(const uint32_t itemidx)

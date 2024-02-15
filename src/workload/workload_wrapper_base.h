@@ -10,7 +10,6 @@
 #ifndef WORKLOAD_WRAPPER_BASE_H
 #define WORKLOAD_WRAPPER_BASE_H
 
-#include <random> // std::mt19937_64
 #include <string>
 
 #include "workload/workload_item.h"
@@ -28,7 +27,7 @@ namespace covered
 
         void validate(); // Provide individual validate() as contructor cannot invoke virtual functions
 
-        WorkloadItem generateWorkloadItem(std::mt19937_64& request_randgen);
+        WorkloadItem generateWorkloadItem(const uint32_t& local_client_worker_idx);
 
         virtual uint32_t getPracticalKeycnt() const = 0;
         WorkloadItem getDatasetItem(const uint32_t itemidx);
@@ -48,7 +47,7 @@ namespace covered
         virtual void createWorkloadGenerator_() = 0; // create workload generator based on overwritten workload parameters
 
         // NOTE: randomly select an item without modifying any variable -> thread safe
-        virtual WorkloadItem generateWorkloadItemInternal_(std::mt19937_64& request_randgen) = 0;
+        virtual WorkloadItem generateWorkloadItemInternal_(const uint32_t& local_client_worker_idx) = 0;
 
         // Get a dataset key-value pair item with the index of itemidx
         virtual WorkloadItem getDatasetItemInternal_(const uint32_t itemidx) = 0;

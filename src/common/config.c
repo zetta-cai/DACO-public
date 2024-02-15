@@ -106,7 +106,7 @@ namespace covered
     const std::string Config::IS_TRACK_EVENT_KEYSTR("is_track_event");
     const std::string Config::LATENCY_HISTOGRAM_SIZE_KEYSTR("latency_histogram_size");
     //const std::string Config::MIN_CAPACITY_MB_KEYSTR("min_capacity_mb"); // <"min_capacity_mb": 10,> in config.json
-    const std::string Config::OUTPUT_BASEDIR_KEYSTR("output_basedir");
+    const std::string Config::OUTPUT_DIRPATH_KEYSTR("output_dirpath");
     const std::string Config::PROPAGATION_ITEM_BUFFER_SIZE_CLIENT_TOEDGE_KEYSTR("propagation_item_buffer_size_client_toedge");
     const std::string Config::PROPAGATION_ITEM_BUFFER_SIZE_EDGE_TOCLIENT_KEYSTR("propagation_item_buffer_size_edge_toclient");
     const std::string Config::PROPAGATION_ITEM_BUFFER_SIZE_EDGE_TOEDGE_KEYSTR("propagation_item_buffer_size_edge_toedge");
@@ -162,7 +162,7 @@ namespace covered
     bool Config::is_track_event_ = false;
     uint32_t Config::latency_histogram_size_ = 1000000; // Track latency up to 1000 ms
     //uint64_t Config::min_capacity_mb_ = 10;
-    std::string Config::output_basedir_("output");
+    std::string Config::output_dirpath_("output");
     uint32_t Config::propagation_item_buffer_size_client_toedge_ = 1000;
     uint32_t Config::propagation_item_buffer_size_edge_toclient_ = 1000;
     uint32_t Config::propagation_item_buffer_size_edge_toedge_ = 1000;
@@ -355,10 +355,10 @@ namespace covered
                 //     int64_t tmp_capacity = kv_ptr->value().get_int64();
                 //     min_capacity_mb_ = static_cast<uint64_t>(tmp_capacity);
                 // }
-                kv_ptr = find_(OUTPUT_BASEDIR_KEYSTR);
+                kv_ptr = find_(OUTPUT_DIRPATH_KEYSTR);
                 if (kv_ptr != NULL)
                 {
-                    output_basedir_ = std::string(kv_ptr->value().get_string().c_str());
+                    output_dirpath_ = std::string(kv_ptr->value().get_string().c_str());
                 }
                 kv_ptr = find_(PROPAGATION_ITEM_BUFFER_SIZE_CLIENT_TOEDGE_KEYSTR);
                 if (kv_ptr != NULL)
@@ -755,10 +755,10 @@ namespace covered
     //     return min_capacity_mb_;
     // }
 
-    std::string Config::getOutputBasedir()
+    std::string Config::getOutputDirpath()
     {
         checkIsValid_();
-        return output_basedir_;
+        return output_dirpath_;
     }
 
     uint32_t Config::getPropagationItemBufferSizeClientToedge()
@@ -982,7 +982,7 @@ namespace covered
         oss << "Evaluator physical machine index:" << evaluator_machine_idx_ << std::endl;
         oss << "Evaluator recvmsg port: " << evaluator_recvmsg_port_ << std::endl;
         oss << "Third-party library dirpath: " << library_dirpath_ << std::endl;
-        oss << "Facebook config filepath: " << facebook_config_filepath_ << std::endl;
+        oss << "Facebook config filepath (relative to library dirpath): " << facebook_config_filepath_ << std::endl;
         oss << "Fine-grained locking size: " << fine_grained_locking_size_ << std::endl;
         oss << "Is assert: " << (is_assert_?"true":"false") << std::endl;
         oss << "Is debug: " << (is_debug_?"true":"false") << std::endl;
@@ -991,7 +991,7 @@ namespace covered
         oss << "Is track event: " << (is_track_event_?"true":"false") << std::endl;
         oss << "Latency histogram size: " << latency_histogram_size_ << std::endl;
         //oss << "Min capacity MiB: " << min_capacity_mb_ << std::endl;
-        oss << "Output base directory: " << output_basedir_ << std::endl;
+        oss << "Output dirpath: " << output_dirpath_ << std::endl;
         oss << "Propagation item buffer size from client to edge: " << propagation_item_buffer_size_client_toedge_ << std::endl;
         oss << "Propagation item buffer size from edge to client: " << propagation_item_buffer_size_edge_toclient_ << std::endl;
         oss << "Propagation item buffer size from edge to edge: " << propagation_item_buffer_size_edge_toedge_ << std::endl;

@@ -1,7 +1,12 @@
 /*
- * FacebookWorkloadWrapper: encapsulate the config parser and workload generator in cachebench for Facebook CDN trace (https://cachelib.org/docs/Cache_Library_User_Guides/Cachebench_Overview/) (thread safe).
- *
- * NOTE: see notes on source code of cachelib in docs/cachebench.md.
+ * FacebookWorkloadWrapper: encapsulate the config parser and workload generator in cachebench for Facebook/Meta CDN trace (https://cachelib.org/docs/Cache_Library_User_Guides/Cachebench_Overview/) (thread safe).
+ * 
+ * NOTE: CacheBench generates workload items by the following random seeds.
+ * -> We use Util::DATASET_KVPAIR_GENERATION_SEED as deterministic seed to generate the same key-value pairs (i.e., dataset) for all clients.
+ * -> We use client index as deterministic seed to generate different items (i.e., workloads) for all clients, yet with the same items for all workers of a specific client.
+ * -> We use global worker index as deterministic seed to choose the same items for all running times of a specific worker.
+ * 
+ * NOTE: see more notes on source code of cachelib in docs/cachebench.md.
  * 
  * By Siyuan Sheng (2023.04.19).
  */
@@ -28,7 +33,7 @@ namespace covered
         FacebookWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt);
         virtual ~FacebookWorkloadWrapper();
 
-        virtual uint32_t getPracticalKeycnt() const;
+        virtual uint32_t getPracticalKeycnt() const override;
 
         // Get average/min/max dataset key/value size
         virtual double getAvgDatasetKeysize() const override;
@@ -45,7 +50,7 @@ namespace covered
         virtual void createWorkloadGenerator_() override;
 
         // NOTE: randomly select an item without modifying any variable -> thread safe
-        virtual WorkloadItem generateWorkloadItemInternal_(std::mt19937_64& request_randgen) override;
+        virtual WorkloadItem generateWorkloadItemInternal_(const uint32_t& local_client_worker_idx) override;
 
         // Get a dataset key-value pair item with the index of itemidx
         virtual WorkloadItem getDatasetItemInternal_(const uint32_t itemidx) override;
@@ -63,6 +68,7 @@ namespace covered
         //facebook::cachelib::cachebench::CacheConfig facebook_cache_config_;
         StressorConfig facebook_stressor_config_;
         std::unique_ptr<covered::GeneratorBase> workload_generator_;
+        std::vector<std::mt19937_64*> client_worker_item_randgen_ptrs_;
     };
 }
 
