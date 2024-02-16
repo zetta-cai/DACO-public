@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <chrono> // system_clock
 #include <errno.h> // ENOENT, errno
-#include <fcntl.h> // open
+#include <fcntl.h> // open, close
 #include <math.h> // isnan and isinf
 #include <sstream> // ostringstream
 #include <cmath> // pow
@@ -120,7 +120,9 @@ namespace covered
     std::uniform_int_distribution<uint32_t> Util::string_randdist_(0, CHARSET.size() - 1); // Range of [0, CHARSET.size() - 1]
 
     // I/O
-    const uint32_t Util::MAX_MMAP_UNIT_MB = 1024; // 1GB
+    const uint32_t Util::MAX_MMAP_BLOCK_SIZE = GB2B(1); // 1GB
+    const int Util::LINE_SEP_CHAR = '\n';
+    const int Util::TSV_SEP_CHAR = '\t';
 
     const std::string Util::kClassName("Util");
 
@@ -331,7 +333,20 @@ namespace covered
             exit(1);
         }
 
-        return tmp_fd;
+        return tmp_fd; // Close outside Util
+    }
+
+    void Util::closeFile(const int& fd)
+    {
+        int result = close(fd);
+        if (result < 0)
+        {
+            std::ostringstream oss;
+            oss << "failed to close the file descriptor " << fd << " (errno: " << errno << ") !";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+        return;
     }
 
     // (2) Time measurement

@@ -1,7 +1,10 @@
 #include "workload/wikipedia_workload_wrapper.h"
 
+#include <stdlib.h> // strtoll
+#include <string.h> // strchr
+#include <sys/mman.h> // mmap and munmap
 #include <unistd.h> // lseek
-#include <unordered_set>
+#include <unordered_map>
 
 #include "common/config.h"
 #include "common/util.h"
@@ -70,8 +73,8 @@ namespace covered
         oss << "load Wikipedia trace " << wiki_trace_type << " files...";
         Util::dumpNormalMsg(instance_name_, oss.str());
         
-        std::unordered_set<Key> dataset_keyset; // Check if key has been tracked by dataset_kvpairs_
-        for (uint32_t tmp_fileidx = 0; tmp_fileidx < trace_filecnt; tmp_fileidx++)
+        std::unordered_map<Key, Value, KeyHasher> dataset_kvmap; // Check if key has been tracked by dataset_kvpairs_ and compare with the original value size
+        for (uint32_t tmp_fileidx = 0; tmp_fileidx < trace_filecnt; tmp_fileidx++) // For each trace file
         {
             const std::string tmp_filepath = trace_filepaths[tmp_fileidx];
 
@@ -89,19 +92,160 @@ namespace covered
 
             // Get file length
             int tmp_fd = Util::openFile(tmp_filepath, O_RDONLY);
-            int tmp_filelen = lseek(tmp_fd, 0, SEEK_END);
+            int64_t tmp_filelen = lseek(tmp_fd, 0, SEEK_END);
             assert(tmp_filelen > 0);
 
-            // TODO: Build memory mapping
-        }
+            // Process the current trace file
+            uint32_t mmap_block_cnt = (tmp_filelen - 1) / Util::MAX_MMAP_BLOCK_SIZE + 1;
+            assert(mmap_block_cnt > 0);
+            char* prev_block_taildata = NULL;
+            int64_t prev_block_tailsize = 0;
+            for (uint32_t tmp_mmap_block_idx = 0; tmp_mmap_block_idx < mmap_block_cnt; tmp_mmap_block_idx++) // For each mmap block in the current trace file
+            {
+                // Calculate current mmap block size
+                int64_t inclusive_start_fileoff = tmp_mmap_block_idx * Util::MAX_MMAP_BLOCK_SIZE;
+                int64_t exclusive_end_fileoff = (tmp_mmap_block_idx == mmap_block_cnt - 1) ? tmp_filelen : (tmp_mmap_block_idx + 1) * Util::MAX_MMAP_BLOCK_SIZE;
+                int64_t tmp_mmap_block_size = exclusive_end_fileoff - inclusive_start_fileoff;
 
-        // Load workload config file for Facebook CDN trace
-        CacheBenchConfig facebook_config(Config::getFacebookConfigFilepath());
-        //facebook_cache_config_ = facebook_config.getCacheConfig();
-        facebook_stressor_config_ = facebook_config.getStressorConfig();
+                // Perform memory mapping
+                char* tmp_block_buffer = (char*) mmap(NULL, tmp_mmap_block_size, PROT_READ, MAP_PRIVATE, tmp_fd, inclusive_start_fileoff);
+                assert(tmp_block_buffer != NULL);
+
+                // Parse the current mmap block in TSV format
+                char* tmp_line_startpos = tmp_block_buffer;
+                char* tmp_block_buffer_endpos = tmp_block_buffer + tmp_mmap_block_size - 1;
+                while (tmp_line_startpos <= tmp_block_buffer_endpos) // For lines in the current mmap block of the current trace file
+                {
+                    // Find the end of the current line
+                    char* tmp_line_endpos = strchr(tmp_line_startpos, Util::LINE_SEP_CHAR);
+                    if (tmp_line_endpos == NULL) // Remaining tail data is NOT a complete line
+                    {
+                        // Save the tail data
+                        assert(tmp_line_startpos <= tmp_block_buffer_endpos);
+                        prev_block_tailsize = tmp_block_buffer_endpos - tmp_line_startpos + 1;
+                        prev_block_taildata = (char*) malloc(prev_block_tailsize);
+                        assert(prev_block_taildata != NULL);
+                        memcpy(prev_block_taildata, tmp_line_startpos, prev_block_tailsize);
+
+                        break; // Switch to the next mmap block of the current trace file
+                    }
+
+                    // Concatenate the tail data of the previous mmap block if any
+                    assert(tmp_line_startpos != NULL);
+                    char* tmp_concat_line_startpos = tmp_line_startpos;
+                    char* tmp_concat_line_endpos = tmp_line_endpos;
+                    if (prev_block_tailsize > 0)
+                    {
+                        assert(prev_block_taildata != NULL);
+
+                        uint32_t tmp_concat_line_size = prev_block_tailsize + tmp_line_endpos - tmp_line_startpos + 1;
+                        tmp_concat_line_startpos = (char*) malloc(tmp_concat_line_size);
+                        assert(tmp_concat_line_startpos != NULL);
+                        memcpy(tmp_concat_line_startpos, prev_block_taildata, prev_block_tailsize); // Tail data of prev mmap block
+                        memcpy(tmp_concat_line_startpos + prev_block_tailsize, tmp_line_startpos, tmp_line_endpos - tmp_line_startpos + 1); // Current line of current mmap block
+                        tmp_concat_line_endpos = tmp_concat_line_startpos + tmp_concat_line_size - 1;
+                    }
+
+                    // Process the current line
+                    char* tmp_column_startpos = tmp_concat_line_startpos;
+                    Key tmp_key;
+                    Value tmp_value;
+                    for (uint32_t tmp_column_idx = 0; tmp_column_idx < column_cnt; tmp_column_idx++) // For each column in the current line of current mmap block of the current trace file
+                    {
+                        assert(tmp_column_startpos <= tmp_concat_line_endpos);
+
+                        // Find the end of the current column
+                        char* tmp_column_endpos = tmp_concat_line_endpos;
+                        if (tmp_column_idx != column_cnt - 1)
+                        {
+                            tmp_column_endpos = strchr(tmp_column_startpos, Util::TSV_SEP_CHAR);
+                            assert(tmp_column_endpos != NULL);
+                        }
+
+                        assert(tmp_column_endpos > tmp_column_startpos); // Column MUST NOT empty except the column separator
+                        if (tmp_column_idx == key_column_idx)
+                        {
+                            char* tmp_key_endptr = NULL;
+                            int64_t tmp_keyint = strtoll(tmp_column_startpos, &tmp_key_endptr, 10);
+                            assert(tmp_key_endptr == tmp_column_endpos); // The first invalid char MUST be the column separator
+                            tmp_key = Key(std::string((const char*)&tmp_keyint, sizeof(int64_t)));
+                        }
+                        else if (tmp_column_idx == value_column_idx)
+                        {
+                            char* tmp_value_endptr = NULL;
+                            int tmp_valuesize = strtol(tmp_column_startpos, &tmp_value_endptr, 10);
+                            assert(tmp_value_endptr == tmp_column_endpos); // The first invalid char MUST be the column separator
+                            tmp_value = Value(tmp_valuesize);
+                        }
+                        else
+                        {
+                            // Do nothing
+                        }
+
+                        // Switch to the next column
+                        tmp_column_startpos = tmp_column_endpos + 1;
+                    } // End of columns in the current line of the current mmap block of the current trace file
+
+                    // Update dataset and workload if necessary
+                    std::unordered_map<Key, Value, KeyHasher>::iterator tmp_dataset_kvmap_iter = dataset_kvmap.find(tmp_key);
+                    if (tmp_dataset_kvmap_iter == dataset_kvmap.end()) // The first request on the key
+                    {
+                        dataset_kvmap.insert(std::pair(tmp_key, tmp_value));
+
+                        dataset_kvpairs_.push_back(std::pair(tmp_key, tmp_value));
+                        workload_key_indices_.push_back(dataset_kvpairs_.size() - 1);
+                        workload_value_sizes_.push_back(-1); // Treat the first request as read request, as stresstest phase is after dataset loading phase
+                    }
+                    else // Subsequent requests on the key
+                    {
+                        if (tmp_value.getValuesize() == tmp_dataset_kvmap_iter->second.getValuesize())
+                        {
+                            workload_value_sizes_.push_back(-1); // Read request
+                        }
+                        else
+                        {
+                            workload_value_sizes_.push_back(tmp_value.getValuesize()); // Write request (put or delete)
+                        }
+                    }
+
+                    // Release concatenated line if necessary
+                    if (prev_block_tailsize > 0)
+                    {
+                        // Release tail data allocated for prev mmap block
+                        assert(prev_block_taildata != NULL);
+                        free(prev_block_taildata);
+                        prev_block_taildata = NULL;
+                        prev_block_tailsize = 0;
+
+                        // Release concatenated line allocated for current mmap block
+                        assert(tmp_concat_line_startpos != NULL);
+                        free(tmp_concat_line_startpos);
+                        tmp_concat_line_startpos = NULL;
+                    }
+
+                    // Switch to the next line
+                    tmp_line_startpos = tmp_line_startpos + 1;
+                } // End of lines of the current mmap block in the current trace file
+
+                // Release memory mapping
+                munmap(tmp_block_buffer, tmp_mmap_block_size);
+
+                // NOTE: the last mmap block of the current trace file MUST NOT have tail data
+                if (tmp_mmap_block_idx == mmap_block_cnt - 1)
+                {
+                    assert(prev_block_tailsize == 0);
+                    assert(prev_block_taildata == NULL);
+                }
+            } // End of mmap blocks of the current trace file
+
+            // Close file
+            Util::closeFile(tmp_fd);
+        } // End of trace files
+
         return;
     }
 
+    // TODO: END HERE
     void FacebookWorkloadWrapper::overwriteWorkloadParameters_()
     {
         assert(clientcnt_ > 0);

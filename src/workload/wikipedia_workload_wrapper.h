@@ -48,6 +48,9 @@ namespace covered
         // Get a dataset key-value pair item with the index of itemidx
         virtual WorkloadItem getDatasetItemInternal_(const uint32_t itemidx) override;
 
+        // Wiki-specific helper functions
+        // TODO: END HERE
+
         // Const shared variables
         std::string instance_name_;
         const WikipediaWorkloadExtraParam workload_extra_param_;
@@ -56,6 +59,9 @@ namespace covered
         std::vector<Key, Value> dataset_kvpairs_; // Key-value pairs of dataset
         std::vector<uint32_t> workload_key_indices_; // Key indices of workload
         std::vector<int> workload_value_sizes_; // Value sizes of workload (< 0: read; = 0: delete; > 0: write)
+
+        // Non-const individual variables
+        // TODO: Track per-clientworker workload index
     };
 }
 

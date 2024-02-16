@@ -163,7 +163,9 @@ namespace covered
         static const std::string CHARSET;
 
         // I/O
-        static const uint32_t MAX_MMAP_UNIT_MB; // Maximum mmap unit size (in units of MiB)
+        static const int64_t MAX_MMAP_BLOCK_SIZE; // Maximum mmap block size (in units of bytes)
+        static const int LINE_SEP_CHAR; // Line separator character
+        static const int TSV_SEP_CHAR; // Tab-separated value separator character
 
         // (0) Cache names
 
@@ -188,6 +190,7 @@ namespace covered
         // NOTE: no confliction as each file (statistics or RocksDB) is accessed by a unique thread (client or cloud)
         static std::fstream* openFile(const std::string& filepath, std::ios_base::openmode mode);
         static int openFile(const std::string& filepath, const int& flags);
+        static void closeFile(const int& fd);
         static std::string getParentDirpath(const std::string& filepath);
         static std::string getFilenameFromFilepath(const std::string& filepath);
 
