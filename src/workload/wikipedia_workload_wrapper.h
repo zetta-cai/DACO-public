@@ -49,19 +49,29 @@ namespace covered
         virtual WorkloadItem getDatasetItemInternal_(const uint32_t itemidx) override;
 
         // Wiki-specific helper functions
-        // TODO: END HERE
+        void parseCurrentFile_(const std::string& tmp_filepath, const uint32_t& key_column_idx, const uint32_t& value_column_idx, const uint32_t& column_cnt, std::unordered_map<Key, Value, KeyHasher>& dataset_kvmap); // Process the current trace file
+        void completeLastLine_(const char* tmp_line_startpos, const char* tmp_line_endpos, char** tmp_complete_line_startpos_ptr, char** tmp_complete_line_endpos_ptr) const; // Complete the last line of a trace file by an extra line separator
+        void concatenateLastLine_(const char* prev_block_taildata, const uint32_t& prev_block_tailsize, const char* tmp_complete_line_startpos, const char* tmp_complete_line_endpos, char** tmp_concat_line_startpos_ptr, char** tmp_concat_line_endpos_ptr) const; // Concatenate tail data of the previous mmap block with the first complete line of the current mmap block
+        void parseCurrentLine_(const char* tmp_concat_line_startpos, const char* tmp_concat_line_endpos, const uint32_t& key_column_idx, const uint32_t& value_column_idx, const uint32_t& column_cnt, Key& key, Value& value) const; // Parse a line to get key and value
+        void updateDatasetAndWorkload_(const Key& key, const Value& value, std::unordered_map<Key, Value, KeyHasher>& dataset_kvmap); // Update dataset and workload with the key-value pair
 
         // Const shared variables
         std::string instance_name_;
         const WikipediaWorkloadExtraParam workload_extra_param_;
 
         // Const shared variables
+        double average_dataset_keysize_; // Average dataset key size
+        double average_dataset_valuesize_; // Average dataset value size
+        uint32_t min_dataset_keysize_; // Minimum dataset key size
+        uint32_t min_dataset_valuesize_; // Minimum dataset value size
+        uint32_t max_dataset_keysize_; // Maximum dataset key size
+        uint32_t max_dataset_valuesize_; // Maximum dataset value size
         std::vector<Key, Value> dataset_kvpairs_; // Key-value pairs of dataset
         std::vector<uint32_t> workload_key_indices_; // Key indices of workload
         std::vector<int> workload_value_sizes_; // Value sizes of workload (< 0: read; = 0: delete; > 0: write)
 
         // Non-const individual variables
-        // TODO: Track per-clientworker workload index
+        std::vector<uint32_t> per_client_worker_workload_idx_; // Track per-clientworker workload index
     };
 }
 
