@@ -2,7 +2,8 @@
 
 #include <assert.h>
 #include <chrono> // system_clock
-#include <errno.h> // ENOENT
+#include <errno.h> // ENOENT, errno
+#include <fcntl.h> // open
 #include <math.h> // isnan and isinf
 #include <sstream> // ostringstream
 #include <cmath> // pow
@@ -88,21 +89,26 @@ namespace covered
     const int64_t Util::MAX_UINT16 = 65536;
     const int64_t Util::MAX_UINT32 = 4294967296;
     const double Util::DOUBLE_IOTA = 0.1;
+
     // Network
     const std::string Util::ANY_IPSTR("0.0.0.0");
     const uint32_t Util::UDP_MAX_PKT_PAYLOAD = 65507; // 65535(ipmax) - 20(iphdr) - 8(udphdr)
     const uint32_t Util::UDP_FRAGHDR_SIZE = 5 * sizeof(uint32_t) + sizeof(uint16_t); // 4(fragment_idx) + 4(fragment_cnt) + 4(msg_payload_size) + 4(msg_seqnum) + 4(source_ip) + 2(source_port)
     const uint32_t Util::UDP_MAX_FRAG_PAYLOAD = Util::UDP_MAX_PKT_PAYLOAD - Util::UDP_FRAGHDR_SIZE;
     const uint16_t Util::UDP_MIN_PORT = 1024; // UDP port has to be >= 1024 (0-1023 are reserved for well-known usage; 1024-49151 are registered ports; 49152-65535 are custom ports)
+
     // Atomicity
     std::memory_order Util::LOAD_CONCURRENCY_ORDER = std::memory_order_acquire;
     std::memory_order Util::STORE_CONCURRENCY_ORDER = std::memory_order_release;
     std::memory_order Util::RMW_CONCURRENCY_ORDER = std::memory_order_acq_rel;
+
     // Workflow control
     const unsigned int Util::SLEEP_INTERVAL_US = MS2US(100); // 100ms
+
     // Workload generation
     const uint32_t Util::DATASET_KVPAIR_GENERATION_SEED = 0;
     //const uint32_t Util::WORKLOAD_KVPAIR_GENERATION_SEED = 1;
+
     // Time measurement
     const int Util::START_YEAR = 1900;
     const long Util::NANOSECONDS_PERSECOND = 1000000000L;
@@ -112,6 +118,9 @@ namespace covered
     const std::string Util::CHARSET("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
     std::mt19937_64 Util::string_randgen_(0);
     std::uniform_int_distribution<uint32_t> Util::string_randdist_(0, CHARSET.size() - 1); // Range of [0, CHARSET.size() - 1]
+
+    // I/O
+    const uint32_t Util::MAX_MMAP_UNIT_MB = 1024; // 1GB
 
     const std::string Util::kClassName("Util");
 
@@ -309,6 +318,20 @@ namespace covered
             exit(1);
         }
         return fs_ptr; // Release outside Util
+    }
+
+    int Util::openFile(const std::string& filepath, const int& flags)
+    {
+        int tmp_fd = open(filepath.c_str(), flags);
+        if (tmp_fd < 0)
+        {
+            std::ostringstream oss;
+            oss << "failed to open the file " << filepath << " (errno: " << errno << ") !";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+
+        return tmp_fd;
     }
 
     // (2) Time measurement

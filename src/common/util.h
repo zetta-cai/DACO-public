@@ -133,28 +133,37 @@ namespace covered
         static const int64_t MAX_UINT16;
         static const int64_t MAX_UINT32;
         static const double DOUBLE_IOTA;
+
         // Network (UDP message payload -> UDP fragment payloads; UDP fragment payload + UDP fragment header -> UDP packet payload)
         static const std::string ANY_IPSTR;
         static const uint32_t UDP_MAX_PKT_PAYLOAD; // Pkt payload = fraghdr + frag payload
         static const uint32_t UDP_FRAGHDR_SIZE;
         static const uint32_t UDP_MAX_FRAG_PAYLOAD;
         static const uint16_t UDP_MIN_PORT;
+
         // Atomicity
         static std::memory_order LOAD_CONCURRENCY_ORDER;
         static std::memory_order STORE_CONCURRENCY_ORDER;
         static std::memory_order RMW_CONCURRENCY_ORDER; // read-modify-write
+
         // Workflow control
         // NOTE: SLEEP_INTERVAL_US MUST be able to support EvaluatorCLI::warmup_max_duration_sec/stresstest_duration_sec and Config::client_raw_statistics_slot_interval_sec
         static const unsigned int SLEEP_INTERVAL_US; // Sleep interval for polling
+
         // Workload generation
         static const uint32_t DATASET_KVPAIR_GENERATION_SEED; // Deterministic seed to generate key-value objects for dataset (the same for all clients to ensure the same dataset)
         //static const uint32_t WORKLOAD_KVPAIR_GENERATION_SEED; // (OBSOLETE: homogeneous cache access patterns is a WRONG assumption -> we should ONLY follow homogeneous workload distribution yet still with heterogeneous cache access patterns) Deterministic seed to generate key-value objects for workload (the same for all clients to ensure homogeneous cache access patterns)
+
         // Time measurement
         static const int START_YEAR;
         static const long NANOSECONDS_PERSECOND; // # of nanoseconds per second
         static const uint32_t SECOND_PRECISION; // # of digits after decimal point of second shown in time string
+
         // Charset
         static const std::string CHARSET;
+
+        // I/O
+        static const uint32_t MAX_MMAP_UNIT_MB; // Maximum mmap unit size (in units of MiB)
 
         // (0) Cache names
 
@@ -178,6 +187,7 @@ namespace covered
         // Open a file (create the file if not exist)
         // NOTE: no confliction as each file (statistics or RocksDB) is accessed by a unique thread (client or cloud)
         static std::fstream* openFile(const std::string& filepath, std::ios_base::openmode mode);
+        static int openFile(const std::string& filepath, const int& flags);
         static std::string getParentDirpath(const std::string& filepath);
         static std::string getFilenameFromFilepath(const std::string& filepath);
 

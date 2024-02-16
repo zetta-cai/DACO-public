@@ -1,7 +1,6 @@
 #include "workload/wikipedia_workload_wrapper.h"
 
-#include <memory> // std::make_unique
-#include <random> // std::mt19937_64, std::discrete_distribution
+#include <unistd.h> // lseek
 #include <unordered_set>
 
 #include "common/config.h"
@@ -67,9 +66,34 @@ namespace covered
         const uint32_t trace_filecnt = trace_filepaths.size();
         assert(trace_filecnt > 0);
 
-        // TODO: END HERE
+        std::ostringstream oss;
+        oss << "load Wikipedia trace " << wiki_trace_type << " files...";
+        Util::dumpNormalMsg(instance_name_, oss.str());
+        
+        std::unordered_set<Key> dataset_keyset; // Check if key has been tracked by dataset_kvpairs_
+        for (uint32_t tmp_fileidx = 0; tmp_fileidx < trace_filecnt; tmp_fileidx++)
+        {
+            const std::string tmp_filepath = trace_filepaths[tmp_fileidx];
 
-        // TODO: use std::unordered_set<Key> to build dataset_kvpairs_
+            // TODO: Encapsulate the following code as an individual function
+
+            // Check if file exists
+            bool is_exist = Util::isFileExist(tmp_filepath, true);
+            if (!is_exist)
+            {
+                std::ostringstream oss;
+                oss << "Wikipedia trace file " << tmp_filepath << " does not exist!";
+                Util::dumpErrorMsg(instance_name_, oss.str());
+                exit(1);
+            }
+
+            // Get file length
+            int tmp_fd = Util::openFile(tmp_filepath, O_RDONLY);
+            int tmp_filelen = lseek(tmp_fd, 0, SEEK_END);
+            assert(tmp_filelen > 0);
+
+            // TODO: Build memory mapping
+        }
 
         // Load workload config file for Facebook CDN trace
         CacheBenchConfig facebook_config(Config::getFacebookConfigFilepath());
