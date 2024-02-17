@@ -40,6 +40,13 @@
     "propagation_item_buffer_size_edge_toedge": 1000,
     "propagation_item_buffer_size_edge_tocloud": 1000,
     "propagation_item_buffer_size_cloud_toedge": 1000,
+    "trace_dirpath": "data",
+    "trace_dirpath_relative_wikiimage_trace_filespaths": ["wikiimage/cache-u-00.gz", "wikiimage/cache-u-01.gz", "wikiimage/cache-u-02.gz", "wikiimage/cache-u-03.gz", "wikiimage/cache-u-04.gz", "wikiimage/cache-u-05.gz", "wikiimage/cache-u-06.gz", "wikiimage/cache-u-07.gz", "wikiimage/cache-u-08.gz", "wikiimage/cache-u-09.gz", "wikiimage/cache-u-10.gz", "wikiimage/cache-u-11.gz", "wikiimage/cache-u-12.gz", "wikiimage/cache-u-13.gz", "wikiimage/cache-u-14.gz", "wikiimage/cache-u-15.gz", "wikiimage/cache-u-16.gz", "wikiimage/cache-u-17.gz", "wikiimage/cache-u-18.gz", "wikiimage/cache-u-19.gz", "wikiimage/cache-u-20.gz"],
+    "trace_dirpath_relative_wikitext_trace_filepaths": ["wikitext/cache-t-00.gz", "wikitext/cache-t-01.gz", "wikitext/cache-t-02.gz", "wikitext/cache-t-03.gz", "wikitext/cache-t-04.gz", "wikitext/cache-t-05.gz", "wikitext/cache-t-06.gz", "wikitext/cache-t-07.gz", "wikitext/cache-t-08.gz", "wikitext/cache-t-09.gz", "wikitext/cache-t-10.gz", "wikitext/cache-t-11.gz", "wikitext/cache-t-12.gz", "wikitext/cache-t-13.gz", "wikitext/cache-t-14.gz", "wikitext/cache-t-15.gz", "wikitext/cache-t-16.gz", "wikitext/cache-t-17.gz", "wikitext/cache-t-18.gz", "wikitext/cache-t-19.gz", "wikitext/cache-t-20.gz"],
+    "trace_wikiimage_keycnt": 0,
+    "trace_wikiimage_total_opcnt": 0,
+    "trace_wikitext_keycnt": 0,
+    "trace_wikitext_total_opcnt": 0,
     "version": "1.0",
     "physical_machines": [
         {

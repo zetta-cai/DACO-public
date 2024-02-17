@@ -39,7 +39,7 @@ namespace covered
 
         static const std::string kClassName;
 
-        void verifyIntegrity_() const;
+        void verifyIntegrity_(const std::string& main_class_name) const;
 
         bool is_add_cli_parameters_;
         bool is_set_param_and_config_;

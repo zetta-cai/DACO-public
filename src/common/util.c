@@ -28,6 +28,7 @@ namespace covered
     const std::string Util::CLOUD_MAIN_NAME("cloud");
     const std::string Util::EVALUATOR_MAIN_NAME("evaluator");
     const std::string Util::CLIUTIL_MAIN_NAME("cliutil");
+    const std::string Util::TRACE_PREPROCESSOR_MAIN_NAME("trace_preprocessor");
 
     // Workload name
     const std::string Util::FACEBOOK_WORKLOAD_NAME("facebook");

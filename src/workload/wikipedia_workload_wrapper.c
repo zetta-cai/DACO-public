@@ -108,16 +108,14 @@ namespace covered
             column_cnt = 5;
             key_column_idx = 1; // 2nd column
             value_column_idx = 3; // 4th column
-
-            // TODO: Update by Config module
+            trace_filepaths = Config::getWikiimageTraceFilepaths();
         }
         else if (wiki_trace_type == WikipediaWorkloadExtraParam::WIKI_TRACE_TEXT_TYPE)
         {
             column_cnt = 4;
             key_column_idx = 1; // 2nd column
             value_column_idx = 2; // 3rd column
-
-            // TODO: Update by Config module
+            trace_filepaths = Config::getWikitextTraceFilepaths();
         }
         else
         {
@@ -143,6 +141,11 @@ namespace covered
             uint32_t tmp_opcnt = parseCurrentFile_(tmp_filepath, key_column_idx, value_column_idx, column_cnt, dataset_kvmap);
             total_workload_opcnt_ += tmp_opcnt;
         } // End of trace files
+
+        // TMPDEBUG24
+        std::ostringstream tmposs;
+        tmposs << "current client workload size: " << curclient_workload_key_indices_.size();
+        Util::dumpNormalMsg(instance_name_, tmposs.str());
 
         return;
     }

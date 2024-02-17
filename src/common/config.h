@@ -93,6 +93,13 @@ namespace covered
         static const std::string PROPAGATION_ITEM_BUFFER_SIZE_EDGE_TOEDGE_KEYSTR;
         static const std::string PROPAGATION_ITEM_BUFFER_SIZE_EDGE_TOCLOUD_KEYSTR;
         static const std::string PROPAGATION_ITEM_BUFFER_SIZE_CLOUD_TOEDGE_KEYSTR;
+        static const std::string TRACE_DIRPATH_KEYSTR;
+        static const std::string TRACE_DIRPATH_RELATIVE_WIKIIMAGE_TRACE_FILEPATHS_KEYSTR;
+        static const std::string TRACE_DIRPATH_RELATIVE_WIKITEXT_TRACE_FILEPATHS_KEYSTR;
+        static const std::string TRACE_WIKIIMAGE_KEYCNT_KEYSTR;
+        static const std::string TRACE_WIKIIMAGE_TOTAL_OPCNT_KEYSTR;
+        static const std::string TRACE_WIKITEXT_KEYCNT_KEYSTR;
+        static const std::string TRACE_WIKITEXT_TOTAL_OPCNT_KEYSTR;
         static const std::string VERSION_KEYSTR;
 
         // For all physical machines
@@ -148,6 +155,11 @@ namespace covered
         static uint32_t getPropagationItemBufferSizeEdgeToedge();
         static uint32_t getPropagationItemBufferSizeEdgeTocloud();
         static uint32_t getPropagationItemBufferSizeCloudToedge();
+        static std::string getTraceDirpath();
+        static std::vector<std::string> getWikiimageTraceFilepaths();
+        static std::vector<std::string> getWikitextTraceFilepaths();
+        static uint32_t getTraceKeycnt(const std::string& workload_name);
+        static uint32_t getTraceTotalOpcnt(const std::string& workload_name);
         static std::string getVersion();
 
         // For current physical machine
@@ -219,7 +231,7 @@ namespace covered
         static uint32_t evaluator_machine_idx_; // Physical machine index of physical evaluator node
         static uint16_t evaluator_recvmsg_port_; // UDP port for evaluator to receive benchmark control messages
         static std::string library_dirpath_; // Library dirpath
-        static std::string facebook_config_filepath_; // Configuration file path for Facebook CDN workload under library dirpath
+        static std::string facebook_config_filepath_; // Configuration file path for Facebook CDN workload relative under library dirpath
         static uint32_t fine_grained_locking_size_; // Bucket size of fine-grained locking
         static bool is_assert_; // Whether to make assertions -> time-consuming assertions may degrade performance
         static bool is_debug_; // Whether to dump debug information -> NOT affect evaluation results and NOT changed during evaluation
@@ -234,6 +246,13 @@ namespace covered
         static uint32_t propagation_item_buffer_size_edge_toedge_; // Buffer size for edge-to-edge propagated messages
         static uint32_t propagation_item_buffer_size_edge_tocloud_; // Buffer size for edge-to-cloud propagated messages
         static uint32_t propagation_item_buffer_size_cloud_toedge_; // Buffer size for cloud-to-edge propagated messages
+        static std::string trace_dirpath_; // Dirpath for trace files
+        static std::vector<std::string> wikiimage_trace_filepaths_; // Wikipedia image trace file paths under trace dirpath
+        static std::vector<std::string> wikitext_trace_filepaths_; // Wikipedia text trace file paths under trace dirpath
+        static uint32_t trace_wikiimage_keycnt_; // Dataset size of Wikipedia image trace
+        static uint32_t trace_wikiimage_total_opcnt_; // Total workload size of Wikipedia image trace
+        static uint32_t trace_wikitext_keycnt_; // Dataset size of Wikipedia text trace
+        static uint32_t trace_wikitext_total_opcnt_; // Total workload size of Wikipedia text trace
         static std::string version_; // Version of COVERED
 
         // For all physical machines

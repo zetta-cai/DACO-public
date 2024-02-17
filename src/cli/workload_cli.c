@@ -94,13 +94,26 @@ namespace covered
             std::string workload_name = argument_info_["workload_name"].as<std::string>();
 
             // Store workload CLI parameters for dynamic configurations
-            if (Util::isReplayedWorkload(workload_name))
+            if (main_class_name == Util::TRACE_PREPROCESSOR_MAIN_NAME) // NOT preprocessed yet
             {
-                // TODO: overwrite keycnt by configured keycnt
+                if (!Util::isReplayedWorkload(workload_name))
+                {
+                    std::ostringstream oss;
+                    oss << "workload " << workload_name << " is NOT replayed and NO need to run trace preprocessor!";
+                    Util::dumpErrorMsg(kClassName, oss.str());
+                    exit(1);
+                }
+
+                keycnt = 0;
+            }
+            else if (Util::isReplayedWorkload(workload_name)) // Already preprocessed for replayed workloads
+            {
+                keycnt = Config::getTraceKeycnt(workload_name);
             }
             keycnt_ = keycnt;
             workload_name_ = workload_name;
             checkWorkloadName_();
+            verifyIntegrity_(main_class_name);
 
             is_set_param_and_config_ = true;
         }
@@ -140,9 +153,25 @@ namespace covered
         return;
     }
 
-    void WorkloadCLI::verifyIntegrity_() const
+    void WorkloadCLI::verifyIntegrity_(const std::string& main_class_name) const
     {
-        assert(keycnt_ > 0);
+        if (main_class_name != Util::TRACE_PREPROCESSOR_MAIN_NAME && keycnt_ == 0) // Already preprocessed yet with invalid key count
+        {
+            if (Util::isReplayedWorkload(workload_name_)) // From Config for replayed workloads
+            {
+                std::ostringstream oss;
+                oss << "please run trace_preprocessor and update config.json for " << workload_name_ << "!";
+                Util::dumpErrorMsg(kClassName, oss.str());
+                exit(1);
+            }
+            else // From CLI for non-replayed workloads
+            {
+                std::ostringstream oss;
+                oss << "invalid key count " << keycnt_ << " for non-replayed workload " << workload_name_ << "!";
+                Util::dumpErrorMsg(kClassName, oss.str());
+                exit(1);
+            }
+        }
 
         return;
     }

@@ -141,13 +141,27 @@ namespace covered
             // Store client CLI parameters for dynamic configurations
             // clientcnt_ = clientcnt;
             is_warmup_speedup_ = is_warmup_speedup;
-            if (Util::isReplayedWorkload(getWorkloadName()))
+            if (main_class_name == Util::TRACE_PREPROCESSOR_MAIN_NAME) // NOT preprocessed yet
             {
-                // TODO: overwrite perclient_opcnt by configured total opcnt / getClientcnt()
+                assert(false); // Should NOT arrive here, as TracePreprocessorCLI does NOT inherit from ClientCLI
+
+                if (!Util::isReplayedWorkload(workload_name))
+                {
+                    std::ostringstream oss;
+                    oss << "workload " << workload_name << " is NOT replayed and NO need to run trace preprocessor!";
+                    Util::dumpErrorMsg(kClassName, oss.str());
+                    exit(1);
+                }
+
+                perclient_opcnt = 0;
+            }
+            else if (Util::isReplayedWorkload(getWorkloadName())) // Already preprocessed for replayed workloads
+            {
+                perclient_opcnt = Config::getTraceTotalOpcnt(getWorkloadName() / getClientcnt());
             }
             perclient_opcnt_ = perclient_opcnt;
             perclient_workercnt_ = perclient_workercnt;
-            verifyIntegrity_();
+            verifyIntegrity_(main_class_name);
 
             is_set_param_and_config_ = true;
         }
@@ -188,10 +202,28 @@ namespace covered
         return;
     }
 
-    void ClientCLI::verifyIntegrity_() const
+    void ClientCLI::verifyIntegrity_(const std::string& main_class_name) const
     {
         // assert(clientcnt_ > 0);
-        assert(perclient_opcnt_ > 0);
+        if (main_class_name != Util::TRACE_PREPROCESSOR_MAIN_NAME && perclient_opcnt_) // Already preprocessed yet with invalid per-client opcnt
+        {
+            const std::string workload_name = getWorkloadName();
+            if (Util::isReplayedWorkload()) // From Config for replayed workloads
+            {
+                std::ostringstream oss;
+                oss << "please run trace_preprocessor and update config.json for " << workload_name << "!";
+                Util::dumpErrorMsg(kClassName, oss.str());
+                exit(1);
+            }
+            else // From CLI for non-replayed workloads
+            {
+                std::ostringstream oss;
+                oss << "invalid per-client opcnt " << perclient_opcnt_ << " for non-replayed workload " << workload_name << "!";
+                Util::dumpErrorMsg(kClassName, oss.str());
+                exit(1);
+            }
+        }
+
         assert(perclient_workercnt_ > 0);
 
         // uint32_t edgecnt = getEdgecnt();

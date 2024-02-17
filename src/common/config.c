@@ -112,6 +112,13 @@ namespace covered
     const std::string Config::PROPAGATION_ITEM_BUFFER_SIZE_EDGE_TOEDGE_KEYSTR("propagation_item_buffer_size_edge_toedge");
     const std::string Config::PROPAGATION_ITEM_BUFFER_SIZE_EDGE_TOCLOUD_KEYSTR("propagation_item_buffer_size_edge_tocloud");
     const std::string Config::PROPAGATION_ITEM_BUFFER_SIZE_CLOUD_TOEDGE_KEYSTR("propagation_item_buffer_size_cloud_toedge");
+    const std::string Config::TRACE_DIRPATH_KEYSTR("trace_dirpath");
+    const std::string Config::TRACE_DIRPATH_RELATIVE_WIKIIMAGE_TRACE_FILEPATHS_KEYSTR("trace_dirpath_relative_wikiimage_trace_filepaths");
+    const std::string Config::TRACE_DIRPATH_RELATIVE_WIKITEXT_TRACE_FILEPATHS_KEYSTR("trace_dirpath_relative_wikitext_trace_filepaths");
+    const std::string Config::TRACE_WIKIIMAGE_KEYCNT_KEYSTR("trace_wikiimage_keycnt");
+    const std::string Config::TRACE_WIKIIMAGE_TOTAL_OPCNT_KEYSTR("trace_wikiimage_total_opcnt");
+    const std::string Config::TRACE_WIKITEXT_KEYCNT_KEYSTR("trace_wikitext_keycnt");
+    const std::string Config::TRACE_WIKITEXT_TOTAL_OPCNT_KEYSTR("trace_wikitext_total_opcnt");
     const std::string Config::VERSION_KEYSTR("version");
 
     // For all physical machines
@@ -168,6 +175,13 @@ namespace covered
     uint32_t Config::propagation_item_buffer_size_edge_toedge_ = 1000;
     uint32_t Config::propagation_item_buffer_size_edge_tocloud_ = 1000;
     uint32_t Config::propagation_item_buffer_size_cloud_toedge_ = 1000;
+    std::string Config::trace_dirpath_("data");
+    std::vector<std::string> Config::wikiimage_trace_filepaths_(0);
+    std::vector<std::string> Config::wikitext_trace_filepaths_(0);
+    uint32_t Config::trace_wikiimage_keycnt_ = 0;
+    uint32_t Config::trace_wikiimage_total_opcnt_ = 0;
+    uint32_t Config::trace_wikitext_keycnt_ = 0;
+    uint32_t Config::trace_wikitext_total_opcnt_ = 0;
     std::string Config::version_("1.0");
 
     // For all physical machines
@@ -389,6 +403,53 @@ namespace covered
                 {
                     int64_t tmp_size = kv_ptr->value().get_int64();
                     propagation_item_buffer_size_cloud_toedge_ = Util::toUint32(tmp_size);
+                }
+                kv_ptr = find_(TRACE_DIRPATH_KEYSTR);
+                if (kv_ptr != NULL)
+                {
+                    trace_dirpath_ = std::string(kv_ptr->value().get_string().c_str());
+                }
+                kv_ptr = find_(TRACE_DIRPATH_RELATIVE_WIKIIMAGE_TRACE_FILEPATHS_KEYSTR);
+                if (kv_ptr != NULL)
+                {
+                    for (boost::json::array::iterator iter = kv_ptr->value().get_array().begin(); iter != kv_ptr->value().get_array().end(); iter++)
+                    {
+                        const std::string trace_dirpath_relative_wikiimage_trace_filepath = std::string(iter->get_string().c_str());
+                        wikiimage_trace_filepaths_.push_back(trace_dirpath_ + "/" + trace_dirpath_relative_wikiimage_trace_filepath);
+                    }
+                }
+                kv_ptr = find_(TRACE_DIRPATH_RELATIVE_WIKITEXT_TRACE_FILEPATHS_KEYSTR);
+                if (kv_ptr != NULL)
+                {
+                    for (boost::json::array::iterator iter = kv_ptr->value().get_array().begin(); iter != kv_ptr->value().get_array().end(); iter++)
+                    {
+                        const std::string trace_dirpath_relative_wikitext_trace_filepath = std::string(iter->get_string().c_str());
+                        wikitext_trace_filepaths_.push_back(trace_dirpath_ + "/" + trace_dirpath_relative_wikitext_trace_filepath);
+                    }
+                }
+                kv_ptr = find_(TRACE_WIKIIMAGE_KEYCNT_KEYSTR);
+                if (kv_ptr != NULL)
+                {
+                    int64_t tmp_keycnt = kv_ptr->value().get_int64();
+                    trace_wikiimage_keycnt_ = Util::toUint32(tmp_keycnt);
+                }
+                kv_ptr = find_(TRACE_WIKIIMAGE_TOTAL_OPCNT_KEYSTR);
+                if (kv_ptr != NULL)
+                {
+                    int64_t tmp_opcnt = kv_ptr->value().get_int64();
+                    trace_wikiimage_total_opcnt_ = Util::toUint32(tmp_opcnt);
+                }
+                kv_ptr = find_(TRACE_WIKITEXT_KEYCNT_KEYSTR);
+                if (kv_ptr != NULL)
+                {
+                    int64_t tmp_keycnt = kv_ptr->value().get_int64();
+                    trace_wikitext_keycnt_ = Util::toUint32(tmp_keycnt);
+                }
+                kv_ptr = find_(TRACE_WIKITEXT_TOTAL_OPCNT_KEYSTR);
+                if (kv_ptr != NULL)
+                {
+                    int64_t tmp_opcnt = kv_ptr->value().get_int64();
+                    trace_wikitext_total_opcnt_ = Util::toUint32(tmp_opcnt);
                 }
                 kv_ptr = find_(VERSION_KEYSTR);
                 if (kv_ptr != NULL)
@@ -791,6 +852,68 @@ namespace covered
         return propagation_item_buffer_size_cloud_toedge_;
     }
 
+    std::string Config::getTraceDirpath()
+    {
+        checkIsValid_();
+        return trace_dirpath_;
+    }
+
+    std::vector<std::string> Config::getWikiimageTraceFilepaths()
+    {
+        checkIsValid_();
+        return wikiimage_trace_filepaths_;
+    }
+
+    std::vector<std::string> Config::getWikitextTraceFilepaths()
+    {
+        checkIsValid_();
+        return wikitext_trace_filepaths_;
+    }
+
+    uint32_t Config::getTraceKeycnt(const std::string& workload_name)
+    {
+        checkIsValid_();
+
+        // NOTE: NOT use static variables in Util module due to undefined order of static variable initialization in C++
+        if (workload_name == "wikiimage")
+        {
+            return trace_wikiimage_keycnt_;
+        }
+        else if (workload_name == "wikitext")
+        {
+            return trace_wikitext_keycnt_;
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "please run trace_preprocessor and update config.json for " << workload_name << "!";
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
+    }
+
+    uint32_t Config::getTraceTotalOpcnt(const std::string& workload_name)
+    {
+        checkIsValid_();
+
+        // NOTE: NOT use static variables in Util module due to undefined order of static variable initialization in C++
+        if (workload_name == "wikiimage")
+        {
+            return trace_wikiimage_total_opcnt_;
+        }
+        else if (workload_name == "wikitext")
+        {
+            return trace_wikitext_total_opcnt_;
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "please run trace_preprocessor and update config.json for " << workload_name << "!";
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
+    }
+
     std::string Config::getVersion()
     {
         checkIsValid_();
@@ -997,6 +1120,37 @@ namespace covered
         oss << "Propagation item buffer size from edge to edge: " << propagation_item_buffer_size_edge_toedge_ << std::endl;
         oss << "Propagation item buffer size from edge to cloud: " << propagation_item_buffer_size_edge_tocloud_ << std::endl;
         oss << "Propagation item buffer size from cloud to edge: " << propagation_item_buffer_size_cloud_toedge_ << std::endl;
+        oss << "Trace dirpath: " << trace_dirpath_ << std::endl;
+        oss << "Wikiimage trace filepaths: ";
+        for (uint32_t i = 0; i < wikiimage_trace_filepaths_.size(); i++)
+        {
+            oss << wikiimage_trace_filepaths_[i];
+            if (i != wikiimage_trace_filepaths_.size() - 1)
+            {
+                oss << ", ";
+            }
+            else
+            {
+                oss << std::endl;
+            }
+        }
+        oss << "Wikitext trace filepaths: ";
+        for (uint32_t i = 0; i < wikitext_trace_filepaths_.size(); i++)
+        {
+            oss << wikitext_trace_filepaths_[i];
+            if (i != wikitext_trace_filepaths_.size() - 1)
+            {
+                oss << ", ";
+            }
+            else
+            {
+                oss << std::endl;
+            }
+        }
+        oss << "Trace wikiimage keycnt: " << trace_wikiimage_keycnt_ << std::endl;
+        oss << "Trace wikiimage total opcnt: " << trace_wikiimage_total_opcnt_ << std::endl;
+        oss << "Trace wikitext keycnt: " << trace_wikitext_keycnt_ << std::endl;
+        oss << "Trace wikitext total opcnt: " << trace_wikitext_total_opcnt_ << std::endl;
         oss << "Version: " << version_ << std::endl;
 
         for (uint32_t i = 0; i < physical_machines_.size(); i++)
@@ -1082,7 +1236,7 @@ namespace covered
     void Config::checkMainClassName_()
     {
         // Obsolete: STATISTICS_AGGREGATOR_MAIN_NAME
-        if (main_class_name_ != Util::SIMULATOR_MAIN_NAME && main_class_name_ != Util::TOTAL_STATISTICS_LOADER_MAIN_NAME && main_class_name_ != Util::DATASET_LOADER_MAIN_NAME && main_class_name_ != Util::CLIENT_MAIN_NAME && main_class_name_ != Util::EDGE_MAIN_NAME && main_class_name_ != Util::CLOUD_MAIN_NAME && main_class_name_ != Util::EVALUATOR_MAIN_NAME && main_class_name_ != Util::CLIUTIL_MAIN_NAME)
+        if (main_class_name_ != Util::SIMULATOR_MAIN_NAME && main_class_name_ != Util::TOTAL_STATISTICS_LOADER_MAIN_NAME && main_class_name_ != Util::DATASET_LOADER_MAIN_NAME && main_class_name_ != Util::CLIENT_MAIN_NAME && main_class_name_ != Util::EDGE_MAIN_NAME && main_class_name_ != Util::CLOUD_MAIN_NAME && main_class_name_ != Util::EVALUATOR_MAIN_NAME && main_class_name_ != Util::CLIUTIL_MAIN_NAME && Util::TRACE_PREPROCESSOR_MAIN_NAME)
         {
             std::ostringstream oss;
             oss << "main class name " << main_class_name_ << " is not supported!";

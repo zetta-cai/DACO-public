@@ -83,6 +83,7 @@ namespace covered
     const std::string ThreadLauncher::EVALUATOR_THREAD_ROLE("evaluator_thread");
     const std::string ThreadLauncher::DATASET_LOADER_THREAD_ROLE("dataset_loader_thread");
     const std::string ThreadLauncher::TOTAL_STATISTICS_LOADER_THREAD_ROLE("total_statistics_loader_thread");
+    const std::string ThreadLauncher::TRACE_PREPROCESSOR_THREAD_ROLE("trace_preprocessor_thread");
     
     // TODO: pass nice value into each pthread for SCHED_OTHER
     //const int ThreadLauncher::SCHEDULING_POLICY = SCHED_OTHER; // Default policy used by Linux (nice value: min 19 to max -20), which relies on kernel.sched_latency_ns and kernel.sched_min_granularity_ns
@@ -192,6 +193,12 @@ namespace covered
             // The single thread role of total statistics loader can occupy all dedicated CPU cores of current physical machine due to NO contention with other thread roles
 
             perrole_required_dedicated_corecnt.insert(std::pair(TOTAL_STATISTICS_LOADER_THREAD_ROLE, Config::getCurrentPhysicalMachine().getCpuDedicatedCorecnt()));
+        }
+        else if (main_class_name == Util::TRACE_PREPROCESSOR_MAIN_NAME)
+        {
+            // The single thread role of trace preprocessor can occupy all dedicated CPU cores of current physical machine due to NO contention with other thread roles
+
+            perrole_required_dedicated_corecnt.insert(std::pair(TRACE_PREPROCESSOR_THREAD_ROLE, Config::getCurrentPhysicalMachine().getCpuDedicatedCorecnt()));
         }
         else
         {

@@ -53,6 +53,7 @@ namespace covered
         static const std::string EVALUATOR_THREAD_ROLE;
         static const std::string DATASET_LOADER_THREAD_ROLE;
         static const std::string TOTAL_STATISTICS_LOADER_THREAD_ROLE;
+        static const std::string TRACE_PREPROCESSOR_THREAD_ROLE;
 
         static const int SCHEDULING_POLICY; // Task scheduling policy
 
