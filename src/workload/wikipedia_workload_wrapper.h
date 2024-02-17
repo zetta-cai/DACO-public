@@ -26,7 +26,10 @@ namespace covered
         WikipediaWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt, const WikipediaWorkloadExtraParam& workload_extra_param);
         virtual ~WikipediaWorkloadWrapper();
 
+        virtual WorkloadItem generateWorkloadItem(const uint32_t& local_client_worker_idx) override; // NOTE: follow the real-world trace to select an item without modifying any variable -> thread safe
         virtual uint32_t getPracticalKeycnt() const override;
+        virtual uint32_t getTotalOpcnt() const override;
+        virtual WorkloadItem getDatasetItem(const uint32_t itemidx) override; // Get a dataset key-value pair item with the index of itemidx
 
         // Get average/min/max dataset key/value size
         virtual double getAvgDatasetKeysize() const override;
@@ -42,14 +45,8 @@ namespace covered
         virtual void overwriteWorkloadParameters_() override;
         virtual void createWorkloadGenerator_() override;
 
-        // NOTE: follow the real-world trace to select an item without modifying any variable -> thread safe
-        virtual WorkloadItem generateWorkloadItemInternal_(const uint32_t& local_client_worker_idx) override;
-
-        // Get a dataset key-value pair item with the index of itemidx
-        virtual WorkloadItem getDatasetItemInternal_(const uint32_t itemidx) override;
-
         // Wiki-specific helper functions
-        void parseCurrentFile_(const std::string& tmp_filepath, const uint32_t& key_column_idx, const uint32_t& value_column_idx, const uint32_t& column_cnt, std::unordered_map<Key, Value, KeyHasher>& dataset_kvmap); // Process the current trace file
+        uint32_t parseCurrentFile_(const std::string& tmp_filepath, const uint32_t& key_column_idx, const uint32_t& value_column_idx, const uint32_t& column_cnt, std::unordered_map<Key, Value, KeyHasher>& dataset_kvmap); // Process the current trace file (return # of lines in the current trace file)
         void completeLastLine_(const char* tmp_line_startpos, const char* tmp_line_endpos, char** tmp_complete_line_startpos_ptr, char** tmp_complete_line_endpos_ptr) const; // Complete the last line of a trace file by an extra line separator
         void concatenateLastLine_(const char* prev_block_taildata, const uint32_t& prev_block_tailsize, const char* tmp_complete_line_startpos, const char* tmp_complete_line_endpos, char** tmp_concat_line_startpos_ptr, char** tmp_concat_line_endpos_ptr) const; // Concatenate tail data of the previous mmap block with the first complete line of the current mmap block
         void parseCurrentLine_(const char* tmp_concat_line_startpos, const char* tmp_concat_line_endpos, const uint32_t& key_column_idx, const uint32_t& value_column_idx, const uint32_t& column_cnt, Key& key, Value& value) const; // Parse a line to get key and value
@@ -66,9 +63,10 @@ namespace covered
         uint32_t min_dataset_valuesize_; // Minimum dataset value size
         uint32_t max_dataset_keysize_; // Maximum dataset key size
         uint32_t max_dataset_valuesize_; // Maximum dataset value size
+        uint32_t total_workload_opcnt_; // Opcnt of workloads in all clients
         std::vector<Key, Value> dataset_kvpairs_; // Key-value pairs of dataset
-        std::vector<uint32_t> workload_key_indices_; // Key indices of workload
-        std::vector<int> workload_value_sizes_; // Value sizes of workload (< 0: read; = 0: delete; > 0: write)
+        std::vector<uint32_t> curclient_workload_key_indices_; // Key indices of workload in the current client
+        std::vector<int> curclient_workload_value_sizes_; // Value sizes of workload in the current client (< 0: read; = 0: delete; > 0: write)
 
         // Non-const individual variables
         std::vector<uint32_t> per_client_worker_workload_idx_; // Track per-clientworker workload index

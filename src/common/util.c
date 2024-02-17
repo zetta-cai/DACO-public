@@ -140,6 +140,23 @@ namespace covered
         return false;
     }
 
+    bool Util::isReplayedWorkload(const std::string workload_name)
+    {
+        if (workload_name == WIKIPEDIA_IMAGE_WORKLOAD_NAME || workload_name == WIKIPEDIA_TEXT_WORKLOAD_NAME)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    std::string Util::getReplayedWorkloadHintstr()
+    {
+        std::ostringstream oss;
+        oss << "replayed workloads (" << WIKIPEDIA_IMAGE_WORKLOAD_NAME << ", " << WIKIPEDIA_TEXT_WORKLOAD_NAME << ")";
+        return oss.str();
+    }
+
     // (1) I/O
 
     // (1.1) stdout/stderr I/O
@@ -961,9 +978,10 @@ namespace covered
     {
         assert(keycnt > 0);
 
+        // Example: /tmp/key100000_facebook
         std::ostringstream oss;
-        // Example: /tmp/key1000000_facebook
         oss << Config::getCloudRocksdbBasedir() << "/key" << keycnt << "_" << workload_name;
+
         return oss.str();
     }
 

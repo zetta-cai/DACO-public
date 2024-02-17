@@ -63,48 +63,9 @@ namespace covered
         }
     }
 
-    uint32_t FacebookWorkloadWrapper::getPracticalKeycnt() const
+    WorkloadItem FacebookWorkloadWrapper::generateWorkloadItem(const uint32_t& local_client_worker_idx)
     {
-        // NOTE: CacheLib CDN generator will remove redundant keys, so the number of generated key-value pairs will be slightly smaller than keycnt -> we do NOT fix CacheLib as the keycnt gap is very limited and we aim to avoid changing its workload distribution.
-        return static_cast<uint32_t>(workload_generator_->getAllKeys().size());
-    }
-
-    void FacebookWorkloadWrapper::initWorkloadParameters_()
-    {
-        // Load workload config file for Facebook CDN trace
-        CacheBenchConfig facebook_config(Config::getFacebookConfigFilepath());
-        //facebook_cache_config_ = facebook_config.getCacheConfig();
-        facebook_stressor_config_ = facebook_config.getStressorConfig();
-        return;
-    }
-
-    void FacebookWorkloadWrapper::overwriteWorkloadParameters_()
-    {
-        assert(clientcnt_ > 0);
-        assert(perclient_workercnt_ > 0);
-        uint32_t perclientworker_opcnt = perclient_opcnt_ / perclient_workercnt_;
-
-        facebook_stressor_config_.numOps = static_cast<uint64_t>(perclientworker_opcnt);
-        facebook_stressor_config_.numThreads = static_cast<uint64_t>(perclient_workercnt_);
-        facebook_stressor_config_.numKeys = static_cast<uint64_t>(keycnt_);
-
-        // NOTE: opPoolDistribution is {1.0}, which generates 0 with a probability of 1.0
-        op_pool_dist_ptr_ = new std::discrete_distribution<>(facebook_stressor_config_.opPoolDistribution.begin(), facebook_stressor_config_.opPoolDistribution.end());
-        if (op_pool_dist_ptr_ == NULL)
-        {
-            Util::dumpErrorMsg(instance_name_, "failed to create operation pool distribution!");
-            exit(1);
-        }
-    }
-
-    void FacebookWorkloadWrapper::createWorkloadGenerator_()
-    {
-        // facebook::cachelib::cachebench::WorkloadGenerator will generate keycnt key-value pairs by generateReqs() and generate perclient_opcnt_ requests by generateKeyDistributions() in constructor
-        workload_generator_ = makeGenerator_(facebook_stressor_config_, client_idx_);
-    }
-
-    WorkloadItem FacebookWorkloadWrapper::generateWorkloadItemInternal_(const uint32_t& local_client_worker_idx)
-    {
+        checkIsValid_();
         assert(local_client_worker_idx < client_worker_item_randgen_ptrs_.size());
 
         std::mt19937_64* request_randgen_ptr = client_worker_item_randgen_ptrs_[local_client_worker_idx];
@@ -153,8 +114,26 @@ namespace covered
         return WorkloadItem(tmp_covered_key, tmp_covered_value, tmp_item_type);
     }
 
-    WorkloadItem FacebookWorkloadWrapper::getDatasetItemInternal_(const uint32_t itemidx)
+    uint32_t FacebookWorkloadWrapper::getPracticalKeycnt() const
     {
+        checkIsValid_();
+
+        // NOTE: CacheLib CDN generator will remove redundant keys, so the number of generated key-value pairs will be slightly smaller than keycnt -> we do NOT fix CacheLib as the keycnt gap is very limited and we aim to avoid changing its workload distribution.
+        return static_cast<uint32_t>(workload_generator_->getAllKeys().size());
+    }
+
+    uint32_t FacebookWorkloadWrapper::getTotalOpcnt() const
+    {
+        checkIsValid_();
+
+        return perclient_opcnt_ * clientcnt_;
+    }
+
+    WorkloadItem FacebookWorkloadWrapper::getDatasetItem(const uint32_t itemidx)
+    {
+        checkIsValid_();
+        assert(itemidx < getPracticalKeycnt());
+        
         // Must be 0 for Facebook CDN trace due to only a single operation pool (cachelib::PoolId = int8_t)
         assert(facebook_stressor_config_.opPoolDistribution.size() == 1 && facebook_stressor_config_.opPoolDistribution[0] == double(1.0));
         const uint8_t tmp_poolid = 0;
@@ -166,35 +145,75 @@ namespace covered
         return WorkloadItem(tmp_covered_key, tmp_covered_value, WorkloadItemType::kWorkloadItemPut);
     }
 
+    void FacebookWorkloadWrapper::initWorkloadParameters_()
+    {
+        // Load workload config file for Facebook CDN trace
+        CacheBenchConfig facebook_config(Config::getFacebookConfigFilepath());
+        //facebook_cache_config_ = facebook_config.getCacheConfig();
+        facebook_stressor_config_ = facebook_config.getStressorConfig();
+        return;
+    }
+
+    void FacebookWorkloadWrapper::overwriteWorkloadParameters_()
+    {
+        assert(clientcnt_ > 0);
+        assert(perclient_workercnt_ > 0);
+        uint32_t perclientworker_opcnt = perclient_opcnt_ / perclient_workercnt_;
+
+        facebook_stressor_config_.numOps = static_cast<uint64_t>(perclientworker_opcnt);
+        facebook_stressor_config_.numThreads = static_cast<uint64_t>(perclient_workercnt_);
+        facebook_stressor_config_.numKeys = static_cast<uint64_t>(keycnt_);
+
+        // NOTE: opPoolDistribution is {1.0}, which generates 0 with a probability of 1.0
+        op_pool_dist_ptr_ = new std::discrete_distribution<>(facebook_stressor_config_.opPoolDistribution.begin(), facebook_stressor_config_.opPoolDistribution.end());
+        if (op_pool_dist_ptr_ == NULL)
+        {
+            Util::dumpErrorMsg(instance_name_, "failed to create operation pool distribution!");
+            exit(1);
+        }
+    }
+
+    void FacebookWorkloadWrapper::createWorkloadGenerator_()
+    {
+        // facebook::cachelib::cachebench::WorkloadGenerator will generate keycnt key-value pairs by generateReqs() and generate perclient_opcnt_ requests by generateKeyDistributions() in constructor
+        workload_generator_ = makeGenerator_(facebook_stressor_config_, client_idx_);
+    }
+
     // Get average/min/max dataset key/value size
 
     double FacebookWorkloadWrapper::getAvgDatasetKeysize() const
     {
+        checkIsValid_();
         return workload_generator_->getAvgDatasetKeysize();
     }
     
     double FacebookWorkloadWrapper::getAvgDatasetValuesize() const
     {
+        checkIsValid_();
         return workload_generator_->getAvgDatasetValuesize();
     }
 
     uint32_t FacebookWorkloadWrapper::getMinDatasetKeysize() const
     {
+        checkIsValid_();
         return workload_generator_->getMinDatasetKeysize();
     }
 
     uint32_t FacebookWorkloadWrapper::getMinDatasetValuesize() const
     {
+        checkIsValid_();
         return workload_generator_->getMinDatasetValuesize();
     }
 
     uint32_t FacebookWorkloadWrapper::getMaxDatasetKeysize() const
     {
+        checkIsValid_();
         return workload_generator_->getMaxDatasetKeysize();
     }
 
     uint32_t FacebookWorkloadWrapper::getMaxDatasetValuesize() const
     {
+        checkIsValid_();
         return workload_generator_->getMaxDatasetValuesize();
     }
 

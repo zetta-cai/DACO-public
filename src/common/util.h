@@ -167,9 +167,12 @@ namespace covered
         static const int LINE_SEP_CHAR; // Line separator character
         static const int TSV_SEP_CHAR; // Tab-separated value separator character
 
-        // (0) Cache names
+        // (0) For caches and workloads
 
-        static bool isSingleNodeCache(const std::string cache_name);
+        static bool isSingleNodeCache(const std::string cache_name); // Will disable cooperative caching for single-node caches
+
+        static bool isReplayedWorkload(const std::string workload_name); // Will disable effects of keycnt/opcnt for replayed workloads (NO tunable workload parameters)
+        static std::string getReplayedWorkloadHintstr(); // Used by CLI module to dump hint information
 
         // (1) I/O
 

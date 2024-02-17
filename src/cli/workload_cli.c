@@ -72,7 +72,7 @@ namespace covered
 
             // Dynamic configurations for client
             argument_desc_.add_options()
-                ("keycnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_KEYCNT), "the total number of keys")
+                ("keycnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_KEYCNT), "the number of unique keys (dataset size; NOT affect " + Util::getReplayedWorkloadHintstr() + ")")
                 ("workload_name", boost::program_options::value<std::string>()->default_value(DEFAULT_WORKLOAD_NAME), "workload name (e.g., facebook)")
             ;
 
@@ -94,6 +94,10 @@ namespace covered
             std::string workload_name = argument_info_["workload_name"].as<std::string>();
 
             // Store workload CLI parameters for dynamic configurations
+            if (Util::isReplayedWorkload(workload_name))
+            {
+                // TODO: overwrite keycnt by configured keycnt
+            }
             keycnt_ = keycnt;
             workload_name_ = workload_name;
             checkWorkloadName_();

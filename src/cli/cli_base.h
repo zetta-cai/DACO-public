@@ -43,7 +43,7 @@ namespace covered
 
         bool is_to_cli_string_;
 
-        // NOTE: JUST for evaluation trick as we may launch nodes with different roles under the same physical machine due to limited devices, while clientcnt/edgecnt is ONLY required by ClientCLI/EdgescaleCLI if each machine plays a single role in practice
+        // NOTE: JUST for evaluation trick as we may launch nodes with different roles under the same physical machine due to limited devices (e.g., launching cloud needs to know clientcnt and edgecnt to calculate dedicated CPU cores), while clientcnt/edgecnt is ONLY required by ClientCLI/EdgescaleCLI if each machine plays a single role in practice
         uint32_t clientcnt_;
         uint32_t edgecnt_; // Scalability on the number of edge nodes
         std::string config_file_;

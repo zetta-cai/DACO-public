@@ -93,20 +93,6 @@ namespace covered
         return;
     }
 
-    WorkloadItem WorkloadWrapperBase::generateWorkloadItem(const uint32_t& local_client_worker_idx)
-    {
-        checkIsValid_();
-        return generateWorkloadItemInternal_(local_client_worker_idx);
-    }
-
-    WorkloadItem WorkloadWrapperBase::getDatasetItem(const uint32_t itemidx)
-    {
-        checkIsValid_();
-
-        assert(itemidx < getPracticalKeycnt());
-        return getDatasetItemInternal_(itemidx);
-    }
-
     void WorkloadWrapperBase::checkIsValid_()
     {
         if (!is_valid_)

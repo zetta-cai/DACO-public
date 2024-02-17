@@ -109,7 +109,7 @@ namespace covered
             argument_desc_.add_options()
                 // ("clientcnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_CLIENTCNT), "the total number of clients")
                 ("disable_warmup_speedup", "disable speedup mode for warmup phase")
-                ("perclient_opcnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_PERCLIENT_OPCNT), "the number of operations for each client")
+                ("perclient_opcnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_PERCLIENT_OPCNT), "the number of per-client operations (per-client workload size; NOT affect " + Util::getReplayedWorkloadHintstr() + ")")
                 ("perclient_workercnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_PERCLIENT_WORKERCNT), "the number of worker threads for each client")
             ;
 
@@ -141,6 +141,10 @@ namespace covered
             // Store client CLI parameters for dynamic configurations
             // clientcnt_ = clientcnt;
             is_warmup_speedup_ = is_warmup_speedup;
+            if (Util::isReplayedWorkload(getWorkloadName()))
+            {
+                // TODO: overwrite perclient_opcnt by configured total opcnt / getClientcnt()
+            }
             perclient_opcnt_ = perclient_opcnt;
             perclient_workercnt_ = perclient_workercnt;
             verifyIntegrity_();

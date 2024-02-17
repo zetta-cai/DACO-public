@@ -26,10 +26,11 @@ namespace covered
         min_dataset_valuesize_ = 0;
         max_dataset_keysize_ = 0;
         max_dataset_valuesize_ = 0;
+        total_workload_opcnt_ = 0;
 
         dataset_kvpairs_.clear();
-        workload_key_indices_.clear();
-        workload_value_sizes_.clear();
+        curclient_workload_key_indices_.clear();
+        curclient_workload_value_sizes_.clear();
 
         per_client_worker_workload_idx_.resize(perclient_workercnt);
         for (uint32_t i = 0; i < perclient_workercnt; i++)
@@ -42,9 +43,56 @@ namespace covered
     {
     }
 
+    WorkloadItem WikipediaWorkloadWrapper::generateWorkloadItem(const uint32_t& local_client_worker_idx)
+    {
+        checkIsValid_();
+        
+        uint32_t curclient_workload_idx = per_client_worker_workload_idx_[local_client_worker_idx];
+        assert(curclient_workload_idx < curclient_workload_key_indices_.size());
+
+        // Get key, value, and type
+        Key tmp_key = dataset_kvpairs_[curclient_workload_key_indices_[curclient_workload_idx]].first;
+        Value tmp_value = dataset_kvpairs_[curclient_workload_key_indices_[curclient_workload_idx]].second;
+        WorkloadItemType tmp_type = WorkloadItemType::kWorkloadItemGet;
+        int tmp_workload_valuesize = curclient_workload_value_sizes_[curclient_workload_idx];
+        if (tmp_workload_valuesize == 0)
+        {
+            tmp_type = WorkloadItemType::kWorkloadItemDel;
+            tmp_value = Value();
+        }
+        else if (tmp_workload_valuesize > 0)
+        {
+            tmp_type = WorkloadItemType::kWorkloadItemPut;
+            tmp_value = Value(tmp_workload_valuesize);
+        }
+
+        // Update for the next workload idx
+        uint32_t next_curclient_workload_idx = (curclient_workload_idx + perclient_workercnt_) % curclient_workload_key_indices_.size();
+        per_client_worker_workload_idx_[local_client_worker_idx] = next_curclient_workload_idx;
+
+        return WorkloadItem(tmp_key, tmp_value, tmp_type);
+    }
+
     uint32_t WikipediaWorkloadWrapper::getPracticalKeycnt() const
     {
+        checkIsValid_();
         return dataset_kvpairs_.size();
+    }
+
+    uint32_t WikipediaWorkloadWrapper::getTotalOpcnt() const
+    {
+        checkIsValid_();
+        return total_workload_opcnt_;
+    }
+
+    WorkloadItem WikipediaWorkloadWrapper::getDatasetItem(const uint32_t itemidx)
+    {
+        checkIsValid_();
+        assert(itemidx < getPracticalKeycnt());
+
+        const Key tmp_covered_key = dataset_kvpairs_[itemidx].first;
+        const Value tmp_covered_value = dataset_kvpairs_[itemidx].second;
+        return WorkloadItem(tmp_covered_key, tmp_covered_value, WorkloadItemType::kWorkloadItemPut);
     }
 
     void WikipediaWorkloadWrapper::initWorkloadParameters_()
@@ -92,7 +140,8 @@ namespace covered
             const std::string tmp_filepath = trace_filepaths[tmp_fileidx];
 
             // Process the current trace file
-            parseCurrentFile_(tmp_filepath, key_column_idx, value_column_idx, column_cnt, dataset_kvmap);
+            uint32_t tmp_opcnt = parseCurrentFile_(tmp_filepath, key_column_idx, value_column_idx, column_cnt, dataset_kvmap);
+            total_workload_opcnt_ += tmp_opcnt;
         } // End of trace files
 
         return;
@@ -110,78 +159,47 @@ namespace covered
         return;
     }
 
-    WorkloadItem WikipediaWorkloadWrapper::generateWorkloadItemInternal_(const uint32_t& local_client_worker_idx)
-    {
-        uint32_t current_workload_idx = per_client_worker_workload_idx_[local_client_worker_idx];
-        assert(current_workload_idx < workload_key_indices_.size());
-
-        // Get key, value, and type
-        Key tmp_key = dataset_kvpairs_[workload_key_indices_[current_workload_idx]].first;
-        Value tmp_value = dataset_kvpairs_[workload_key_indices_[current_workload_idx]].second;
-        WorkloadItemType tmp_type = WorkloadItemType::kWorkloadItemGet;
-        int tmp_workload_valuesize = workload_value_sizes_[current_workload_idx];
-        if (tmp_workload_valuesize == 0)
-        {
-            tmp_type = WorkloadItemType::kWorkloadItemDel;
-            tmp_value = Value();
-        }
-        else if (tmp_workload_valuesize > 0)
-        {
-            tmp_type = WorkloadItemType::kWorkloadItemPut;
-            tmp_value = Value(tmp_workload_valuesize);
-        }
-
-        // Update for the next workload idx
-        uint32_t next_workload_idx = (current_workload_idx + perclient_workercnt_) % workload_key_indices_.size();
-        per_client_worker_workload_idx_[local_client_worker_idx] = next_workload_idx;
-
-        return WorkloadItem(tmp_key, tmp_value, tmp_type);
-    }
-
-    WorkloadItem WikipediaWorkloadWrapper::getDatasetItemInternal_(const uint32_t itemidx)
-    {
-        assert(itemidx < dataset_kvpairs_.size());
-
-        const Key tmp_covered_key = dataset_kvpairs_[itemidx].first;
-        const Value tmp_covered_value = dataset_kvpairs_[itemidx].second;
-        return WorkloadItem(tmp_covered_key, tmp_covered_value, WorkloadItemType::kWorkloadItemPut);
-    }
-
     // Get average/min/max dataset key/value size
 
     double WikipediaWorkloadWrapper::getAvgDatasetKeysize() const
     {
+        checkIsValid_();
         return average_dataset_keysize_;
     }
     
     double WikipediaWorkloadWrapper::getAvgDatasetValuesize() const
     {
+        checkIsValid_();
         return average_dataset_valuesize_;
     }
 
     uint32_t WikipediaWorkloadWrapper::getMinDatasetKeysize() const
     {
+        checkIsValid_();
         return min_dataset_keysize_;
     }
 
     uint32_t WikipediaWorkloadWrapper::getMinDatasetValuesize() const
     {
+        checkIsValid_();
         return min_dataset_valuesize_;
     }
 
     uint32_t WikipediaWorkloadWrapper::getMaxDatasetKeysize() const
     {
+        checkIsValid_();
         return max_dataset_keysize_;
     }
 
     uint32_t WikipediaWorkloadWrapper::getMaxDatasetValuesize() const
     {
+        checkIsValid_();
         return max_dataset_valuesize_;
     }
 
     // Wiki-specific helper functions
 
-    void WikipediaWorkloadWrapper::parseCurrentFile_(const std::string& tmp_filepath, const uint32_t& key_column_idx, const uint32_t& value_column_idx, const uint32_t& column_cnt, std::unordered_map<Key, Value, KeyHasher>& dataset_kvmap)
+    uint32_t WikipediaWorkloadWrapper::parseCurrentFile_(const std::string& tmp_filepath, const uint32_t& key_column_idx, const uint32_t& value_column_idx, const uint32_t& column_cnt, std::unordered_map<Key, Value, KeyHasher>& dataset_kvmap)
     {
         // Check if file exists
         bool is_exist = Util::isFileExist(tmp_filepath, true);
@@ -199,6 +217,7 @@ namespace covered
         assert(tmp_filelen > 0);
 
         // Process mmap blocks of the current trace file
+        uint32_t global_workload_idx = 0; // i.e., global line index of the current trace file
         uint32_t mmap_block_cnt = (tmp_filelen - 1) / Util::MAX_MMAP_BLOCK_SIZE + 1;
         assert(mmap_block_cnt > 0);
         char* prev_block_taildata = NULL;
@@ -258,13 +277,17 @@ namespace covered
                     concatenateLastLine_(prev_block_taildata, prev_block_tailsize, tmp_complete_line_startpos, tmp_complete_line_endpos, &tmp_concat_line_startpos, &tmp_concat_line_endpos);
                 }
 
-                // Process the current line to get key and value
-                Key tmp_key;
-                Value tmp_value;
-                parseCurrentLine_(tmp_concat_line_startpos, tmp_concat_line_endpos, key_column_idx, value_column_idx, column_cnt, tmp_key, tmp_value);
+                if (global_workload_idx % clientcnt_ == client_idx_) // The current line is partitioned to the current client
+                {
+                    // Process the current line to get key and value
+                    Key tmp_key;
+                    Value tmp_value;
+                    parseCurrentLine_(tmp_concat_line_startpos, tmp_concat_line_endpos, key_column_idx, value_column_idx, column_cnt, tmp_key, tmp_value);
 
-                // Update dataset and workload if necessary
-                updateDatasetAndWorkload_(tmp_key, tmp_value, dataset_kvmap);
+                    // Update dataset and workload if necessary
+                    updateDatasetAndWorkload_(tmp_key, tmp_value, dataset_kvmap);
+                }
+                global_workload_idx++;
 
                 // Release complete line if necessary
                 if (is_achieve_trace_file_end)
@@ -311,7 +334,7 @@ namespace covered
         // Close file
         Util::closeFile(tmp_fd);
 
-        return;
+        return global_workload_idx;
     }
 
     void WikipediaWorkloadWrapper::completeLastLine_(const char* tmp_line_startpos, const char* tmp_line_endpos, char** tmp_complete_line_startpos_ptr, char** tmp_complete_line_endpos_ptr) const

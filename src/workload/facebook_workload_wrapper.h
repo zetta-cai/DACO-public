@@ -33,7 +33,10 @@ namespace covered
         FacebookWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& opcnt, const uint32_t& perclient_workercnt);
         virtual ~FacebookWorkloadWrapper();
 
+        virtual WorkloadItem generateWorkloadItem(const uint32_t& local_client_worker_idx) override; // NOTE: randomly select an item without modifying any variable -> thread safe
         virtual uint32_t getPracticalKeycnt() const override;
+        virtual uint32_t getTotalOpcnt() const override;
+        virtual WorkloadItem getDatasetItem(const uint32_t itemidx) override; // Get a dataset key-value pair item with the index of itemidx
 
         // Get average/min/max dataset key/value size
         virtual double getAvgDatasetKeysize() const override;
@@ -48,12 +51,6 @@ namespace covered
         virtual void initWorkloadParameters_() override;
         virtual void overwriteWorkloadParameters_() override;
         virtual void createWorkloadGenerator_() override;
-
-        // NOTE: randomly select an item without modifying any variable -> thread safe
-        virtual WorkloadItem generateWorkloadItemInternal_(const uint32_t& local_client_worker_idx) override;
-
-        // Get a dataset key-value pair item with the index of itemidx
-        virtual WorkloadItem getDatasetItemInternal_(const uint32_t itemidx) override;
 
         std::unique_ptr<covered::GeneratorBase> makeGenerator_(const StressorConfig& config, const uint32_t& client_idx);
 
