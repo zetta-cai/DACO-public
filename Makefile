@@ -84,6 +84,11 @@ total_statistics_loader: src/total_statistics_loader.o $(LINK_OBJECTS)
 DEPS += src/total_statistics_loader.d
 CLEANS += src/total_statistics_loader.o
 
+trace_preprocessor: src/trace_preprocessor.o $(LINK_OBJECTS)
+	$(LINK) $^ $(LDLIBS) -o $@
+DEPS += src/trace_preprocessor.d
+CLEANS += src/trace_preprocessor.o
+
 #statistics_aggregator: src/statistics_aggregator.o $(LINK_OBJECTS)
 #	$(LINK) $^ $(LDLIBS) -o $@
 #DEPS += src/statistics_aggregator.d
@@ -92,7 +97,7 @@ CLEANS += src/total_statistics_loader.o
 ##############################################################################
 
 # statistics_aggregator
-TARGETS := dataset_loader simulator client edge cloud evaluator cliutil total_statistics_loader
+TARGETS := dataset_loader simulator client edge cloud evaluator cliutil total_statistics_loader trace_preprocessor
 
 all: $(TARGETS)
 #	rm -rf $(CLEANS) $(DEPS)
