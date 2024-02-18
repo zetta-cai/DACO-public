@@ -7,6 +7,8 @@ namespace covered
     const std::string WikipediaWorkloadExtraParam::WIKI_TRACE_TEXT_TYPE("text");
     const std::string WikipediaWorkloadExtraParam::WIKI_TRACE_IMAGE_TYPE("image");
 
+    const std::string WikipediaWorkloadExtraParam::kClassName("WikipediaWorkloadExtraParam");
+
     WikipediaWorkloadExtraParam::WikipediaWorkloadExtraParam(const std::string& wiki_trace_type) : WorkloadExtraParamBase()
     {
         if (wiki_trace_type != WIKI_TRACE_TEXT_TYPE && wiki_trace_type != WIKI_TRACE_IMAGE_TYPE)

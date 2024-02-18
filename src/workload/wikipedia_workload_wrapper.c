@@ -1,10 +1,10 @@
 #include "workload/wikipedia_workload_wrapper.h"
 
+#include <fcntl.h> // O_RDONLY
 #include <stdlib.h> // strtoll
 #include <string.h> // strchr
 #include <sys/mman.h> // mmap and munmap
 #include <unistd.h> // lseek
-#include <unordered_map>
 
 #include "common/config.h"
 #include "common/util.h"
@@ -317,7 +317,7 @@ namespace covered
 
                 // Switch to the next line
                 tmp_line_startpos = tmp_line_endpos + 1;
-                if (is_achieve_mmap_block_end)
+                if (is_achieve_trace_file_end)
                 {
                     assert(tmp_line_startpos > tmp_block_buffer_endpos);
                 }
@@ -371,13 +371,13 @@ namespace covered
 
     void WikipediaWorkloadWrapper::parseCurrentLine_(const char* tmp_concat_line_startpos, const char* tmp_concat_line_endpos, const uint32_t& key_column_idx, const uint32_t& value_column_idx, const uint32_t& column_cnt, Key& key, Value& value) const
     {
-        char* tmp_column_startpos = tmp_concat_line_startpos;
+        const char* tmp_column_startpos = tmp_concat_line_startpos;
         for (uint32_t tmp_column_idx = 0; tmp_column_idx < column_cnt; tmp_column_idx++) // For each column in the current line of current mmap block of the current trace file
         {
             assert(tmp_column_startpos <= tmp_concat_line_endpos);
 
             // Find the end of the current column
-            char* tmp_column_endpos = tmp_concat_line_endpos; // \n
+            const char* tmp_column_endpos = tmp_concat_line_endpos; // \n
             if (tmp_column_idx != column_cnt - 1)
             {
                 tmp_column_endpos = strchr(tmp_column_startpos, Util::TSV_SEP_CHAR); // \t
@@ -419,36 +419,36 @@ namespace covered
             dataset_kvmap.insert(std::pair(key, value));
 
             // Update dataset statistics
-            average_dataset_keysize_ = (average_dataset_keysize_ * dataset_kvpairs_.size() + key.getKeysize()) / (dataset_kvpairs_.size() + 1);
+            average_dataset_keysize_ = (average_dataset_keysize_ * dataset_kvpairs_.size() + key.getKeyLength()) / (dataset_kvpairs_.size() + 1);
             average_dataset_valuesize_ = (average_dataset_valuesize_ * dataset_kvpairs_.size() + value.getValuesize()) / (dataset_kvpairs_.size() + 1);
             if (dataset_kvpairs_.size() == 0) // The first kvpair
             {
-                min_dataset_keysize_ = key.getKeysize();
+                min_dataset_keysize_ = key.getKeyLength();
                 min_dataset_valuesize_ = value.getValuesize();
-                max_dataset_keysize_ = key.getKeysize();
+                max_dataset_keysize_ = key.getKeyLength();
                 max_dataset_valuesize_ = value.getValuesize();
             }
             else // Subsequent kvpairs
             {
-                min_dataset_keysize_ = std::min(min_dataset_keysize_, key.getKeysize());
+                min_dataset_keysize_ = std::min(min_dataset_keysize_, key.getKeyLength());
                 min_dataset_valuesize_ = std::min(min_dataset_valuesize_, value.getValuesize());
-                max_dataset_keysize_ = std::max(max_dataset_keysize_, key.getKeysize());
+                max_dataset_keysize_ = std::max(max_dataset_keysize_, key.getKeyLength());
                 max_dataset_valuesize_ = std::max(max_dataset_valuesize_, value.getValuesize());
             }
 
             dataset_kvpairs_.push_back(std::pair(key, value));
-            workload_key_indices_.push_back(dataset_kvpairs_.size() - 1);
-            workload_value_sizes_.push_back(-1); // Treat the first request as read request, as stresstest phase is after dataset loading phase
+            curclient_workload_key_indices_.push_back(dataset_kvpairs_.size() - 1);
+            curclient_workload_value_sizes_.push_back(-1); // Treat the first request as read request, as stresstest phase is after dataset loading phase
         }
         else // Subsequent requests on the key
         {
             if (value.getValuesize() == tmp_dataset_kvmap_iter->second.getValuesize())
             {
-                workload_value_sizes_.push_back(-1); // Read request
+                curclient_workload_value_sizes_.push_back(-1); // Read request
             }
             else
             {
-                workload_value_sizes_.push_back(value.getValuesize()); // Write request (put or delete)
+                curclient_workload_value_sizes_.push_back(value.getValuesize()); // Write request (put or delete)
             }
         }
 

@@ -12,6 +12,7 @@
 #define WIKIPEDIA_WORKLOAD_WRAPPER_H
 
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "workload/wikipedia_workload_extra_param.h"
@@ -64,7 +65,7 @@ namespace covered
         uint32_t max_dataset_keysize_; // Maximum dataset key size
         uint32_t max_dataset_valuesize_; // Maximum dataset value size
         uint32_t total_workload_opcnt_; // Opcnt of workloads in all clients
-        std::vector<Key, Value> dataset_kvpairs_; // Key-value pairs of dataset
+        std::vector<std::pair<Key, Value>> dataset_kvpairs_; // Key-value pairs of dataset
         std::vector<uint32_t> curclient_workload_key_indices_; // Key indices of workload in the current client
         std::vector<int> curclient_workload_value_sizes_; // Value sizes of workload in the current client (< 0: read; = 0: delete; > 0: write)
 

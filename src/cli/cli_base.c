@@ -121,6 +121,8 @@ namespace covered
             ;
 
             // Common dynamic configurations
+            // NOTE: options_description::add_options() will return an instance of options_description_easy_init, whose operator() will create a new option_description and add it to the options_description
+            // NOTE: the created option_description will store the argument of (const char* description) into a new string
             // Obsolete: ("debug", "enable debug information"); ("track_event", "track events to break down latencies"), ("multinode", "disable single-node mode (NOT work for simulator)")
             argument_desc_.add_options()
                 ("clientcnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_CLIENTCNT), "the total number of clients")

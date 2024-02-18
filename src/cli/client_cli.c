@@ -105,11 +105,13 @@ namespace covered
 
             // (1) Create CLI parameter description
 
+            std::string perclient_opcnt_descstr = "the number of per-client operations (per-client workload size; NOT affect " + Util::getReplayedWorkloadHintstr() + ")";
+
             // Dynamic configurations for client
             argument_desc_.add_options()
                 // ("clientcnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_CLIENTCNT), "the total number of clients")
                 ("disable_warmup_speedup", "disable speedup mode for warmup phase")
-                ("perclient_opcnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_PERCLIENT_OPCNT), "the number of per-client operations (per-client workload size; NOT affect " + Util::getReplayedWorkloadHintstr() + ")")
+                ("perclient_opcnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_PERCLIENT_OPCNT), perclient_opcnt_descstr.c_str())
                 ("perclient_workercnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_PERCLIENT_WORKERCNT), "the number of worker threads for each client")
             ;
 
@@ -145,6 +147,7 @@ namespace covered
             {
                 assert(false); // Should NOT arrive here, as TracePreprocessorCLI does NOT inherit from ClientCLI
 
+                const std::string workload_name = getWorkloadName();
                 if (!Util::isReplayedWorkload(workload_name))
                 {
                     std::ostringstream oss;
@@ -157,7 +160,7 @@ namespace covered
             }
             else if (Util::isReplayedWorkload(getWorkloadName())) // Already preprocessed for replayed workloads
             {
-                perclient_opcnt = Config::getTraceTotalOpcnt(getWorkloadName() / getClientcnt());
+                perclient_opcnt = Config::getTraceTotalOpcnt(getWorkloadName()) / getClientcnt();
             }
             perclient_opcnt_ = perclient_opcnt;
             perclient_workercnt_ = perclient_workercnt;
@@ -208,7 +211,7 @@ namespace covered
         if (main_class_name != Util::TRACE_PREPROCESSOR_MAIN_NAME && perclient_opcnt_) // Already preprocessed yet with invalid per-client opcnt
         {
             const std::string workload_name = getWorkloadName();
-            if (Util::isReplayedWorkload()) // From Config for replayed workloads
+            if (Util::isReplayedWorkload(workload_name)) // From Config for replayed workloads
             {
                 std::ostringstream oss;
                 oss << "please run trace_preprocessor and update config.json for " << workload_name << "!";

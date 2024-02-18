@@ -60,7 +60,7 @@ namespace covered
         const uint32_t perclient_opcnt_;
         const uint32_t perclient_workercnt_;
 
-        void checkIsValid_();
+        void checkIsValid_() const;
     };
 }
 

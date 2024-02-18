@@ -70,9 +70,11 @@ namespace covered
 
             // (1) Create CLI parameter description
 
+            std::string keycnt_descstr = "the number of unique keys (dataset size; NOT affect " + Util::getReplayedWorkloadHintstr() + ")";
+
             // Dynamic configurations for client
             argument_desc_.add_options()
-                ("keycnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_KEYCNT), "the number of unique keys (dataset size; NOT affect " + Util::getReplayedWorkloadHintstr() + ")")
+                ("keycnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_KEYCNT), keycnt_descstr.c_str())
                 ("workload_name", boost::program_options::value<std::string>()->default_value(DEFAULT_WORKLOAD_NAME), "workload name (e.g., facebook)")
             ;
 

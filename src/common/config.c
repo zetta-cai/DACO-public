@@ -1236,7 +1236,7 @@ namespace covered
     void Config::checkMainClassName_()
     {
         // Obsolete: STATISTICS_AGGREGATOR_MAIN_NAME
-        if (main_class_name_ != Util::SIMULATOR_MAIN_NAME && main_class_name_ != Util::TOTAL_STATISTICS_LOADER_MAIN_NAME && main_class_name_ != Util::DATASET_LOADER_MAIN_NAME && main_class_name_ != Util::CLIENT_MAIN_NAME && main_class_name_ != Util::EDGE_MAIN_NAME && main_class_name_ != Util::CLOUD_MAIN_NAME && main_class_name_ != Util::EVALUATOR_MAIN_NAME && main_class_name_ != Util::CLIUTIL_MAIN_NAME && Util::TRACE_PREPROCESSOR_MAIN_NAME)
+        if (main_class_name_ != Util::SIMULATOR_MAIN_NAME && main_class_name_ != Util::TOTAL_STATISTICS_LOADER_MAIN_NAME && main_class_name_ != Util::DATASET_LOADER_MAIN_NAME && main_class_name_ != Util::CLIENT_MAIN_NAME && main_class_name_ != Util::EDGE_MAIN_NAME && main_class_name_ != Util::CLOUD_MAIN_NAME && main_class_name_ != Util::EVALUATOR_MAIN_NAME && main_class_name_ != Util::CLIUTIL_MAIN_NAME && main_class_name_ != Util::TRACE_PREPROCESSOR_MAIN_NAME)
         {
             std::ostringstream oss;
             oss << "main class name " << main_class_name_ << " is not supported!";

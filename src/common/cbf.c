@@ -52,7 +52,7 @@ namespace covered
 
     CBF::~CBF()
     {
-        for (int i = 0; i < hash_wrappers_.size(); i++)
+        for (uint32_t i = 0; i < hash_wrappers_.size(); i++)
         {
             assert(hash_wrappers_[i] != NULL);
             delete hash_wrappers_[i];

@@ -93,7 +93,7 @@ namespace covered
         return;
     }
 
-    void WorkloadWrapperBase::checkIsValid_()
+    void WorkloadWrapperBase::checkIsValid_() const
     {
         if (!is_valid_)
         {
