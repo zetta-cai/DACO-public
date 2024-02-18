@@ -16,6 +16,7 @@
 /cloud
 /evaluator
 /cliutil
+/trace_preprocessor
 #/statistics_aggregator
 
 # Prerequisites

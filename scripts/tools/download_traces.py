@@ -5,7 +5,7 @@ import os
 
 from ..common import *
 
-is_clear_tarball = False # whether to clear intermediate tarball files
+is_clear_tarball = True # whether to clear intermediate tarball files
 
 # (1) Create trace dirpath if not exist
 
@@ -46,8 +46,8 @@ for i in range(len(wikiimage_trace_filepaths)):
     tmp_trace_filepath = wikiimage_trace_filepaths[i]
     if not os.path.exists(tmp_trace_filepath):
         # Download each wikiimage tarball file if not exist
-        tmp_trace_filename = os.path.basename(wikiimage_trace_filepaths[i]) # xxx.tsv
-        tmp_tarball_filename = tmp_trace_filename[:-4] + ".gz" # xxx.gz
+        tmp_trace_filename = os.path.basename(wikiimage_trace_filepaths[i]) # xxx
+        tmp_tarball_filename = tmp_trace_filename + ".gz" # xxx.gz
         tmp_tarball_filepath = "{}/{}".format(wikiimage_trace_dirpath, tmp_tarball_filename)
         if not os.path.exists(tmp_tarball_filepath):
             LogUtil.prompt(Common.scriptname, "download {}...".format(tmp_tarball_filepath))
@@ -57,7 +57,7 @@ for i in range(len(wikiimage_trace_filepaths)):
 
         # Decompress each wikiimage trace file if not exist
         LogUtil.prompt(Common.scriptname, "decompress {}...".format(tmp_tarball_filepath))
-        tmp_decompress_cmd = "cd {} && gunzip {}".format(wikiimage_trace_dirpath, tmp_tarball_filename)
+        tmp_decompress_cmd = "cd {} && gunzip -k {}".format(wikiimage_trace_dirpath, tmp_tarball_filename)
         tmp_decompress_subprocess = SubprocessUtil.runCmd(tmp_decompress_cmd, is_capture_output=False)
 
         # Clear tarball file if necessary
@@ -89,18 +89,18 @@ for i in range(len(wikitext_trace_filepaths)):
     tmp_trace_filepath = wikitext_trace_filepaths[i]
     if not os.path.exists(tmp_trace_filepath):
         # Download each wikitext trace file if not exist
-        tmp_trace_filename = os.path.basename(wikitext_trace_filepaths[i]) # xxx.tsv
-        tmp_tarball_filename = tmp_trace_filename[:-4] + ".gz" # xxx.gz
+        tmp_trace_filename = os.path.basename(wikitext_trace_filepaths[i]) # xxx
+        tmp_tarball_filename = tmp_trace_filename + ".gz" # xxx.gz
         tmp_tarball_filepath = "{}/{}".format(wikitext_trace_dirpath, tmp_tarball_filename)
         if not os.path.exists(tmp_tarball_filepath):
-            LogUtil.prompt(Common.scriptname, "download {}...".format(tmp_tarball_filepath)
+            LogUtil.prompt(Common.scriptname, "download {}...".format(tmp_tarball_filepath))
             tmp_download_url = "{}/{}".format(wikitext_download_url_prefix, tmp_tarball_filename)
             tmp_download_cmd = "cd {} && wget {}".format(wikitext_trace_dirpath, tmp_download_url)
             tmp_download_subprocess = SubprocessUtil.runCmd(tmp_download_cmd, is_capture_output=False)
 
         # Decompress each wikitext trace file if not exist
         LogUtil.prompt(Common.scriptname, "decompress {}...".format(tmp_tarball_filepath))
-        tmp_decompress_cmd = "cd {} && gunzip {}".format(wikitext_trace_dirpath, tmp_tarball_filename)
+        tmp_decompress_cmd = "cd {} && gunzip -k {}".format(wikitext_trace_dirpath, tmp_tarball_filename)
         tmp_decompress_subprocess = SubprocessUtil.runCmd(tmp_decompress_cmd, is_capture_output=False)
 
         # Clear tarball file if necessary
