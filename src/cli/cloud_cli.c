@@ -92,7 +92,6 @@ namespace covered
 
             // Store cloud CLI parameters for dynamic configurations and mark CloudParam as valid
             cloud_storage_ = cloud_storage;
-            checkCloudStorage_();
 
             is_set_param_and_config_ = true;
         }
@@ -100,12 +99,14 @@ namespace covered
         return;
     }
 
-    void CloudCLI::dumpCliParameters_()
+    void CloudCLI::verifyAndDumpCliParameters_(const std::string& main_class_name)
     {
         if (!is_dump_cli_parameters_)
         {
-            PropagationCLI::dumpCliParameters_();
-            WorkloadCLI::dumpCliParameters_();
+            PropagationCLI::verifyAndDumpCliParameters_(main_class_name);
+            WorkloadCLI::verifyAndDumpCliParameters_(main_class_name);
+
+            checkCloudStorage_();
 
             // (6) Dump stored CLI parameters and parsed config information if debug
 

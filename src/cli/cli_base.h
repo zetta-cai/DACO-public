@@ -37,6 +37,8 @@ namespace covered
 
         static const std::string kClassName;
 
+        void verifyIntegrity_() const;
+
         bool is_add_cli_parameters_;
         bool is_set_param_and_config_;
         bool is_dump_cli_parameters_;
@@ -52,10 +54,8 @@ namespace covered
         void parseCliParameters_(int argc, char **argv);
         virtual void setParamAndConfig_(const std::string& main_class_name);
         void processCliParameters_();
-        virtual void dumpCliParameters_();
+        virtual void verifyAndDumpCliParameters_(const std::string& main_class_name);
         virtual void createRequiredDirectories_(const std::string& main_class_name) = 0;
-
-        void verifyIntegrity_() const;
 
         boost::program_options::options_description argument_desc_;
         boost::program_options::variables_map argument_info_;

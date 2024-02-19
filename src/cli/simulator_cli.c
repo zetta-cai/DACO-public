@@ -72,12 +72,12 @@ namespace covered
         return;
     }
 
-    void SimulatorCLI::dumpCliParameters_()
+    void SimulatorCLI::verifyAndDumpCliParameters_(const std::string& main_class_name)
     {
         if (!is_dump_cli_parameters_)
         {
-            CloudCLI::dumpCliParameters_();
-            EvaluatorCLI::dumpCliParameters_();
+            CloudCLI::verifyAndDumpCliParameters_(main_class_name);
+            EvaluatorCLI::verifyAndDumpCliParameters_(main_class_name);
 
             is_dump_cli_parameters_ = true;
         }

@@ -117,11 +117,11 @@ namespace covered
         return;
     }
 
-    void PropagationCLI::dumpCliParameters_()
+    void PropagationCLI::verifyAndDumpCliParameters_(const std::string& main_class_name)
     {
         if (!is_dump_cli_parameters_)
         {
-            CLIBase::dumpCliParameters_();
+            CLIBase::verifyAndDumpCliParameters_(main_class_name);
 
             // (6) Dump stored CLI parameters and parsed config information if debug
 

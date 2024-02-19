@@ -118,9 +118,7 @@ namespace covered
 
             // Store edgescale CLI parameters for dynamic configurations
             capacity_bytes_ = capacity_bytes;
-            checkCapacityBytes_();
             // edgecnt_ = edgecnt;
-            verifyIntegrity_();
 
             is_set_param_and_config_ = true;
         }
@@ -128,11 +126,14 @@ namespace covered
         return;
     }
 
-    void EdgescaleCLI::dumpCliParameters_()
+    void EdgescaleCLI::verifyAndDumpCliParameters_(const std::string& main_class_name)
     {
         if (!is_dump_cli_parameters_)
         {
-            CLIBase::dumpCliParameters_();
+            CLIBase::verifyAndDumpCliParameters_(main_class_name);
+
+            checkCapacityBytes_();
+            verifyIntegrity_();
 
             // (6) Dump stored CLI parameters and parsed config information if debug
 

@@ -102,7 +102,6 @@ namespace covered
             // Store client CLI parameters for dynamic configurations
             dataset_loadercnt_ = dataset_loadercnt;
             cloud_idx_ = cloud_idx;
-            verifyIntegrity_();
 
             is_set_param_and_config_ = true;
         }
@@ -110,11 +109,13 @@ namespace covered
         return;
     }
 
-    void DatasetLoaderCLI::dumpCliParameters_()
+    void DatasetLoaderCLI::verifyAndDumpCliParameters_(const std::string& main_class_name)
     {
         if (!is_dump_cli_parameters_)
         {
-            CloudCLI::dumpCliParameters_();
+            CloudCLI::verifyAndDumpCliParameters_(main_class_name);
+
+            verifyIntegrity_();
 
             // (6) Dump stored CLI parameters and parsed config information if debug
 

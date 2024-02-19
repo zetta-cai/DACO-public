@@ -58,7 +58,7 @@ namespace covered
             parseCliParameters_(argc, argv); // Parse CLI parameters based on argument_desc_ to set argument_info_
             setParamAndConfig_(main_class_name); // Set parameters for dynamic configurations and load config file for static configurations
             processCliParameters_(); // Process static/dynamic actions
-            dumpCliParameters_(); // Dump CLI parameters
+            verifyAndDumpCliParameters_(main_class_name); // Dump CLI parameters
             createRequiredDirectories_(main_class_name); // Create required directories (e.g., client statistics directory and cloud RocksDB directory)
         }
         catch (const std::exception & e)
@@ -165,7 +165,6 @@ namespace covered
             clientcnt_ = clientcnt;
             edgecnt_ = edgecnt;
             config_file_ = config_filepath;
-            verifyIntegrity_();
 
             // (4) Load config file for static configurations
 
@@ -204,10 +203,12 @@ namespace covered
         return;
     }
 
-    void CLIBase::dumpCliParameters_()
+    void CLIBase::verifyAndDumpCliParameters_(const std::string& main_class_name)
     {
         if (!is_dump_cli_parameters_)
         {
+            verifyIntegrity_();
+            
             // (6) Dump stored CLI parameters and parsed config information if debug
 
             Util::dumpDebugMsg(kClassName, Config::toString());

@@ -136,12 +136,12 @@ namespace covered
         return;
     }
 
-    void EvaluatorCLI::dumpCliParameters_()
+    void EvaluatorCLI::verifyAndDumpCliParameters_(const std::string& main_class_name)
     {
         if (!is_dump_cli_parameters_)
         {
-            ClientCLI::dumpCliParameters_();
-            EdgeCLI::dumpCliParameters_();
+            ClientCLI::verifyAndDumpCliParameters_(main_class_name);
+            EdgeCLI::verifyAndDumpCliParameters_(main_class_name);
 
             // (6) Dump stored CLI parameters and parsed config information if debug
 

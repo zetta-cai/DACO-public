@@ -65,11 +65,11 @@ namespace covered
         return;
     }
 
-    void TracePreprocessorCLI::dumpCliParameters_()
+    void TracePreprocessorCLI::verifyAndDumpCliParameters_(const std::string& main_class_name)
     {
         if (!is_dump_cli_parameters_)
         {
-            WorkloadCLI::dumpCliParameters_();
+            WorkloadCLI::verifyAndDumpCliParameters_(main_class_name);
 
             is_dump_cli_parameters_ = true;
         }

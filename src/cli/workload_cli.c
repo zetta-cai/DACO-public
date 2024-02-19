@@ -114,8 +114,6 @@ namespace covered
             }
             keycnt_ = keycnt;
             workload_name_ = workload_name;
-            checkWorkloadName_();
-            verifyIntegrity_(main_class_name);
 
             is_set_param_and_config_ = true;
         }
@@ -123,11 +121,14 @@ namespace covered
         return;
     }
 
-    void WorkloadCLI::dumpCliParameters_()
+    void WorkloadCLI::verifyAndDumpCliParameters_(const std::string& main_class_name)
     {
         if (!is_dump_cli_parameters_)
         {
-            CLIBase::dumpCliParameters_();
+            CLIBase::verifyAndDumpCliParameters_(main_class_name);
+
+            checkWorkloadName_();
+            verifyIntegrity_(main_class_name);
 
             // (6) Dump stored CLI parameters and parsed config information if debug
 
@@ -145,7 +146,7 @@ namespace covered
 
     void WorkloadCLI::checkWorkloadName_() const
     {
-        if (workload_name_ != Util::FACEBOOK_WORKLOAD_NAME || workload_name_ != Util::WIKIPEDIA_IMAGE_WORKLOAD_NAME || workload_name_ != Util::WIKIPEDIA_TEXT_WORKLOAD_NAME)
+        if (workload_name_ != Util::FACEBOOK_WORKLOAD_NAME && workload_name_ != Util::WIKIPEDIA_IMAGE_WORKLOAD_NAME && workload_name_ != Util::WIKIPEDIA_TEXT_WORKLOAD_NAME)
         {
             std::ostringstream oss;
             oss << "workload name " << workload_name_ << " is not supported!";

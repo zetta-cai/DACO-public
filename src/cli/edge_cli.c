@@ -205,9 +205,7 @@ namespace covered
 
             // Store edgecnt CLI parameters for dynamic configurations
             cache_name_ = cache_name;
-            checkCacheName_();
             hash_name_ = hash_name;
-            checkHashName_();
             percacheserver_workercnt_ = percacheserver_workercnt;
             // ONLY used by COVERED
             if (cache_name == Util::COVERED_CACHE_NAME)
@@ -235,20 +233,22 @@ namespace covered
                 covered_topk_edgecnt_ = covered_topk_edgecnt;
             }
 
-            verifyIntegrity_();
-
             is_set_param_and_config_ = true;
         }
 
         return;
     }
 
-    void EdgeCLI::dumpCliParameters_()
+    void EdgeCLI::verifyAndDumpCliParameters_(const std::string& main_class_name)
     {
         if (!is_dump_cli_parameters_)
         {
-            EdgescaleCLI::dumpCliParameters_();
-            PropagationCLI::dumpCliParameters_();
+            EdgescaleCLI::verifyAndDumpCliParameters_(main_class_name);
+            PropagationCLI::verifyAndDumpCliParameters_(main_class_name);
+
+            checkCacheName_();
+            checkHashName_();
+            verifyIntegrity_();
 
             // (6) Dump stored CLI parameters and parsed config information if debug
 

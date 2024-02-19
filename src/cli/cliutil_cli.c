@@ -69,12 +69,12 @@ namespace covered
         return;
     }
 
-    void CliutilCLI::dumpCliParameters_()
+    void CliutilCLI::verifyAndDumpCliParameters_(const std::string& main_class_name)
     {
         if (!is_dump_cli_parameters_)
         {
-            DatasetLoaderCLI::dumpCliParameters_();
-            SimulatorCLI::dumpCliParameters_();
+            DatasetLoaderCLI::verifyAndDumpCliParameters_(main_class_name);
+            SimulatorCLI::verifyAndDumpCliParameters_(main_class_name);
 
             is_dump_cli_parameters_ = true;
         }

@@ -45,9 +45,9 @@ namespace covered
         uint32_t dataset_loadercnt_;
         uint32_t cloud_idx_;
     protected:
-        virtual void addCliParameters_();
-        virtual void setParamAndConfig_(const std::string& main_class_name);
-        virtual void dumpCliParameters_();
+        virtual void addCliParameters_() override;
+        virtual void setParamAndConfig_(const std::string& main_class_name) override;
+        virtual void verifyAndDumpCliParameters_(const std::string& main_class_name) override;
         virtual void createRequiredDirectories_(const std::string& main_class_name) override;
     };
 }

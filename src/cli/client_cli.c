@@ -164,7 +164,6 @@ namespace covered
             }
             perclient_opcnt_ = perclient_opcnt;
             perclient_workercnt_ = perclient_workercnt;
-            verifyIntegrity_(main_class_name);
 
             is_set_param_and_config_ = true;
         }
@@ -172,13 +171,15 @@ namespace covered
         return;
     }
 
-    void ClientCLI::dumpCliParameters_()
+    void ClientCLI::verifyAndDumpCliParameters_(const std::string& main_class_name)
     {
         if (!is_dump_cli_parameters_)
         {
-            EdgescaleCLI::dumpCliParameters_();
-            PropagationCLI::dumpCliParameters_();
-            WorkloadCLI::dumpCliParameters_();
+            EdgescaleCLI::verifyAndDumpCliParameters_(main_class_name);
+            PropagationCLI::verifyAndDumpCliParameters_(main_class_name);
+            WorkloadCLI::verifyAndDumpCliParameters_(main_class_name);
+
+            verifyIntegrity_(main_class_name);
 
             // (6) Dump stored CLI parameters and parsed config information if debug
 
@@ -208,7 +209,7 @@ namespace covered
     void ClientCLI::verifyIntegrity_(const std::string& main_class_name) const
     {
         // assert(clientcnt_ > 0);
-        if (main_class_name != Util::TRACE_PREPROCESSOR_MAIN_NAME && perclient_opcnt_) // Already preprocessed yet with invalid per-client opcnt
+        if (main_class_name != Util::TRACE_PREPROCESSOR_MAIN_NAME && perclient_opcnt_ == 0) // Already preprocessed yet with invalid per-client opcnt
         {
             const std::string workload_name = getWorkloadName();
             if (Util::isReplayedWorkload(workload_name)) // From Config for replayed workloads

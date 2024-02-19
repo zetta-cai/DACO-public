@@ -44,9 +44,9 @@ namespace covered
         uint64_t capacity_bytes_; // Scalability on per-edge memory bytes
         // uint32_t edgecnt_; // Scalability on the number of edge nodes
     protected:
-        virtual void addCliParameters_();
-        virtual void setParamAndConfig_(const std::string& main_class_name);
-        virtual void dumpCliParameters_();
+        virtual void addCliParameters_() override;
+        virtual void setParamAndConfig_(const std::string& main_class_name) override;
+        virtual void verifyAndDumpCliParameters_(const std::string& main_class_name) override;
     };
 }
 

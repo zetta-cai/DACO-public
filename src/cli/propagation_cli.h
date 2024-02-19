@@ -44,9 +44,9 @@ namespace covered
         uint32_t propagation_latency_crossedge_us_; // 1/2 RTT between edge and neighbor (bidirectional link)
         uint32_t propagation_latency_edgecloud_us_; // 1/2 RTT between edge and cloud (bidirectional link)
     protected:
-        virtual void addCliParameters_();
-        virtual void setParamAndConfig_(const std::string& main_class_name);
-        virtual void dumpCliParameters_();
+        virtual void addCliParameters_() override;
+        virtual void setParamAndConfig_(const std::string& main_class_name) override;
+        virtual void verifyAndDumpCliParameters_(const std::string& main_class_name) override;
     };
 }
 
