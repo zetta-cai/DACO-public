@@ -5,6 +5,7 @@
 *.tar.gz
 *.pyc
 *.bak
+/data/*
 /output/*
 /lib/*
 /src/cache/segcache/build

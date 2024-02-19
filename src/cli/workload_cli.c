@@ -98,14 +98,6 @@ namespace covered
             // Store workload CLI parameters for dynamic configurations
             if (main_class_name == Util::TRACE_PREPROCESSOR_MAIN_NAME) // NOT preprocessed yet
             {
-                if (!Util::isReplayedWorkload(workload_name))
-                {
-                    std::ostringstream oss;
-                    oss << "workload " << workload_name << " is NOT replayed and NO need to run trace preprocessor!";
-                    Util::dumpErrorMsg(kClassName, oss.str());
-                    exit(1);
-                }
-
                 keycnt = 0;
             }
             else if (Util::isReplayedWorkload(workload_name)) // Already preprocessed for replayed workloads
@@ -158,6 +150,14 @@ namespace covered
 
     void WorkloadCLI::verifyIntegrity_(const std::string& main_class_name) const
     {
+        if (main_class_name == Util::TRACE_PREPROCESSOR_MAIN_NAME && !Util::isReplayedWorkload(workload_name))
+        {
+            std::ostringstream oss;
+            oss << "workload " << workload_name << " is NOT replayed and NO need to run trace preprocessor!";
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
+
         if (main_class_name != Util::TRACE_PREPROCESSOR_MAIN_NAME && keycnt_ == 0) // Already preprocessed yet with invalid key count
         {
             if (Util::isReplayedWorkload(workload_name_)) // From Config for replayed workloads

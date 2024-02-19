@@ -147,15 +147,6 @@ namespace covered
             {
                 assert(false); // Should NOT arrive here, as TracePreprocessorCLI does NOT inherit from ClientCLI
 
-                const std::string workload_name = getWorkloadName();
-                if (!Util::isReplayedWorkload(workload_name))
-                {
-                    std::ostringstream oss;
-                    oss << "workload " << workload_name << " is NOT replayed and NO need to run trace preprocessor!";
-                    Util::dumpErrorMsg(kClassName, oss.str());
-                    exit(1);
-                }
-
                 perclient_opcnt = 0;
             }
             else if (Util::isReplayedWorkload(getWorkloadName())) // Already preprocessed for replayed workloads
@@ -208,10 +199,18 @@ namespace covered
 
     void ClientCLI::verifyIntegrity_(const std::string& main_class_name) const
     {
+        const std::string workload_name = getWorkloadName();
+        if (main_class_name == Util::TRACE_PREPROCESSOR_MAIN_NAME && !Util::isReplayedWorkload(workload_name))
+        {
+            std::ostringstream oss;
+            oss << "workload " << workload_name << " is NOT replayed and NO need to run trace preprocessor!";
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
+
         // assert(clientcnt_ > 0);
         if (main_class_name != Util::TRACE_PREPROCESSOR_MAIN_NAME && perclient_opcnt_ == 0) // Already preprocessed yet with invalid per-client opcnt
         {
-            const std::string workload_name = getWorkloadName();
             if (Util::isReplayedWorkload(workload_name)) // From Config for replayed workloads
             {
                 std::ostringstream oss;
