@@ -14,18 +14,13 @@ namespace covered
     WorkloadWrapperBase* WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name)
     {
         WorkloadWrapperBase* workload_ptr = NULL;
-        if (workload_name == Util::FACEBOOK_WORKLOAD_NAME)
+        if (workload_name == Util::FACEBOOK_WORKLOAD_NAME) // Facebook/Meta CDN
         {
             workload_ptr = new FacebookWorkloadWrapper(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt);
         }
-        else if (workload_name == Util::WIKIPEDIA_IMAGE_WORKLOAD_NAME)
+        else if (workload_name == Util::WIKIPEDIA_IMAGE_WORKLOAD_NAME || workload_name == Util::WIKIPEDIA_TEXT_WORKLOAD_NAME) // Wiki image/text CDN
         {
-            WikipediaWorkloadExtraParam tmp_param(Util::WIKIPEDIA_IMAGE_WORKLOAD_NAME);
-            workload_ptr = new WikipediaWorkloadWrapper(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, tmp_param);
-        }
-        else if (workload_name == Util::WIKIPEDIA_TEXT_WORKLOAD_NAME)
-        {
-            WikipediaWorkloadExtraParam tmp_param(Util::WIKIPEDIA_TEXT_WORKLOAD_NAME);
+            WikipediaWorkloadExtraParam tmp_param(workload_name);
             workload_ptr = new WikipediaWorkloadWrapper(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, tmp_param);
         }
         else

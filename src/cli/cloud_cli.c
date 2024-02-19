@@ -68,9 +68,11 @@ namespace covered
 
             // (1) Create CLI parameter description
 
+            std::string cloud_storage_descstr = "type of cloud storage (e.g., " + Util::HDD_NAME + ")";
+
             // Dynamic configurations for client
             argument_desc_.add_options()
-                ("cloud_storage", boost::program_options::value<std::string>()->default_value(DEFAULT_CLOUD_STORAGE), "type of cloud storage (e.g., hdd)")
+                ("cloud_storage", boost::program_options::value<std::string>()->default_value(DEFAULT_CLOUD_STORAGE), cloud_storage_descstr.c_str())
             ;
 
             is_add_cli_parameters_ = true;

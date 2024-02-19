@@ -154,7 +154,7 @@ namespace covered
     std::string Util::getReplayedWorkloadHintstr()
     {
         std::ostringstream oss;
-        oss << "replayed workloads (" << WIKIPEDIA_IMAGE_WORKLOAD_NAME << ", " << WIKIPEDIA_TEXT_WORKLOAD_NAME << ")";
+        oss << "replayed workloads (" << WIKIPEDIA_IMAGE_WORKLOAD_NAME << " and " << WIKIPEDIA_TEXT_WORKLOAD_NAME << ")";
         return oss.str();
     }
 

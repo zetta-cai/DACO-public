@@ -4,36 +4,33 @@
 
 namespace covered
 {
-    const std::string WikipediaWorkloadExtraParam::WIKI_TRACE_TEXT_TYPE("text");
-    const std::string WikipediaWorkloadExtraParam::WIKI_TRACE_IMAGE_TYPE("image");
-
     const std::string WikipediaWorkloadExtraParam::kClassName("WikipediaWorkloadExtraParam");
 
-    WikipediaWorkloadExtraParam::WikipediaWorkloadExtraParam(const std::string& wiki_trace_type) : WorkloadExtraParamBase()
+    WikipediaWorkloadExtraParam::WikipediaWorkloadExtraParam(const std::string& wiki_workload_name) : WorkloadExtraParamBase()
     {
-        if (wiki_trace_type != WIKI_TRACE_TEXT_TYPE && wiki_trace_type != WIKI_TRACE_IMAGE_TYPE)
+        if (wiki_workload_name != Util::WIKIPEDIA_IMAGE_WORKLOAD_NAME && wiki_workload_name != Util::WIKIPEDIA_TEXT_WORKLOAD_NAME)
         {
-            Util::dumpErrorMsg(kClassName, "invalid wiki trace type: " + wiki_trace_type);
+            Util::dumpErrorMsg(kClassName, "invalid wiki workload name: " + wiki_workload_name);
             exit(1);
         }
 
-        wiki_trace_type_ = wiki_trace_type;
+        wiki_workload_name_ = wiki_workload_name;
     }
 
     WikipediaWorkloadExtraParam::~WikipediaWorkloadExtraParam()
     {
     }
 
-    std::string WikipediaWorkloadExtraParam::getWikiTraceType() const
+    std::string WikipediaWorkloadExtraParam::getWikiWorkloadName() const
     {
-        return wiki_trace_type_;
+        return wiki_workload_name_;
     }
 
     const WikipediaWorkloadExtraParam& WikipediaWorkloadExtraParam::operator=(const WikipediaWorkloadExtraParam& other)
     {
         WorkloadExtraParamBase::operator=(other);
 
-        wiki_trace_type_ = other.wiki_trace_type_;
+        wiki_workload_name_ = other.wiki_workload_name_;
 
         return *this;
     }

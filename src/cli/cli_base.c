@@ -215,8 +215,8 @@ namespace covered
 
             std::ostringstream oss;
             oss << "[Dynamic configurations from CLI parameters in " << kClassName << "]" << std::endl;
-            oss << "Client count: " << clientcnt_;
-            oss << "Edge count: " << edgecnt_;
+            oss << "Client count: " << clientcnt_ << std::endl;
+            oss << "Edge count: " << edgecnt_ << std::endl;
             oss << "Config filepath: " << config_file_;
             Util::dumpDebugMsg(kClassName, oss.str());
 

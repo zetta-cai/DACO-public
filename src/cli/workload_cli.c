@@ -71,11 +71,12 @@ namespace covered
             // (1) Create CLI parameter description
 
             std::string keycnt_descstr = "the number of unique keys (dataset size; NOT affect " + Util::getReplayedWorkloadHintstr() + ")";
+            std::string workload_name_descstr = "workload name (e.g., " + Util::FACEBOOK_WORKLOAD_NAME + ", " + Util::WIKIPEDIA_IMAGE_WORKLOAD_NAME + ", and " + Util::WIKIPEDIA_TEXT_WORKLOAD_NAME + ")";
 
             // Dynamic configurations for client
             argument_desc_.add_options()
                 ("keycnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_KEYCNT), keycnt_descstr.c_str())
-                ("workload_name", boost::program_options::value<std::string>()->default_value(DEFAULT_WORKLOAD_NAME), "workload name (e.g., facebook)")
+                ("workload_name", boost::program_options::value<std::string>()->default_value(DEFAULT_WORKLOAD_NAME), workload_name_descstr.c_str())
             ;
 
             is_add_cli_parameters_ = true;
@@ -150,10 +151,10 @@ namespace covered
 
     void WorkloadCLI::verifyIntegrity_(const std::string& main_class_name) const
     {
-        if (main_class_name == Util::TRACE_PREPROCESSOR_MAIN_NAME && !Util::isReplayedWorkload(workload_name))
+        if (main_class_name == Util::TRACE_PREPROCESSOR_MAIN_NAME && !Util::isReplayedWorkload(workload_name_))
         {
             std::ostringstream oss;
-            oss << "workload " << workload_name << " is NOT replayed and NO need to run trace preprocessor!";
+            oss << "workload " << workload_name_ << " is NOT replayed and NO need to run trace preprocessor!";
             Util::dumpErrorMsg(kClassName, oss.str());
             exit(1);
         }

@@ -97,20 +97,20 @@ namespace covered
 
     void WikipediaWorkloadWrapper::initWorkloadParameters_()
     {
-        const std::string wiki_trace_type = workload_extra_param_.getWikiTraceType();
+        const std::string wiki_workload_name = workload_extra_param_.getWikiWorkloadName();
 
         uint32_t column_cnt = 0;
         uint32_t key_column_idx = 0;
         uint32_t value_column_idx = 0;
         std::vector<std::string> trace_filepaths; // NOTE: follow the trace order
-        if (wiki_trace_type == WikipediaWorkloadExtraParam::WIKI_TRACE_IMAGE_TYPE)
+        if (wiki_workload_name == Util::WIKIPEDIA_IMAGE_WORKLOAD_NAME)
         {
             column_cnt = 5;
             key_column_idx = 1; // 2nd column
             value_column_idx = 3; // 4th column
             trace_filepaths = Config::getWikiimageTraceFilepaths();
         }
-        else if (wiki_trace_type == WikipediaWorkloadExtraParam::WIKI_TRACE_TEXT_TYPE)
+        else if (wiki_workload_name == Util::WIKIPEDIA_TEXT_WORKLOAD_NAME)
         {
             column_cnt = 4;
             key_column_idx = 1; // 2nd column
@@ -120,7 +120,7 @@ namespace covered
         else
         {
             std::ostringstream oss;
-            oss << "Wikipedia trace type " << wiki_trace_type << " is not supported now!";
+            oss << "Wikipedia workload name " << wiki_workload_name << " is not supported now!";
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }
@@ -129,7 +129,7 @@ namespace covered
         assert(trace_filecnt > 0);
 
         std::ostringstream oss;
-        oss << "load Wikipedia trace " << wiki_trace_type << " files...";
+        oss << "load " << wiki_workload_name << " trace files...";
         Util::dumpNormalMsg(instance_name_, oss.str());
         
         std::unordered_map<Key, Value, KeyHasher> dataset_kvmap; // Check if key has been tracked by dataset_kvpairs_ and compare with the original value size

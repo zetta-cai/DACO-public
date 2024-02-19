@@ -16,19 +16,16 @@ namespace covered
     class WikipediaWorkloadExtraParam : public WorkloadExtraParamBase
     {
     public:
-        static const std::string WIKI_TRACE_TEXT_TYPE;
-        static const std::string WIKI_TRACE_IMAGE_TYPE;
-
-        WikipediaWorkloadExtraParam(const std::string& wiki_trace_type);
+        WikipediaWorkloadExtraParam(const std::string& wiki_workload_name);
         virtual ~WikipediaWorkloadExtraParam();
 
-        std::string getWikiTraceType() const;
+        std::string getWikiWorkloadName() const;
 
         virtual const WikipediaWorkloadExtraParam& operator=(const WikipediaWorkloadExtraParam& other);
     private:
         static const std::string kClassName;
 
-        std::string wiki_trace_type_;
+        std::string wiki_workload_name_;
     };
 }
 
