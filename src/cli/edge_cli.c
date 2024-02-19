@@ -170,7 +170,7 @@ namespace covered
             // Dynamic configurations for client
             argument_desc_.add_options()
                 ("cache_name", boost::program_options::value<std::string>()->default_value(DEFAULT_CACHE_NAME), cache_name_descstr.c_str())
-                ("hash_name", boost::program_options::value<std::string>()->default_value(DEFAULT_HASH_NAME, hash_name_descstr.c_str())
+                ("hash_name", boost::program_options::value<std::string>()->default_value(DEFAULT_HASH_NAME), hash_name_descstr.c_str())
                 ("percacheserver_workercnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_PERCACHESERVER_WORKERCNT), "the number of worker threads for each cache server")
                 ("covered_local_uncached_max_mem_usage_mb", boost::program_options::value<uint64_t>()->default_value(DEFAULT_COVERED_LOCAL_UNCACHED_MAX_MEM_USAGE_MB), "the maximum memory usage for local uncached metadata in units of MiB (only used by COVERED)")
                 ("covered_peredge_synced_victimcnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_COVERED_PEREDGE_SYNCED_VICTIMCNT), "per-edge number of victims synced to each neighbor (only used by COVERED)")

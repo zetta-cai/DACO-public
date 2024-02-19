@@ -132,10 +132,15 @@ namespace covered
         oss << "load " << wiki_workload_name << " trace files...";
         Util::dumpNormalMsg(instance_name_, oss.str());
         
-        std::unordered_map<Key, Value, KeyHasher> dataset_kvmap; // Check if key has been tracked by dataset_kvpairs_ and compare with the original value size
+        std::unordered_map<Key, std::pair<Value, uint32_t>, KeyHasher> dataset_kvmap; // Track key, value, and key indice; check if key has been tracked by dataset_kvpairs_ and compare with the original value size
         for (uint32_t tmp_fileidx = 0; tmp_fileidx < trace_filecnt; tmp_fileidx++) // For each trace file
         {
             const std::string tmp_filepath = trace_filepaths[tmp_fileidx];
+
+            oss.clear();
+            oss.str("");
+            oss << "load " << tmp_filepath << " (" << (tmp_fileidx + 1) << "/" << trace_filecnt << ")...";
+            Util::dumpNormalMsg(instance_name_, oss.str());
 
             // Process the current trace file
             uint32_t tmp_opcnt = parseCurrentFile_(tmp_filepath, key_column_idx, value_column_idx, column_cnt, dataset_kvmap);
@@ -202,7 +207,7 @@ namespace covered
 
     // Wiki-specific helper functions
 
-    uint32_t WikipediaWorkloadWrapper::parseCurrentFile_(const std::string& tmp_filepath, const uint32_t& key_column_idx, const uint32_t& value_column_idx, const uint32_t& column_cnt, std::unordered_map<Key, Value, KeyHasher>& dataset_kvmap)
+    uint32_t WikipediaWorkloadWrapper::parseCurrentFile_(const std::string& tmp_filepath, const uint32_t& key_column_idx, const uint32_t& value_column_idx, const uint32_t& column_cnt, std::unordered_map<Key, std::pair<Value, uint32_t>, KeyHasher>& dataset_kvmap)
     {
         // Check if file exists
         bool is_exist = Util::isFileExist(tmp_filepath, true);
@@ -220,7 +225,8 @@ namespace covered
         assert(tmp_filelen > 0);
 
         // Process mmap blocks of the current trace file
-        uint32_t global_workload_idx = 0; // i.e., global line index of the current trace file
+        bool is_first_line = true; // We should skip the first title/metadata line
+        uint32_t global_workload_idx = 0; // i.e., global data line index of the current trace file
         uint32_t mmap_block_cnt = (tmp_filelen - 1) / Util::MAX_MMAP_BLOCK_SIZE + 1;
         assert(mmap_block_cnt > 0);
         char* prev_block_taildata = NULL;
@@ -280,17 +286,28 @@ namespace covered
                     concatenateLastLine_(prev_block_taildata, prev_block_tailsize, tmp_complete_line_startpos, tmp_complete_line_endpos, &tmp_concat_line_startpos, &tmp_concat_line_endpos);
                 }
 
-                if (global_workload_idx % clientcnt_ == client_idx_) // The current line is partitioned to the current client
-                {
-                    // Process the current line to get key and value
-                    Key tmp_key;
-                    Value tmp_value;
-                    parseCurrentLine_(tmp_concat_line_startpos, tmp_concat_line_endpos, key_column_idx, value_column_idx, column_cnt, tmp_key, tmp_value);
+                // TMPDEBUG24
+                // std::string tmp_line(tmp_concat_line_startpos, tmp_concat_line_endpos - tmp_concat_line_startpos + 1);
+                // Util::dumpNormalMsg(instance_name_, "tmp_line: " + tmp_line);
 
-                    // Update dataset and workload if necessary
-                    updateDatasetAndWorkload_(tmp_key, tmp_value, dataset_kvmap);
+                if (is_first_line) // Skip the first line of the current trace file, which is a title/metadata line instead of a data line
+                {
+                    is_first_line = false;
                 }
-                global_workload_idx++;
+                else // Non-first line of the current trace file (i.e., data line)
+                {
+                    if (global_workload_idx % clientcnt_ == client_idx_) // The current line is partitioned to the current client
+                    {
+                        // Process the current line to get key and value
+                        Key tmp_key;
+                        Value tmp_value;
+                        parseCurrentLine_(tmp_concat_line_startpos, tmp_concat_line_endpos, key_column_idx, value_column_idx, column_cnt, tmp_key, tmp_value);
+
+                        // Update dataset and workload if necessary
+                        updateDatasetAndWorkload_(tmp_key, tmp_value, dataset_kvmap);
+                    }
+                    global_workload_idx++;
+                }
 
                 // Release complete line if necessary
                 if (is_achieve_trace_file_end)
@@ -384,6 +401,10 @@ namespace covered
                 assert(tmp_column_endpos != NULL);
             }
 
+            // TMPDEBUG24
+            // std::string tmp_column(tmp_column_startpos, tmp_column_endpos - tmp_column_startpos + 1);
+            // Util::dumpNormalMsg(instance_name_, "tmp_column: " + tmp_column);
+
             assert(tmp_column_endpos > tmp_column_startpos); // Column MUST NOT empty except the column separator
             if (tmp_column_idx == key_column_idx)
             {
@@ -411,12 +432,13 @@ namespace covered
         return;
     }
 
-    void WikipediaWorkloadWrapper::updateDatasetAndWorkload_(const Key& key, const Value& value, std::unordered_map<Key, Value, KeyHasher>& dataset_kvmap)
+    void WikipediaWorkloadWrapper::updateDatasetAndWorkload_(const Key& key, const Value& value, std::unordered_map<Key, std::pair<Value, uint32_t>, KeyHasher>& dataset_kvmap)
     {
-        std::unordered_map<Key, Value, KeyHasher>::iterator tmp_dataset_kvmap_iter = dataset_kvmap.find(key);
+        std::unordered_map<Key, std::pair<Value, uint32_t>, KeyHasher>::iterator tmp_dataset_kvmap_iter = dataset_kvmap.find(key);
         if (tmp_dataset_kvmap_iter == dataset_kvmap.end()) // The first request on the key
         {
-            dataset_kvmap.insert(std::pair(key, value));
+            dataset_kvpairs_.push_back(std::pair(key, value));
+            dataset_kvmap.insert(std::pair(key, std::pair(value, dataset_kvpairs_.size() - 1)));
 
             // Update dataset statistics
             average_dataset_keysize_ = (average_dataset_keysize_ * dataset_kvpairs_.size() + key.getKeyLength()) / (dataset_kvpairs_.size() + 1);
@@ -436,13 +458,16 @@ namespace covered
                 max_dataset_valuesize_ = std::max(max_dataset_valuesize_, value.getValuesize());
             }
 
-            dataset_kvpairs_.push_back(std::pair(key, value));
             curclient_workload_key_indices_.push_back(dataset_kvpairs_.size() - 1);
             curclient_workload_value_sizes_.push_back(-1); // Treat the first request as read request, as stresstest phase is after dataset loading phase
         }
         else // Subsequent requests on the key
         {
-            if (value.getValuesize() == tmp_dataset_kvmap_iter->second.getValuesize())
+            const Value& original_value = tmp_dataset_kvmap_iter->second.first;
+            const uint32_t key_indice = tmp_dataset_kvmap_iter->second.second;
+
+            curclient_workload_key_indices_.push_back(key_indice);
+            if (value.getValuesize() == original_value.getValuesize())
             {
                 curclient_workload_value_sizes_.push_back(-1); // Read request
             }
