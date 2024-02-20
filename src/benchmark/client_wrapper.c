@@ -61,14 +61,14 @@ namespace covered
         uint32_t client_idx = client_wrapper_param.getClientIdx();
         ClientCLI* client_cli_ptr = client_wrapper_param.getClientCLIPtr();
         
-        ClientWrapper local_client(client_cli_ptr->getCapacityBytes(), client_idx, client_cli_ptr->getClientcnt(), client_cli_ptr->isWarmupSpeedup(), client_cli_ptr->getEdgecnt(), client_cli_ptr->getKeycnt(), client_cli_ptr->getPerclientOpcnt(), client_cli_ptr->getPerclientWorkercnt(), client_cli_ptr->getPropagationLatencyClientedgeUs(), client_cli_ptr->getWorkloadName());
+        ClientWrapper local_client(client_cli_ptr->getCapacityBytes(), client_idx, client_cli_ptr->getClientcnt(), client_cli_ptr->isWarmupSpeedup(), client_cli_ptr->getEdgecnt(), client_cli_ptr->getKeycnt(), client_cli_ptr->getPerclientOpcnt(), client_cli_ptr->getPerclientWorkercnt(), client_cli_ptr->getPropagationLatencyClientedgeUs(), client_cli_ptr->getTotalWorkloadLoadcntScale(), client_cli_ptr->getWorkloadName());
         local_client.start();
         
         pthread_exit(NULL);
         return NULL;
     }
 
-    ClientWrapper::ClientWrapper(const uint64_t& capacity_bytes, const uint32_t& client_idx, const uint32_t& clientcnt, const bool& is_warmup_speedup, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge_us, const std::string& workload_name) : NodeWrapperBase(NodeWrapperBase::CLIENT_NODE_ROLE, client_idx, clientcnt, false), is_warmup_speedup_(is_warmup_speedup), capacity_bytes_(capacity_bytes), edgecnt_(edgecnt), perclient_workercnt_(perclient_workercnt), is_warmup_phase_(true)
+    ClientWrapper::ClientWrapper(const uint64_t& capacity_bytes, const uint32_t& client_idx, const uint32_t& clientcnt, const bool& is_warmup_speedup, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge_us, const uint32_t& total_workload_loadcnt_scale, const std::string& workload_name) : NodeWrapperBase(NodeWrapperBase::CLIENT_NODE_ROLE, client_idx, clientcnt, false), is_warmup_speedup_(is_warmup_speedup), capacity_bytes_(capacity_bytes), edgecnt_(edgecnt), perclient_workercnt_(perclient_workercnt), is_warmup_phase_(true)
     {
         // Differentiate different clients
         std::ostringstream oss;
@@ -77,7 +77,9 @@ namespace covered
 
         // Create workload generator for the client
         // NOTE: creating workload generator needs time, so we introduce NodeParamBase::node_initialized_
-        workload_generator_ptr_ = WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(capacity_bytes_, clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name);
+        const bool is_loading_phase = false; // Track workload items instead of dataset items
+        const uint32_t total_workload_loadcnt = keycnt * total_workload_loadcnt_scale;
+        workload_generator_ptr_ = WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(capacity_bytes_, clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, is_loading_phase, total_workload_loadcnt);
         Util::dumpVariablesForDebug(instance_name_, 4, "average dataset key size:", std::to_string(workload_generator_ptr_->getAvgDatasetKeysize()).c_str(), "average dataset value size:", std::to_string(workload_generator_ptr_->getAvgDatasetValuesize()).c_str());
         Util::dumpVariablesForDebug(instance_name_, 4, "min dataset key size:", std::to_string(workload_generator_ptr_->getMinDatasetKeysize()).c_str(), "min dataset value size:", std::to_string(workload_generator_ptr_->getMinDatasetValuesize()).c_str());
         Util::dumpVariablesForDebug(instance_name_, 4, "max dataset key size:", std::to_string(workload_generator_ptr_->getMaxDatasetKeysize()).c_str(), "max dataset value size:", std::to_string(workload_generator_ptr_->getMaxDatasetValuesize()).c_str());

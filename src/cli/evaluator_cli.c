@@ -92,7 +92,7 @@ namespace covered
 
             // Dynamic configurations for client
             argument_desc_.add_options()
-                ("warmup_reqcnt_scale", boost::program_options::value<uint32_t>()->default_value(DEFAULT_WARMUP_REQCNT_SCALE), "scale of warmup request count (= warmup_reqcnt_scale * keycnt)")
+                ("warmup_reqcnt_scale", boost::program_options::value<uint32_t>()->default_value(DEFAULT_WARMUP_REQCNT_SCALE), "scale of warmup request count (-> warmup_reqcnt_scale * keycnt)")
                 #ifdef ENABLE_WARMUP_MAX_DURATION
                 ("warmup_max_duration_sec", boost::program_options::value<uint32_t>()->default_value(DEFAULT_WARMUP_MAX_DURATION_SEC), "maximum duration of warmup phase (seconds)")
                 #endif
@@ -142,6 +142,8 @@ namespace covered
         {
             ClientCLI::verifyAndDumpCliParameters_(main_class_name);
             EdgeCLI::verifyAndDumpCliParameters_(main_class_name);
+
+            verifyIntegrity_();
 
             // (6) Dump stored CLI parameters and parsed config information if debug
 
@@ -202,6 +204,13 @@ namespace covered
             is_create_required_directories_ = true;
         }
 
+        return;
+    }
+
+    void EvaluatorCLI::verifyIntegrity_() const
+    {
+        // Total workload loadcnt should > warmup reqcnt
+        assert(total_workload_loadcnt_ > getWarmupReqcntScale());
         return;
     }
 }

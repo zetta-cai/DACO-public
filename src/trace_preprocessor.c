@@ -44,7 +44,8 @@ int main(int argc, char **argv) {
     const uint32_t client_idx = 0;
     const uint32_t perclient_workercnt = 1;
     const uint32_t perclient_opcnt = 0; // NOTE: perclient_opcnt will NOT be used by replayed traces
-    covered::WorkloadWrapperBase* workload_generator_ptr = covered::WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name);
+    const bool is_loading_phase = true; // Track dataset items instead of workload items (yet still track total opcnt)
+    covered::WorkloadWrapperBase* workload_generator_ptr = covered::WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, is_loading_phase);
 
     // (3) Dump workload properties
 

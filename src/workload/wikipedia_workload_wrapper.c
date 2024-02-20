@@ -166,7 +166,7 @@ namespace covered
 
         // TMPDEBUG24
         std::ostringstream tmposs;
-        tmposs << "current client workload size: " << curclient_workload_keys_.size();
+        tmposs << "is_loading_phase: " << is_loading_phase_ << "; dataset_kvpairs_ size: " << dataset_kvpairs_.size() << "; current client workload size: " << curclient_workload_keys_.size() << "; total_workload_opcnt_: " << total_workload_opcnt_;
         Util::dumpNormalMsg(instance_name_, tmposs.str());
 
         return;
