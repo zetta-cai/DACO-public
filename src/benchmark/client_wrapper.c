@@ -80,9 +80,6 @@ namespace covered
         const bool is_loading_phase = false; // Track workload items instead of dataset items
         const uint32_t total_workload_loadcnt = keycnt * total_workload_loadcnt_scale;
         workload_generator_ptr_ = WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(capacity_bytes_, clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, is_loading_phase, total_workload_loadcnt);
-        Util::dumpVariablesForDebug(instance_name_, 4, "average dataset key size:", std::to_string(workload_generator_ptr_->getAvgDatasetKeysize()).c_str(), "average dataset value size:", std::to_string(workload_generator_ptr_->getAvgDatasetValuesize()).c_str());
-        Util::dumpVariablesForDebug(instance_name_, 4, "min dataset key size:", std::to_string(workload_generator_ptr_->getMinDatasetKeysize()).c_str(), "min dataset value size:", std::to_string(workload_generator_ptr_->getMinDatasetValuesize()).c_str());
-        Util::dumpVariablesForDebug(instance_name_, 4, "max dataset key size:", std::to_string(workload_generator_ptr_->getMaxDatasetKeysize()).c_str(), "max dataset value size:", std::to_string(workload_generator_ptr_->getMaxDatasetValuesize()).c_str());
         assert(workload_generator_ptr_ != NULL);
 
         // Create statistics tracker for the client

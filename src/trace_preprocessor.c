@@ -1,5 +1,5 @@
 /*
- * Preprocess replayed traces to get trace properties including keycnt and total opcnt.
+ * Preprocess replayed traces to get trace properties including keycnt, total opcnt, and dataset capacity size (for cache capacity calculation in evaluation).
  *
  * NOTE: you should update corresponding entires in config.json for replayed traces after preprocessing.
  * 
@@ -46,10 +46,26 @@ int main(int argc, char **argv) {
     const uint32_t perclient_opcnt = 0; // NOTE: perclient_opcnt will NOT be used by replayed traces
     const bool is_loading_phase = true; // Track dataset items instead of workload items (yet still track total opcnt)
     covered::WorkloadWrapperBase* workload_generator_ptr = covered::WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, is_loading_phase);
+    assert(workload_generator_ptr != NULL);
 
     // (3) Dump workload properties
 
-    covered::Util::dumpVariablesForDebug(main_class_name, 4, "unique key count (dataset size):", std::to_string(workload_generator_ptr->getPracticalKeycnt()).c_str(), "total opcnt of all clients (workload size):", std::to_string(workload_generator_ptr->getTotalOpcnt()).c_str());
+    oss.clear();
+    oss.str("");
+
+    const uint32_t dataset_keycnt = workload_generator_ptr->getPracticalKeycnt();
+    oss << "unique key count (dataset size): " << dataset_keycnt << "; total opcnt of all clients (workload size): " << workload_generator_ptr->getTotalOpcnt() << std::endl;
+
+    const uint32_t avg_dataset_keysize = workload_generator_ptr->getAvgDatasetKeysize();
+    const uint32_t avg_dataset_valuesize = workload_generator_ptr->getAvgDatasetValuesize();
+    const uint64_t dataset_capacity_size = (static_cast<uint64_t>(avg_dataset_keysize) + static_cast<uint64_t>(avg_dataset_valuesize)) * static_cast<uint64_t>(dataset_keycnt);
+    const uint32_t dataset_capacity_mb = static_cast<uint32_t>(B2MB(dataset_capacity_size));
+    oss << "average dataset key size: " << avg_dataset_keysize << "; average dataset value size: " << avg_dataset_valuesize << "; dataset_capacity_mb: " << dataset_capacity_mb << std::endl;
+
+    oss << "min dataset key size: " << workload_generator_ptr->getMinDatasetKeysize() << "; min dataset value size: " << workload_generator_ptr->getMinDatasetValuesize() << std::endl;
+    oss << "max dataset key size: " << workload_generator_ptr->getMaxDatasetKeysize() << "; max dataset value size: " << workload_generator_ptr->getMaxDatasetValuesize();
+
+    covered::Util::dumpNormalMsg(main_class_name, oss.str());
 
     // (6) Release variables
 

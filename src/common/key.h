@@ -23,6 +23,7 @@ namespace covered
 
         uint32_t getKeyLength() const;
         std::string getKeystr() const;
+        std::string getKeyIntstr() const;
 
         uint32_t getKeyPayloadSize() const;
         uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position) const;

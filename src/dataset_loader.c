@@ -112,10 +112,11 @@ int main(int argc, char **argv) {
     const uint32_t opcnt = clientcnt * perclient_workercnt; // dataset_loadercnt
     const bool is_loading_phase = true; // Track dataset items instead of workload items
     covered::WorkloadWrapperBase* workload_generator_ptr = covered::WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(clientcnt, client_idx, keycnt, opcnt, perclient_workercnt, workload_name, is_loading_phase);
+    assert(workload_generator_ptr != NULL);
+    
     covered::Util::dumpVariablesForDebug(main_class_name, 4, "average dataset key size:", std::to_string(workload_generator_ptr->getAvgDatasetKeysize()).c_str(), "average dataset value size:", std::to_string(workload_generator_ptr->getAvgDatasetValuesize()).c_str());
     covered::Util::dumpVariablesForDebug(main_class_name, 4, "min dataset key size:", std::to_string(workload_generator_ptr->getMinDatasetKeysize()).c_str(), "min dataset value size:", std::to_string(workload_generator_ptr->getMinDatasetValuesize()).c_str());
     covered::Util::dumpVariablesForDebug(main_class_name, 4, "max dataset key size:", std::to_string(workload_generator_ptr->getMaxDatasetKeysize()).c_str(), "max dataset value size:", std::to_string(workload_generator_ptr->getMaxDatasetValuesize()).c_str());
-    assert(workload_generator_ptr != NULL);
 
     // Create dataset loader parameters
     struct DatasetLoaderParam dataset_loader_params[dataset_loadercnt];

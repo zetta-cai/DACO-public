@@ -27,6 +27,28 @@ namespace covered
     {
         return keystr_;
     }
+
+    std::string Key::getKeyIntstr() const
+    {
+        const uint32_t keylen = keystr_.length();
+        assert(keylen == 4 || keylen == 8);
+
+        std::string key_intstr = "";
+        if (keylen == 4)
+        {
+            int32_t keyint = 0;
+            memcpy(&keyint, keystr_.c_str(), sizeof(int32_t));
+            key_intstr = std::to_string(keyint);
+        }
+        else
+        {
+            int64_t keyint = 0;
+            memcpy(&keyint, keystr_.c_str(), sizeof(int64_t));
+            key_intstr = std::to_string(keyint);
+        }
+
+        return key_intstr;
+    }
     
     uint32_t Key::getKeyPayloadSize() const
     {

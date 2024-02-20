@@ -41,15 +41,15 @@ namespace covered
         WorkloadWrapperBase* workload_ptr = getWorkloadGeneratorByWorkloadName(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, is_loading_phase, total_workload_loadcnt);
         assert(workload_ptr != NULL);
 
-        // NOTE: cache capacity MUST be larger than the maximum object size in the workload
-        const uint32_t max_obj_size = workload_ptr->getMaxDatasetKeysize() + workload_ptr->getMaxDatasetValuesize();
-        if (capacity_bytes <= max_obj_size)
-        {
-            std::ostringstream oss;
-            oss << "cache capacity (" << capacity_bytes << " bytes) should > the maximum object size (" << max_obj_size << " bytes) in workload " << workload_name << "!";
-            Util::dumpErrorMsg(kClassName, oss.str());
-            exit(1);
-        }
+        // (OBSOLETE due to already checking objsize in LocalCacheBase) NOTE: cache capacity MUST be larger than the maximum object size in the workload
+        // const uint32_t max_obj_size = workload_ptr->getMaxDatasetKeysize() + workload_ptr->getMaxDatasetValuesize();
+        // if (capacity_bytes <= max_obj_size)
+        // {
+        //     std::ostringstream oss;
+        //     oss << "cache capacity (" << capacity_bytes << " bytes) should > the maximum object size (" << max_obj_size << " bytes) in workload " << workload_name << "!";
+        //     Util::dumpErrorMsg(kClassName, oss.str());
+        //     exit(1);
+        // }
 
         return workload_ptr;
     }

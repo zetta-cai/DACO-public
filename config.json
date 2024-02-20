@@ -27,7 +27,7 @@
     "evaluator_recvmsg_port": 5200,
     "fine_grained_locking_size": 1000,
     "is_assert": 0,
-    "is_debug": 1,
+    "is_debug": 0,
     "is_info": 0,
     "is_generate_random_valuestr": 0,
     "is_track_event": 0,

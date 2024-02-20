@@ -160,6 +160,7 @@ namespace covered
                 oss.clear();
                 oss.str("");
                 oss << "achieve total workload load cnt: " << total_workload_loadcnt_ << "; total # of passed operations: " << total_workload_opcnt_ << "; current client workload size: " << curclient_workload_keys_.size();
+                Util::dumpNormalMsg(instance_name_, oss.str());
                 break;
             }
         } // End of trace files
@@ -480,12 +481,13 @@ namespace covered
 
             if (is_loading_phase_) // Loading phase
             {
+                const uint32_t original_dataset_size = dataset_kvpairs_.size();
                 dataset_kvpairs_.push_back(std::pair(key, value));
 
                 // Update dataset statistics
-                average_dataset_keysize_ = (average_dataset_keysize_ * dataset_kvpairs_.size() + key.getKeyLength()) / (dataset_kvpairs_.size() + 1);
-                average_dataset_valuesize_ = (average_dataset_valuesize_ * dataset_kvpairs_.size() + value.getValuesize()) / (dataset_kvpairs_.size() + 1);
-                if (dataset_kvpairs_.size() == 0) // The first kvpair
+                average_dataset_keysize_ = (average_dataset_keysize_ * original_dataset_size + key.getKeyLength()) / (original_dataset_size + 1);
+                average_dataset_valuesize_ = (average_dataset_valuesize_ * original_dataset_size + value.getValuesize()) / (original_dataset_size + 1);
+                if (original_dataset_size == 0) // The first kvpair
                 {
                     min_dataset_keysize_ = key.getKeyLength();
                     min_dataset_valuesize_ = value.getValuesize();
