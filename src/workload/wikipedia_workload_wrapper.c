@@ -339,7 +339,7 @@ namespace covered
                     }
                     global_workload_idx++;
 
-                    if (total_workload_opcnt_ + global_workload_idx >= total_workload_loadcnt_)
+                    if (!is_loading_phase_ && total_workload_opcnt_ + global_workload_idx >= total_workload_loadcnt_)
                     {
                         is_achieve_total_workload_loadcnt = true; // Stop parsing trace files
                     }
@@ -476,7 +476,7 @@ namespace covered
         std::unordered_map<Key, Value, KeyHasher>::iterator tmp_dataset_kvmap_iter = dataset_kvmap.find(key);
         if (tmp_dataset_kvmap_iter == dataset_kvmap.end()) // The first request on the key
         {
-            dataset_kvmap.insert(std::pair(key, value);
+            dataset_kvmap.insert(std::pair(key, value));
 
             if (is_loading_phase_) // Loading phase
             {

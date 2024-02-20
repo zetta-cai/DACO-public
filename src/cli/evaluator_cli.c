@@ -210,7 +210,7 @@ namespace covered
     void EvaluatorCLI::verifyIntegrity_() const
     {
         // Total workload loadcnt should > warmup reqcnt
-        assert(total_workload_loadcnt_ > getWarmupReqcntScale());
+        assert(getTotalWorkloadLoadcntScale() > warmup_reqcnt_scale_);
         return;
     }
 }
