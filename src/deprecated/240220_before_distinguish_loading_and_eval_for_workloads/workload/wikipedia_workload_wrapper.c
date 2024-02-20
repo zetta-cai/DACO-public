@@ -13,7 +13,7 @@ namespace covered
 {
     const std::string WikipediaWorkloadWrapper::kClassName("WikipediaWorkloadWrapper");
 
-    WikipediaWorkloadWrapper::WikipediaWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const bool& is_loading_phase, const uint32_t& total_workload_loadcnt) : WorkloadWrapperBase(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, is_loading_phase, total_workload_loadcnt), wiki_workload_name_(workload_name)
+    WikipediaWorkloadWrapper::WikipediaWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const WikipediaWorkloadExtraParam& workload_extra_param) : WorkloadWrapperBase(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt), workload_extra_param_(workload_extra_param)
     {
         // Differentiate facebook workload generator in different clients
         std::ostringstream oss;
@@ -26,9 +26,10 @@ namespace covered
         min_dataset_valuesize_ = 0;
         max_dataset_keysize_ = 0;
         max_dataset_valuesize_ = 0;
+        total_workload_opcnt_ = 0;
 
         dataset_kvpairs_.clear();
-        curclient_workload_keys_.clear();
+        curclient_workload_key_indices_.clear();
         curclient_workload_value_sizes_.clear();
 
         per_client_worker_workload_idx_.resize(perclient_workercnt);
@@ -36,8 +37,6 @@ namespace covered
         {
             per_client_worker_workload_idx_[i] = i;
         }
-
-        total_workload_opcnt_ = 0;
     }
 
     WikipediaWorkloadWrapper::~WikipediaWorkloadWrapper()
@@ -47,15 +46,13 @@ namespace covered
     WorkloadItem WikipediaWorkloadWrapper::generateWorkloadItem(const uint32_t& local_client_worker_idx)
     {
         checkIsValid_();
-
-        assert(!is_loading_phase_); // Must be evaluation phase
         
         uint32_t curclient_workload_idx = per_client_worker_workload_idx_[local_client_worker_idx];
-        assert(curclient_workload_idx < curclient_workload_keys_.size());
+        assert(curclient_workload_idx < curclient_workload_key_indices_.size());
 
         // Get key, value, and type
-        Key tmp_key = curclient_workload_keys_[curclient_workload_idx];
-        Value tmp_value;
+        Key tmp_key = dataset_kvpairs_[curclient_workload_key_indices_[curclient_workload_idx]].first;
+        Value tmp_value = dataset_kvpairs_[curclient_workload_key_indices_[curclient_workload_idx]].second;
         WorkloadItemType tmp_type = WorkloadItemType::kWorkloadItemGet;
         int tmp_workload_valuesize = curclient_workload_value_sizes_[curclient_workload_idx];
         if (tmp_workload_valuesize == 0)
@@ -70,7 +67,7 @@ namespace covered
         }
 
         // Update for the next workload idx
-        uint32_t next_curclient_workload_idx = (curclient_workload_idx + perclient_workercnt_) % curclient_workload_keys_.size();
+        uint32_t next_curclient_workload_idx = (curclient_workload_idx + perclient_workercnt_) % curclient_workload_key_indices_.size();
         per_client_worker_workload_idx_[local_client_worker_idx] = next_curclient_workload_idx;
 
         return WorkloadItem(tmp_key, tmp_value, tmp_type);
@@ -79,25 +76,18 @@ namespace covered
     uint32_t WikipediaWorkloadWrapper::getPracticalKeycnt() const
     {
         checkIsValid_();
-
-        assert(is_loading_phase_); // Must be loading phase
-
         return dataset_kvpairs_.size();
     }
 
     uint32_t WikipediaWorkloadWrapper::getTotalOpcnt() const
     {
         checkIsValid_();
-
-        // NOTE: in loading phase, we just NOT track workload items, but still track total opcnt (used by trace preprocessor)
-        return total_workload_opcnt_; // Tracked by both loading and evaluation phases
+        return total_workload_opcnt_;
     }
 
     WorkloadItem WikipediaWorkloadWrapper::getDatasetItem(const uint32_t itemidx)
     {
         checkIsValid_();
-
-        assert(is_loading_phase_); // Must be loading phase
         assert(itemidx < getPracticalKeycnt());
 
         const Key tmp_covered_key = dataset_kvpairs_[itemidx].first;
@@ -107,18 +97,20 @@ namespace covered
 
     void WikipediaWorkloadWrapper::initWorkloadParameters_()
     {
+        const std::string wiki_workload_name = workload_extra_param_.getWikiWorkloadName();
+
         uint32_t column_cnt = 0;
         uint32_t key_column_idx = 0;
         uint32_t value_column_idx = 0;
         std::vector<std::string> trace_filepaths; // NOTE: follow the trace order
-        if (wiki_workload_name_ == Util::WIKIPEDIA_IMAGE_WORKLOAD_NAME)
+        if (wiki_workload_name == Util::WIKIPEDIA_IMAGE_WORKLOAD_NAME)
         {
             column_cnt = 5;
             key_column_idx = 1; // 2nd column
             value_column_idx = 3; // 4th column
             trace_filepaths = Config::getWikiimageTraceFilepaths();
         }
-        else if (wiki_workload_name_ == Util::WIKIPEDIA_TEXT_WORKLOAD_NAME)
+        else if (wiki_workload_name == Util::WIKIPEDIA_TEXT_WORKLOAD_NAME)
         {
             column_cnt = 4;
             key_column_idx = 1; // 2nd column
@@ -128,7 +120,7 @@ namespace covered
         else
         {
             std::ostringstream oss;
-            oss << "Wikipedia workload name " << wiki_workload_name_ << " is not supported now!";
+            oss << "Wikipedia workload name " << wiki_workload_name << " is not supported now!";
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }
@@ -137,11 +129,10 @@ namespace covered
         assert(trace_filecnt > 0);
 
         std::ostringstream oss;
-        oss << "load " << wiki_workload_name_ << " trace files...";
+        oss << "load " << wiki_workload_name << " trace files...";
         Util::dumpNormalMsg(instance_name_, oss.str());
         
-        std::unordered_map<Key, Value, KeyHasher> dataset_kvmap; // Track key and value; check if key has been tracked by dataset_kvpairs_ for loading phase and compare with the original value size for evaluation phase
-        bool is_achieve_total_workload_loadcnt = false;
+        std::unordered_map<Key, std::pair<Value, uint32_t>, KeyHasher> dataset_kvmap; // Track key, value, and key indice; check if key has been tracked by dataset_kvpairs_ and compare with the original value size
         for (uint32_t tmp_fileidx = 0; tmp_fileidx < trace_filecnt; tmp_fileidx++) // For each trace file
         {
             const std::string tmp_filepath = trace_filepaths[tmp_fileidx];
@@ -152,21 +143,13 @@ namespace covered
             Util::dumpNormalMsg(instance_name_, oss.str());
 
             // Process the current trace file
-            uint32_t tmp_opcnt = parseCurrentFile_(tmp_filepath, key_column_idx, value_column_idx, column_cnt, dataset_kvmap, is_achieve_total_workload_loadcnt);
-            total_workload_opcnt_ += tmp_opcnt; // NOTE: update total opcnt for both loading and evaluation phases
-
-            if (is_achieve_total_workload_loadcnt)
-            {
-                oss.clear();
-                oss.str("");
-                oss << "achieve total workload load cnt: " << total_workload_loadcnt_ << "; total # of passed operations: " << total_workload_opcnt_ << "; current client workload size: " << curclient_workload_keys_.size();
-                break;
-            }
+            uint32_t tmp_opcnt = parseCurrentFile_(tmp_filepath, key_column_idx, value_column_idx, column_cnt, dataset_kvmap);
+            total_workload_opcnt_ += tmp_opcnt;
         } // End of trace files
 
         // TMPDEBUG24
         std::ostringstream tmposs;
-        tmposs << "current client workload size: " << curclient_workload_keys_.size();
+        tmposs << "current client workload size: " << curclient_workload_key_indices_.size();
         Util::dumpNormalMsg(instance_name_, tmposs.str());
 
         return;
@@ -189,60 +172,42 @@ namespace covered
     double WikipediaWorkloadWrapper::getAvgDatasetKeysize() const
     {
         checkIsValid_();
-
-        assert(is_loading_phase_);
-
-        return average_dataset_keysize_; // NOT tracked by evaluation phase which may NOT load all trace files
+        return average_dataset_keysize_;
     }
     
     double WikipediaWorkloadWrapper::getAvgDatasetValuesize() const
     {
         checkIsValid_();
-
-        assert(is_loading_phase_);
-
-        return average_dataset_valuesize_; // NOT tracked by evaluation phase which may NOT load all trace files
+        return average_dataset_valuesize_;
     }
 
     uint32_t WikipediaWorkloadWrapper::getMinDatasetKeysize() const
     {
         checkIsValid_();
-
-        assert(is_loading_phase_);
-
-        return min_dataset_keysize_; // NOT tracked by evaluation phase which may NOT load all trace files
+        return min_dataset_keysize_;
     }
 
     uint32_t WikipediaWorkloadWrapper::getMinDatasetValuesize() const
     {
         checkIsValid_();
-
-        assert(is_loading_phase_);
-
-        return min_dataset_valuesize_; // NOT tracked by evaluation phase which may NOT load all trace files
+        return min_dataset_valuesize_;
     }
 
     uint32_t WikipediaWorkloadWrapper::getMaxDatasetKeysize() const
     {
         checkIsValid_();
-
-        assert(is_loading_phase_);
-
-        return max_dataset_keysize_; // NOT tracked by evaluation phase which may NOT load all trace files
+        return max_dataset_keysize_;
     }
 
     uint32_t WikipediaWorkloadWrapper::getMaxDatasetValuesize() const
     {
         checkIsValid_();
-
-        assert(is_loading_phase_);
-
-        return max_dataset_valuesize_; // NOT tracked by evaluation phase which may NOT load all trace files
+        return max_dataset_valuesize_;
     }
 
     // Wiki-specific helper functions
 
-    uint32_t WikipediaWorkloadWrapper::parseCurrentFile_(const std::string& tmp_filepath, const uint32_t& key_column_idx, const uint32_t& value_column_idx, const uint32_t& column_cnt, std::unordered_map<Key, Value, KeyHasher>& dataset_kvmap, bool& is_achieve_total_workload_loadcnt)
+    uint32_t WikipediaWorkloadWrapper::parseCurrentFile_(const std::string& tmp_filepath, const uint32_t& key_column_idx, const uint32_t& value_column_idx, const uint32_t& column_cnt, std::unordered_map<Key, std::pair<Value, uint32_t>, KeyHasher>& dataset_kvmap)
     {
         // Check if file exists
         bool is_exist = Util::isFileExist(tmp_filepath, true);
@@ -280,7 +245,7 @@ namespace covered
             // Parse the current mmap block in TSV format
             char* tmp_line_startpos = tmp_block_buffer;
             char* tmp_block_buffer_endpos = tmp_block_buffer + tmp_mmap_block_size - 1;
-            while (!is_achieve_total_workload_loadcnt && tmp_line_startpos <= tmp_block_buffer_endpos) // For lines in the current mmap block of the current trace file
+            while (tmp_line_startpos <= tmp_block_buffer_endpos) // For lines in the current mmap block of the current trace file
             {
                 // Find the end of the current line
                 bool is_achieve_trace_file_end = false;
@@ -321,6 +286,10 @@ namespace covered
                     concatenateLastLine_(prev_block_taildata, prev_block_tailsize, tmp_complete_line_startpos, tmp_complete_line_endpos, &tmp_concat_line_startpos, &tmp_concat_line_endpos);
                 }
 
+                // TMPDEBUG24
+                // std::string tmp_line(tmp_concat_line_startpos, tmp_concat_line_endpos - tmp_concat_line_startpos + 1);
+                // Util::dumpNormalMsg(instance_name_, "tmp_line: " + tmp_line);
+
                 if (is_first_line) // Skip the first line of the current trace file, which is a title/metadata line instead of a data line
                 {
                     is_first_line = false;
@@ -338,11 +307,6 @@ namespace covered
                         updateDatasetAndWorkload_(tmp_key, tmp_value, dataset_kvmap);
                     }
                     global_workload_idx++;
-
-                    if (total_workload_opcnt_ + global_workload_idx >= total_workload_loadcnt_)
-                    {
-                        is_achieve_total_workload_loadcnt = true; // Stop parsing trace files
-                    }
                 }
 
                 // Release complete line if necessary
@@ -384,11 +348,6 @@ namespace covered
             {
                 assert(prev_block_tailsize == 0);
                 assert(prev_block_taildata == NULL);
-            }
-
-            if (is_achieve_total_workload_loadcnt) // Stop parsing trace files
-            {
-                break;
             }
         } // End of mmap blocks of the current trace file
 
@@ -442,6 +401,10 @@ namespace covered
                 assert(tmp_column_endpos != NULL);
             }
 
+            // TMPDEBUG24
+            // std::string tmp_column(tmp_column_startpos, tmp_column_endpos - tmp_column_startpos + 1);
+            // Util::dumpNormalMsg(instance_name_, "tmp_column: " + tmp_column);
+
             assert(tmp_column_endpos > tmp_column_startpos); // Column MUST NOT empty except the column separator
             if (tmp_column_idx == key_column_idx)
             {
@@ -469,58 +432,48 @@ namespace covered
         return;
     }
 
-    void WikipediaWorkloadWrapper::updateDatasetAndWorkload_(const Key& key, const Value& value, std::unordered_map<Key, Value, KeyHasher>& dataset_kvmap)
+    void WikipediaWorkloadWrapper::updateDatasetAndWorkload_(const Key& key, const Value& value, std::unordered_map<Key, std::pair<Value, uint32_t>, KeyHasher>& dataset_kvmap)
     {
-        // NOTE: dataset_kvmap is required even in evaluation phase to compare with original value size
-
-        std::unordered_map<Key, Value, KeyHasher>::iterator tmp_dataset_kvmap_iter = dataset_kvmap.find(key);
+        std::unordered_map<Key, std::pair<Value, uint32_t>, KeyHasher>::iterator tmp_dataset_kvmap_iter = dataset_kvmap.find(key);
         if (tmp_dataset_kvmap_iter == dataset_kvmap.end()) // The first request on the key
         {
-            dataset_kvmap.insert(std::pair(key, value);
+            dataset_kvpairs_.push_back(std::pair(key, value));
+            dataset_kvmap.insert(std::pair(key, std::pair(value, dataset_kvpairs_.size() - 1)));
 
-            if (is_loading_phase_) // Loading phase
+            // Update dataset statistics
+            average_dataset_keysize_ = (average_dataset_keysize_ * dataset_kvpairs_.size() + key.getKeyLength()) / (dataset_kvpairs_.size() + 1);
+            average_dataset_valuesize_ = (average_dataset_valuesize_ * dataset_kvpairs_.size() + value.getValuesize()) / (dataset_kvpairs_.size() + 1);
+            if (dataset_kvpairs_.size() == 0) // The first kvpair
             {
-                dataset_kvpairs_.push_back(std::pair(key, value));
+                min_dataset_keysize_ = key.getKeyLength();
+                min_dataset_valuesize_ = value.getValuesize();
+                max_dataset_keysize_ = key.getKeyLength();
+                max_dataset_valuesize_ = value.getValuesize();
+            }
+            else // Subsequent kvpairs
+            {
+                min_dataset_keysize_ = std::min(min_dataset_keysize_, key.getKeyLength());
+                min_dataset_valuesize_ = std::min(min_dataset_valuesize_, value.getValuesize());
+                max_dataset_keysize_ = std::max(max_dataset_keysize_, key.getKeyLength());
+                max_dataset_valuesize_ = std::max(max_dataset_valuesize_, value.getValuesize());
+            }
 
-                // Update dataset statistics
-                average_dataset_keysize_ = (average_dataset_keysize_ * dataset_kvpairs_.size() + key.getKeyLength()) / (dataset_kvpairs_.size() + 1);
-                average_dataset_valuesize_ = (average_dataset_valuesize_ * dataset_kvpairs_.size() + value.getValuesize()) / (dataset_kvpairs_.size() + 1);
-                if (dataset_kvpairs_.size() == 0) // The first kvpair
-                {
-                    min_dataset_keysize_ = key.getKeyLength();
-                    min_dataset_valuesize_ = value.getValuesize();
-                    max_dataset_keysize_ = key.getKeyLength();
-                    max_dataset_valuesize_ = value.getValuesize();
-                }
-                else // Subsequent kvpairs
-                {
-                    min_dataset_keysize_ = std::min(min_dataset_keysize_, key.getKeyLength());
-                    min_dataset_valuesize_ = std::min(min_dataset_valuesize_, value.getValuesize());
-                    max_dataset_keysize_ = std::max(max_dataset_keysize_, key.getKeyLength());
-                    max_dataset_valuesize_ = std::max(max_dataset_valuesize_, value.getValuesize());
-                }
-            }
-            else // Evaluation phase
-            {
-                curclient_workload_keys_.push_back(key);
-                curclient_workload_value_sizes_.push_back(-1); // Treat the first request as read request, as stresstest phase is after dataset loading phase
-            }
+            curclient_workload_key_indices_.push_back(dataset_kvpairs_.size() - 1);
+            curclient_workload_value_sizes_.push_back(-1); // Treat the first request as read request, as stresstest phase is after dataset loading phase
         }
         else // Subsequent requests on the key
         {
-            if (!is_loading_phase_) // Evaluation phase
-            {
-                const Value& original_value = tmp_dataset_kvmap_iter->second;
+            const Value& original_value = tmp_dataset_kvmap_iter->second.first;
+            const uint32_t key_indice = tmp_dataset_kvmap_iter->second.second;
 
-                curclient_workload_keys_.push_back(key);
-                if (value.getValuesize() == original_value.getValuesize())
-                {
-                    curclient_workload_value_sizes_.push_back(-1); // Read request
-                }
-                else
-                {
-                    curclient_workload_value_sizes_.push_back(value.getValuesize()); // Write request (put or delete)
-                }
+            curclient_workload_key_indices_.push_back(key_indice);
+            if (value.getValuesize() == original_value.getValuesize())
+            {
+                curclient_workload_value_sizes_.push_back(-1); // Read request
+            }
+            else
+            {
+                curclient_workload_value_sizes_.push_back(value.getValuesize()); // Write request (put or delete)
             }
         }
 

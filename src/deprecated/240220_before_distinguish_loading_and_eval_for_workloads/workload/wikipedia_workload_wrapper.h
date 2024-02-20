@@ -5,8 +5,6 @@
  * -> Image TSV: relative_unix hashed_path_query image_type response_size time_firstbyte
  * -> Text TSV: relative_unix hashed_path_query response_size time_firstbyte
  * 
- * NOTE: (i) as Wiki image and text CDN workloads have large I/O overhead for loading trace files, we MUST distinguish loading and evaluation phases -> (ii) In loading phase, we ONLY load dataset instead of tracking workload items; while in evaluation phase, we ONLY track workload items instead of dataset -> (iii) Although we cannot use dataset key indices for workload items, the space cost is acceptable due to not-many workload items under geo-distributed tiered storage (large propagation latency limits throughput and hence # of workload items).
- * 
  * By Siyuan Sheng (2024.02.15).
  */
 
@@ -17,6 +15,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "workload/wikipedia_workload_extra_param.h"
 #include "workload/workload_item.h"
 #include "workload/workload_wrapper_base.h"
 
@@ -25,7 +24,7 @@ namespace covered
     class WikipediaWorkloadWrapper : public WorkloadWrapperBase
     {
     public:
-        WikipediaWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const bool& is_loading_phase, const uint32_t& total_workload_loadcnt);
+        WikipediaWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const WikipediaWorkloadExtraParam& workload_extra_param);
         virtual ~WikipediaWorkloadWrapper();
 
         virtual WorkloadItem generateWorkloadItem(const uint32_t& local_client_worker_idx) override; // NOTE: follow the real-world trace to select an item without modifying any variable -> thread safe
@@ -48,30 +47,27 @@ namespace covered
         virtual void createWorkloadGenerator_() override;
 
         // Wiki-specific helper functions
-        uint32_t parseCurrentFile_(const std::string& tmp_filepath, const uint32_t& key_column_idx, const uint32_t& value_column_idx, const uint32_t& column_cnt, std::unordered_map<Key, Value, KeyHasher>& dataset_kvmap, bool& is_achieve_total_workload_loadcnt); // Process the current trace file (return # of lines in the current trace file)
+        uint32_t parseCurrentFile_(const std::string& tmp_filepath, const uint32_t& key_column_idx, const uint32_t& value_column_idx, const uint32_t& column_cnt, std::unordered_map<Key, std::pair<Value, uint32_t>, KeyHasher>& dataset_kvmap); // Process the current trace file (return # of lines in the current trace file)
         void completeLastLine_(const char* tmp_line_startpos, const char* tmp_line_endpos, char** tmp_complete_line_startpos_ptr, char** tmp_complete_line_endpos_ptr) const; // Complete the last line of a trace file by an extra line separator
         void concatenateLastLine_(const char* prev_block_taildata, const uint32_t& prev_block_tailsize, const char* tmp_complete_line_startpos, const char* tmp_complete_line_endpos, char** tmp_concat_line_startpos_ptr, char** tmp_concat_line_endpos_ptr) const; // Concatenate tail data of the previous mmap block with the first complete line of the current mmap block
         void parseCurrentLine_(const char* tmp_concat_line_startpos, const char* tmp_concat_line_endpos, const uint32_t& key_column_idx, const uint32_t& value_column_idx, const uint32_t& column_cnt, Key& key, Value& value) const; // Parse a line to get key and value
-        void updateDatasetAndWorkload_(const Key& key, const Value& value, std::unordered_map<Key, Value, KeyHasher>& dataset_kvmap); // Update dataset and workload with the key-value pair
+        void updateDatasetAndWorkload_(const Key& key, const Value& value, std::unordered_map<Key, std::pair<Value, uint32_t>, KeyHasher>& dataset_kvmap); // Update dataset and workload with the key-value pair
 
         // Const shared variables
         std::string instance_name_;
-        const std::string wiki_workload_name_;
+        const WikipediaWorkloadExtraParam workload_extra_param_;
 
         // Const shared variables
-        // (1) For loading phase
         double average_dataset_keysize_; // Average dataset key size
         double average_dataset_valuesize_; // Average dataset value size
         uint32_t min_dataset_keysize_; // Minimum dataset key size
         uint32_t min_dataset_valuesize_; // Minimum dataset value size
         uint32_t max_dataset_keysize_; // Maximum dataset key size
         uint32_t max_dataset_valuesize_; // Maximum dataset value size
-        std::vector<std::pair<Key, Value>> dataset_kvpairs_; // Key-value pairs of dataset
-        // (2) For evaluation phase
-        std::vector<Key> curclient_workload_keys_; // Key indices of workload in the current client
-        std::vector<int> curclient_workload_value_sizes_; // Value sizes of workload in the current client (< 0: read; = 0: delete; > 0: write)
-        // (3) For both loading phase and evaluation phase
         uint32_t total_workload_opcnt_; // Opcnt of workloads in all clients
+        std::vector<std::pair<Key, Value>> dataset_kvpairs_; // Key-value pairs of dataset
+        std::vector<uint32_t> curclient_workload_key_indices_; // Key indices of workload in the current client
+        std::vector<int> curclient_workload_value_sizes_; // Value sizes of workload in the current client (< 0: read; = 0: delete; > 0: write)
 
         // Non-const individual variables
         std::vector<uint32_t> per_client_worker_workload_idx_; // Track per-clientworker workload index

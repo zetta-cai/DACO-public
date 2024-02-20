@@ -6,8 +6,6 @@
  * -> We use client index as deterministic seed to generate different items (i.e., workloads) for all clients, yet with the same items for all workers of a specific client.
  * -> We use global worker index as deterministic seed to choose the same items for all running times of a specific worker.
  * 
- * NOTE: (i) as Facebook/Meta CDN provides workload generator without I/O overhead for loading trace files, NO need to distinguish loading and evaluation phases -> (ii) Instead, we can always generate dataset and use dataset key indices to reduce space cost of workload items.
- * 
  * NOTE: see more notes on source code of cachelib in docs/cachebench.md.
  * 
  * By Siyuan Sheng (2023.04.19).
@@ -32,7 +30,7 @@ namespace covered
     class FacebookWorkloadWrapper : public WorkloadWrapperBase
     {
     public:
-        FacebookWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const bool& is_loading_phase, const uint32_t& total_workload_loadcnt);
+        FacebookWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt);
         virtual ~FacebookWorkloadWrapper();
 
         virtual WorkloadItem generateWorkloadItem(const uint32_t& local_client_worker_idx) override; // NOTE: randomly select an item without modifying any variable -> thread safe

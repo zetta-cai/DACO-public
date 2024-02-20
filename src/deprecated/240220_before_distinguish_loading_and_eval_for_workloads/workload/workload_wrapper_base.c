@@ -11,16 +11,17 @@ namespace covered
 {
     const std::string WorkloadWrapperBase::kClassName("WorkloadWrapperBase");
 
-    WorkloadWrapperBase* WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const bool& is_loading_phase, const uint32_t& total_workload_loadcnt)
+    WorkloadWrapperBase* WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name)
     {
         WorkloadWrapperBase* workload_ptr = NULL;
         if (workload_name == Util::FACEBOOK_WORKLOAD_NAME) // Facebook/Meta CDN
         {
-            workload_ptr = new FacebookWorkloadWrapper(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, is_loading_phase, total_workload_loadcnt);
+            workload_ptr = new FacebookWorkloadWrapper(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt);
         }
         else if (workload_name == Util::WIKIPEDIA_IMAGE_WORKLOAD_NAME || workload_name == Util::WIKIPEDIA_TEXT_WORKLOAD_NAME) // Wiki image/text CDN
         {
-            workload_ptr = new WikipediaWorkloadWrapper(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, is_loading_phase, total_workload_loadcnt);
+            WikipediaWorkloadExtraParam tmp_param(workload_name);
+            workload_ptr = new WikipediaWorkloadWrapper(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, tmp_param);
         }
         else
         {
@@ -36,9 +37,9 @@ namespace covered
         return workload_ptr;
     }
 
-    WorkloadWrapperBase* WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(const uint64_t& capacity_bytes, const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const bool& is_loading_phase, const uint32_t& total_workload_loadcnt)
+    WorkloadWrapperBase* WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(const uint64_t& capacity_bytes, const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name)
     {
-        WorkloadWrapperBase* workload_ptr = getWorkloadGeneratorByWorkloadName(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, is_loading_phase, total_workload_loadcnt);
+        WorkloadWrapperBase* workload_ptr = getWorkloadGeneratorByWorkloadName(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name);
         assert(workload_ptr != NULL);
 
         // NOTE: cache capacity MUST be larger than the maximum object size in the workload
@@ -54,7 +55,7 @@ namespace covered
         return workload_ptr;
     }
 
-    WorkloadWrapperBase::WorkloadWrapperBase(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const bool& is_loading_phase, const uint32_t& total_workload_loadcnt) : clientcnt_(clientcnt), client_idx_(client_idx), keycnt_(keycnt), perclient_opcnt_(perclient_opcnt), perclient_workercnt_(perclient_workercnt), is_loading_phase_(is_loading_phase), total_workload_loadcnt_(total_workload_loadcnt)
+    WorkloadWrapperBase::WorkloadWrapperBase(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt) : clientcnt_(clientcnt), client_idx_(client_idx), keycnt_(keycnt), perclient_opcnt_(perclient_opcnt), perclient_workercnt_(perclient_workercnt)
     {
         // Differentiate workload generator in different clients
         std::ostringstream oss;
@@ -62,20 +63,6 @@ namespace covered
         base_instance_name_ = oss.str();
 
         is_valid_ = false;
-
-        // Verify parameters
-        if (is_loading_phase) // Loading phase
-        {
-            assert(total_workload_loadcnt == 0);
-        }
-        else // Evaluation phase
-        {
-            assert(total_workload_loadcnt > 0);
-
-            // NOTE: keycnt and perclient_opcnt MUST > 0, as evaluation phase occurs after trace preprocessing
-            assert(keycnt > 0);
-            assert(perclient_opcnt > 0);
-        }
     }
 
     WorkloadWrapperBase::~WorkloadWrapperBase() {}
