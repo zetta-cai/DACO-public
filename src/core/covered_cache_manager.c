@@ -290,6 +290,8 @@ namespace covered
                 // NOTE: getAggregatedUncachedPopularity() will check and deep copy aggregated uncache popularity atomically -> tmp_topk_list_length should > 0 if has_aggregated_uncached_popularity = true
                 std::ostringstream oss;
                 oss << "top-list length should > 0 if aggregated uncached popularity exists, yet is zero now when calculate placement for key " << key.getKeystr();
+                // TMPDEBUG24
+                oss << "; key intstr: " << key.getKeyIntstr();
                 Util::dumpErrorMsg(instance_name_, oss.str());
                 exit(1);
             }

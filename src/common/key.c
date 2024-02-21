@@ -1,6 +1,8 @@
 #include "common/key.h"
 
 #include <arpa/inet.h> // htonl ntohl
+#include <assert.h>
+#include <cstring> // memcpy
 
 namespace covered
 {
