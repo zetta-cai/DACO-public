@@ -69,7 +69,7 @@ namespace covered
 
 		// Send UDP packet
 		int flags = 0;
-		int return_code = sendto(sockfd_, pkt_payload.getBytesRef().data(), pkt_payload.getSize(), flags, (struct sockaddr*)(&remote_sockaddr), sizeof(remote_sockaddr));
+		int return_code = sendto(sockfd_, pkt_payload.getBytesConstRef().data(), pkt_payload.getSize(), flags, (struct sockaddr*)(&remote_sockaddr), sizeof(remote_sockaddr));
 		if (return_code < 0) {
 			std::ostringstream oss;
             oss << "failed to send " << pkt_payload.getSize() << " bytes to remote address with ip " << remote_ipstr << " and port " << remote_port << " (errno: " << errno << ")";

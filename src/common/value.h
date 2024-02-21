@@ -27,9 +27,11 @@ namespace covered
         std::string generateValuestr() const; // Generate value string as value content for serialization
 
         // Offset of value (position) is dynamically changed for different keys in message payload
-        uint32_t getValuePayloadSize() const;
-        uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position) const;
-        uint32_t deserialize(const DynamicArray& msg_payload, const uint32_t& position);
+        // NOTE: value content will NOT consume space if is_space_efficient = true
+        uint32_t getValuePayloadSize(const bool& is_space_efficient = false) const;
+        uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position, const bool& is_space_efficient = false) const;
+        uint32_t deserialize(const DynamicArray& msg_payload, const uint32_t& position, const bool& is_space_efficient = false);
+        uint32_t deserialize(std::fstream* fs_ptr, const bool& is_space_efficient = false);
 
         const Value& operator=(const Value& other);
     private:

@@ -13,10 +13,11 @@
 
 #include "cli/dataset_loader_cli.h"
 #include "cli/simulator_cli.h"
+#include "cli/trace_preprocessor_cli.h"
 
 namespace covered
 {
-    class CliutilCLI : virtual public DatasetLoaderCLI, virtual public SimulatorCLI
+    class CliutilCLI : virtual public DatasetLoaderCLI, virtual public SimulatorCLI, virtual public TracePreprocessorCLI
     {
     public:
         CliutilCLI(int argc, char **argv);

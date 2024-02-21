@@ -28,6 +28,7 @@ namespace covered
         uint32_t getKeyPayloadSize() const;
         uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position) const;
         uint32_t deserialize(const DynamicArray& msg_payload, const uint32_t& position);
+        uint32_t deserialize(std::fstream* fs_ptr);
 
         bool operator<(const Key& other) const; // To be used as key in std::map and std::set
         bool operator==(const Key& other) const; // To be used as key in std::unordered_map

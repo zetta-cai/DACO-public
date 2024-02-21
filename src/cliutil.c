@@ -26,6 +26,7 @@ int main(int argc, char **argv) {
     const std::string EVALUATOR_PREFIX_STRING = "Evaluator:";
     const std::string SIMULATOR_PREFIX_STRING = "Simulator:";
     const std::string DATASET_LOADER_PREFIX_STRING = "DatasetLoader:";
+    const std::string TRACE_PREPROCESSOR_PREFIX_STRING = "TracePreprocessor:";
 
     // (1) Parse and process CLI parameters
     // NOTE: use CliutilCLI to parse CLI parameters for all possible components
@@ -46,6 +47,8 @@ int main(int argc, char **argv) {
     cliutil_cli.clearIsToCliString();
     std::string dataset_loader_cli_string = ((covered::DatasetLoaderCLI*)&cliutil_cli)->toCliString();
     cliutil_cli.clearIsToCliString();
+    std::string trace_preprocessor_cli_string = ((covered::TracePreprocessorCLI*)&cliutil_cli)->toCliString();
+    cliutil_cli.clearIsToCliString();
     
     // Print CLI string of different components
     std::ostringstream oss;
@@ -55,6 +58,7 @@ int main(int argc, char **argv) {
     oss << EVALUATOR_PREFIX_STRING << evaluator_cli_string << std::endl;
     oss << SIMULATOR_PREFIX_STRING << simulator_cli_string << std::endl;
     oss << DATASET_LOADER_PREFIX_STRING << dataset_loader_cli_string << std::endl;
+    oss << TRACE_PREPROCESSOR_PREFIX_STRING << trace_preprocessor_cli_string << std::endl;
     std::cout << oss.str();
 
     return 0;

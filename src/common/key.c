@@ -3,6 +3,7 @@
 #include <arpa/inet.h> // htonl ntohl
 #include <assert.h>
 #include <cstring> // memcpy
+#include <fstream> // std::fstream
 
 namespace covered
 {
@@ -78,9 +79,23 @@ namespace covered
         size += sizeof(uint32_t);
         DynamicArray keybytes(keysize);
         msg_payload.arraycpy(size, keybytes, 0, keysize);
-        keystr_ = std::string(keybytes.getBytesRef().data(), keysize);
+        keystr_ = std::string(keybytes.getBytesConstRef().data(), keysize);
         size += keysize;
         return size - position;
+    }
+
+    uint32_t Key::deserialize(std::fstream* fs_ptr)
+    {
+        uint32_t size = 0;
+        uint32_t bitendian_keysize = 0;
+        fs_ptr->read((char*)&bitendian_keysize, sizeof(uint32_t));
+        uint32_t keysize = ntohl(keysize);
+        size += sizeof(uint32_t);
+        DynamicArray keybytes(keysize);
+        fs_ptr->read(keybytes.getBytesRef().data(), keysize);
+        keystr_ = std::string(keybytes.getBytesRef().data(), keysize);
+        size += keysize;
+        return size;
     }
 
     bool Key::operator<(const Key& other) const

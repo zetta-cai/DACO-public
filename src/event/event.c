@@ -152,7 +152,7 @@ namespace covered
         size += sizeof(uint32_t);
         DynamicArray eventname_bytes(eventname_length);
         msg_payload.arraycpy(size, eventname_bytes, 0, eventname_length);
-        event_name_ = std::string(eventname_bytes.getBytesRef().data(), eventname_length);
+        event_name_ = std::string(eventname_bytes.getBytesConstRef().data(), eventname_length);
         size += eventname_length;
         uint32_t bigendian_event_latency_us = 0;
         msg_payload.serialize(size, (char *)&bigendian_event_latency_us, sizeof(uint32_t));

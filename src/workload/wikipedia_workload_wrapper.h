@@ -59,9 +59,9 @@ namespace covered
 
         // (2) For role of preprocessor
 
-        void verifyDatasetFile_();
-        uint32_t dumpDatasetFile_() const; // Return dataset file size (in units of bytes)
-        uint32_t loadDatasetFile_() const; // Return dataset file size (in units of bytes)
+        void verifyDatasetFileForPreprocessor_();
+        uint32_t dumpDatasetFile_() const; // Dump dataset key-value pairs into dataset file; return dataset file size (in units of bytes)
+        uint32_t loadDatasetFile_() const; // Load dataset key-value pairs to update dataset_kvpairs_ and dataset_lookup_table_; return dataset file size (in units of bytes)
 
         // (3) Common utilities
 

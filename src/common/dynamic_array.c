@@ -23,7 +23,12 @@ namespace covered
     
     DynamicArray::~DynamicArray() {};
 
-    const std::vector<char>& DynamicArray::getBytesRef() const
+    std::vector<char>& DynamicArray::getBytesRef()
+    {
+        return bytes_;
+    }
+
+    const std::vector<char>& DynamicArray::getBytesConstRef() const
     {
         return bytes_;
     }

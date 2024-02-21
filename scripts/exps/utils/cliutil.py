@@ -11,6 +11,7 @@ class CLIUtil:
     EVALUATOR_PREFIX_STRING = "Evaluator:"
     SIMULATOR_PREFIX_STRING = "Simulator:"
     DATASET_LOADER_PREFIX_STRING = "DatasetLoader:"
+    TRACE_PREPROCESSOR_PREFIX_STRING = "TracePreprocessor:"
 
     @staticmethod
     def getCliStrAfterPrefix_(tmp_outputstr_line, prefix_string):
@@ -44,6 +45,7 @@ class CLIUtil:
         self.evaluator_cli_str_ = ""
         self.simulator_cli_str_ = ""
         self.dataset_loader_cli_str_ = ""
+        self.trace_preprocessor_cli_str_ = ""
         for tmp_outputstr_line in run_cliutil_outputstr.splitlines():
             # For client
             if self.client_cli_str_ == "":
@@ -75,6 +77,11 @@ class CLIUtil:
                 self.dataset_loader_cli_str_ = CLIUtil.getCliStrAfterPrefix_(tmp_outputstr_line, CLIUtil.DATASET_LOADER_PREFIX_STRING)
                 if self.dataset_loader_cli_str_ != "":
                     continue
+            # For trace_preprocessor
+            if self.trace_preprocessor_cli_str_ == "":
+                self.trace_preprocessor_cli_str_ = CLIUtil.getCliStrAfterPrefix_(tmp_outputstr_line, CLIUtil.TRACE_PREPROCESS)
+                if self.trace_preprocessor_cli_str_ != "":
+                    continue
     
     def getClientCLIStr(self):
         return self.client_cli_str_
@@ -96,3 +103,6 @@ class CLIUtil:
 
     def getTotalStatisticsLoaderCLIStr(self):
         return self.evaluator_cli_str_
+    
+    def getTracePreprocessorCLIStr(self):
+        return self.trace_preprocessor_cli_str_

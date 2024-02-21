@@ -27,6 +27,7 @@ namespace covered
 
             oss << DatasetLoaderCLI::toCliString();
             oss << SimulatorCLI::toCliString();
+            oss << TracePreprocessorCLI::toCliString();
 
             is_to_cli_string_ = true;
         }
@@ -38,6 +39,7 @@ namespace covered
     {
         DatasetLoaderCLI::clearIsToCliString();
         SimulatorCLI::clearIsToCliString();
+        TracePreprocessorCLI::clearIsToCliString();
         
         is_to_cli_string_ = false;
         return;
@@ -49,6 +51,7 @@ namespace covered
         {
             DatasetLoaderCLI::addCliParameters_();
             SimulatorCLI::addCliParameters_();
+            TracePreprocessorCLI::addCliParameters_();
 
             is_add_cli_parameters_ = true;
         }
@@ -62,6 +65,7 @@ namespace covered
         {
             DatasetLoaderCLI::setParamAndConfig_(main_class_name);
             SimulatorCLI::setParamAndConfig_(main_class_name);
+            TracePreprocessorCLI::setParamAndConfig_(main_class_name);
 
             is_set_param_and_config_ = true;
         }
@@ -75,6 +79,7 @@ namespace covered
         {
             DatasetLoaderCLI::verifyAndDumpCliParameters_(main_class_name);
             SimulatorCLI::verifyAndDumpCliParameters_(main_class_name);
+            TracePreprocessorCLI::verifyAndDumpCliParameters_(main_class_name);
 
             is_dump_cli_parameters_ = true;
         }
@@ -88,6 +93,7 @@ namespace covered
         {
             DatasetLoaderCLI::createRequiredDirectories_(main_class_name);
             SimulatorCLI::createRequiredDirectories_(main_class_name);
+            TracePreprocessorCLI::createRequiredDirectories_(main_class_name);
 
             is_create_required_directories_ = true;
         }

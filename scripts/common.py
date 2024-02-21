@@ -69,3 +69,6 @@ class Common:
 
     # NOTE: used by C++ program total_statistics_loader -> MUST be the same as src/total_statistics_loader.c
     TOTAL_STATISTICS_LOADER_FINISH_RELOADING_SYMBOL = "Total statistics loader done"
+
+    # NOTE: used by C++ program trace_preprocessor -> MUST be the same as src/trace_preprocessor.c
+    TRACE_PREPROCESSOR_FINISH_SYMBOL = "Trace preprocessor done"

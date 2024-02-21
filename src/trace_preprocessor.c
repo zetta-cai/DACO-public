@@ -72,10 +72,9 @@ int main(int argc, char **argv) {
     delete workload_generator_ptr;
     workload_generator_ptr = NULL;
 
-    // TODO: Uncomment the following code if we launch trace preprocessor by python scripts
-    // // NOTE: used by exp scripts to verify whether trace preprocessor has finished -> MUST be the same as scripts/common.py
-    // const std::string TRACE_PREPROCESSOR_FINISH_SYMBOL = "Trace preprocessor done";
-    // covered::Util::dumpNormalMsg(main_class_name, TRACE_PREPROCESSOR_FINISH_SYMBOL);
+    // NOTE: used by exp scripts to verify whether trace preprocessor has finished -> MUST be the same as scripts/common.py
+    const std::string TRACE_PREPROCESSOR_FINISH_SYMBOL = "Trace preprocessor done";
+    covered::Util::dumpNormalMsg(main_class_name, TRACE_PREPROCESSOR_FINISH_SYMBOL);
 
     return 0;
 }
