@@ -19,10 +19,15 @@ namespace covered
     class WorkloadWrapperBase
     {
     public:
-        static WorkloadWrapperBase* getWorkloadGeneratorByWorkloadName(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const bool& is_loading_phase, const uint32_t& total_workload_loadcnt = 0);
-        static WorkloadWrapperBase* getWorkloadGeneratorByWorkloadName(const uint64_t& capacity_bytes, const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const bool& is_loading_phase, const uint32_t& total_workload_loadcnt = 0);
+        static const std::string WORKLOAD_USAGE_ROLE_PREPROCESSOR;
+        static const std::string WORKLOAD_USAGE_ROLE_LOADER;
+        static const std::string WORKLOAD_USAGE_ROLE_CLIENT;
+        static const std::string WORKLOAD_USAGE_ROLE_CLOUD;
 
-        WorkloadWrapperBase(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const bool& is_loading_phase, const uint32_t& total_workload_loadcnt);
+        static WorkloadWrapperBase* getWorkloadGeneratorByWorkloadName(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const uint32_t& max_eval_workload_loadcnt = 0);
+        // static WorkloadWrapperBase* getWorkloadGeneratorByWorkloadName(const uint64_t& capacity_bytes, const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const uint32_t& max_eval_workload_loadcnt = 0); // (OBSOLETE due to already checking objsize in LocalCacheBase)
+
+        WorkloadWrapperBase(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_usage_role, const uint32_t& max_eval_workload_loadcnt);
         virtual ~WorkloadWrapperBase();
 
         // Access by the single thread of client wrapper (NO need to be thread safe)
@@ -59,8 +64,12 @@ namespace covered
         const uint32_t keycnt_;
         const uint32_t perclient_opcnt_;
         const uint32_t perclient_workercnt_;
-        const bool is_loading_phase_; // Distinguish loading and evaluation phase to avoid too large I/O overhead and hence reduce evaluation time cost
-        const uint32_t total_workload_loadcnt_; // ONLY used in evaluation phase
+        const std::string workload_usage_role_; // Distinguish different roles to avoid file I/O overhead of loading all trace files (for dataset loader and clients during loading/evaluation), and avoid disk I/O overhead of accessing rocksdb (for cloud during warmup)
+        const uint32_t max_eval_workload_loadcnt_; // ONLY used in evaluation phase
+
+        bool needAllTraceFiles_();
+        bool needDatasetItems_();
+        bool needWorkloadItems_();
 
         void checkIsValid_() const;
     };

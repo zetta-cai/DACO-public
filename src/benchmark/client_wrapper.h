@@ -49,7 +49,7 @@ namespace covered
     public:
         static void* launchClient(void* client_wrapper_param_ptr);
 
-        ClientWrapper(const uint64_t& capacity_bytes, const uint32_t& client_idx, const uint32_t& clientcnt, const bool& is_warmup_speedup, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge_us, const uint32_t& total_workload_loadcnt_scale, const std::string& workload_name);
+        ClientWrapper(const uint64_t& capacity_bytes, const uint32_t& client_idx, const uint32_t& clientcnt, const bool& is_warmup_speedup, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& max_eval_workload_loadcnt_scale, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge_us, const std::string& workload_name);
         virtual ~ClientWrapper();
 
         // (1) Const getters

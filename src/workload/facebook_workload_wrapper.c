@@ -15,11 +15,11 @@ namespace covered
 {
     const std::string FacebookWorkloadWrapper::kClassName("FacebookWorkloadWrapper");
 
-    FacebookWorkloadWrapper::FacebookWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const bool& is_loading_phase, const uint32_t& total_workload_loadcnt) : WorkloadWrapperBase(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, is_loading_phase, total_workload_loadcnt)
+    FacebookWorkloadWrapper::FacebookWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_usage_role, const uint32_t& max_eval_workload_loadcnt) : WorkloadWrapperBase(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_usage_role, max_eval_workload_loadcnt)
     {
         // NOTE: NOT used by facebook workload wrapper
-        UNUSED(is_loading_phase);
-        UNUSED(total_workload_loadcnt);
+        UNUSED(workload_usage_role);
+        UNUSED(max_eval_workload_loadcnt);
 
         // Differentiate facebook workload generator in different clients
         std::ostringstream oss;

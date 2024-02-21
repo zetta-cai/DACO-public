@@ -9,7 +9,7 @@ namespace covered
     const bool ClientCLI::DEFAULT_IS_WARMUP_SPEEDUP = true;
     const uint32_t ClientCLI::DEFAULT_PERCLIENT_OPCNT = 1000000;
     const uint32_t ClientCLI::DEFAULT_PERCLIENT_WORKERCNT = 1;
-    const uint32_t ClientCLI::DEFAULT_TOTAL_WORKLOAD_LOADCNT_SCALE = 6; // Must > EvaluatorCLI::DEFAULT_WARMUP_REQCNT_SCALE
+    const uint32_t ClientCLI::DEFAULT_MAX_EVAL_WORKLOAD_LOADCNT_SCALE = 6; // Must > EvaluatorCLI::DEFAULT_WARMUP_REQCNT_SCALE
 
     const std::string ClientCLI::kClassName("ClientCLI");
 
@@ -17,6 +17,7 @@ namespace covered
     {
         // clientcnt_ = 0;
         is_warmup_speedup_ = true;
+        max_eval_workload_loadcnt_scale_ = 0;
         perclient_opcnt_ = 0;
         perclient_workercnt_ = 0;
     }
@@ -48,9 +49,9 @@ namespace covered
         return perclient_workercnt_;
     }
 
-    uint32_t ClientCLI::getTotalWorkloadLoadcntScale() const
+    uint32_t ClientCLI::getMaxEvalWorkloadLoadcntScale() const
     {
-        return total_workload_loadcnt_scale_;
+        return max_eval_workload_loadcnt_scale_;
     }
 
     std::string ClientCLI::toCliString()
@@ -76,6 +77,10 @@ namespace covered
                 assert(!is_warmup_speedup_);
                 oss << " --disable_warmup_speedup";
             }
+            if (max_eval_workload_loadcnt_scale_ != DEFAULT_MAX_EVAL_WORKLOAD_LOADCNT_SCALE)
+            {
+                oss << " --max_eval_workload_loadcnt_scale " << max_eval_workload_loadcnt_scale_;
+            }
             if (perclient_opcnt_ != DEFAULT_PERCLIENT_OPCNT)
             {
                 oss << " --perclient_opcnt " << perclient_opcnt_;
@@ -83,10 +88,6 @@ namespace covered
             if (perclient_workercnt_ != DEFAULT_PERCLIENT_WORKERCNT)
             {
                 oss << " --perclient_workercnt " << perclient_workercnt_;
-            }
-            if (total_workload_loadcnt_scale_ != DEFAULT_TOTAL_WORKLOAD_LOADCNT_SCALE)
-            {
-                oss << " --total_workload_loadcnt_scale " << total_workload_loadcnt_scale_;
             }
 
             is_to_cli_string_ = true;
@@ -121,9 +122,9 @@ namespace covered
             argument_desc_.add_options()
                 // ("clientcnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_CLIENTCNT), "the total number of clients")
                 ("disable_warmup_speedup", "disable speedup mode for warmup phase")
+                ("max_eval_workload_loadcnt_scale", boost::program_options::value<uint32_t>()->default_value(DEFAULT_MAX_EVAL_WORKLOAD_LOADCNT_SCALE), "scale of max workload loadcnt for evaluation (MUST > warmup_reqcnt_scale; -> max_eval_workload_loadcnt_scale * keycnt)")
                 ("perclient_opcnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_PERCLIENT_OPCNT), perclient_opcnt_descstr.c_str())
                 ("perclient_workercnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_PERCLIENT_WORKERCNT), "the number of worker threads for each client")
-                ("total_workload_loadcnt_scale", boost::program_options::value<uint32_t>()->default_value(DEFAULT_TOTAL_WORKLOAD_LOADCNT_SCALE), "scale of total workload loadcnt (MUST > warmup_reqcnt_scale; -> total_workload_loadcnt_scale * keycnt)")
             ;
 
             is_add_cli_parameters_ = true;
@@ -148,9 +149,9 @@ namespace covered
             {
                 is_warmup_speedup = false;
             }
+            uint32_t max_eval_workload_loadcnt_scale = argument_info_["max_eval_workload_loadcnt_scale"].as<uint32_t>();
             uint32_t perclient_opcnt = argument_info_["perclient_opcnt"].as<uint32_t>();
             uint32_t perclient_workercnt = argument_info_["perclient_workercnt"].as<uint32_t>();
-            uint32_t total_workload_loadcnt_scale = argument_info_["total_workload_loadcnt_scale"].as<uint32_t>();
 
             // Store client CLI parameters for dynamic configurations
             // clientcnt_ = clientcnt;
@@ -165,9 +166,9 @@ namespace covered
             {
                 perclient_opcnt = Config::getTraceTotalOpcnt(getWorkloadName()) / getClientcnt();
             }
+            max_eval_workload_loadcnt_scale_ = max_eval_workload_loadcnt_scale;
             perclient_opcnt_ = perclient_opcnt;
             perclient_workercnt_ = perclient_workercnt;
-            total_workload_loadcnt_scale_ = total_workload_loadcnt_scale;
 
             is_set_param_and_config_ = true;
         }
@@ -191,9 +192,9 @@ namespace covered
             oss << "[Dynamic configurations from CLI parameters in " << kClassName << "]" << std::endl;
             // oss << "Client count: " << clientcnt_ << std::endl;
             oss << "Warmup speedup flag: " << (is_warmup_speedup_?"true":"false") << std::endl;
+            oss << "Max workload loadcnt scale for evaluation: " << max_eval_workload_loadcnt_scale_;
             oss << "Per-client operation count (workload size): " << perclient_opcnt_ << std::endl;
             oss << "Per-client worker count: " << perclient_workercnt_ << std::endl;
-            oss << "Total workload load count scale: " << total_workload_loadcnt_scale_;
             Util::dumpDebugMsg(kClassName, oss.str());
 
             is_dump_cli_parameters_ = true;

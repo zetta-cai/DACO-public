@@ -709,9 +709,6 @@ namespace covered
 
         while (true) // Timeout-and-retry
         {
-            // TMPDEBUG24
-            Util::dumpVariablesForDebug(base_instance_name_, 2, "prepare global get request for key", key.getKeyIntstr().c_str());
-
             // Prepare global get request to cloud
             uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
             MessageBase* global_get_request_ptr = new GlobalGetRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
@@ -720,9 +717,6 @@ namespace covered
             #ifdef DEBUG_CACHE_SERVER_WORKER
             Util::dumpVariablesForDebug(base_instance_name_, 5, "issue a global request;", "type:", MessageBase::messageTypeToString(global_get_request_ptr->getMessageType()).c_str(), "keystr:", key.getKeystr().c_str());
             #endif
-
-            // TMPDEBUG24
-            Util::dumpVariablesForDebug(base_instance_name_, 2, "issue global get request for key", key.getKeyIntstr().c_str());
 
             // Prepare for latency-aware weight tuning
             const struct timespec tmp_cloud_access_start_timestamp = Util::getCurrentTimespec(); // NOT count timeout
@@ -754,9 +748,6 @@ namespace covered
             }
             else
             {
-                // TMPDEBUG24
-                Util::dumpVariablesForDebug(base_instance_name_, 4, "receive global get response for key", key.getKeyIntstr().c_str(), "skip_propagation_latency:", Util::toString(skip_propagation_latency).c_str());
-
                 // Update edge-cloud latency for latency-aware weight tuning if NOT timeout
                 const struct timespec tmp_cloud_access_end_timestamp = Util::getCurrentTimespec();
                 const double tmp_cloud_access_edge_cloud_rtt_us = Util::getDeltaTimeUs(tmp_cloud_access_end_timestamp, tmp_cloud_access_start_timestamp);
@@ -770,14 +761,8 @@ namespace covered
                 MessageBase* global_response_ptr = MessageBase::getResponseFromMsgPayload(global_response_msg_payload);
                 assert(global_response_ptr != NULL);
 
-                // TMPDEBUG24
-                Util::dumpVariablesForDebug(base_instance_name_, 2, "before process global get response for key", key.getKeyIntstr().c_str());
-                
                 // Get value from global response message
                 processRspToAccessCloud_(global_response_ptr, value, tmp_cloud_access_edge_cloud_latency_us);
-
-                // TMPDEBUG24
-                Util::dumpVariablesForDebug(base_instance_name_, 2, "after process global get response for key", key.getKeyIntstr().c_str());
 
                 // Update total bandwidth usage for received global get response
                 BandwidthUsage global_response_bandwidth_usage = global_response_ptr->getBandwidthUsageRef();

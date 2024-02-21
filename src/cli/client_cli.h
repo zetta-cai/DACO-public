@@ -28,7 +28,7 @@ namespace covered
         bool isWarmupSpeedup() const;
         uint32_t getPerclientOpcnt() const;
         uint32_t getPerclientWorkercnt() const;
-        uint32_t getTotalWorkloadLoadcntScale() const;
+        uint32_t getMaxEvalWorkloadLoadcntScale() const;
 
         std::string toCliString(); // NOT virtual for cilutil
         virtual void clearIsToCliString(); // Idempotent operation: clear is_to_cli_string_ for the next toCliString()
@@ -37,7 +37,7 @@ namespace covered
         static const bool DEFAULT_IS_WARMUP_SPEEDUP;
         static const uint32_t DEFAULT_PERCLIENT_OPCNT;
         static const uint32_t DEFAULT_PERCLIENT_WORKERCNT;
-        static const uint32_t DEFAULT_TOTAL_WORKLOAD_LOADCNT_SCALE;
+        static const uint32_t DEFAULT_MAX_EVAL_WORKLOAD_LOADCNT_SCALE;
 
         static const std::string kClassName;
 
@@ -52,9 +52,9 @@ namespace covered
 
         // uint32_t clientcnt_;
         bool is_warmup_speedup_; // Come from --disable_warmup_speedup
+        uint32_t max_eval_workload_loadcnt_scale_; // Must > EvaluatorCLI::warmup_reqcnt_scale_
         uint32_t perclient_opcnt_;
         uint32_t perclient_workercnt_;
-        uint32_t total_workload_loadcnt_scale_; // Must > EvaluatorCLI::warmup_reqcnt_scale_
     protected:
         virtual void addCliParameters_() override;
         virtual void setParamAndConfig_(const std::string& main_class_name) override;
