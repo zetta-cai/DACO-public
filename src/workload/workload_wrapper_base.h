@@ -59,21 +59,20 @@ namespace covered
         // Const shared variables
         std::string base_instance_name_;
         bool is_valid_;
-    protected:
+
         // Const shared variables coming from Param
+        // ONLY for clients
         const uint32_t clientcnt_;
         const uint32_t client_idx_;
-        const uint32_t keycnt_;
         const uint32_t perclient_opcnt_;
         const uint32_t perclient_workercnt_;
+        const uint32_t max_eval_workload_loadcnt_; // ONLY used in evaluation phase
+        // For all roles
+        const uint32_t keycnt_;
         const std::string workload_name_;
         const std::string workload_usage_role_; // Distinguish different roles to avoid file I/O overhead of loading all trace files (for dataset loader and clients during loading/evaluation), and avoid disk I/O overhead of accessing rocksdb (for cloud during warmup)
-        const uint32_t max_eval_workload_loadcnt_; // ONLY used in evaluation phase
 
-        // (1) ONLY for replayed traces, which have dataset file dumped by trace preprocessor
-
-        // (1.1) For role of preprocessor, dataset loader, and cloud
-
+        // For role of preprocessor, dataset loader, and cloud (ONLY for replayed traces)
         double average_dataset_keysize_; // Average dataset key size
         double average_dataset_valuesize_; // Average dataset value size
         uint32_t min_dataset_keysize_; // Minimum dataset key size
@@ -82,6 +81,30 @@ namespace covered
         uint32_t max_dataset_valuesize_; // Maximum dataset value size
         std::unordered_map<Key, uint32_t, KeyHasher> dataset_lookup_table_; // Fast indexing for dataset key-value pairs
         std::vector<std::pair<Key, Value>> dataset_kvpairs_; // Key-value pairs of dataset
+    protected:
+        // Getters for const shared variables coming from Param
+        // ONLY for clients
+        const uint32_t getClientcnt_() const;
+        const uint32_t getClientIdx_() const;
+        const uint32_t getPerclientOpcnt_() const;
+        const uint32_t getPerclientWorkercnt_() const;
+        const uint32_t getMaxEvalWorkloadLoadcnt_() const;
+        // For all roles
+        const uint32_t getKeycnt_() const;
+        const std::string getWorkloadName_() const;
+        const std::string getWorkloadUsageRole_() const;
+
+        // (1) ONLY for replayed traces, which have dataset file dumped by trace preprocessor
+
+        // (1.1) For role of preprocessor, dataset loader, and cloud
+        const double getAverageDatasetKeysize_() const;
+        const double getAverageDatasetValuesize_() const;
+        const uint32_t getMinDatasetKeysize_() const;
+        const uint32_t getMinDatasetValuesize_() const;
+        const uint32_t getMaxDatasetKeysize_() const;
+        const uint32_t getMaxDatasetValuesize_() const;
+        std::unordered_map<Key, uint32_t, KeyHasher>& getDatasetLookupTableRef_();
+        std::vector<std::pair<Key, Value>>& getDatasetKvpairsRef_();
 
         // (1.2) For role of trace preprocessor
 

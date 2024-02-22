@@ -106,11 +106,13 @@ int main(int argc, char **argv) {
 
     // Create a workload generator
     // NOTE: NOT need client CLI parameters as we only use dataset key-value pairs instead of workload items
-    const uint32_t clientcnt = 1;
-    const uint32_t client_idx = 0;
-    const uint32_t perclient_workercnt = dataset_loadercnt;
-    const uint32_t opcnt = clientcnt * perclient_workercnt; // dataset_loadercnt
-    covered::WorkloadWrapperBase* workload_generator_ptr = covered::WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(clientcnt, client_idx, keycnt, opcnt, perclient_workercnt, workload_name, covered::WorkloadWrapperBase::WORKLOAD_USAGE_ROLE_LOADER); // Track dataset items
+    const uint32_t clientcnt = 0; // No need workload items
+    const uint32_t client_idx = 0; // No need workload items
+    // const uint32_t perclient_workercnt = dataset_loadercnt;
+    //const uint32_t perclient_opcnt = clientcnt * perclient_workercnt; // dataset_loadercnt
+    const uint32_t perclient_workercnt = 0; // No need workload items
+    const uint32_t perclient_opcnt = 0; // No need workload items
+    covered::WorkloadWrapperBase* workload_generator_ptr = covered::WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, covered::WorkloadWrapperBase::WORKLOAD_USAGE_ROLE_LOADER); // Track dataset items
     assert(workload_generator_ptr != NULL);
     
     covered::Util::dumpVariablesForDebug(main_class_name, 4, "average dataset key size:", std::to_string(workload_generator_ptr->getAvgDatasetKeysize()).c_str(), "average dataset value size:", std::to_string(workload_generator_ptr->getAvgDatasetValuesize()).c_str());

@@ -134,7 +134,7 @@ namespace covered
 
         assert(false); // Should NOT arrive here, as ONLY trace preprocessor invokes this function, while Facebook does NOT need trace preprocessing!
 
-        return perclient_opcnt_ * clientcnt_;
+        return getPerclientOpcnt_() * getClientcnt_();
     }
 
     WorkloadItem FacebookWorkloadWrapper::getDatasetItem(const uint32_t itemidx)
@@ -190,13 +190,17 @@ namespace covered
 
     void FacebookWorkloadWrapper::overwriteWorkloadParameters_()
     {
-        assert(clientcnt_ > 0);
-        assert(perclient_workercnt_ > 0);
-        uint32_t perclientworker_opcnt = perclient_opcnt_ / perclient_workercnt_;
+        uint32_t tmp_perclientworker_opcnt = 0;
+        uint32_t tmp_perclient_workercnt = 0;
+        if (needWorkloadItems_())
+        {
+            tmp_perclient_workercnt = getPerclientWorkercnt_();
+            tmp_perclientworker_opcnt = getPerclientOpcnt_() / tmp_perclient_workercnt;
+        }
 
-        facebook_stressor_config_.numOps = static_cast<uint64_t>(perclientworker_opcnt);
-        facebook_stressor_config_.numThreads = static_cast<uint64_t>(perclient_workercnt_);
-        facebook_stressor_config_.numKeys = static_cast<uint64_t>(keycnt_);
+        facebook_stressor_config_.numOps = static_cast<uint64_t>(tmp_perclientworker_opcnt);
+        facebook_stressor_config_.numThreads = static_cast<uint64_t>(tmp_perclient_workercnt);
+        facebook_stressor_config_.numKeys = static_cast<uint64_t>(getKeycnt_());
 
         // NOTE: opPoolDistribution is {1.0}, which generates 0 with a probability of 1.0
         op_pool_dist_ptr_ = new std::discrete_distribution<>(facebook_stressor_config_.opPoolDistribution.begin(), facebook_stressor_config_.opPoolDistribution.end());
@@ -210,7 +214,16 @@ namespace covered
     void FacebookWorkloadWrapper::createWorkloadGenerator_()
     {
         // facebook::cachelib::cachebench::WorkloadGenerator will generate keycnt key-value pairs by generateReqs() and generate perclient_opcnt_ requests by generateKeyDistributions() in constructor
-        workload_generator_ = makeGenerator_(facebook_stressor_config_, client_idx_);
+        uint32_t tmp_client_idx = 0;
+        if (needWorkloadItems_()) // Clients
+        {
+            tmp_client_idx = getClientIdx_(); // Use client idx as random seed to generate workload items for the current client
+        }
+        else // Dataset loader and cloud
+        {
+            tmp_client_idx = 0; // NOTE: ONLY need dataset items, yet NOT use workload items -> client idx makes no sense
+        }
+        workload_generator_ = makeGenerator_(facebook_stressor_config_, tmp_client_idx);
     }
 
     // Get average/min/max dataset key/value size

@@ -70,8 +70,7 @@ namespace covered
 
         is_valid_ = false;
 
-        // (1) ONLY for replayed traces, which have dataset file dumped by trace preprocessor
-        // (1.1) For role of preprocessor, dataset loader, and cloud
+        // For role of preprocessor, dataset loader, and cloud (ONLY for replayed traces)
         average_dataset_keysize_ = 0;
         average_dataset_valuesize_ = 0;
         min_dataset_keysize_ = 0;
@@ -82,17 +81,13 @@ namespace covered
         dataset_kvpairs_.clear();
 
         // Verify workload usage role
-        if (needDatasetItems_())
+        if (workload_usage_role == WORKLOAD_USAGE_ROLE_PREPROCESSOR)
         {
-            assert(max_eval_workload_loadcnt == 0);
+            assert(Util::isReplayedWorkload(workload_name)); // ONLY replayed traces need preprocessing
         }
-        else if (needWorkloadItems_())
+        else if (workload_usage_role == WORKLOAD_USAGE_ROLE_LOADER || workload_usage_role == WORKLOAD_USAGE_ROLE_CLIENT || workload_usage_role == WORKLOAD_USAGE_ROLE_CLOUD)
         {
-            assert(max_eval_workload_loadcnt > 0);
-
-            // NOTE: keycnt and perclient_opcnt MUST > 0, as evaluation phase occurs after trace preprocessing
-            assert(keycnt > 0);
-            assert(perclient_opcnt > 0);
+            // Do nothing
         }
         else
         {
@@ -127,7 +122,179 @@ namespace covered
         return;
     }
 
+    // Getters for const shared variables coming from Param
+
+    const uint32_t WorkloadWrapperBase::getClientcnt_() const
+    {
+        // ONLY for clients
+        assert(workload_usage_role_ == WORKLOAD_USAGE_ROLE_CLIENT);
+
+        assert(clientcnt_ > 0);
+        
+        return clientcnt_;
+    }
+
+    const uint32_t WorkloadWrapperBase::getClientIdx_() const
+    {
+        // ONLY for clients
+        assert(workload_usage_role_ == WORKLOAD_USAGE_ROLE_CLIENT);
+
+        assert(client_idx_ >= 0);
+        assert(client_idx_ < clientcnt_);
+        
+        return client_idx_;
+    }
+
+    const uint32_t WorkloadWrapperBase::getPerclientOpcnt_() const
+    {
+        // ONLY for clients
+        assert(workload_usage_role_ == WORKLOAD_USAGE_ROLE_CLIENT);
+
+        // NOTE: perclient_opcnt MUST > 0, as loading/evaluation/warmup phase occurs after trace preprocessing
+        assert(perclient_opcnt_ > 0);
+        
+        return perclient_opcnt_;
+    }
+
+    const uint32_t WorkloadWrapperBase::getPerclientWorkercnt_() const
+    {
+        // ONLY for clients
+        assert(workload_usage_role_ == WORKLOAD_USAGE_ROLE_CLIENT);
+
+        assert(perclient_workercnt_ > 0);
+        
+        return perclient_workercnt_;
+    }
+
+    const uint32_t getMaxEvalWorkloadLoadcnt_() const
+    {
+        // ONLY for clients
+        assert(workload_usage_role_ == WORKLOAD_USAGE_ROLE_CLIENT);
+
+        assert(max_eval_workload_loadcnt_ > 0);
+        
+        return max_eval_workload_loadcnt_;
+    }
+
+    const uint32_t WorkloadWrapperBase::getKeycnt_() const
+    {
+        // For all roles
+        if (needAllTraceFiles_()) // Trace preprocessor
+        {
+            assert(keycnt_ == 0);
+        }
+        else // Dataset loader, clients, and cloud
+        {
+            // NOTE: keycnt MUST > 0, as loading/evaluation/warmup phase occurs after trace preprocessing
+            assert(keycnt_ > 0);
+        }
+
+        return keycnt_;
+    }
+
+    const std::string WorkloadWrapperBase::getWorkloadName_() const
+    {
+        // For all roles
+        return workload_name_;
+    }
+
+    const std::string WorkloadWrapperBase::getWorkloadUsageRole_() const
+    {
+        // For all roles
+        return workload_usage_role_;
+    }
+
     // (1) ONLY for replayed traces, which have dataset file dumped by trace preprocessor
+
+    // (1.1) For role of preprocessor, dataset loader, and cloud
+    
+    const double WorkloadWrapperBase::getAverageDatasetKeysize_() const
+    {
+        // For role of preprocessor, dataset loader, and cloud (ONLY for replayed traces)
+        assert(Util::isReplayedWorkload(workload_name_));
+        assert(needDatasetItems_());
+
+        assert(average_dataset_keysize_ >= 0);
+
+        return average_dataset_keysize_;
+    }
+
+    const double WorkloadWrapperBase::getAverageDatasetValuesize_() const
+    {
+        // For role of preprocessor, dataset loader, and cloud (ONLY for replayed traces)
+        assert(Util::isReplayedWorkload(workload_name_));
+        assert(needDatasetItems_());
+
+        assert(average_dataset_valuesize_ >= 0);
+
+        return average_dataset_valuesize_;
+    }
+
+    const uint32_t WorkloadWrapperBase::getMinDatasetKeysize_() const
+    {
+        // For role of preprocessor, dataset loader, and cloud (ONLY for replayed traces)
+        assert(Util::isReplayedWorkload(workload_name_));
+        assert(needDatasetItems_());
+
+        assert(min_dataset_keysize_ >= 0);
+
+        return min_dataset_keysize_;
+    }
+
+    const uint32_t WorkloadWrapperBase::getMinDatasetValuesize_() const
+    {
+        // For role of preprocessor, dataset loader, and cloud (ONLY for replayed traces)
+        assert(Util::isReplayedWorkload(workload_name_));
+        assert(needDatasetItems_());
+
+        assert(min_dataset_valuesize_ >= 0);
+
+        return min_dataset_valuesize_;
+    }
+
+    const uint32_t WorkloadWrapperBase::getMaxDatasetKeysize_() const
+    {
+        // For role of preprocessor, dataset loader, and cloud (ONLY for replayed traces)
+        assert(Util::isReplayedWorkload(workload_name_));
+        assert(needDatasetItems_());
+
+        assert(max_dataset_keysize_ >= 0);
+
+        return max_dataset_keysize_;
+    }
+
+    const uint32_t WorkloadWrapperBase::getMaxDatasetValuesize_() const
+    {
+        // For role of preprocessor, dataset loader, and cloud (ONLY for replayed traces)
+        assert(Util::isReplayedWorkload(workload_name_));
+        assert(needDatasetItems_());
+
+        assert(max_dataset_valuesize_ >= 0);
+
+        return max_dataset_valuesize_;
+    }
+
+    std::unordered_map<Key, uint32_t, KeyHasher>& WorkloadWrapperBase::getDatasetLookupTableRef_()
+    {
+        // For role of preprocessor, dataset loader, and cloud (ONLY for replayed traces)
+        assert(Util::isReplayedWorkload(workload_name_));
+        assert(needDatasetItems_());
+
+        assert(dataset_lookup_table_.size() > 0);
+
+        return dataset_lookup_table_;
+    }
+
+    std::vector<std::pair<Key, Value>>& WorkloadWrapperBase::getDatasetKvpairsRef_()
+    {
+        // For role of preprocessor, dataset loader, and cloud (ONLY for replayed traces)
+        assert(Util::isReplayedWorkload(workload_name_));
+        assert(needDatasetItems_());
+
+        assert(dataset_kvpairs_.size() > 0);
+
+        return dataset_kvpairs_;
+    }
 
     // (1.2) For role of preprocessor
 

@@ -77,9 +77,9 @@ namespace covered
 
         // Create workload generator for warmup speedup
         // NOTE: ONLY need keycnt and workload name to generate dataset items or locate corresponding dataset file, yet NOT need other parameters, as we only use dataset key-value pairs instead of workload items
-        const uint32_t tmp_clientcnt = 1;
-        const uint32_t tmp_client_idx = 0;
-        const uint32_t tmp_perclient_workercnt = 1;
+        const uint32_t tmp_clientcnt = 0; // No need workload items
+        const uint32_t tmp_client_idx = 0; // No need workload items
+        const uint32_t tmp_perclient_workercnt = 0; // No need workload items
         const uint32_t tmp_perclient_opcnt = 0; // No need workload items
         workload_generator_ptr_ = WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(tmp_clientcnt, tmp_client_idx, keycnt, tmp_perclient_opcnt, tmp_perclient_workercnt, workload_name, covered::WorkloadWrapperBase::WORKLOAD_USAGE_ROLE_CLOUD); // Track dataset items to support quick operations for warmup speedup
         assert(workload_generator_ptr_ != NULL);

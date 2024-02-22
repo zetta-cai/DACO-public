@@ -69,7 +69,7 @@ namespace covered
         }
 
         // Update for the next workload idx
-        uint32_t next_curclient_workload_idx = (curclient_workload_idx + perclient_workercnt_) % curclient_workload_keys_.size();
+        uint32_t next_curclient_workload_idx = (curclient_workload_idx + getPerclientWorkercnt_()) % curclient_workload_keys_.size();
         per_client_worker_workload_idx_[local_client_worker_idx] = next_curclient_workload_idx;
 
         return WorkloadItem(tmp_key, tmp_value, tmp_type);
@@ -81,7 +81,7 @@ namespace covered
 
         assert(needDatasetItems_());
 
-        return dataset_kvpairs_.size();
+        return getDatasetKvpairsRef_().size();
     }
 
     uint32_t WikipediaWorkloadWrapper::getTotalOpcnt() const
@@ -100,8 +100,8 @@ namespace covered
         assert(needDatasetItems_());
         assert(itemidx < getPracticalKeycnt());
 
-        const Key tmp_covered_key = dataset_kvpairs_[itemidx].first;
-        const Value tmp_covered_value = dataset_kvpairs_[itemidx].second;
+        const Key tmp_covered_key = getDatasetKvpairsRef_()[itemidx].first;
+        const Value tmp_covered_value = getDatasetKvpairsRef_()[itemidx].second;
         return WorkloadItem(tmp_covered_key, tmp_covered_value, WorkloadItemType::kWorkloadItemPut);
     }
 
@@ -123,7 +123,7 @@ namespace covered
                 const uint32_t dataset_filesize = dumpDatasetFile_();
 
                 std::ostringstream oss;
-                oss << "dump dataset file (" << dataset_filesize << " bytes) for workload " << workload_name_;
+                oss << "dump dataset file (" << dataset_filesize << " bytes) for workload " << getWorkloadName_();
                 Util::dumpNormalMsg(instance_name_, oss.str());
             }
         }
@@ -132,13 +132,13 @@ namespace covered
             const uint32_t dataset_filesize = loadDatasetFile_(); // Load dataset for dataset loader and cloud (will update dataset_kvpairs_, dataset_lookup_table_, and dataset statistics)
 
             std::ostringstream oss;
-            oss << "load dataset file (" << dataset_filesize << " bytes) for workload " << workload_name_;
+            oss << "load dataset file (" << dataset_filesize << " bytes) for workload " << getWorkloadName_();
             Util::dumpNormalMsg(instance_name_, oss.str());
         }
         else
         {
             std::ostringstream oss;
-            oss << "invalid workload usage role " << workload_usage_role_;
+            oss << "invalid workload usage role " << getWorkloadUsageRole_;
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }
@@ -166,7 +166,7 @@ namespace covered
 
         assert(needDatasetItems_());
 
-        return average_dataset_keysize_; // NOT tracked by evaluation phase which may NOT load all trace files
+        return getAverageDatasetKeysize_(); // NOT tracked by evaluation phase which may NOT load all trace files
     }
     
     double WikipediaWorkloadWrapper::getAvgDatasetValuesize() const
@@ -175,7 +175,7 @@ namespace covered
 
         assert(needDatasetItems_());
 
-        return average_dataset_valuesize_; // NOT tracked by evaluation phase which may NOT load all trace files
+        return getAverageDatasetValuesize_(); // NOT tracked by evaluation phase which may NOT load all trace files
     }
 
     uint32_t WikipediaWorkloadWrapper::getMinDatasetKeysize() const
@@ -184,7 +184,7 @@ namespace covered
 
         assert(needDatasetItems_());
 
-        return min_dataset_keysize_; // NOT tracked by evaluation phase which may NOT load all trace files
+        return getMinDatasetKeysize_(); // NOT tracked by evaluation phase which may NOT load all trace files
     }
 
     uint32_t WikipediaWorkloadWrapper::getMinDatasetValuesize() const
@@ -193,7 +193,7 @@ namespace covered
 
         assert(needDatasetItems_());
 
-        return min_dataset_valuesize_; // NOT tracked by evaluation phase which may NOT load all trace files
+        return getMinDatasetValuesize_(); // NOT tracked by evaluation phase which may NOT load all trace files
     }
 
     uint32_t WikipediaWorkloadWrapper::getMaxDatasetKeysize() const
@@ -202,7 +202,7 @@ namespace covered
 
         assert(needDatasetItems_());
 
-        return max_dataset_keysize_; // NOT tracked by evaluation phase which may NOT load all trace files
+        return getMaxDatasetKeysize_(); // NOT tracked by evaluation phase which may NOT load all trace files
     }
 
     uint32_t WikipediaWorkloadWrapper::getMaxDatasetValuesize() const
@@ -211,7 +211,7 @@ namespace covered
 
         assert(needDatasetItems_());
 
-        return max_dataset_valuesize_; // NOT tracked by evaluation phase which may NOT load all trace files
+        return getMaxDatasetValuesize_(); // NOT tracked by evaluation phase which may NOT load all trace files
     }
 
     // Wiki-specific helper functions
@@ -224,14 +224,14 @@ namespace covered
         uint32_t key_column_idx = 0;
         uint32_t value_column_idx = 0;
         std::vector<std::string> trace_filepaths; // NOTE: follow the trace order
-        if (workload_name_ == Util::WIKIPEDIA_IMAGE_WORKLOAD_NAME)
+        if (getWorkloadName_() == Util::WIKIPEDIA_IMAGE_WORKLOAD_NAME)
         {
             column_cnt = 5;
             key_column_idx = 1; // 2nd column
             value_column_idx = 3; // 4th column
             trace_filepaths = Config::getWikiimageTraceFilepaths();
         }
-        else if (workload_name_ == Util::WIKIPEDIA_TEXT_WORKLOAD_NAME)
+        else if (getWorkloadName_() == Util::WIKIPEDIA_TEXT_WORKLOAD_NAME)
         {
             column_cnt = 4;
             key_column_idx = 1; // 2nd column
@@ -241,7 +241,7 @@ namespace covered
         else
         {
             std::ostringstream oss;
-            oss << "Wikipedia workload name " << workload_name_ << " is not supported now!";
+            oss << "Wikipedia workload name " << getWorkloadName_() << " is not supported now!";
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }
@@ -250,7 +250,7 @@ namespace covered
         assert(trace_filecnt > 0);
 
         std::ostringstream oss;
-        oss << "load " << workload_name_ << " trace files...";
+        oss << "load " << getWorkloadName_() << " trace files...";
         Util::dumpNormalMsg(instance_name_, oss.str());
         
         bool is_achieve_max_eval_workload_loadcnt = false;
@@ -281,7 +281,7 @@ namespace covered
 
                 oss.clear();
                 oss.str("");
-                oss << "achieve max workload load cnt for evaluation: " << max_eval_workload_loadcnt_ << "; # of loaded operations: " << eval_workload_opcnt_ << "; current client workload size: " << curclient_workload_keys_.size();
+                oss << "achieve max workload load cnt for evaluation: " << getMaxEvalWorkloadLoadcnt_() << "; # of loaded operations: " << eval_workload_opcnt_ << "; current client workload size: " << curclient_workload_keys_.size();
                 Util::dumpNormalMsg(instance_name_, oss.str());
                 break;
             }
@@ -289,7 +289,7 @@ namespace covered
 
         // TMPDEBUG24
         std::ostringstream tmposs;
-        tmposs << "workload_usage_role_: " << workload_usage_role_ << "; dataset_kvpairs_ size: " << dataset_kvpairs_.size() << "; current client workload size: " << curclient_workload_keys_.size() << "; total_workload_opcnt_: " << total_workload_opcnt_;
+        tmposs << "getWorkloadUsageRole_: " << getWorkloadUsageRole_ << "; current client workload size: " << curclient_workload_keys_.size() << "; total_workload_opcnt_: " << total_workload_opcnt_;
         Util::dumpNormalMsg(instance_name_, tmposs.str());
 
         return;
@@ -380,7 +380,17 @@ namespace covered
                 }
                 else // Non-first line of the current trace file (i.e., data line)
                 {
-                    if (global_workload_idx % clientcnt_ == client_idx_) // The current line is partitioned to the current client
+                    bool need_curline = false;
+                    if (needAllTraceFiles_()) // Trace preprocessor (consider all data lines)
+                    {
+                        need_curline = true;
+                    }
+                    else if (needWorkloadItems_() && (global_workload_idx % getClientcnt_() == getClientIdx())) // Clients (ONLY consider corresponding data lines)
+                    {
+                        need_curline = true;
+                    }
+
+                    if (need_curline) // The current line is partitioned to the current client
                     {
                         // Process the current line to get key and value
                         Key tmp_key;
@@ -392,7 +402,7 @@ namespace covered
                     }
                     global_workload_idx++;
 
-                    if (needWorkloadItems_() && eval_workload_opcnt_ + global_workload_idx >= max_eval_workload_loadcnt_) // Clients for evaluation
+                    if (needWorkloadItems_() && eval_workload_opcnt_ + global_workload_idx >= getMaxEvalWorkloadLoadcnt_()) // Clients for evaluation
                     {
                         is_achieve_max_eval_workload_loadcnt = true; // Stop parsing trace files
                     }
@@ -528,12 +538,15 @@ namespace covered
     {
         if (needAllTraceFiles_()) // Preprocessor (all trace files)
         {
-            std::unordered_map<Key, uint32_t, KeyHasher>::iterator tmp_dataset_lookup_table_iter = dataset_lookup_table_.find(key);
-            if (tmp_dataset_lookup_table_iter == dataset_lookup_table_.end()) // The first request on the key
+            std::unordered_map<Key, uint32_t, KeyHasher>& tmp_dataset_lookup_table_ref = getDatasetLookupTableRef_();
+            std::vector<std::pair<Key, Value>>& tmp_dataset_kvpairs_ref = getDatasetKvpairsRef_();
+
+            std::unordered_map<Key, uint32_t, KeyHasher>::iterator tmp_dataset_lookup_table_iter = tmp_dataset_lookup_table_ref.find(key);
+            if (tmp_dataset_lookup_table_iter == tmp_dataset_lookup_table_ref.end()) // The first request on the key
             {
-                const uint32_t original_dataset_size = dataset_kvpairs_.size();
-                dataset_kvpairs_.push_back(std::pair(key, value));
-                dataset_lookup_table_.insert(std::pair(key, original_dataset_size));
+                const uint32_t original_dataset_size = tmp_dataset_kvpairs_ref.size();
+                tmp_dataset_kvpairs_ref.push_back(std::pair(key, value));
+                tmp_dataset_lookup_table_ref.insert(std::pair(key, original_dataset_size));
 
                 // Update dataset statistics
                 updateDatasetStatistics_(key, value, original_dataset_size);
@@ -567,7 +580,7 @@ namespace covered
         else
         {
             std::ostringstream oss;
-            oss << "invalid workload usage role " << workload_usage_role_ << ", which does not need both dataset and workload items";
+            oss << "invalid workload usage role " << getWorkloadUsageRole_ << ", which does not need both dataset and workload items";
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }
