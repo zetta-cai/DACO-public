@@ -15,6 +15,7 @@
 
 #include <cstdint>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include <cachelib/cachebench/cache/Cache.h>
@@ -65,6 +66,7 @@ class WorkloadGenerator : public covered::GeneratorBase {
   const uint32_t client_idx_;
   std::vector<std::string> keys_;
   std::vector<std::vector<size_t>> sizes_;
+  std::unordered_map<std::string, uint32_t> dataset_lookup_table_; // Siyuan: to support quick operations for warmup speedup
   std::vector<facebook::cachelib::cachebench::Request> reqs_; // key-value pairs
   // @firstKeyIndexForPool_ contains the first key in each pool (As represented
   // by key pool distribution). It's a convenient method for us to populate

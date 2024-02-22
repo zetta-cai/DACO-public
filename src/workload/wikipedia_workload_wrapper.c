@@ -20,17 +20,13 @@ namespace covered
         oss << kClassName << " client" << client_idx;
         instance_name_ = oss.str();
 
+        // For preprocessor
         total_workload_opcnt_ = 0;
 
-        average_dataset_keysize_ = 0;
-        average_dataset_valuesize_ = 0;
-        min_dataset_keysize_ = 0;
-        min_dataset_valuesize_ = 0;
-        max_dataset_keysize_ = 0;
-        max_dataset_valuesize_ = 0;
-        dataset_lookup_table_.clear();
-        dataset_kvpairs_.clear();
+        // For preprocessor, dataset loader, and cloud
+        // See WorkloadWrapperBase
 
+        // For clients
         curclient_partial_dataset_kvmap_.clear();
         curclient_workload_keys_.clear();
         curclient_workload_value_sizes_.clear();
@@ -133,7 +129,7 @@ namespace covered
         }
         else if (needDatasetItems_()) // Need dataset items for dataset loader and cloud for warmup speedup
         {
-            const uint32_t dataset_filesize = loadDatasetFile_(dataset_kvpairs_, dataset_lookup_table_); // Load dataset for dataset loader and cloud (will update dataset_kvpairs_ and dataset_lookup_table_)
+            const uint32_t dataset_filesize = loadDatasetFile_(); // Load dataset for dataset loader and cloud (will update dataset_kvpairs_, dataset_lookup_table_, and dataset statistics)
 
             std::ostringstream oss;
             oss << "load dataset file (" << dataset_filesize << " bytes) for workload " << workload_name_;
@@ -530,7 +526,7 @@ namespace covered
 
     void WikipediaWorkloadWrapper::updateDatasetOrWorkload_(const Key& key, const Value& value)
     {
-        if (needDatasetItems_()) // Preprocessor (all trace files) or dataset_loader/cloud (dataset file)
+        if (needAllTraceFiles_()) // Preprocessor (all trace files)
         {
             std::unordered_map<Key, uint32_t, KeyHasher>::iterator tmp_dataset_lookup_table_iter = dataset_lookup_table_.find(key);
             if (tmp_dataset_lookup_table_iter == dataset_lookup_table_.end()) // The first request on the key
@@ -540,22 +536,7 @@ namespace covered
                 dataset_lookup_table_.insert(std::pair(key, original_dataset_size));
 
                 // Update dataset statistics
-                average_dataset_keysize_ = (average_dataset_keysize_ * original_dataset_size + key.getKeyLength()) / (original_dataset_size + 1);
-                average_dataset_valuesize_ = (average_dataset_valuesize_ * original_dataset_size + value.getValuesize()) / (original_dataset_size + 1);
-                if (original_dataset_size == 0) // The first kvpair
-                {
-                    min_dataset_keysize_ = key.getKeyLength();
-                    min_dataset_valuesize_ = value.getValuesize();
-                    max_dataset_keysize_ = key.getKeyLength();
-                    max_dataset_valuesize_ = value.getValuesize();
-                }
-                else // Subsequent kvpairs
-                {
-                    min_dataset_keysize_ = std::min(min_dataset_keysize_, key.getKeyLength());
-                    min_dataset_valuesize_ = std::min(min_dataset_valuesize_, value.getValuesize());
-                    max_dataset_keysize_ = std::max(max_dataset_keysize_, key.getKeyLength());
-                    max_dataset_valuesize_ = std::max(max_dataset_valuesize_, value.getValuesize());
-                }
+                updateDatasetStatistics_(key, value, original_dataset_size);
             }
         }
         else if (needWorkloadItems_()) // Clients (partial trace files) for evaluation phase

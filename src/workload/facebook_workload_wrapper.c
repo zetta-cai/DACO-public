@@ -17,6 +17,9 @@ namespace covered
 
     FacebookWorkloadWrapper::FacebookWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const uint32_t& max_eval_workload_loadcnt) : WorkloadWrapperBase(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role, max_eval_workload_loadcnt)
     {
+        // NOTE: Facebook CDN is not replayed trace and NO need for trace preprocessing (also NO need to dump dataset file)
+        assert(!needAllTraceFiles_()); // Must NOT trace preprocessor
+
         // NOTE: NOT used by facebook workload wrapper
         UNUSED(max_eval_workload_loadcnt);
 
@@ -25,30 +28,27 @@ namespace covered
         oss << kClassName << " client" << client_idx;
         instance_name_ = oss.str();
         
+        // For clients, dataset loader, and cloud
         op_pool_dist_ptr_ = NULL;
         workload_generator_ = nullptr;
 
+        // For clients
         client_worker_item_randgen_ptrs_.resize(perclient_workercnt, NULL);
         last_reqid_ = std::nullopt; // Not used by WorkloadGenerator for Facebook CDN trace
-
-        dataset_lookup_table_.resize(0);
-        dataset_kvpairs_.resize(0);
     }
 
     FacebookWorkloadWrapper::~FacebookWorkloadWrapper()
     {
-        if (needAllTraceFiles_() || needWorkloadItems_()) // Trace preprocessor or clients
+        // For clients, dataset loader, and cloud
+        if (op_pool_dist_ptr_ != NULL)
         {
-            if (op_pool_dist_ptr_ != NULL)
-            {
-                delete op_pool_dist_ptr_;
-                op_pool_dist_ptr_ = NULL;
-            }
-
-            assert(workload_generator_ != nullptr);
-            workload_generator_->markFinish();
-            workload_generator_->markShutdown();
+            delete op_pool_dist_ptr_;
+            op_pool_dist_ptr_ = NULL;
         }
+
+        assert(workload_generator_ != nullptr);
+        workload_generator_->markFinish();
+        workload_generator_->markShutdown();
 
         if (needWorkloadItems_()) // Clients
         {
@@ -121,31 +121,18 @@ namespace covered
         checkIsValid_();
         checkPointers_();
 
-        assert(needDatasetItems_());
+        assert(needDatasetItems_()); // Dataset loader and cloud
 
         // NOTE: CacheLib CDN generator will remove redundant keys, so the number of generated key-value pairs will be slightly smaller than keycnt -> we do NOT fix CacheLib as the keycnt gap is very limited and we aim to avoid changing its workload distribution.
-
-        uint32_t dataset_size = 0;
-        if (needAllTraceFiles_()) // Trace preprocessor
-        {
-            dataset_size = static_cast<uint32_t>(workload_generator_->getAllKeys().size());
-        }
-        else // Dataset loader or cloud
-        {
-            dataset_size = dataset_kvpairs_.size();
-        }
-
-        return dataset_size;
+        return static_cast<uint32_t>(workload_generator_->getAllKeys().size());
     }
-
-    // TODO: END HERE
 
     uint32_t FacebookWorkloadWrapper::getTotalOpcnt() const
     {
         checkIsValid_();
         checkPointers_();
 
-        assert(needAllTraceFiles_()); // Must be trace preprocessor to load all trace files
+        assert(false); // Should NOT arrive here, as ONLY trace preprocessor invokes this function, while Facebook does NOT need trace preprocessing!
 
         return perclient_opcnt_ * clientcnt_;
     }
@@ -155,7 +142,7 @@ namespace covered
         checkIsValid_();
         checkPointers_();
 
-        assert(needDatasetItems_());
+        assert(needDatasetItems_()); // Dataset loader and cloud
         assert(itemidx < getPracticalKeycnt());
         
         // Must be 0 for Facebook CDN trace due to only a single operation pool (cachelib::PoolId = int8_t)
@@ -166,18 +153,16 @@ namespace covered
 
         const Key tmp_covered_key(tmp_facebook_req.key);
         const Value tmp_covered_value(static_cast<uint32_t>(*(tmp_facebook_req.sizeBegin)));
+
         return WorkloadItem(tmp_covered_key, tmp_covered_value, WorkloadItemType::kWorkloadItemPut);
     }
 
     void FacebookWorkloadWrapper::initWorkloadParameters_()
     {
-        if (needAllTraceFiles_() || needWorkloadItems_()) // Trace preprocessor or clients
-        {
-            // Load workload config file for Facebook CDN trace
-            CacheBenchConfig facebook_config(Config::getFacebookConfigFilepath());
-            //facebook_cache_config_ = facebook_config.getCacheConfig();
-            facebook_stressor_config_ = facebook_config.getStressorConfig();
-        }
+        // Load workload config file for Facebook CDN trace
+        CacheBenchConfig facebook_config(Config::getFacebookConfigFilepath());
+        //facebook_cache_config_ = facebook_config.getCacheConfig();
+        facebook_stressor_config_ = facebook_config.getStressorConfig();
 
         if (needWorkloadItems_()) // Clients
         {
@@ -205,42 +190,27 @@ namespace covered
 
     void FacebookWorkloadWrapper::overwriteWorkloadParameters_()
     {
-        if (needAllTraceFiles_() || needWorkloadItems_()) // Trace preprocessor or clients
+        assert(clientcnt_ > 0);
+        assert(perclient_workercnt_ > 0);
+        uint32_t perclientworker_opcnt = perclient_opcnt_ / perclient_workercnt_;
+
+        facebook_stressor_config_.numOps = static_cast<uint64_t>(perclientworker_opcnt);
+        facebook_stressor_config_.numThreads = static_cast<uint64_t>(perclient_workercnt_);
+        facebook_stressor_config_.numKeys = static_cast<uint64_t>(keycnt_);
+
+        // NOTE: opPoolDistribution is {1.0}, which generates 0 with a probability of 1.0
+        op_pool_dist_ptr_ = new std::discrete_distribution<>(facebook_stressor_config_.opPoolDistribution.begin(), facebook_stressor_config_.opPoolDistribution.end());
+        if (op_pool_dist_ptr_ == NULL)
         {
-            assert(clientcnt_ > 0);
-            assert(perclient_workercnt_ > 0);
-            uint32_t perclientworker_opcnt = perclient_opcnt_ / perclient_workercnt_;
-
-            facebook_stressor_config_.numOps = static_cast<uint64_t>(perclientworker_opcnt);
-            facebook_stressor_config_.numThreads = static_cast<uint64_t>(perclient_workercnt_);
-            facebook_stressor_config_.numKeys = static_cast<uint64_t>(keycnt_);
-
-            // NOTE: opPoolDistribution is {1.0}, which generates 0 with a probability of 1.0
-            op_pool_dist_ptr_ = new std::discrete_distribution<>(facebook_stressor_config_.opPoolDistribution.begin(), facebook_stressor_config_.opPoolDistribution.end());
-            if (op_pool_dist_ptr_ == NULL)
-            {
-                Util::dumpErrorMsg(instance_name_, "failed to create operation pool distribution!");
-                exit(1);
-            }
+            Util::dumpErrorMsg(instance_name_, "failed to create operation pool distribution!");
+            exit(1);
         }
     }
 
     void FacebookWorkloadWrapper::createWorkloadGenerator_()
     {
-        if (needAllTraceFiles_() || needWorkloadItems_()) // Trace preprocessor or clients
-        {
-            // facebook::cachelib::cachebench::WorkloadGenerator will generate keycnt key-value pairs by generateReqs() and generate perclient_opcnt_ requests by generateKeyDistributions() in constructor
-            workload_generator_ = makeGenerator_(facebook_stressor_config_, client_idx_);
-        }
-
-        if (needAllTraceFiles_()) // Trace preprocessor
-        {
-            const uint32_t dataset_filesize = dumpDatasetFile_();
-
-            std::ostringstream oss;
-            oss << "dump dataset file (" << dataset_filesize << " bytes) for workload " << workload_name_;
-            Util::dumpNormalMsg(instance_name_, oss.str());
-        }
+        // facebook::cachelib::cachebench::WorkloadGenerator will generate keycnt key-value pairs by generateReqs() and generate perclient_opcnt_ requests by generateKeyDistributions() in constructor
+        workload_generator_ = makeGenerator_(facebook_stressor_config_, client_idx_);
     }
 
     // Get average/min/max dataset key/value size
@@ -250,7 +220,7 @@ namespace covered
         checkIsValid_();
         checkPointers_();
 
-        assert(needDatasetItems_());
+        assert(needDatasetItems_()); // Dataset loader and cloud
 
         return workload_generator_->getAvgDatasetKeysize();
     }
@@ -260,7 +230,7 @@ namespace covered
         checkIsValid_();
         checkPointers_();
 
-        assert(needDatasetItems_());
+        assert(needDatasetItems_()); // Dataset loader and cloud
 
         return workload_generator_->getAvgDatasetValuesize();
     }
@@ -270,7 +240,7 @@ namespace covered
         checkIsValid_();
         checkPointers_();
 
-        assert(needDatasetItems_());
+        assert(needDatasetItems_()); // Dataset loader and cloud
 
         return workload_generator_->getMinDatasetKeysize();
     }
@@ -280,7 +250,7 @@ namespace covered
         checkIsValid_();
         checkPointers_();
 
-        assert(needDatasetItems_());
+        assert(needDatasetItems_()); // Dataset loader and cloud
 
         return workload_generator_->getMinDatasetValuesize();
     }
@@ -290,7 +260,7 @@ namespace covered
         checkIsValid_();
         checkPointers_();
 
-        assert(needDatasetItems_());
+        assert(needDatasetItems_()); // Dataset loader and cloud
 
         return workload_generator_->getMaxDatasetKeysize();
     }
@@ -300,18 +270,16 @@ namespace covered
         checkIsValid_();
         checkPointers_();
 
-        assert(needDatasetItems_());
+        assert(needDatasetItems_()); // Dataset loader and cloud
 
         return workload_generator_->getMaxDatasetValuesize();
     }
 
-    // (1) For the role of trace preprocessor and clients
+    // (1) For the role of clients, dataset loader, and cloud
 
     // The same makeGenerator as in lib/CacheLib/cachelib/cachebench/runner/Stressor.cpp
     std::unique_ptr<covered::GeneratorBase> FacebookWorkloadWrapper::makeGenerator_(const StressorConfig& config, const uint32_t& client_idx)
     {
-        assert(needAllTraceFiles_() || needWorkloadItems_()); // Trace preprocessor or clients
-
         if (config.generator == "piecewise-replay") {
             Util::dumpErrorMsg(instance_name_, "piecewise-replay generator is not supported now!");
             exit(1);
@@ -336,17 +304,12 @@ namespace covered
         }
     }
 
-    // (2) For role of trace preprocessor
-
-    // (4) Common utilities
+    // (2) Common utilities
 
     void FacebookWorkloadWrapper::checkPointers_() const
     {
-        if (needAllTraceFiles_() || needWorkloadItems_()) // Trace preprocessor or clients
-        {
-            assert(op_pool_dist_ptr_ != NULL);
-            assert(workload_generator_ != nullptr);
-        }
+        assert(op_pool_dist_ptr_ != NULL);
+        assert(workload_generator_ != nullptr);  
 
         if (needWorkloadItems_) // Clients
         {

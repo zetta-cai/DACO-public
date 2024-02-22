@@ -74,6 +74,15 @@ namespace covered
         std::ostringstream oss;
         oss << kClassName << " cloud" << cloud_idx;
         instance_name_ = oss.str();
+
+        // Create workload generator for warmup speedup
+        // NOTE: ONLY need keycnt and workload name to generate dataset items or locate corresponding dataset file, yet NOT need other parameters, as we only use dataset key-value pairs instead of workload items
+        const uint32_t tmp_clientcnt = 1;
+        const uint32_t tmp_client_idx = 0;
+        const uint32_t tmp_perclient_workercnt = 1;
+        const uint32_t tmp_perclient_opcnt = 0; // No need workload items
+        workload_generator_ptr_ = WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(tmp_clientcnt, tmp_client_idx, keycnt, tmp_perclient_opcnt, tmp_perclient_workercnt, workload_name, covered::WorkloadWrapperBase::WORKLOAD_USAGE_ROLE_CLOUD); // Track dataset items to support quick operations for warmup speedup
+        assert(workload_generator_ptr_ != NULL);
         
         // Open local RocksDB KVS (maybe time-consuming -> introduce NodeParamBase::node_initialized_)
         cloud_rocksdb_ptr_ = new RocksdbWrapper(cloud_idx, cloud_storage, Util::getCloudRocksdbDirpath(keycnt, workload_name, cloud_idx));
@@ -90,6 +99,11 @@ namespace covered
         
     CloudWrapper::~CloudWrapper()
     {
+        // Release workload generator
+        assert(workload_generator_ptr_ != NULL);
+        delete workload_generator_ptr_;
+        workload_generator_ptr_ = NULL;
+        
         // Close local RocksDB KVS
         assert(cloud_rocksdb_ptr_ != NULL);
         delete cloud_rocksdb_ptr_;

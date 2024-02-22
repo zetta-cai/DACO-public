@@ -70,17 +70,33 @@ namespace covered
         const std::string workload_usage_role_; // Distinguish different roles to avoid file I/O overhead of loading all trace files (for dataset loader and clients during loading/evaluation), and avoid disk I/O overhead of accessing rocksdb (for cloud during warmup)
         const uint32_t max_eval_workload_loadcnt_; // ONLY used in evaluation phase
 
-        // (1) For role of trace preprocessor
+        // (1) ONLY for replayed traces, which have dataset file dumped by trace preprocessor
+
+        // (1.1) For role of preprocessor, dataset loader, and cloud
+
+        double average_dataset_keysize_; // Average dataset key size
+        double average_dataset_valuesize_; // Average dataset value size
+        uint32_t min_dataset_keysize_; // Minimum dataset key size
+        uint32_t min_dataset_valuesize_; // Minimum dataset value size
+        uint32_t max_dataset_keysize_; // Maximum dataset key size
+        uint32_t max_dataset_valuesize_; // Maximum dataset value size
+        std::unordered_map<Key, uint32_t, KeyHasher> dataset_lookup_table_; // Fast indexing for dataset key-value pairs
+        std::vector<std::pair<Key, Value>> dataset_kvpairs_; // Key-value pairs of dataset
+
+        // (1.2) For role of trace preprocessor
 
         void verifyDatasetFileForPreprocessor_();
         uint32_t dumpDatasetFile_() const; // Dump dataset key-value pairs into dataset file; return dataset file size (in units of bytes)
 
-        // (2) For role of dataset loader and cloud
+        // (1.3) For role of dataset loader and cloud
 
-        // NOTE: we do NOT maintain dataset_kvpairs_ and dataset_lookup_table_ as protected member variables in workload wrapper base, as each workload wrapper has different roles to use them (e.g., Wiki CDN uses them for trace preprocessor, yet Facebook CDN NOT use)
-        uint32_t loadDatasetFile_(std::vector<std::pair<Key, Value>>& dataset_kvpairs, std::unordered_map<Key, Value, KeyHasher>& dataset_lookup_table); // Load dataset key-value pairs to update dataset_kvpairs and dataset_lookup_table; return dataset file size (in units of bytes)
+        uint32_t loadDatasetFile_(); // Load dataset key-value pairs to update dataset_kvpairs_, dataset_lookup_table_, and dataset statistics; return dataset file size (in units of bytes)
 
-        // (3) Common utilities
+        // (1.4) Common utilities
+
+        void updateDatasetStatistics_(const Key& key, const Value& value, const uint32_t& original_dataset_size); // Update dataset statistics (e.g., average/min/max dataset key/value size)
+
+        // (2) Other common utilities
 
         bool needAllTraceFiles_();
         bool needDatasetItems_();

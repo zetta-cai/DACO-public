@@ -70,6 +70,17 @@ namespace covered
 
         is_valid_ = false;
 
+        // (1) ONLY for replayed traces, which have dataset file dumped by trace preprocessor
+        // (1.1) For role of preprocessor, dataset loader, and cloud
+        average_dataset_keysize_ = 0;
+        average_dataset_valuesize_ = 0;
+        min_dataset_keysize_ = 0;
+        min_dataset_valuesize_ = 0;
+        max_dataset_keysize_ = 0;
+        max_dataset_valuesize_ = 0;
+        dataset_lookup_table_.clear();
+        dataset_kvpairs_.clear();
+
         // Verify workload usage role
         if (needDatasetItems_())
         {
@@ -116,10 +127,14 @@ namespace covered
         return;
     }
 
-    // (1) For role of preprocessor
+    // (1) ONLY for replayed traces, which have dataset file dumped by trace preprocessor
+
+    // (1.2) For role of preprocessor
 
     void WorkloadWrapperBase::verifyDatasetFileForPreprocessor_()
     {
+        assert(Util::isReplayedWorkload(workload_name_));
+
         // Check if trace dirpath exists
         const std::string tmp_dirpath = Config::getTraceDirpath();
         bool is_exist = Util::isDirectoryExist(tmp_dirpath, true);
@@ -147,6 +162,8 @@ namespace covered
 
     void WorkloadWrapperBase::dumpDatasetFile_() const
     {
+        assert(Util::isReplayedWorkload(workload_name_));
+
         const std::string tmp_dataset_filepath = Util::getDatasetFilepath(workload_name_);
         assert(!Util::isFileExist(tmp_dataset_filepath, true)); // Must NOT exist (already verified by verifyDatasetFile_() before)
 
@@ -162,24 +179,23 @@ namespace covered
         // Format: dataset size, key, value, key, value, ...
         uint32_t size = 0;
         // (0) dataset size
-        const uint32_t dataset_size = getPracticalKeycnt();
+        const uint32_t dataset_size = dataset_kvpairs_.size();
+        assert(dataset_size > 0);
         fs_ptr->write((const char*)&dataset_size, sizeof(uint32_t));
         size += sizeof(uint32_t);
         // (1) key-value pairs
         const bool is_value_space_efficient = true; // NOT serialize value content
         for (uint32_t i = 0; i < dataset_size; i++)
         {
-            WorkloadItem tmp_item = getDatasetItem(i);
-
             // Key
-            const Key& tmp_key = tmp_item.getKey();
+            const Key& tmp_key = dataset_kvpairs_[i].first;
             DynamicArray tmp_dynamic_array_for_key(tmp_key.getKeyPayloadSize());
             const uint32_t key_serialize_size = tmp_key.serialize(tmp_dynamic_array_for_key, 0);
             tmp_dynamic_array_for_key.writeBinaryFile(0, fs_ptr, key_serialize_size);
             size += key_serialize_size;
 
             // Value
-            const Value& tmp_value = tmp_item.getValue();
+            const Value& tmp_value = dataset_kvpairs_[i].second;
             DynamicArray tmp_dynamic_array_for_value(tmp_value.getValuePayloadSize(is_value_space_efficient));
             const uint32_t value_serialize_size = tmp_value.serialize(tmp_dynamic_array_for_value, 0, is_value_space_efficient);
             tmp_dynamic_array_for_value.writeBinaryFile(0, fs_ptr, value_serialize_size);
@@ -194,10 +210,12 @@ namespace covered
         return size - 0;
     }
 
-    // (2) For role of dataset loader and cloud
+    // (1.3) For role of dataset loader and cloud
 
-    void WorkloadWrapperBase::loadDatasetFile_(std::vector<std::pair<Key, Value>>& dataset_kvpairs, std::unordered_map<Key, Value, KeyHasher>& dataset_lookup_table)
+    void WorkloadWrapperBase::loadDatasetFile_()
     {
+        assert(Util::isReplayedWorkload(workload_name_));
+
         const std::string tmp_dataset_filepath = Util::getDatasetFilepath(workload_name_);
 
         bool is_exist = Util::isFileExist(tmp_dataset_filepath, true);
@@ -221,7 +239,7 @@ namespace covered
         uint64_t dataset_size = 0;
         fs_ptr->read((char *)&dataset_size, sizeof(uint64_t));
         size += sizeof(uint64_t);
-        dataset_kvpairs.resize(dataset_size);
+        dataset_kvpairs_.resize(dataset_size);
         // (1) key-value pairs
         for (uint64_t i = 0; i < dataset_size; i++)
         {
@@ -236,8 +254,12 @@ namespace covered
             size += value_deserialize_size;
 
             // Update dataset
-            dataset_kvpairs[i] = std::pair(tmp_key, tmp_value);
-            dataset_lookup_table.insert(std::pair(tmp_key, i));
+            const uint32_t original_dataset_size = dataset_kvpairs_.size();
+            dataset_kvpairs_[i] = std::pair(tmp_key, tmp_value);
+            dataset_lookup_table_.insert(std::pair(tmp_key, i));
+
+            // Update dataset statistics
+            updateDatasetStatistics_(tmp_key, tmp_value, original_dataset_size);
         }
 
         // Close file and release ofstream
@@ -248,7 +270,33 @@ namespace covered
         return size - 0;
     }
 
-    // (3) Common utilities
+    // (1.4) Common utilities
+
+    void WorkloadWrapperBase::updateDatasetStatistics_(const Key& key, const Value& value, const uint32_t& original_dataset_size)
+    {
+        assert(Util::isReplayedWorkload(workload_name_));
+
+        average_dataset_keysize_ = (average_dataset_keysize_ * original_dataset_size + key.getKeyLength()) / (original_dataset_size + 1);
+        average_dataset_valuesize_ = (average_dataset_valuesize_ * original_dataset_size + value.getValuesize()) / (original_dataset_size + 1);
+        if (original_dataset_size == 0) // The first kvpair
+        {
+            min_dataset_keysize_ = key.getKeyLength();
+            min_dataset_valuesize_ = value.getValuesize();
+            max_dataset_keysize_ = key.getKeyLength();
+            max_dataset_valuesize_ = value.getValuesize();
+        }
+        else // Subsequent kvpairs
+        {
+            min_dataset_keysize_ = std::min(min_dataset_keysize_, key.getKeyLength());
+            min_dataset_valuesize_ = std::min(min_dataset_valuesize_, value.getValuesize());
+            max_dataset_keysize_ = std::max(max_dataset_keysize_, key.getKeyLength());
+            max_dataset_valuesize_ = std::max(max_dataset_valuesize_, value.getValuesize());
+        }
+
+        return;
+    }
+
+    // (2) Other common utilities
 
     bool WorkloadWrapperBase::needAllTraceFiles_()
     {

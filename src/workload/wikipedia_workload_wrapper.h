@@ -56,10 +56,7 @@ namespace covered
         void completeLastLine_(const char* tmp_line_startpos, const char* tmp_line_endpos, char** tmp_complete_line_startpos_ptr, char** tmp_complete_line_endpos_ptr) const; // Complete the last line of a trace file by an extra line separator
         void concatenateLastLine_(const char* prev_block_taildata, const uint32_t& prev_block_tailsize, const char* tmp_complete_line_startpos, const char* tmp_complete_line_endpos, char** tmp_concat_line_startpos_ptr, char** tmp_concat_line_endpos_ptr) const; // Concatenate tail data of the previous mmap block with the first complete line of the current mmap block
         void parseCurrentLine_(const char* tmp_concat_line_startpos, const char* tmp_concat_line_endpos, const uint32_t& key_column_idx, const uint32_t& value_column_idx, const uint32_t& column_cnt, Key& key, Value& value) const; // Parse a line to get key and value
-
-        // (2) Common utilities
-
-        void updateDatasetOrWorkload_(const Key& key, const Value& value); // Update dataset or workload with the key-value pair from all/partial trace files or dataset file
+        void updateDatasetOrWorkload_(const Key& key, const Value& value); // Update dataset or workload with the key-value pair from all/partial trace files
 
         // Const shared variables
         std::string instance_name_;
@@ -68,14 +65,7 @@ namespace covered
         // (1) For role of preprocessor
         uint32_t total_workload_opcnt_; // Total opcnt of workloads in all clients
         // (2) For role of preprocessor, dataset loader, and cloud
-        double average_dataset_keysize_; // Average dataset key size
-        double average_dataset_valuesize_; // Average dataset value size
-        uint32_t min_dataset_keysize_; // Minimum dataset key size
-        uint32_t min_dataset_valuesize_; // Minimum dataset value size
-        uint32_t max_dataset_keysize_; // Maximum dataset key size
-        uint32_t max_dataset_valuesize_; // Maximum dataset value size
-        std::unordered_map<Key, uint32_t, KeyHasher> dataset_lookup_table_; // Fast indexing for dataset key-value pairs
-        std::vector<std::pair<Key, Value>> dataset_kvpairs_; // Key-value pairs of dataset
+        // See WorkloadWrapperBase
         // (3) For role of clients during evaluation
         std::unordered_map<Key, Value, KeyHasher> curclient_partial_dataset_kvmap_; // Key-value map of partial dataset accessed by workload in current client (compare with original value sizes for workload item types)
         std::vector<Key> curclient_workload_keys_; // Key indices of workload in the current client

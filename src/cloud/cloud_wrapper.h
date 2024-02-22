@@ -13,6 +13,7 @@
 #include "cli/cloud_cli.h"
 #include "common/node_wrapper_base.h"
 #include "network/propagation_simulator_param.h"
+#include "workload/workload_wrapper_base.h"
 
 namespace covered
 {
@@ -53,6 +54,7 @@ namespace covered
         void checkPointers_() const;
 
         std::string instance_name_;
+        WorkloadWrapperBase* workload_generator_ptr_; // for warmup speedup (thread safe)
         RocksdbWrapper* cloud_rocksdb_ptr_;
 
         PropagationSimulatorParam* cloud_toedge_propagation_simulator_param_ptr_;

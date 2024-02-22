@@ -208,6 +208,11 @@ void WorkloadGenerator::generateReqs() {
       auto reqSizes = sizes_.end() - 1;
       reqs_.emplace_back(keys_[j], reqSizes->begin(), reqSizes->end());
 
+      // Siyuan: update dataset lookup table to support quick operations for warmup speedup
+      std::unordered_map<std::string, uint32_t>::iterator tmp_iter = dataset_lookup_table_.find(keys_[j]);
+      assert(tmp_iter == dataset_lookup_table_.end()); // Must NOT exist
+      dataset_lookup_table_.insert(std::pair(keys_[j], j));
+
       // Siyuan: update avg/min/max dataset value size
       uint32_t tmp_valuesize = *(reqSizes->begin());
       avg_dataset_valuesize_ += static_cast<double>(tmp_valuesize);

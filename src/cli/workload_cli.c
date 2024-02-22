@@ -99,10 +99,7 @@ namespace covered
             // Store workload CLI parameters for dynamic configurations
             if (main_class_name == Util::TRACE_PREPROCESSOR_MAIN_NAME) // NOT preprocessed yet
             {
-                if (Util::isReplayedWorkload(getWorkloadName())) // NOTE: non-replayed traces (e.g., Facebook CDN) still needs keycnt to generate dataset
-                {
-                    keycnt = 0; 
-                }
+                keycnt = 0;
             }
             else if (Util::isReplayedWorkload(workload_name)) // Already preprocessed for replayed workloads
             {
@@ -162,13 +159,10 @@ namespace covered
             }
             else
             {
-                assert(keycnt_ > 0);
-
-                // OBSOLETE as non-replayed traces (e.g., Facebook CDN) still needs preprocessing
-                // std::ostringstream oss;
-                // oss << "workload " << workload_name_ << " is NOT replayed and NO need to run trace preprocessor!";
-                // Util::dumpErrorMsg(kClassName, oss.str());
-                // exit(1);
+                std::ostringstream oss;
+                oss << "workload " << workload_name_ << " is NOT replayed and NO need to run trace preprocessor!";
+                Util::dumpErrorMsg(kClassName, oss.str());
+                exit(1);
             }
         }
 
