@@ -48,6 +48,11 @@ namespace covered
         virtual uint32_t getMinDatasetValuesize() const = 0;
         virtual uint32_t getMaxDatasetKeysize() const = 0;
         virtual uint32_t getMaxDatasetValuesize() const = 0;
+
+        // For warmup speedup
+        virtual void quickDatasetGet(const Key& key, Value& value) const = 0;
+        virtual void quickDatasetPut(const Key& key, const Value& value) = 0;
+        virtual void quickDatasetDel(const Key& key) = 0;
     private:
         static const std::string kClassName;
 
@@ -73,6 +78,7 @@ namespace covered
         const std::string workload_usage_role_; // Distinguish different roles to avoid file I/O overhead of loading all trace files (for dataset loader and clients during loading/evaluation), and avoid disk I/O overhead of accessing rocksdb (for cloud during warmup)
 
         // For role of preprocessor, dataset loader, and cloud (ONLY for replayed traces)
+        // NOTE: non-replayed traces can generate all information (dataset items, workload items, dataset statistics) by workload generator
         double average_dataset_keysize_; // Average dataset key size
         double average_dataset_valuesize_; // Average dataset value size
         uint32_t min_dataset_keysize_; // Minimum dataset key size
@@ -96,7 +102,7 @@ namespace covered
 
         // (1) ONLY for replayed traces, which have dataset file dumped by trace preprocessor
 
-        // (1.1) For role of preprocessor, dataset loader, and cloud
+        // (1.1) For role of preprocessor, dataset loader, and cloud (ONLY for replayed traces)
         const double getAverageDatasetKeysize_() const;
         const double getAverageDatasetValuesize_() const;
         const uint32_t getMinDatasetKeysize_() const;
@@ -106,16 +112,22 @@ namespace covered
         std::unordered_map<Key, uint32_t, KeyHasher>& getDatasetLookupTableRef_();
         std::vector<std::pair<Key, Value>>& getDatasetKvpairsRef_();
 
-        // (1.2) For role of trace preprocessor
+        // (1.2) For role of trace preprocessor (ONLY for replayed traces)
 
         void verifyDatasetFileForPreprocessor_();
         uint32_t dumpDatasetFile_() const; // Dump dataset key-value pairs into dataset file; return dataset file size (in units of bytes)
 
-        // (1.3) For role of dataset loader and cloud
+        // (1.3) For role of dataset loader and cloud (ONLY for replayed traces)
 
         uint32_t loadDatasetFile_(); // Load dataset key-value pairs to update dataset_kvpairs_, dataset_lookup_table_, and dataset statistics; return dataset file size (in units of bytes)
 
-        // (1.4) Common utilities
+        // (1.4) For role of cloud for warmup speedup (ONLY for replayed traces)
+
+        void quickDatasetGet_(const Key& key, Value& value) const;
+        void quickDatasetPut_(const Key& key, const Value& value);
+        void quickDatasetDel_(const Key& key);
+
+        // (1.5) Common utilities (ONLY for replayed traces)
 
         void updateDatasetStatistics_(const Key& key, const Value& value, const uint32_t& original_dataset_size); // Update dataset statistics (e.g., average/min/max dataset key/value size)
 

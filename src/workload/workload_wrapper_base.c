@@ -206,7 +206,7 @@ namespace covered
 
     // (1) ONLY for replayed traces, which have dataset file dumped by trace preprocessor
 
-    // (1.1) For role of preprocessor, dataset loader, and cloud
+    // (1.1) For role of preprocessor, dataset loader, and cloud (ONLY for replayed traces)
     
     const double WorkloadWrapperBase::getAverageDatasetKeysize_() const
     {
@@ -296,11 +296,12 @@ namespace covered
         return dataset_kvpairs_;
     }
 
-    // (1.2) For role of preprocessor
+    // (1.2) For role of preprocessor (ONLY for replayed traces)
 
     void WorkloadWrapperBase::verifyDatasetFileForPreprocessor_()
     {
         assert(Util::isReplayedWorkload(workload_name_));
+        assert(needAllTraceFiles_()); // Trace preprocessor
 
         // Check if trace dirpath exists
         const std::string tmp_dirpath = Config::getTraceDirpath();
@@ -330,6 +331,7 @@ namespace covered
     void WorkloadWrapperBase::dumpDatasetFile_() const
     {
         assert(Util::isReplayedWorkload(workload_name_));
+        assert(needAllTraceFiles_()); // Trace preprocessor
 
         const std::string tmp_dataset_filepath = Util::getDatasetFilepath(workload_name_);
         assert(!Util::isFileExist(tmp_dataset_filepath, true)); // Must NOT exist (already verified by verifyDatasetFile_() before)
@@ -377,11 +379,12 @@ namespace covered
         return size - 0;
     }
 
-    // (1.3) For role of dataset loader and cloud
+    // (1.3) For role of dataset loader and cloud (ONLY for replayed traces)
 
     void WorkloadWrapperBase::loadDatasetFile_()
     {
         assert(Util::isReplayedWorkload(workload_name_));
+        assert(workload_usage_role_ == WORKLOAD_USAGE_ROLE_LOADER || workload_usage_role_ == WORKLOAD_USAGE_ROLE_CLOUD); // dataset loader and cloud
 
         const std::string tmp_dataset_filepath = Util::getDatasetFilepath(workload_name_);
 
@@ -437,7 +440,52 @@ namespace covered
         return size - 0;
     }
 
-    // (1.4) Common utilities
+    // (1.4) For role of cloud for warmup speedup (ONLY for replayed traces)
+
+    void WorkloadWrapperBase::quickDatasetGet_(const Key& key, Value& value) const
+    {
+        assert(Util::isReplayedWorkload(workload_name_));
+        assert(workload_usage_role_ == WORKLOAD_USAGE_ROLE_CLOUD); // cloud
+
+        // Check dataset lookup table
+        std::unordered_map<Key, uint32_t, KeyHasher>::const_iterator tmp_iter = dataset_lookup_table_.find(key);
+        assert(tmp_iter != dataset_lookup_table_.end()); // Key must exist
+
+        // Get value
+        const uint32_t dataset_kvpairs_index = tmp_iter->second;
+        assert(dataset_kvpairs_index < dataset_kvpairs_.size());
+        assert(dataset_kvpairs_[dataset_kvpairs_index].first == key);
+        value = dataset_kvpairs_[dataset_kvpairs_index].second;
+
+        return;
+    }
+
+    void WorkloadWrapperBase::quickDatasetPut_(const Key& key, const Value& value)
+    {
+        assert(Util::isReplayedWorkload(workload_name_));
+        assert(workload_usage_role_ == WORKLOAD_USAGE_ROLE_CLOUD); // cloud
+
+        // Check dataset lookup table
+        std::unordered_map<Key, uint32_t, KeyHasher>::const_iterator tmp_iter = dataset_lookup_table_.find(key);
+        assert(tmp_iter != dataset_lookup_table_.end()); // Key must exist
+
+        // Put value
+        const uint32_t dataset_kvpairs_index = tmp_iter->second;
+        assert(dataset_kvpairs_index < dataset_kvpairs_.size());
+        assert(dataset_kvpairs_[dataset_kvpairs_index].first == key);
+        dataset_kvpairs_[dataset_kvpairs_index].second = value;
+
+        return;
+    }
+
+    void WorkloadWrapperBase::quickDatasetDel_(const Key& key)
+    {
+        quickDatasetPut_(key, Value()); // Put a default value with is_deleted = true
+
+        return;
+    }
+
+    // (1.5) Common utilities (ONLY for replayed traces)
 
     void WorkloadWrapperBase::updateDatasetStatistics_(const Key& key, const Value& value, const uint32_t& original_dataset_size)
     {

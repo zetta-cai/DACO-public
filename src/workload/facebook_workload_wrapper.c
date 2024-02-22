@@ -288,6 +288,10 @@ namespace covered
         return workload_generator_->getMaxDatasetValuesize();
     }
 
+    // For warmup speedup
+
+    // TODO: END HERE
+
     // (1) For the role of clients, dataset loader, and cloud
 
     // The same makeGenerator as in lib/CacheLib/cachelib/cachebench/runner/Stressor.cpp

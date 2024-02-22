@@ -40,6 +40,11 @@ namespace covered
         virtual uint32_t getMinDatasetValuesize() const override;
         virtual uint32_t getMaxDatasetKeysize() const override;
         virtual uint32_t getMaxDatasetValuesize() const override;
+
+        // For warmup speedup
+        virtual void quickDatasetGet(const Key& key, Value& value) const override;
+        virtual void quickDatasetPut(const Key& key, const Value& value) override;
+        virtual void quickDatasetDel(const Key& key) override;
     private:
         static const std::string kClassName;
 

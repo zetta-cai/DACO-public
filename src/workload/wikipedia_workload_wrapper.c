@@ -214,6 +214,38 @@ namespace covered
         return getMaxDatasetValuesize_(); // NOT tracked by evaluation phase which may NOT load all trace files
     }
 
+    // For warmup speedup
+
+    void WikipediaWorkloadWrapper::quickDatasetGet(const Key& key, Value& value) const
+    {
+        checkIsValid_();
+
+        assert(getWorkloadUsageRole_() == WORKLOAD_USAGE_ROLE_CLOUD); // Must be cloud for warmup speedup
+
+        quickDatasetGet_(key, value);
+        return;
+    }
+
+    void WikipediaWorkloadWrapper::quickDatasetPut(const Key& key, const Value& value)
+    {
+        checkIsValid_();
+
+        assert(getWorkloadUsageRole_() == WORKLOAD_USAGE_ROLE_CLOUD); // Must be cloud for warmup speedup
+
+        quickDatasetPut_(key, value);
+        return;
+    }
+
+    void WikipediaWorkloadWrapper::quickDatasetDel(const Key& key)
+    {
+        checkIsValid_();
+
+        assert(getWorkloadUsageRole_() == WORKLOAD_USAGE_ROLE_CLOUD); // Must be cloud for warmup speedup
+
+        quickDatasetDel_(key);
+        return;
+    }
+
     // Wiki-specific helper functions
 
     // (1) For role of preprocessor (all trace files) and clients (partial trace files)
