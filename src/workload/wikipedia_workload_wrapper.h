@@ -57,19 +57,12 @@ namespace covered
         void concatenateLastLine_(const char* prev_block_taildata, const uint32_t& prev_block_tailsize, const char* tmp_complete_line_startpos, const char* tmp_complete_line_endpos, char** tmp_concat_line_startpos_ptr, char** tmp_concat_line_endpos_ptr) const; // Concatenate tail data of the previous mmap block with the first complete line of the current mmap block
         void parseCurrentLine_(const char* tmp_concat_line_startpos, const char* tmp_concat_line_endpos, const uint32_t& key_column_idx, const uint32_t& value_column_idx, const uint32_t& column_cnt, Key& key, Value& value) const; // Parse a line to get key and value
 
-        // (2) For role of preprocessor
-
-        void verifyDatasetFileForPreprocessor_();
-        uint32_t dumpDatasetFile_() const; // Dump dataset key-value pairs into dataset file; return dataset file size (in units of bytes)
-        uint32_t loadDatasetFile_() const; // Load dataset key-value pairs to update dataset_kvpairs_ and dataset_lookup_table_; return dataset file size (in units of bytes)
-
-        // (3) Common utilities
+        // (2) Common utilities
 
         void updateDatasetOrWorkload_(const Key& key, const Value& value); // Update dataset or workload with the key-value pair from all/partial trace files or dataset file
 
         // Const shared variables
         std::string instance_name_;
-        const std::string wiki_workload_name_;
 
         // Const shared variables
         // (1) For role of preprocessor

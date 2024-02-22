@@ -99,7 +99,10 @@ namespace covered
             // Store workload CLI parameters for dynamic configurations
             if (main_class_name == Util::TRACE_PREPROCESSOR_MAIN_NAME) // NOT preprocessed yet
             {
-                keycnt = 0;
+                if (Util::isReplayedWorkload(getWorkloadName())) // NOTE: non-replayed traces (e.g., Facebook CDN) still needs keycnt to generate dataset
+                {
+                    keycnt = 0; 
+                }
             }
             else if (Util::isReplayedWorkload(workload_name)) // Already preprocessed for replayed workloads
             {
@@ -151,12 +154,22 @@ namespace covered
 
     void WorkloadCLI::verifyIntegrity_(const std::string& main_class_name) const
     {
-        if (main_class_name == Util::TRACE_PREPROCESSOR_MAIN_NAME && !Util::isReplayedWorkload(workload_name_))
+        if (main_class_name == Util::TRACE_PREPROCESSOR_MAIN_NAME)
         {
-            std::ostringstream oss;
-            oss << "workload " << workload_name_ << " is NOT replayed and NO need to run trace preprocessor!";
-            Util::dumpErrorMsg(kClassName, oss.str());
-            exit(1);
+            if (Util::isReplayedWorkload(workload_name_))
+            {
+                assert(keycnt_ == 0); // Set by setParamAndConfig_()
+            }
+            else
+            {
+                assert(keycnt_ > 0);
+
+                // OBSOLETE as non-replayed traces (e.g., Facebook CDN) still needs preprocessing
+                // std::ostringstream oss;
+                // oss << "workload " << workload_name_ << " is NOT replayed and NO need to run trace preprocessor!";
+                // Util::dumpErrorMsg(kClassName, oss.str());
+                // exit(1);
+            }
         }
 
         if (main_class_name != Util::TRACE_PREPROCESSOR_MAIN_NAME && keycnt_ == 0) // Already preprocessed yet with invalid key count

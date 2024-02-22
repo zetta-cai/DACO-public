@@ -30,7 +30,9 @@ int main(int argc, char **argv) {
     const uint32_t keycnt = trace_preprocessor_cli.getKeycnt();
     assert(keycnt == 0); // keycnt MUST be 0 for trace preprocessor; keycnt will NOT be used by replayed traces
     const std::string workload_name = trace_preprocessor_cli.getWorkloadName();
-    assert(covered::Util::isReplayedWorkload(workload_name));
+
+    // OBSOLETE as non-replayed traces (e.g., Facebook CDN) still needs preprocessing
+    //assert(covered::Util::isReplayedWorkload(workload_name));
 
     // (2) Preprocess trace files by workload wrapper
 

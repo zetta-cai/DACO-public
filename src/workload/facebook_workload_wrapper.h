@@ -17,6 +17,8 @@
 #define FACEBOOK_WORKLOAD_WRAPPER_H
 
 #include <string>
+#include <unordered_map>
+#include <vector>
 
 //#include <cachelib/cachebench/util/CacheConfig.h>
 
@@ -32,7 +34,7 @@ namespace covered
     class FacebookWorkloadWrapper : public WorkloadWrapperBase
     {
     public:
-        FacebookWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_usage_role, const uint32_t& max_eval_workload_loadcnt);
+        FacebookWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const uint32_t& max_eval_workload_loadcnt);
         virtual ~FacebookWorkloadWrapper();
 
         virtual WorkloadItem generateWorkloadItem(const uint32_t& local_client_worker_idx) override; // NOTE: randomly select an item without modifying any variable -> thread safe
@@ -54,20 +56,40 @@ namespace covered
         virtual void overwriteWorkloadParameters_() override;
         virtual void createWorkloadGenerator_() override;
 
+        // Facebook-specific helper functions
+
+        // (1) For role of trace preprocessor and clients
+
         std::unique_ptr<covered::GeneratorBase> makeGenerator_(const StressorConfig& config, const uint32_t& client_idx);
+
+        // (2) For role of trace preprocessor
+
+        void verifyDatasetFileForPreprocessor_();
+        uint32_t dumpDatasetFile_() const; // Dump dataset key-value pairs into dataset file; return dataset file size (in units of bytes)
+
+        // (3) For role of dataset loader and cloud
+
+        uint32_t loadDatasetFile_() const; // Load dataset key-value pairs to update dataset_kvpairs_ and dataset_lookup_table_; return dataset file size (in units of bytes)
+
+        // (4) Common utilities
+
+        void checkPointers_() const;
 
         // Const shared variables
         std::string instance_name_;
-        std::discrete_distribution<>* op_pool_dist_ptr_;
-
-        // Non-const shared variables
-        std::optional<uint64_t> last_reqid_; // NOT thread safe yet UNUSED in Facebook CDN workload
 
         // Const shared variables
+        // (1) For trace preprocessor and clients
+        std::discrete_distribution<>* op_pool_dist_ptr_;
         //facebook::cachelib::cachebench::CacheConfig facebook_cache_config_;
         StressorConfig facebook_stressor_config_;
-        std::unique_ptr<covered::GeneratorBase> workload_generator_;
+        std::unique_ptr<covered::GeneratorBase> workload_generator_; // NOTE: workload generator is ONLY used by trace preprocessor (need all traces) and clients (need workload items)
+        // (2) For clients
         std::vector<std::mt19937_64*> client_worker_item_randgen_ptrs_;
+        std::optional<uint64_t> last_reqid_; // NOT thread safe yet UNUSED in Facebook CDN workload
+        // (3) For dataset loader and cloud
+        std::unordered_map<Key, uint32_t, KeyHasher> dataset_lookup_table_; // Fast indexing for dataset key-value pairs
+        std::vector<std::pair<Key, Value>> dataset_kvpairs_; // Key-value pairs of dataset
     };
 }
 

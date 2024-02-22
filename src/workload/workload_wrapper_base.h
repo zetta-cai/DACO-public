@@ -11,6 +11,8 @@
 #define WORKLOAD_WRAPPER_BASE_H
 
 #include <string>
+#include <unordered_map>
+#include <vector>
 
 #include "workload/workload_item.h"
 
@@ -27,7 +29,7 @@ namespace covered
         static WorkloadWrapperBase* getWorkloadGeneratorByWorkloadName(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const uint32_t& max_eval_workload_loadcnt = 0);
         // static WorkloadWrapperBase* getWorkloadGeneratorByWorkloadName(const uint64_t& capacity_bytes, const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const uint32_t& max_eval_workload_loadcnt = 0); // (OBSOLETE due to already checking objsize in LocalCacheBase)
 
-        WorkloadWrapperBase(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_usage_role, const uint32_t& max_eval_workload_loadcnt);
+        WorkloadWrapperBase(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const uint32_t& max_eval_workload_loadcnt);
         virtual ~WorkloadWrapperBase();
 
         // Access by the single thread of client wrapper (NO need to be thread safe)
@@ -64,8 +66,21 @@ namespace covered
         const uint32_t keycnt_;
         const uint32_t perclient_opcnt_;
         const uint32_t perclient_workercnt_;
+        const std::string workload_name_;
         const std::string workload_usage_role_; // Distinguish different roles to avoid file I/O overhead of loading all trace files (for dataset loader and clients during loading/evaluation), and avoid disk I/O overhead of accessing rocksdb (for cloud during warmup)
         const uint32_t max_eval_workload_loadcnt_; // ONLY used in evaluation phase
+
+        // (1) For role of trace preprocessor
+
+        void verifyDatasetFileForPreprocessor_();
+        uint32_t dumpDatasetFile_() const; // Dump dataset key-value pairs into dataset file; return dataset file size (in units of bytes)
+
+        // (2) For role of dataset loader and cloud
+
+        // NOTE: we do NOT maintain dataset_kvpairs_ and dataset_lookup_table_ as protected member variables in workload wrapper base, as each workload wrapper has different roles to use them (e.g., Wiki CDN uses them for trace preprocessor, yet Facebook CDN NOT use)
+        uint32_t loadDatasetFile_(std::vector<std::pair<Key, Value>>& dataset_kvpairs, std::unordered_map<Key, Value, KeyHasher>& dataset_lookup_table); // Load dataset key-value pairs to update dataset_kvpairs and dataset_lookup_table; return dataset file size (in units of bytes)
+
+        // (3) Common utilities
 
         bool needAllTraceFiles_();
         bool needDatasetItems_();

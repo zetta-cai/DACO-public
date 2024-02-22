@@ -13,7 +13,7 @@ namespace covered
 {
     const std::string WikipediaWorkloadWrapper::kClassName("WikipediaWorkloadWrapper");
 
-    WikipediaWorkloadWrapper::WikipediaWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const uint32_t& max_eval_workload_loadcnt) : WorkloadWrapperBase(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_usage_role, max_eval_workload_loadcnt), wiki_workload_name_(workload_name)
+    WikipediaWorkloadWrapper::WikipediaWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const uint32_t& max_eval_workload_loadcnt) : WorkloadWrapperBase(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role, max_eval_workload_loadcnt)
     {
         // Differentiate facebook workload generator in different clients
         std::ostringstream oss;
@@ -127,16 +127,16 @@ namespace covered
                 const uint32_t dataset_filesize = dumpDatasetFile_();
 
                 std::ostringstream oss;
-                oss << "dump dataset file (" << dataset_filesize << " bytes) for workload " << wiki_workload_name_;
+                oss << "dump dataset file (" << dataset_filesize << " bytes) for workload " << workload_name_;
                 Util::dumpNormalMsg(instance_name_, oss.str());
             }
         }
         else if (needDatasetItems_()) // Need dataset items for dataset loader and cloud for warmup speedup
         {
-            const uint32_t dataset_filesize = loadDatasetFile_(); // Load dataset for dataset loader and cloud (will update dataset_kvpairs_ and dataset_lookup_table_)
+            const uint32_t dataset_filesize = loadDatasetFile_(dataset_kvpairs_, dataset_lookup_table_); // Load dataset for dataset loader and cloud (will update dataset_kvpairs_ and dataset_lookup_table_)
 
             std::ostringstream oss;
-            oss << "load dataset file (" << dataset_filesize << " bytes) for workload " << wiki_workload_name_;
+            oss << "load dataset file (" << dataset_filesize << " bytes) for workload " << workload_name_;
             Util::dumpNormalMsg(instance_name_, oss.str());
         }
         else
@@ -228,14 +228,14 @@ namespace covered
         uint32_t key_column_idx = 0;
         uint32_t value_column_idx = 0;
         std::vector<std::string> trace_filepaths; // NOTE: follow the trace order
-        if (wiki_workload_name_ == Util::WIKIPEDIA_IMAGE_WORKLOAD_NAME)
+        if (workload_name_ == Util::WIKIPEDIA_IMAGE_WORKLOAD_NAME)
         {
             column_cnt = 5;
             key_column_idx = 1; // 2nd column
             value_column_idx = 3; // 4th column
             trace_filepaths = Config::getWikiimageTraceFilepaths();
         }
-        else if (wiki_workload_name_ == Util::WIKIPEDIA_TEXT_WORKLOAD_NAME)
+        else if (workload_name_ == Util::WIKIPEDIA_TEXT_WORKLOAD_NAME)
         {
             column_cnt = 4;
             key_column_idx = 1; // 2nd column
@@ -245,7 +245,7 @@ namespace covered
         else
         {
             std::ostringstream oss;
-            oss << "Wikipedia workload name " << wiki_workload_name_ << " is not supported now!";
+            oss << "Wikipedia workload name " << workload_name_ << " is not supported now!";
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }
@@ -254,7 +254,7 @@ namespace covered
         assert(trace_filecnt > 0);
 
         std::ostringstream oss;
-        oss << "load " << wiki_workload_name_ << " trace files...";
+        oss << "load " << workload_name_ << " trace files...";
         Util::dumpNormalMsg(instance_name_, oss.str());
         
         bool is_achieve_max_eval_workload_loadcnt = false;
@@ -526,135 +526,7 @@ namespace covered
         return;
     }
 
-    // (2) For role of preprocessor
-
-    void WikipediaWorkloadWrapper::verifyDatasetFile_()
-    {
-        // Check if trace dirpath exists
-        const std::string tmp_dirpath = Config::getTraceDirpath();
-        bool is_exist = Util::isDirectoryExist(tmp_dirpath, true);
-        if (!is_exist)
-        {
-            std::ostringstream oss;
-            oss << "trace directory " << tmp_dirpath << " does not exist!";
-            Util::dumpErrorMsg(instance_name_, oss.str());
-            exit(1);
-        }
-
-        // Check if dataset filepath exists
-        const std::string tmp_dataset_filepath = Util::getDatasetFilepath(wiki_workload_name_);
-        bool is_exist = Util::isFileExist(tmp_dataset_filepath, true);
-        if (is_exist)
-        {
-            std::ostringstream oss;
-            oss << "dataset file " << tmp_dataset_filepath << " already exists -> please delete it before trace preprocessing!";
-            Util::dumpErrorMsg(instance_name_, oss.str());
-            exit(1);
-        }
-
-        return;
-    }
-
-    void WikipediaWorkloadWrapper::dumpDatasetFile_() const
-    {
-        const std::string tmp_dataset_filepath = Util::getDatasetFilepath(wiki_workload_name_);
-        assert(!Util::isFileExist(tmp_dataset_filepath, true)); // Must NOT exist (already verified by verifyDatasetFile_() before)
-
-        // Create and open a binary file for dumping dataset by trace preprocessor
-        // NOTE: trace preprocessor is a single-thread program and hence ONLY one dataset file will be created for each given workload
-        std::ostringstream oss;
-        oss << "open file " << tmp_dataset_filepath << " for dumping dataset of " << wiki_workload_name_;
-        Util::dumpNormalMsg(instance_name_, oss.str());
-        std::fstream* fs_ptr = Util::openFile(tmp_dataset_filepath, std::ios_base::out | std::ios_base::binary);
-        assert(fs_ptr != NULL);
-
-        // Dump key-value pairs of dataset
-        // Format: dataset size, key, value, key, value, ...
-        uint32_t size = 0;
-        // (0) dataset size
-        const uint64_t dataset_size = dataset_kvpairs_.size();
-        fs_ptr->write((const char*)&dataset_size, sizeof(uint64_t));
-        size += sizeof(uint64_t);
-        // (1) key-value pairs
-        const bool is_value_space_efficient = true; // NOT serialize value content
-        for (uint64_t i = 0; i < dataset_size; i++)
-        {
-            // Key
-            const Key& tmp_key = dataset_kvpairs_[i].first;
-            DynamicArray tmp_dynamic_array_for_key(tmp_key.getKeyPayloadSize());
-            const uint32_t key_serialize_size = tmp_key.serialize(tmp_dynamic_array_for_key, 0);
-            tmp_dynamic_array_for_key.writeBinaryFile(0, fs_ptr, key_serialize_size);
-            size += key_serialize_size;
-
-            // Value
-            const Value& tmp_value = dataset_kvpairs_[i].second;
-            DynamicArray tmp_dynamic_array_for_value(tmp_value.getValuePayloadSize(is_value_space_efficient));
-            const uint32_t value_serialize_size = tmp_value.serialize(tmp_dynamic_array_for_value, 0, is_value_space_efficient);
-            tmp_dynamic_array_for_value.writeBinaryFile(0, fs_ptr, value_serialize_size);
-            size += value_serialize_size;
-        }
-
-        // Close file and release ofstream
-        fs_ptr->close();
-        delete fs_ptr;
-        fs_ptr = NULL;
-
-        return size - 0;
-    }
-
-    void WikipediaWorkloadWrapper::loadDatasetFile_() const
-    {
-        const std::string tmp_dataset_filepath = Util::getDatasetFilepath(wiki_workload_name_);
-
-        bool is_exist = Util::isFileExist(tmp_dataset_filepath, true);
-        if (!is_exist)
-        {
-            // File does not exist
-            std::ostringstream oss;
-            oss << "dataset file " << tmp_dataset_filepath << " does not exist -> please run trace_preprocessor before dataset loader and evaluation!";
-            Util::dumpErrorMsg(instance_name_, oss.str());
-            exit(1);
-        }
-
-        // Open the existing binary file for total aggregated statistics
-        std::fstream* fs_ptr = Util::openFile(tmp_dataset_filepath, std::ios_base::in | std::ios_base::binary);
-        assert(fs_ptr != NULL);
-
-        // Load dataset key-value pairs from dataset file
-        // Format: dataset size, key, value, key, value, ...
-        uint32_t size = 0;
-        // (0) dataset size
-        uint64_t dataset_size = 0;
-        fs_ptr->read((char *)&dataset_size, sizeof(uint64_t));
-        size += sizeof(uint64_t);
-        dataset_kvpairs_.resize(dataset_size);
-        // (1) key-value pairs
-        for (uint64_t i = 0; i < dataset_size; i++)
-        {
-            // Key
-            Key tmp_key;
-            uint32_t key_deserialize_size = tmp_key.deserialize(fs_ptr);
-            size += key_deserialize_size;
-
-            // Value
-            Value tmp_value;
-            uint32_t value_deserialize_size = tmp_value.deserialize(fs_ptr, is_value_space_efficient);
-            size += value_deserialize_size;
-
-            // Update dataset
-            dataset_kvpairs_[i] = std::pair(tmp_key, tmp_value);
-            dataset_lookup_table_.insert(std::pair(tmp_key, i));
-        }
-
-        // Close file and release ofstream
-        fs_ptr->close();
-        delete fs_ptr;
-        fs_ptr = NULL;
-
-        return size - 0;
-    }
-
-    // (3) Common utilities
+    // (2) Common utilities
 
     void WikipediaWorkloadWrapper::updateDatasetOrWorkload_(const Key& key, const Value& value)
     {
