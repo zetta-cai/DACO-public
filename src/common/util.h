@@ -265,6 +265,7 @@ namespace covered
 
         // (6) Intermediate files
 
+        static std::string getDatasetFilepath(const std::string workload_name);
         static std::string getEvaluatorStatisticsDirpath(EvaluatorCLI* evaluator_cli_ptr);
         static std::string getEvaluatorStatisticsFilepath(EvaluatorCLI* evaluator_cli_ptr);
         static std::string getCloudRocksdbBasedirForWorkload(const uint32_t& keycnt, const std::string& workload_name);

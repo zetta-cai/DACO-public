@@ -947,6 +947,14 @@ namespace covered
 
     // (6) Intermediate files
 
+    std::string Util::getDatasetFilepath(const std::string workload_name)
+    {
+        // NOTE: MUST be the same as dataset filepath in scripts/tools/preprocess_traces.py
+        const std::string tmp_dirpath = Config::getTraceDirpath();
+        const std::string tmp_dataset_filepath = tmp_dirpath + "/" + workload_name + ".dataset";
+        return tmp_dataset_filepath;
+    }
+
     std::string Util::getEvaluatorStatisticsDirpath(EvaluatorCLI* evaluator_cli_ptr)
     {
         assert(evaluator_cli_ptr != NULL);

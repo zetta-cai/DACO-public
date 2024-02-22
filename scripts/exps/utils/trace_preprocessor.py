@@ -8,11 +8,14 @@ from .cliutil import *
 from .exputil import *
 
 class TracePreprocessor:
-    def __init__(self, **kwargs):
+    def __init__(self, trace_preprocessor_logfile = None, **kwargs):
         # For launched componenets
         self.is_successful_finish_ = False
 
         self.cliutil_instance_ = CLIUtil(**kwargs)
+        self.trace_preprocessor_logfile_ = "tmp_trace_preprocessor.out"
+        if trace_preprocessor_logfile is not None:
+            self.trace_preprocessor_logfile_ = trace_preprocessor_logfile
     
     def run(self):
         # NOTE: current machine idx MUST be a client machine idx for preprocessing phase
@@ -22,8 +25,7 @@ class TracePreprocessor:
 
         # (1) Launch trace preprocessor
         ## Get launch trace preprocessor command
-        trace_preprocessor_logfile = "tmp_trace_preprocessor.out"
-        launch_trace_preprocessor_cmd = "nohup ./trace_preprocessor {} >{} 2>&1 &".format(self.cliutil_instance_.getTracePreprocessorCLIStr(), trace_preprocessor_logfile)
+        launch_trace_preprocessor_cmd = "nohup ./trace_preprocessor {} >{} 2>&1 &".format(self.cliutil_instance_.getTracePreprocessorCLIStr(), self.trace_preprocessor_logfile_)
         ## Execute command
         launch_trace_preprocessor__subprocess = SubprocessUtil.runCmd(launch_trace_preprocessor__cmd)
         if launch_trace_preprocessor__subprocess.returncode != 0:
@@ -32,7 +34,7 @@ class TracePreprocessor:
         # (2) Periodically check whether trace preprocessor finishes benchmark
         LogUtil.prompt(Common.scriptname, "wait for trace preprocessor to finish preprocessing phase...")
         ## Get check trace preprocessor finish preprocessing command
-        check_trace_preprocessor_finish_preprocessing_cmd = "cat {} | grep '{}'".format(trace_preprocessor_logfile, Common.TRACE_PREPROCESSOR_FINISH_SYMBOL)
+        check_trace_preprocessor_finish_preprocessing_cmd = "cat {} | grep '{}'".format(self.trace_preprocessor_logfile_, Common.TRACE_PREPROCESSOR_FINISH_SYMBOL)
         while True:
             ## Periodically check
             time.sleep(5)

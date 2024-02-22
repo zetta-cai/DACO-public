@@ -18,13 +18,13 @@ class ExpUtil:
                 ssh_cmd = "ssh -f -i {} {}@{}".format(Common.sshkey_filepath, Common.username, cls.physical_machines_[remote_machine_idx]["public_ipstr"])
             else:
                 ssh_cmd = "ssh -i {} {}@{}".format(Common.sshkey_filepath, Common.username, cls.physical_machines_[remote_machine_idx]["public_ipstr"])
-            remote_cmd = "{} \"source /home/{}/.bashrc_non_interactive && cd {} && {}\"".format(ssh_cmd, Common.username, Common.proj_dirname, internal_cmd)
+            remote_cmd = "{} \"source /home/{}/.bashrc_non_interactive && {}\"".format(ssh_cmd, Common.username, internal_cmd)
         return remote_cmd
 
     @classmethod
     def launchComponent(cls, tmp_machine_idx, tmp_component, tmp_component_clistr, tmp_component_logfile):
         # Get launch component command
-        launch_component_cmd = "nohup {} {} >{} 2>&1 &".format(tmp_component, tmp_component_clistr, tmp_component_logfile)
+        launch_component_cmd = "cd {} && nohup {} {} >{} 2>&1 &".format(Common.proj_dirname, tmp_component, tmp_component_clistr, tmp_component_logfile)
         if tmp_machine_idx != Common.cur_machine_idx:
             # NOTE: set with_background = True to avoid getting stuck by background command
             launch_component_cmd = cls.getRemoteCmd(tmp_machine_idx, launch_component_cmd, with_background = True)

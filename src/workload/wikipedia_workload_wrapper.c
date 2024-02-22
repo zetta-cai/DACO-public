@@ -542,7 +542,7 @@ namespace covered
         }
 
         // Check if dataset filepath exists
-        const std::string tmp_dataset_filepath = getDatasetFilepath_();
+        const std::string tmp_dataset_filepath = Util::getDatasetFilepath(wiki_workload_name_);
         bool is_exist = Util::isFileExist(tmp_dataset_filepath, true);
         if (is_exist)
         {
@@ -557,7 +557,7 @@ namespace covered
 
     void WikipediaWorkloadWrapper::dumpDatasetFile_() const
     {
-        const std::string tmp_dataset_filepath = getDatasetFilepath_();
+        const std::string tmp_dataset_filepath = Util::getDatasetFilepath(wiki_workload_name_);
         assert(!Util::isFileExist(tmp_dataset_filepath, true)); // Must NOT exist (already verified by verifyDatasetFile_() before)
 
         // Create and open a binary file for dumping dataset by trace preprocessor
@@ -604,7 +604,7 @@ namespace covered
 
     void WikipediaWorkloadWrapper::loadDatasetFile_() const
     {
-        const std::string tmp_dataset_filepath = getDatasetFilepath_();
+        const std::string tmp_dataset_filepath = Util::getDatasetFilepath(wiki_workload_name_);
 
         bool is_exist = Util::isFileExist(tmp_dataset_filepath, true);
         if (!is_exist)
@@ -655,13 +655,6 @@ namespace covered
     }
 
     // (3) Common utilities
-
-    std::string WikipediaWorkloadWrapper::getDatasetFilepath_()
-    {
-        const std::string tmp_dirpath = Config::getTraceDirpath();
-        const std::string tmp_dataset_filepath = tmp_dirpath + "/" + wiki_workload_name_ + ".dataset";
-        return tmp_dataset_filepath;
-    }
 
     void WikipediaWorkloadWrapper::updateDatasetOrWorkload_(const Key& key, const Value& value)
     {

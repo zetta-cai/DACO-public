@@ -65,7 +65,6 @@ namespace covered
 
         // (3) Common utilities
 
-        std::string getDatasetFilepath_();
         void updateDatasetOrWorkload_(const Key& key, const Value& value); // Update dataset or workload with the key-value pair from all/partial trace files or dataset file
 
         // Const shared variables

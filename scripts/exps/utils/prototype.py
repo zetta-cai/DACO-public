@@ -35,7 +35,7 @@ class Prototype:
         ## Wait for evaluator initialization
         time.sleep(0.5)
         ## Get verify evaluator finish initialization command
-        verify_evaluator_initialization_cmd =  "cat {} | grep '{}'".format(evaluator_logfile, Common.EVALUATOR_FINISH_INITIALIZATION_SYMBOL)
+        verify_evaluator_initialization_cmd =  "cd {} && cat {} | grep '{}'".format(Common.proj_dirname, evaluator_logfile, Common.EVALUATOR_FINISH_INITIALIZATION_SYMBOL)
         if evaluator_machine_idx != Common.cur_machine_idx:
             verify_evaluator_initialization_cmd = ExpUtil.getRemoteCmd(evaluator_machine_idx, verify_evaluator_initialization_cmd)
         ## Verify existence of evaluator finish initialization symbol
@@ -101,7 +101,7 @@ class Prototype:
         # (6) Periodically check whether evaluator finishes benchmark
         LogUtil.prompt(Common.scriptname, "wait for prototype to finish benchmark...")
         ## Get check evaluator finish benchmark command
-        check_evaluator_finish_benchmark_cmd = "cat {} | grep '{}'".format(evaluator_logfile, Common.EVALUATOR_FINISH_BENCHMARK_SYMBOL)
+        check_evaluator_finish_benchmark_cmd = "Common.proj_dirname && cat {} | grep '{}'".format(evaluator_logfile, Common.EVALUATOR_FINISH_BENCHMARK_SYMBOL)
         if evaluator_machine_idx != Common.cur_machine_idx:
             check_evaluator_finish_benchmark_cmd = ExpUtil.getRemoteCmd(evaluator_machine_idx, check_evaluator_finish_benchmark_cmd)
         while True:
