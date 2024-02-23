@@ -14,6 +14,10 @@
 #include "common/key.h"
 #include "common/value.h"
 
+// Only store value size instead of value string into RocksDB to avoid large dataset loading time cost and huge storage overhead
+// NOTE: the impl trick is acceptable as (i) geo-distributed system bottleneck is network propagation latency instead of cloud processing latency; (ii) smaller rocksdb size (i.e., smaller cloud latency) which actually incurs lower improvement in evaluation (i.e., underclaimed results) due to larger cache hit ratio of COVERED
+#define ROCKSDB_NO_VALUESTR
+
 namespace covered
 {
     class RocksdbWrapper
