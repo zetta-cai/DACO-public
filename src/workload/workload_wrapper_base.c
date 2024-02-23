@@ -404,6 +404,9 @@ namespace covered
         }
 
         // Open the existing binary file for total aggregated statistics
+        std::ostringstream oss;
+        oss << "open file " << tmp_dataset_filepath << " for loading dataset of " << workload_name_;
+        Util::dumpNormalMsg(base_instance_name_, oss.str());
         std::fstream* fs_ptr = Util::openFile(tmp_dataset_filepath, std::ios_base::in | std::ios_base::binary);
         assert(fs_ptr != NULL);
 
@@ -411,13 +414,13 @@ namespace covered
         // Format: dataset size, key, value, key, value, ...
         uint32_t size = 0;
         // (0) dataset size
-        uint64_t dataset_size = 0;
-        fs_ptr->read((char *)&dataset_size, sizeof(uint64_t));
-        size += sizeof(uint64_t);
+        uint32_t dataset_size = 0;
+        fs_ptr->read((char *)&dataset_size, sizeof(uint32_t));
+        size += sizeof(uint32_t);
         dataset_kvpairs_.resize(dataset_size);
         // (1) key-value pairs
         const bool is_value_space_efficient = true; // NOT deserialize value content
-        for (uint64_t i = 0; i < dataset_size; i++)
+        for (uint32_t i = 0; i < dataset_size; i++)
         {
             // Key
             Key tmp_key;

@@ -89,7 +89,7 @@ namespace covered
         uint32_t size = 0;
         uint32_t bitendian_keysize = 0;
         fs_ptr->read((char*)&bitendian_keysize, sizeof(uint32_t));
-        uint32_t keysize = ntohl(keysize);
+        uint32_t keysize = ntohl(bitendian_keysize);
         size += sizeof(uint32_t);
         DynamicArray keybytes(keysize);
         fs_ptr->read(keybytes.getBytesRef().data(), keysize);

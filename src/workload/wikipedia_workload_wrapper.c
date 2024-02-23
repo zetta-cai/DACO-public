@@ -81,7 +81,8 @@ namespace covered
 
         assert(needDatasetItems_());
 
-        return getDatasetKvpairsConstRef_().size();
+        int64_t dataset_size = getDatasetKvpairsConstRef_().size();
+        return Util::toUint32(dataset_size);
     }
 
     uint32_t WikipediaWorkloadWrapper::getTotalOpcnt() const

@@ -35,7 +35,7 @@ for i in range(len(replayed_workloads)):
 
         is_generate_dataset_file = True
     else:
-        LogUtil.prompt("Dataset file {} already exists, skip trace preprocessing...".format(tmp_dataset_filepath))
+        LogUtil.prompt(Common.scriptname, "Dataset file {} already exists, skip trace preprocessing...".format(tmp_dataset_filepath))
 
     # (2) Copy dataset file to cloud machine if not exist
     if Common.cur_machine_idx == client_machine_idxes[0]: # NOTE: ONLY copy if the current machine is the first client machine to avoid duplicate copying
@@ -80,5 +80,5 @@ for i in range(len(replayed_workloads)):
                     LogUtil.die(Common.scriptname, SubprocessUtil.getSubprocessErrstr(copy_dataset_file_subprocess))
 
 # (3) Hint users to check keycnt and total opcnt in log files, and update config.json if necessary
-# TODO: NOTE: we comment the following code as we have already updated config.json with correct keycnt and total opcnt
-LogUtil.emphasize(Common.scriptname, "Please check keycnt and total opcnt in the following log files to update config.json accordingly if necessary:\n{}".format(log_filenames))
+# NOTE: we comment the following code as we have already updated config.json with correct keycnt and total opcnt
+#LogUtil.emphasize(Common.scriptname, "Please check keycnt and total opcnt in the following log files to update config.json accordingly if necessary:\n{}".format(log_filenames))

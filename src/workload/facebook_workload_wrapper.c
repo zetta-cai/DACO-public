@@ -124,7 +124,8 @@ namespace covered
         assert(needDatasetItems_()); // Dataset loader and cloud
 
         // NOTE: CacheLib CDN generator will remove redundant keys, so the number of generated key-value pairs will be slightly smaller than keycnt -> we do NOT fix CacheLib as the keycnt gap is very limited and we aim to avoid changing its workload distribution.
-        return static_cast<uint32_t>(workload_generator_->getAllKeys().size());
+        int64_t dataset_size = workload_generator_->getAllKeys().size();
+        return Util::toUint32(dataset_size);
     }
 
     uint32_t FacebookWorkloadWrapper::getTotalOpcnt() const
