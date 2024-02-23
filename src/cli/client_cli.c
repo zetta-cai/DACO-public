@@ -7,9 +7,10 @@ namespace covered
 {
     // const uint32_t ClientCLI::DEFAULT_CLIENTCNT = 1;
     const bool ClientCLI::DEFAULT_IS_WARMUP_SPEEDUP = true;
+    const uint32_t ClientCLI::DEFAULT_MAX_EVAL_WORKLOAD_LOADCNT_SCALE = 6; // Must > EvaluatorCLI::DEFAULT_WARMUP_REQCNT_SCALE
     const uint32_t ClientCLI::DEFAULT_PERCLIENT_OPCNT = 1000000;
     const uint32_t ClientCLI::DEFAULT_PERCLIENT_WORKERCNT = 1;
-    const uint32_t ClientCLI::DEFAULT_MAX_EVAL_WORKLOAD_LOADCNT_SCALE = 6; // Must > EvaluatorCLI::DEFAULT_WARMUP_REQCNT_SCALE
+    const uint32_t ClientCLI::DEFAULT_WARMUP_REQCNT_SCALE = 5;
 
     const std::string ClientCLI::kClassName("ClientCLI");
 
@@ -54,7 +55,7 @@ namespace covered
         return perclient_workercnt_;
     }
 
-    uint32_t EvaluatorCLI::getWarmupReqcntScale() const
+    uint32_t ClientCLI::getWarmupReqcntScale() const
     {
         return warmup_reqcnt_scale_;
     }

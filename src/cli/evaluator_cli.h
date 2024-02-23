@@ -29,7 +29,6 @@ namespace covered
         std::string toCliString(); // NOT virtual for cilutil
         virtual void clearIsToCliString(); // Idempotent operation: clear is_to_cli_string_ for the next toCliString()
     private:
-        static const uint32_t DEFAULT_WARMUP_REQCNT_SCALE;
         static const uint32_t DEFAULT_WARMUP_MAX_DURATION_SEC;
         static const uint32_t DEFAULT_STRESSTEST_DURATION_SEC;
 

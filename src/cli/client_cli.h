@@ -36,9 +36,10 @@ namespace covered
     private:
         //static const uint32_t DEFAULT_CLIENTCNT;
         static const bool DEFAULT_IS_WARMUP_SPEEDUP;
+        static const uint32_t DEFAULT_MAX_EVAL_WORKLOAD_LOADCNT_SCALE;
         static const uint32_t DEFAULT_PERCLIENT_OPCNT;
         static const uint32_t DEFAULT_PERCLIENT_WORKERCNT;
-        static const uint32_t DEFAULT_MAX_EVAL_WORKLOAD_LOADCNT_SCALE;
+        static const uint32_t DEFAULT_WARMUP_REQCNT_SCALE;
 
         static const std::string kClassName;
 

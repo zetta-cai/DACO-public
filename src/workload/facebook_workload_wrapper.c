@@ -300,6 +300,7 @@ namespace covered
 
         uint32_t value_size = 0;
         workload_generator_->quickDatasetGet(key.getKeystr(), value_size);
+        value = Value(value_size);
 
         return;
     }

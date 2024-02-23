@@ -6,7 +6,6 @@
 
 namespace covered
 {
-    const uint32_t EvaluatorCLI::DEFAULT_WARMUP_REQCNT_SCALE = 5;
     const uint32_t EvaluatorCLI::DEFAULT_WARMUP_MAX_DURATION_SEC = 30;
     const uint32_t EvaluatorCLI::DEFAULT_STRESSTEST_DURATION_SEC = 30;
 
