@@ -34,23 +34,28 @@ class WorkloadGenerator : public covered::GeneratorBase {
   explicit WorkloadGenerator(const StressorConfig& config, const uint32_t& client_idx);
   virtual ~WorkloadGenerator() {}
 
-  const facebook::cachelib::cachebench::Request& getReq(
+  virtual const facebook::cachelib::cachebench::Request& getReq(
       uint8_t poolId,
       std::mt19937_64& gen,
       std::optional<uint64_t> lastRequestId = std::nullopt) override;
   
   // Siyuan: get dataset item of a specific index
-  const facebook::cachelib::cachebench::Request& getReq(uint8_t poolId, uint32_t itemidx);
+  virtual const facebook::cachelib::cachebench::Request& getReq(uint8_t poolId, uint32_t itemidx) override;
 
-  const std::vector<std::string>& getAllKeys() const override { return keys_; }
+  virtual const std::vector<std::string>& getAllKeys() const override { return keys_; }
 
   // Siyuan: average/min/max dataset key/value size
-  double getAvgDatasetKeysize() const;
-  double getAvgDatasetValuesize() const;
-  uint32_t getMinDatasetKeysize() const;
-  uint32_t getMinDatasetValuesize() const;
-  uint32_t getMaxDatasetKeysize() const;
-  uint32_t getMaxDatasetValuesize() const;
+  virtual double getAvgDatasetKeysize() const override;
+  virtual double getAvgDatasetValuesize() const override;
+  virtual uint32_t getMinDatasetKeysize() const override;
+  virtual uint32_t getMinDatasetValuesize() const override;
+  virtual uint32_t getMaxDatasetKeysize() const override;
+  virtual uint32_t getMaxDatasetValuesize() const override;
+
+  // Siyuan: quick operations for warmup speedup
+  virtual void quickDatasetGet(const std::string& key, uint32_t& value_size) const override;
+  virtual void quickDatasetPut(const std::string& key, const uint32_t& value_size) override;
+  virtual void quickDatasetDel(const std::string& key) override;
 
  private:
   static const std::string kClassName;

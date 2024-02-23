@@ -205,7 +205,7 @@ namespace covered
         // Track intermediate events and events of intermediate responses to break down latencies for debugging
         // NOTE: requests MUST have empty event list; NOT consume bandwidth if without event tracking
         EventList event_list_;
-        bool skip_propagation_latency_; // NOT simulate propagation latency for warmup speedup
+        bool skip_propagation_latency_; // NOT simulate propagation latency for warmup speedup (also skip disk I/O latency in cloud)
 
         bool is_valid_; // NOT serialized/deserialized in msg payload
         bool is_response_; // NOT serialized/deserialized in msg payload

@@ -95,7 +95,7 @@ namespace covered
 
         // Current worker thread start to issue requests and receive responses
         // uint32_t tmp_i = 0; // TMPDEBUG
-        const bool is_warmup_speedup = tmp_client_wrapper_ptr->isWarmupSpeedup();
+        const bool is_warmup_speedup = tmp_client_wrapper_ptr->isWarmupSpeedup(); // NOTE: warmup speedup will skip propagation latency in network and disk I/O latency in cloud
         while (tmp_client_wrapper_ptr->isNodeRunning())
         {
             // Get current phase (warmup or stresstest)

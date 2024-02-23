@@ -97,6 +97,45 @@ uint32_t WorkloadGenerator::getMaxDatasetValuesize() const
   return max_dataset_valuesize_;
 }
 
+// Siyuan: quick operations for warmup speedup
+
+void WorkloadGenerator::quickDatasetGet(const std::string& key, uint32_t& value_size) const
+{
+  // Lookup key
+  std::unordered_map<std::string, uint32_t>::const_iterator tmp_iter = dataset_lookup_table_.find(key);
+  assert(tmp_iter != dataset_lookup_table_.end()); // Must exist
+
+  // Get value size
+  const uint32_t reqs_index = tmp_iter->second;
+  assert(reqs_index < reqs_.size());
+  const facebook::cachelib::cachebench::Request& tmp_facebook_req = reqs_[reqs_index];
+  value_size = static_cast<uint32_t>(*(tmp_facebook_req.sizeBegin));
+
+  return;
+}
+
+void WorkloadGenerator::quickDatasetPut(const std::string& key, const uint32_t& value_size)
+{
+  // Lookup key
+  std::unordered_map<std::string, uint32_t>::const_iterator tmp_iter = dataset_lookup_table_.find(key);
+  assert(tmp_iter != dataset_lookup_table_.end()); // Must exist
+
+  // Put value size
+  const uint32_t reqs_index = tmp_iter->second;
+  assert(reqs_index < reqs_.size());
+  facebook::cachelib::cachebench::Request& tmp_facebook_req = reqs_[reqs_index];
+  *(tmp_facebook_req.sizeBegin) = value_size;
+
+  return;
+}
+
+void WorkloadGenerator::quickDatasetDel(const std::string& key)
+{
+  quickDatasetPut(key, 0); // Use value size of 0 to simulate deletion (NOT affect cache stable performance in evaluation, as quick operations are ONLY used for warmup speedup and Facebook CDN is read-only trace without delete operations)
+
+  return;
+}
+
 void WorkloadGenerator::generateKeys() {
   uint8_t pid = 0;
   auto fn = [pid, this](size_t start, size_t end, size_t local_thread_idx) -> void {

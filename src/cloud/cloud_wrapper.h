@@ -41,6 +41,7 @@ namespace covered
         CloudWrapper(const uint32_t& cloud_idx, const std::string& cloud_storage, const uint32_t& keycnt, const uint32_t& propagation_latency_edgecloud_us, const std::string& workload_name);
         ~CloudWrapper();
 
+        WorkloadWrapperBase* getWorkloadGeneratorPtr() const;
         RocksdbWrapper* getCloudRocksdbPtr() const;
         PropagationSimulatorParam* getCloudToedgePropagationSimulatorParamPtr() const;
     private:
@@ -54,7 +55,7 @@ namespace covered
         void checkPointers_() const;
 
         std::string instance_name_;
-        WorkloadWrapperBase* workload_generator_ptr_; // for warmup speedup (thread safe)
+        WorkloadWrapperBase* workload_generator_ptr_; // for warmup speedup to skip disk I/O latency in cloud (thread safe)
         RocksdbWrapper* cloud_rocksdb_ptr_;
 
         PropagationSimulatorParam* cloud_toedge_propagation_simulator_param_ptr_;

@@ -75,13 +75,13 @@ namespace covered
         oss << kClassName << " cloud" << cloud_idx;
         instance_name_ = oss.str();
 
-        // Create workload generator for warmup speedup
+        // Create workload generator for warmup speedup (skip disk I/O latency in cloud)
         // NOTE: ONLY need keycnt and workload name to generate dataset items or locate corresponding dataset file, yet NOT need other parameters, as we only use dataset key-value pairs instead of workload items
         const uint32_t tmp_clientcnt = 0; // No need workload items
         const uint32_t tmp_client_idx = 0; // No need workload items
         const uint32_t tmp_perclient_workercnt = 0; // No need workload items
         const uint32_t tmp_perclient_opcnt = 0; // No need workload items
-        workload_generator_ptr_ = WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(tmp_clientcnt, tmp_client_idx, keycnt, tmp_perclient_opcnt, tmp_perclient_workercnt, workload_name, covered::WorkloadWrapperBase::WORKLOAD_USAGE_ROLE_CLOUD); // Track dataset items to support quick operations for warmup speedup
+        workload_generator_ptr_ = WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(tmp_clientcnt, tmp_client_idx, keycnt, tmp_perclient_opcnt, tmp_perclient_workercnt, workload_name, covered::WorkloadWrapperBase::WORKLOAD_USAGE_ROLE_CLOUD); // Track dataset items to support quick operations for warmup speedup (skip disk I/O latency in cloud)
         assert(workload_generator_ptr_ != NULL);
         
         // Open local RocksDB KVS (maybe time-consuming -> introduce NodeParamBase::node_initialized_)
@@ -113,6 +113,12 @@ namespace covered
         assert(cloud_toedge_propagation_simulator_param_ptr_ != NULL);
         delete cloud_toedge_propagation_simulator_param_ptr_;
         cloud_toedge_propagation_simulator_param_ptr_ = NULL;
+    }
+
+    WorkloadWrapperBase* CloudWrapper::getWorkloadGeneratorPtr() const
+    {
+        assert(workload_generator_ptr_ != NULL);
+        return workload_generator_ptr_;
     }
 
     RocksdbWrapper* CloudWrapper::getCloudRocksdbPtr() const
@@ -213,6 +219,7 @@ namespace covered
     {
         NodeWrapperBase::checkPointers_();
 
+        assert(workload_generator_ptr_ != NULL);
         assert(cloud_rocksdb_ptr_ != NULL);
         assert(cloud_toedge_propagation_simulator_param_ptr_ != NULL);
 

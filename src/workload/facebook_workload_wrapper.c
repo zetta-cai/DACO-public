@@ -290,7 +290,37 @@ namespace covered
 
     // For warmup speedup
 
-    // TODO: END HERE
+    void FacebookWorkloadWrapper::quickDatasetGet(const Key& key, Value& value) const
+    {
+        checkIsValid_();
+        checkPointers_();
+
+        assert(getWorkloadUsageRole_() == WorkloadWrapperBase::WORKLOAD_USAGE_ROLE_CLOUD);
+
+        uint32_t value_size = 0;
+        workload_generator_->quickDatasetGet(key.getKeystr(), value_size);
+
+        return;
+    }
+
+    void FacebookWorkloadWrapper::quickDatasetPut(const Key& key, const Value& value)
+    {
+        checkIsValid_();
+        checkPointers_();
+
+        assert(getWorkloadUsageRole_() == WorkloadWrapperBase::WORKLOAD_USAGE_ROLE_CLOUD);
+
+        workload_generator_->quickDatasetPut(key.getKeystr(), value.getValuesize());
+
+        return;
+    }
+
+    void FacebookWorkloadWrapper::quickDatasetDel(const Key& key)
+    {
+        quickDatasetPut(key, Value()); // Use default value with is_deleted = true and value size = 0 as delete operation
+
+        return;
+    }
 
     // (1) For the role of clients, dataset loader, and cloud
 

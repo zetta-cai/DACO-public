@@ -134,7 +134,14 @@ namespace covered
                 tmp_key = global_get_request_ptr->getKey();
 
                 // Get value from RocksDB KVS
-                cloud_wrapper_ptr_->getCloudRocksdbPtr()->get(tmp_key, tmp_value);
+                if (skip_propagation_latency) // Warmup speedup is enabled
+                {
+                    cloud_wrapper_ptr_->getWorkloadGeneratorPtr()->quickDatasetGet(tmp_key, tmp_value);
+                }
+                else // Normal backend storage access (evaluation phase, or warmup phase without warmup speedup)
+                {
+                    cloud_wrapper_ptr_->getCloudRocksdbPtr()->get(tmp_key, tmp_value);
+                }
 
                 event_name = Event::CLOUD_GET_ROCKSDB_EVENT_NAME;
                 break;
@@ -147,7 +154,15 @@ namespace covered
                 assert(tmp_value.isDeleted() == false);
 
                 // Put value into RocksDB KVS
-                cloud_wrapper_ptr_->getCloudRocksdbPtr()->put(tmp_key, tmp_value);
+                if (skip_propagation_latency) // Warmup speedup is enabled
+                {
+                    // NOTE: we use an impl trick to NOT reflect writes into rocksdb for warmup speedup (NOT affect evaluation results on cache stable performance)
+                    cloud_wrapper_ptr_->getWorkloadGeneratorPtr()->quickDatasetPut(tmp_key, tmp_value);
+                }
+                else // Normal backend storage access (evaluation phase, or warmup phase without warmup speedup)
+                {
+                    cloud_wrapper_ptr_->getCloudRocksdbPtr()->put(tmp_key, tmp_value);
+                }
 
                 event_name = Event::CLOUD_PUT_ROCKSDB_EVENT_NAME;
                 break;
@@ -158,7 +173,15 @@ namespace covered
                 tmp_key = global_del_request_ptr->getKey();
 
                 // Remove value from RocksDB KVS
-                cloud_wrapper_ptr_->getCloudRocksdbPtr()->remove(tmp_key);
+                if (skip_propagation_latency) // Warmup speedup is enabled
+                {
+                    // NOTE: we use an impl trick to NOT reflect writes into rocksdb for warmup speedup (NOT affect evaluation results on cache stable performance)
+                    cloud_wrapper_ptr_->getWorkloadGeneratorPtr()->quickDatasetDel(tmp_key);
+                }
+                else // Normal backend storage access (evaluation phase, or warmup phase without warmup speedup)
+                {
+                    cloud_wrapper_ptr_->getCloudRocksdbPtr()->remove(tmp_key);
+                }
 
                 event_name = Event::CLOUD_DEL_ROCKSDB_EVENT_NAME;
                 break;
@@ -170,7 +193,14 @@ namespace covered
                 tmp_placement_edgeset = covered_placement_global_get_request_ptr->getEdgesetRef();
 
                 // Get value from RocksDB KVS
-                cloud_wrapper_ptr_->getCloudRocksdbPtr()->get(tmp_key, tmp_value);
+                if (skip_propagation_latency) // Warmup speedup is enabled (non-blocking data fetching during warmup phase)
+                {
+                    cloud_wrapper_ptr_->getWorkloadGeneratorPtr()->quickDatasetGet(tmp_key, tmp_value);
+                }
+                else // Normal backend storage access (evaluation phase, or warmup phase without warmup speedup)
+                {
+                    cloud_wrapper_ptr_->getCloudRocksdbPtr()->get(tmp_key, tmp_value);
+                }
 
                 event_name = Event::BG_CLOUD_GET_ROCKSDB_EVENT_NAME;
                 break;

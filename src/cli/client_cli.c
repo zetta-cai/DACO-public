@@ -121,7 +121,7 @@ namespace covered
             // Dynamic configurations for client
             argument_desc_.add_options()
                 // ("clientcnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_CLIENTCNT), "the total number of clients")
-                ("disable_warmup_speedup", "disable speedup mode for warmup phase")
+                ("disable_warmup_speedup", "disable speedup mode (skip network propagation and disk I/O latency) for warmup phase")
                 ("max_eval_workload_loadcnt_scale", boost::program_options::value<uint32_t>()->default_value(DEFAULT_MAX_EVAL_WORKLOAD_LOADCNT_SCALE), "scale of max workload loadcnt for evaluation (MUST > warmup_reqcnt_scale; -> max_eval_workload_loadcnt_scale * keycnt)")
                 ("perclient_opcnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_PERCLIENT_OPCNT), perclient_opcnt_descstr.c_str())
                 ("perclient_workercnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_PERCLIENT_WORKERCNT), "the number of worker threads for each client")
