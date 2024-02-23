@@ -23,7 +23,6 @@ namespace covered
         EvaluatorCLI(int argc, char **argv);
         virtual ~EvaluatorCLI();
 
-        uint32_t getWarmupReqcntScale() const;
         uint32_t getWarmupMaxDurationSec() const;
         uint32_t getStresstestDurationSec() const;
 
@@ -45,7 +44,6 @@ namespace covered
 
         bool is_to_cli_string_;
 
-        uint32_t warmup_reqcnt_scale_;
         uint32_t warmup_max_duration_sec_;
         uint32_t stresstest_duration_sec_;
     protected:

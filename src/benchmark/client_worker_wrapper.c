@@ -50,14 +50,14 @@ namespace covered
         oss << kClassName << " client" << client_idx << "-worker" << local_client_worker_idx << "-global" << global_client_worker_idx;
         instance_name_ = oss.str();
 
-        // For sending local requests
+        // (1) For sending local requests
 
         // Get closest edge network address to send local requests
         std::string closest_edge_ipstr = Util::getClosestEdgeIpstr(client_idx, clientcnt, edgecnt);
         uint16_t closest_edge_cache_server_recvreq_port = Util::getClosestEdgeCacheServerRecvreqPort(client_idx, clientcnt, edgecnt);
         closest_edge_cache_server_recvreq_dst_addr_ = NetworkAddr(closest_edge_ipstr, closest_edge_cache_server_recvreq_port);
 
-        // For receiving local responses
+        // (2) For receiving local responses
 
         // Get source address of client worker to receive local responses
         const bool is_private_client_ipstr = true; // NOTE: client communicates with the closest edge node via private IP address
@@ -70,6 +70,15 @@ namespace covered
         NetworkAddr host_addr(Util::ANY_IPSTR, client_worker_recvrsp_port);
         client_worker_recvrsp_socket_server_ptr_ = new UdpMsgSocketServer(host_addr);
         assert(client_worker_recvrsp_socket_server_ptr_ != NULL);
+
+        // (3) For per-client-worker warmup reqcnt limitation
+
+        cur_warmup_reqcnt_ = 0;
+        const uint32_t total_warmup_reqcnt = client_wrapper_ptr->getKeycnt() * client_wrapper_ptr->getWarmupReqcntScale();
+        const uint32_t total_client_workercnt = client_wrapper_ptr->getNodeCnt() / client_wrapper_ptr->getPerclientWorkercnt();
+        warmup_reqcnt_limit_ = (total_warmup_reqcnt - 1) / total_client_workercnt + 1; // Get per-client-worker warmup reqcnt limitation
+        assert(warmup_reqcnt_limit_ > 0);
+        assert(warmup_reqcnt_limit_ * total_client_workercnt >= total_warmup_reqcnt); // Total # of issued warmup reqs MUST >= total # of required warmup reqs
     }
     
     ClientWorkerWrapper::~ClientWorkerWrapper()
@@ -101,6 +110,19 @@ namespace covered
             // Get current phase (warmup or stresstest)
             bool is_warmup_phase = tmp_client_wrapper_ptr->isWarmupPhase();
             bool is_stresstest_phase = !is_warmup_phase;
+
+            // Consider per-client-worker warmup reqcnt limitation to avoid inconsistent warmup progress (under second-level evaluator monitoring) among different caches due to different warmup speed
+            if (is_warmup_phase)
+            {
+                if (cur_warmup_reqcnt_ < warmup_reqcnt_limit_)
+                {
+                    cur_warmup_reqcnt_++;
+                }
+                else
+                {
+                    continue; // Skip issuing workload items to edge unless entering stresstest phase
+                }
+            }
 
             // Generate key-value request based on a specific workload
             WorkloadItem workload_item = workload_generator_ptr->generateWorkloadItem(local_client_worker_idx);

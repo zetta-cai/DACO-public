@@ -23,11 +23,6 @@ namespace covered
 
     EvaluatorCLI::~EvaluatorCLI() {}
 
-    uint32_t EvaluatorCLI::getWarmupReqcntScale() const
-    {
-        return warmup_reqcnt_scale_;
-    }
-
     uint32_t EvaluatorCLI::getWarmupMaxDurationSec() const
     {
         return warmup_max_duration_sec_;
@@ -51,10 +46,6 @@ namespace covered
 
             oss << ClientCLI::toCliString();
             oss << EdgeCLI::toCliString();
-            if (warmup_reqcnt_scale_ != DEFAULT_WARMUP_REQCNT_SCALE)
-            {
-                oss << " --warmup_reqcnt_scale " << warmup_reqcnt_scale_;
-            }
             #ifdef ENABLE_WARMUP_MAX_DURATION
             if (warmup_max_duration_sec_ != DEFAULT_WARMUP_MAX_DURATION_SEC)
             {
@@ -92,7 +83,6 @@ namespace covered
 
             // Dynamic configurations for client
             argument_desc_.add_options()
-                ("warmup_reqcnt_scale", boost::program_options::value<uint32_t>()->default_value(DEFAULT_WARMUP_REQCNT_SCALE), "scale of warmup request count (-> warmup_reqcnt_scale * keycnt)")
                 #ifdef ENABLE_WARMUP_MAX_DURATION
                 ("warmup_max_duration_sec", boost::program_options::value<uint32_t>()->default_value(DEFAULT_WARMUP_MAX_DURATION_SEC), "maximum duration of warmup phase (seconds)")
                 #endif
@@ -114,14 +104,12 @@ namespace covered
 
             // (3) Get CLI parameters for client dynamic configurations
 
-            uint32_t warmup_reqcnt_scale = argument_info_["warmup_reqcnt_scale"].as<uint32_t>();
             #ifdef ENABLE_WARMUP_MAX_DURATION
             uint32_t warmup_max_duration_sec = argument_info_["warmup_max_duration_sec"].as<uint32_t>();
             #endif
             uint32_t stresstest_duration_sec = argument_info_["stresstest_duration_sec"].as<uint32_t>();
 
             // Store client CLI parameters for dynamic configurations
-            warmup_reqcnt_scale_ = warmup_reqcnt_scale;
             #ifdef ENABLE_WARMUP_MAX_DURATION
             assert(warmup_max_duration_sec > 0);
             warmup_max_duration_sec_ = warmup_max_duration_sec;
@@ -149,7 +137,6 @@ namespace covered
 
             std::ostringstream oss;
             oss << "[Dynamic configurations from CLI parameters in " << kClassName << "]" << std::endl;
-            oss << "Warmup request count scale: " << warmup_reqcnt_scale_ << std::endl;
             #ifdef ENABLE_WARMUP_MAX_DURATION
             oss << "Warmup maximum duration seconds: " << warmup_max_duration_sec_ << std::endl;
             #endif
@@ -209,8 +196,7 @@ namespace covered
 
     void EvaluatorCLI::verifyIntegrity_() const
     {
-        // Total workload loadcnt should > warmup reqcnt
-        assert(getMaxEvalWorkloadLoadcntScale() > warmup_reqcnt_scale_);
+        // Do nothing
         return;
     }
 }

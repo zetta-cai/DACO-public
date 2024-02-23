@@ -49,14 +49,16 @@ namespace covered
     public:
         static void* launchClient(void* client_wrapper_param_ptr);
 
-        ClientWrapper(const uint64_t& capacity_bytes, const uint32_t& client_idx, const uint32_t& clientcnt, const bool& is_warmup_speedup, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& max_eval_workload_loadcnt_scale, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge_us, const std::string& workload_name);
+        ClientWrapper(const uint64_t& capacity_bytes, const uint32_t& client_idx, const uint32_t& clientcnt, const bool& is_warmup_speedup, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& max_eval_workload_loadcnt_scale, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge_us, const uint32_t& warmup_reqcnt_scale, const std::string& workload_name);
         virtual ~ClientWrapper();
 
         // (1) Const getters
 
         uint32_t getEdgeCnt() const;
+        uint32_t getKeycnt() const;
         bool isWarmupSpeedup() const;
         uint32_t getPerclientWorkercnt() const;
+        uint32_t getWarmupReqcntScale() const;
         bool isWarmupPhase() const;
         WorkloadWrapperBase* getWorkloadWrapperPtr() const;
         ClientStatisticsTracker* getClientStatisticsTrackerPtr() const;
@@ -84,7 +86,9 @@ namespace covered
         const bool is_warmup_speedup_; // Come from CLI
         const uint64_t capacity_bytes_; // Come from CLI
         const uint32_t edgecnt_; // Come from CLI
+        const uint32_t keycnt_; // Come from CLI
         const uint32_t perclient_workercnt_; // Come from CLI
+        const uint32_t warmup_reqcnt_scale_; // Come from CLI
 
         // Const individual variable
         std::string instance_name_;

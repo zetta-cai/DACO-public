@@ -40,12 +40,16 @@ namespace covered
 
         ClientWorkerParam* client_worker_param_ptr_;
 
-        // For sending local requests
+        // (1) For sending local requests
         NetworkAddr closest_edge_cache_server_recvreq_dst_addr_; // Used by client worker to send local requests
 
-        // For receiveing local responses
+        // (2) For receiveing local responses
         NetworkAddr client_worker_recvrsp_source_addr_; // Used by cache server workers to send back local responses (const individual variable)
         UdpMsgSocketServer* client_worker_recvrsp_socket_server_ptr_; // Used by client worker to receive local responses from cache server workers (non-const individual variable)
+
+        // (3) For per-client-worker warmup reqcnt limitation
+        uint32_t cur_warmup_reqcnt_;
+        uint32_t warmup_reqcnt_limit_;
     };
 }
 

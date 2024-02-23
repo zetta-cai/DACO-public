@@ -16,6 +16,9 @@
 #include "network/network_addr.h"
 #include "network/udp_msg_socket_server.h"
 
+// Access in-memory dataset to avoid disk I/O latency for warmup speedup, yet still access RocksDB after warmup -> NOT affect cache stable performance
+#define ENABLE_CLOUD_WARMUP_SPEEDUP
+
 namespace covered
 {
     class DataServer

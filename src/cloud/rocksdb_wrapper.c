@@ -85,7 +85,7 @@ namespace covered
     void RocksdbWrapper::get(const Key& key, Value& value)
     {
         std::string key_str = key.getKeystr();
-        #ifdef ROCKSDB_NO_VALUESTR
+        #ifdef ENABLE_ROCKSDB_NO_VALUESTR
         std::string valuesize_str;
         rocksdb::Status rocksdb_status = db_ptr_->Get(rocksdb::ReadOptions(), key_str, &valuesize_str);
         #else
@@ -95,7 +95,7 @@ namespace covered
         //assert(rocksdb_status.ok());
         if (rocksdb_status.ok())
         {
-            #ifdef ROCKSDB_NO_VALUESTR
+            #ifdef ENABLE_ROCKSDB_NO_VALUESTR
             uint32_t value_size = *((uint32_t*)valuesize_str.data());
             value = Value(value_size);
             #else
@@ -121,8 +121,8 @@ namespace covered
         assert(value.isDeleted() == false);
 
         std::string key_str = key.getKeystr();
-        #ifdef ROCKSDB_NO_VALUESTR
-        uint32_t value_size = value.getValueSize();
+        #ifdef ENABLE_ROCKSDB_NO_VALUESTR
+        uint32_t value_size = value.getValuesize();
         std::string valuesize_str = std::string((char*)&value_size, sizeof(uint32_t));
         rocksdb::Status rocksdb_status = db_ptr_->Put(rocksdb::WriteOptions(), key_str, valuesize_str);
         #else
