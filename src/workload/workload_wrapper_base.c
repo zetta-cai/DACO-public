@@ -10,10 +10,10 @@
 
 namespace covered
 {
-    const std::string WORKLOAD_USAGE_ROLE_PREPROCESSOR("preprocessor");
-    const std::string WORKLOAD_USAGE_ROLE_LOADER("loader");
-    const std::string WORKLOAD_USAGE_ROLE_CLIENT("client");
-    const std::string WORKLOAD_USAGE_ROLE_CLOUD("cloud");
+    const std::string WorkloadWrapperBase::WORKLOAD_USAGE_ROLE_PREPROCESSOR("preprocessor");
+    const std::string WorkloadWrapperBase::WORKLOAD_USAGE_ROLE_LOADER("loader");
+    const std::string WorkloadWrapperBase::WORKLOAD_USAGE_ROLE_CLIENT("client");
+    const std::string WorkloadWrapperBase::WORKLOAD_USAGE_ROLE_CLOUD("cloud");
 
     const std::string WorkloadWrapperBase::kClassName("WorkloadWrapperBase");
 
@@ -61,7 +61,7 @@ namespace covered
     //     return workload_ptr;
     // }
 
-    WorkloadWrapperBase::WorkloadWrapperBase(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const uint32_t& max_eval_workload_loadcnt) : clientcnt_(clientcnt), client_idx_(client_idx), keycnt_(keycnt), perclient_opcnt_(perclient_opcnt), perclient_workercnt_(perclient_workercnt), workload_name_(workload_name), workload_usage_role_(workload_usage_role), max_eval_workload_loadcnt_(max_eval_workload_loadcnt)
+    WorkloadWrapperBase::WorkloadWrapperBase(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const uint32_t& max_eval_workload_loadcnt) : clientcnt_(clientcnt), client_idx_(client_idx), perclient_opcnt_(perclient_opcnt), perclient_workercnt_(perclient_workercnt), max_eval_workload_loadcnt_(max_eval_workload_loadcnt), keycnt_(keycnt), workload_name_(workload_name), workload_usage_role_(workload_usage_role)
     {
         // Differentiate workload generator in different clients
         std::ostringstream oss;
@@ -166,7 +166,7 @@ namespace covered
         return perclient_workercnt_;
     }
 
-    const uint32_t getMaxEvalWorkloadLoadcnt_() const
+    const uint32_t WorkloadWrapperBase::getMaxEvalWorkloadLoadcnt_() const
     {
         // ONLY for clients
         assert(workload_usage_role_ == WORKLOAD_USAGE_ROLE_CLIENT);
@@ -296,6 +296,17 @@ namespace covered
         return dataset_kvpairs_;
     }
 
+    const std::vector<std::pair<Key, Value>>& WorkloadWrapperBase::getDatasetKvpairsConstRef_() const
+    {
+        // For role of preprocessor, dataset loader, and cloud (ONLY for replayed traces)
+        assert(Util::isReplayedWorkload(workload_name_));
+        assert(needDatasetItems_());
+
+        assert(dataset_kvpairs_.size() > 0);
+
+        return dataset_kvpairs_;
+    }
+
     // (1.2) For role of preprocessor (ONLY for replayed traces)
 
     void WorkloadWrapperBase::verifyDatasetFileForPreprocessor_()
@@ -310,25 +321,25 @@ namespace covered
         {
             std::ostringstream oss;
             oss << "trace directory " << tmp_dirpath << " does not exist!";
-            Util::dumpErrorMsg(instance_name_, oss.str());
+            Util::dumpErrorMsg(base_instance_name_, oss.str());
             exit(1);
         }
 
         // Check if dataset filepath exists
         const std::string tmp_dataset_filepath = Util::getDatasetFilepath(workload_name_);
-        bool is_exist = Util::isFileExist(tmp_dataset_filepath, true);
+        is_exist = Util::isFileExist(tmp_dataset_filepath, true);
         if (is_exist)
         {
             std::ostringstream oss;
             oss << "dataset file " << tmp_dataset_filepath << " already exists -> please delete it before trace preprocessing!";
-            Util::dumpErrorMsg(instance_name_, oss.str());
+            Util::dumpErrorMsg(base_instance_name_, oss.str());
             exit(1);
         }
 
         return;
     }
 
-    void WorkloadWrapperBase::dumpDatasetFile_() const
+    uint32_t WorkloadWrapperBase::dumpDatasetFile_() const
     {
         assert(Util::isReplayedWorkload(workload_name_));
         assert(needAllTraceFiles_()); // Trace preprocessor
@@ -340,7 +351,7 @@ namespace covered
         // NOTE: trace preprocessor is a single-thread program and hence ONLY one dataset file will be created for each given workload
         std::ostringstream oss;
         oss << "open file " << tmp_dataset_filepath << " for dumping dataset of " << workload_name_;
-        Util::dumpNormalMsg(instance_name_, oss.str());
+        Util::dumpNormalMsg(base_instance_name_, oss.str());
         std::fstream* fs_ptr = Util::openFile(tmp_dataset_filepath, std::ios_base::out | std::ios_base::binary);
         assert(fs_ptr != NULL);
 
@@ -381,7 +392,7 @@ namespace covered
 
     // (1.3) For role of dataset loader and cloud (ONLY for replayed traces)
 
-    void WorkloadWrapperBase::loadDatasetFile_()
+    uint32_t WorkloadWrapperBase::loadDatasetFile_()
     {
         assert(Util::isReplayedWorkload(workload_name_));
         assert(workload_usage_role_ == WORKLOAD_USAGE_ROLE_LOADER || workload_usage_role_ == WORKLOAD_USAGE_ROLE_CLOUD); // dataset loader and cloud
@@ -394,7 +405,7 @@ namespace covered
             // File does not exist
             std::ostringstream oss;
             oss << "dataset file " << tmp_dataset_filepath << " does not exist -> please run trace_preprocessor before dataset loader and evaluation!";
-            Util::dumpErrorMsg(instance_name_, oss.str());
+            Util::dumpErrorMsg(base_instance_name_, oss.str());
             exit(1);
         }
 
@@ -411,6 +422,7 @@ namespace covered
         size += sizeof(uint64_t);
         dataset_kvpairs_.resize(dataset_size);
         // (1) key-value pairs
+        const bool is_value_space_efficient = true; // NOT deserialize value content
         for (uint64_t i = 0; i < dataset_size; i++)
         {
             // Key
@@ -513,7 +525,7 @@ namespace covered
 
     // (2) Other common utilities
 
-    bool WorkloadWrapperBase::needAllTraceFiles_()
+    bool WorkloadWrapperBase::needAllTraceFiles_() const
     {
         // Trace preprocessor loads all trace files for dataset items and total opcnt
         if (workload_usage_role_ == WORKLOAD_USAGE_ROLE_PREPROCESSOR)
@@ -523,21 +535,21 @@ namespace covered
         return false;
     }
 
-    bool WorkloadWrapperBase::needDatasetItems_()
+    bool WorkloadWrapperBase::needDatasetItems_() const
     {
         // Trace preprocessor, dataset loader, and cloud need dataset items for preprocessing, loading, and warmup speedup
         // Trace preprocessor is from all trace files, while dataset loader and cloud are from dataset file dumped by trace preprocessor
-        if (workload_usage_role == WORKLOAD_USAGE_ROLE_PREPROCESSOR || workload_usage_role == WORKLOAD_USAGE_ROLE_LOADER || workload_usage_role == WORKLOAD_USAGE_ROLE_CLOUD) // ONLY need dataset items for preprocessing, loading, and warmup speedup
+        if (workload_usage_role_ == WORKLOAD_USAGE_ROLE_PREPROCESSOR || workload_usage_role_ == WORKLOAD_USAGE_ROLE_LOADER || workload_usage_role_ == WORKLOAD_USAGE_ROLE_CLOUD) // ONLY need dataset items for preprocessing, loading, and warmup speedup
         {
             return true;
         }
         return false;
     }
 
-    bool WorkloadWrapperBase::needWorkloadItems_()
+    bool WorkloadWrapperBase::needWorkloadItems_() const
     {
         // Client needs workload items for evaluation
-        if (workload_usage_role == WORKLOAD_USAGE_ROLE_CLIENT) // ONLY need workload items for evaluation
+        if (workload_usage_role_ == WORKLOAD_USAGE_ROLE_CLIENT) // ONLY need workload items for evaluation
         {
             return true;
         }

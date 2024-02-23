@@ -20,6 +20,7 @@ namespace covered
     class TracePreprocessorCLI : virtual public WorkloadCLI
     {
     public:
+        TracePreprocessorCLI();
         TracePreprocessorCLI(int argc, char **argv);
         virtual ~TracePreprocessorCLI();
 

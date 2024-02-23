@@ -48,9 +48,9 @@ class GeneratorBase {
   virtual uint32_t getMaxDatasetValuesize() const = 0;
 
   // Siyuan: quick operations for warmup speedup
-  virtual void quickDatasetGet(const std::string& key, uint32_t& value_size) const override;
-  virtual void quickDatasetPut(const std::string& key, const uint32_t& value_size) override;
-  virtual void quickDatasetDel(const std::string& key) override;
+  virtual void quickDatasetGet(const std::string& key, uint32_t& value_size) const = 0;
+  virtual void quickDatasetPut(const std::string& key, const uint32_t& value_size) = 0;
+  virtual void quickDatasetDel(const std::string& key) = 0;
 
   // Notify the workload generator that the nvm cache has already warmed up.
   virtual void setNvmCacheWarmedUp(uint64_t /*timestamp*/) {

@@ -166,9 +166,9 @@ namespace covered
 
         if (needWorkloadItems_()) // Clients
         {
-            for (uint32_t tmp_local_client_worker_idx = 0; tmp_local_client_worker_idx < perclient_workercnt; tmp_local_client_worker_idx++)
+            for (uint32_t tmp_local_client_worker_idx = 0; tmp_local_client_worker_idx < getPerclientWorkercnt_(); tmp_local_client_worker_idx++)
             {
-                uint32_t tmp_global_client_worker_idx = Util::getGlobalClientWorkerIdx(client_idx, tmp_local_client_worker_idx, perclient_workercnt);
+                uint32_t tmp_global_client_worker_idx = Util::getGlobalClientWorkerIdx(getClientIdx_(), tmp_local_client_worker_idx, getPerclientWorkercnt_());
 
                 // Each per-client worker uses worker_idx as deterministic seed to create a random generator and get different requests
                 // NOTE: we use global_client_worker_idx to randomly generate requests from workload items
@@ -358,7 +358,7 @@ namespace covered
         assert(op_pool_dist_ptr_ != NULL);
         assert(workload_generator_ != nullptr);  
 
-        if (needWorkloadItems_) // Clients
+        if (needWorkloadItems_()) // Clients
         {
             assert(client_worker_item_randgen_ptrs_.size() > 0);
             for (uint32_t i = 0; i < client_worker_item_randgen_ptrs_.size(); i++)

@@ -81,7 +81,7 @@ namespace covered
 
         assert(needDatasetItems_());
 
-        return getDatasetKvpairsRef_().size();
+        return getDatasetKvpairsConstRef_().size();
     }
 
     uint32_t WikipediaWorkloadWrapper::getTotalOpcnt() const
@@ -138,7 +138,7 @@ namespace covered
         else
         {
             std::ostringstream oss;
-            oss << "invalid workload usage role " << getWorkloadUsageRole_;
+            oss << "invalid workload usage role " << getWorkloadUsageRole_();
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }
@@ -321,7 +321,7 @@ namespace covered
 
         // TMPDEBUG24
         std::ostringstream tmposs;
-        tmposs << "getWorkloadUsageRole_: " << getWorkloadUsageRole_ << "; current client workload size: " << curclient_workload_keys_.size() << "; total_workload_opcnt_: " << total_workload_opcnt_;
+        tmposs << "getWorkloadUsageRole_: " << getWorkloadUsageRole_() << "; current client workload size: " << curclient_workload_keys_.size() << "; total_workload_opcnt_: " << total_workload_opcnt_;
         Util::dumpNormalMsg(instance_name_, tmposs.str());
 
         return;
@@ -417,7 +417,7 @@ namespace covered
                     {
                         need_curline = true;
                     }
-                    else if (needWorkloadItems_() && (global_workload_idx % getClientcnt_() == getClientIdx())) // Clients (ONLY consider corresponding data lines)
+                    else if (needWorkloadItems_() && (global_workload_idx % getClientcnt_() == getClientIdx_())) // Clients (ONLY consider corresponding data lines)
                     {
                         need_curline = true;
                     }
@@ -612,7 +612,7 @@ namespace covered
         else
         {
             std::ostringstream oss;
-            oss << "invalid workload usage role " << getWorkloadUsageRole_ << ", which does not need both dataset and workload items";
+            oss << "invalid workload usage role " << getWorkloadUsageRole_() << ", which does not need both dataset and workload items";
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }

@@ -7,7 +7,7 @@ namespace covered
 {
     const std::string CliutilCLI::kClassName("CliutilCLI");
 
-    CliutilCLI::CliutilCLI(int argc, char **argv) : DatasetLoaderCLI(), SimulatorCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false), is_to_cli_string_(false)
+    CliutilCLI::CliutilCLI(int argc, char **argv) : DatasetLoaderCLI(), SimulatorCLI(), TracePreprocessorCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false), is_to_cli_string_(false)
     {
         parseAndProcessCliParameters(argc, argv);
     }

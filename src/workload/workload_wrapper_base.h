@@ -111,6 +111,7 @@ namespace covered
         const uint32_t getMaxDatasetValuesize_() const;
         std::unordered_map<Key, uint32_t, KeyHasher>& getDatasetLookupTableRef_();
         std::vector<std::pair<Key, Value>>& getDatasetKvpairsRef_();
+        const std::vector<std::pair<Key, Value>>& getDatasetKvpairsConstRef_() const;
 
         // (1.2) For role of trace preprocessor (ONLY for replayed traces)
 
@@ -133,9 +134,9 @@ namespace covered
 
         // (2) Other common utilities
 
-        bool needAllTraceFiles_();
-        bool needDatasetItems_();
-        bool needWorkloadItems_();
+        bool needAllTraceFiles_() const;
+        bool needDatasetItems_() const;
+        bool needWorkloadItems_() const;
 
         void checkIsValid_() const;
     };

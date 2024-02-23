@@ -7,6 +7,10 @@ namespace covered
 {
     const std::string TracePreprocessorCLI::kClassName("TracePreprocessorCLI");
 
+    TracePreprocessorCLI::TracePreprocessorCLI() : WorkloadCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false), is_to_cli_string_(false)
+    {
+    }
+
     TracePreprocessorCLI::TracePreprocessorCLI(int argc, char **argv) : WorkloadCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false), is_to_cli_string_(false)
     {
         parseAndProcessCliParameters(argc, argv);
