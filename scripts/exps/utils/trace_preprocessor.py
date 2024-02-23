@@ -27,7 +27,7 @@ class TracePreprocessor:
         ## Get launch trace preprocessor command
         launch_trace_preprocessor_cmd = "nohup ./trace_preprocessor {} >{} 2>&1 &".format(self.cliutil_instance_.getTracePreprocessorCLIStr(), self.trace_preprocessor_logfile_)
         ## Execute command
-        launch_trace_preprocessor__subprocess = SubprocessUtil.runCmd(launch_trace_preprocessor__cmd)
+        launch_trace_preprocessor__subprocess = SubprocessUtil.runCmd(launch_trace_preprocessor_cmd)
         if launch_trace_preprocessor__subprocess.returncode != 0:
             self.dieWithCleanup_("failed to launch trace preprocessor (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(launch_trace_preprocessor__subprocess)))
         

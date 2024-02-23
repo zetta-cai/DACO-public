@@ -107,8 +107,6 @@ namespace covered
 
     void WikipediaWorkloadWrapper::initWorkloadParameters_()
     {
-        checkIsValid_();
-
         if (needAllTraceFiles_() || needWorkloadItems_()) // Need all trace files for preprocessing (preprocessor), or need partial trace files for workload items (clients)
         {
             if (needAllTraceFiles_()) // Check trace dirpath and dataset filepath for trace preprocessor

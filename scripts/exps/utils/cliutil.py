@@ -79,7 +79,7 @@ class CLIUtil:
                     continue
             # For trace_preprocessor
             if self.trace_preprocessor_cli_str_ == "":
-                self.trace_preprocessor_cli_str_ = CLIUtil.getCliStrAfterPrefix_(tmp_outputstr_line, CLIUtil.TRACE_PREPROCESS)
+                self.trace_preprocessor_cli_str_ = CLIUtil.getCliStrAfterPrefix_(tmp_outputstr_line, CLIUtil.TRACE_PREPROCESSOR_PREFIX_STRING)
                 if self.trace_preprocessor_cli_str_ != "":
                     continue
     

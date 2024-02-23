@@ -4,7 +4,7 @@
 from ..common import *
 from ..exps.utils.exputil import *
 
-related_components = ["./client", "./edge", "./cloud", "./evaluator", "./simulator", "./dataset_loader", "./total_statistics_loader"]
+related_components = ["./client", "./edge", "./cloud", "./evaluator", "./simulator", "./dataset_loader", "./total_statistics_loader", "./trace_preprocessor"]
 physical_machines = JsonUtil.getValueForKeystr(Common.scriptname, "physical_machines")
 
 for tmp_machine_idx in range(len(physical_machines)):

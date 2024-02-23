@@ -280,8 +280,6 @@ namespace covered
         assert(Util::isReplayedWorkload(workload_name_));
         assert(needDatasetItems_());
 
-        assert(dataset_lookup_table_.size() > 0);
-
         return dataset_lookup_table_;
     }
 
@@ -291,8 +289,6 @@ namespace covered
         assert(Util::isReplayedWorkload(workload_name_));
         assert(needDatasetItems_());
 
-        assert(dataset_kvpairs_.size() > 0);
-
         return dataset_kvpairs_;
     }
 
@@ -301,8 +297,6 @@ namespace covered
         // For role of preprocessor, dataset loader, and cloud (ONLY for replayed traces)
         assert(Util::isReplayedWorkload(workload_name_));
         assert(needDatasetItems_());
-
-        assert(dataset_kvpairs_.size() > 0);
 
         return dataset_kvpairs_;
     }
