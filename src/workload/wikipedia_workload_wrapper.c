@@ -318,11 +318,6 @@ namespace covered
             }
         } // End of trace files
 
-        // TMPDEBUG24
-        std::ostringstream tmposs;
-        tmposs << "getWorkloadUsageRole_: " << getWorkloadUsageRole_() << "; current client workload size: " << curclient_workload_keys_.size() << "; total_workload_opcnt_: " << total_workload_opcnt_;
-        Util::dumpNormalMsg(instance_name_, tmposs.str());
-
         return;
     }
 
