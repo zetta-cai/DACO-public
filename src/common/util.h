@@ -153,8 +153,9 @@ namespace covered
         static const unsigned int SLEEP_INTERVAL_US; // Sleep interval for polling
 
         // Workload generation
-        static const uint32_t DATASET_KVPAIR_GENERATION_SEED; // Deterministic seed to generate key-value objects for dataset (the same for all clients to ensure the same dataset)
+        static const uint32_t DATASET_KVPAIR_GENERATION_SEED; // Deterministic seed to generate key-value objects for dataset (the same for all clients to ensure the same dataset; ONLY for non-replayed traces)
         //static const uint32_t WORKLOAD_KVPAIR_GENERATION_SEED; // (OBSOLETE: homogeneous cache access patterns is a WRONG assumption -> we should ONLY follow homogeneous workload distribution yet still with heterogeneous cache access patterns) Deterministic seed to generate key-value objects for workload (the same for all clients to ensure homogeneous cache access patterns)
+        static const uint32_t DATASET_KVPAIR_SAMPLE_SEED; // Used to randomly sample dataset items during preprocessing (ONLY for replayed traces)
 
         // Time measurement
         static const int START_YEAR;

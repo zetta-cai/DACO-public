@@ -1,6 +1,7 @@
 #include "workload/replayed_workload_wrapper_base.h"
 
 #include <assert.h>
+#include <random> // std::mt19937 and std::bernoulli_distribution
 #include <sstream>
 
 #include "common/util.h"
@@ -15,6 +16,8 @@ namespace covered
         std::ostringstream oss;
         oss << kClassName << " client" << client_idx;
         base_instance_name_ = oss.str();
+
+        dataset_sample_ratio_ = Config::getTraceDatasetSampleRatio(workload_name);
 
         // For preprocessor
         total_workload_opcnt_ = 0;
@@ -119,11 +122,10 @@ namespace covered
         {
             verifyDatasetAndWorkloadAbsenceForPreprocessor_(); // Sampled dataset and workload files should NOT exist before preprocessing
 
-            // TODO: END HERE
+            parseTraceFiles_(); // Update dataset and total workload (if sample ratio < 1.0) for trace preprocessor
 
-            parseTraceFiles_(); // Update dataset for trace preprocessor
-
-            // TODO: sample dataset and total workload
+            // Sample dataset and total workload (if sample ratio < 1.0)
+            sampleDatasetAndWorkload_();
 
             // Dump dataset file by trace preprocessor for dataset loader and cloud
             const uint32_t dataset_filesize = dumpDatasetFile_();
@@ -136,8 +138,7 @@ namespace covered
         }
         else if (needWorkloadItems_()) // Need partial trace files for workload items (clients)
         {
-            const double dataset_sample_ratio = Config::getTraceDatasetSampleRatio(getWorkloadName_());
-            if (dataset_sample_ratio < 1.0)
+            if (dataset_sample_ratio_ < 1.0)
             {
                 // TODO: Load sampled workload file
             }
@@ -363,6 +364,83 @@ namespace covered
         return;
     }
 
+    void ReplayedWorkloadWrapperBase::sampleDatasetAndWorkload_()
+    {
+        assert(needAllTraceFiles_()); // Must be trae preprocessor
+
+        if (dataset_sample_ratio_ == 1.0) // NO need sampling (directly use dataset kvpairs for dataset file, and use original trace files instead of generating new workload file)
+        {
+            assert(total_workload_keys_.size() == 0);
+            assert(total_workload_value_sizes_.size() == 0);
+        }
+        else if (dataset_sample_ratio_ > 0.0 && dataset_sample_ratio_ < 1.0) // Need sampling for dataset and workload items
+        {
+            // Sample dataset kvpairs (will update dataset_kvpairs_ and dataset_lookup_table_)
+            sampleDatasetInternal_();
+
+            // TODO: Sample workload items (will update total_workload_keys_ and total_workload_value_sizes_)
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "invalid dataset sample ratio " << dataset_sample_ratio_;
+            Util::dumpErrorMsg(base_instance_name_, oss.str());
+            exit(1);
+        }
+
+        return;
+    }
+
+    void ReplayedWorkloadWrapperBase::sampleDatasetInternal_()
+    {
+        // Approach 1: use std::bernoulli_distribution with probability of dataset_sample_ratio to make a decision for each dataset item -> after n independent trials (time complexity is O(n)), will finally get dataset_sample_ratio items
+
+        // Approach 2: use std::shuffle to randomly rearrange the order of dataset kvpairs, and then choose the first dataset_sample_ratio items -> time complexity of std::shuffle is O(n), which needs to generate n random numbers to swap items from end to begin of dataset kvpairs
+
+        // NOTE: here we use approach 1, which only needs 1 memory copy when getting sampled dataset kvpairs, while std::shuffle in approach 2 needs 3 memory copy due to in-place swapping (both do NOT count the final copy to replace dataset_kvpairs_)
+        std::mt19937 tmp_random_gen(Util::DATASET_KVPAIR_SAMPLE_SEED);
+        std::bernoulli_distribution tmp_bernoulli_distribution(dataset_sample_ratio_); // Bernoulli distribution with p of dataset_sample_ratio_
+        const uint32_t original_dataset_kvpairs_size = dataset_kvpairs_.size();
+        const uint32_t sampled_dataset_kvpairs_size = original_dataset_kvpairs_size * dataset_sample_ratio_;
+        assert(sampled_dataset_kvpairs_size > 0);
+        std::unordered_map<Key, uint32_t, KeyHasher> tmp_sampled_dataset_lookup_table;
+        std::vector<std::pair<Key, Value>> tmp_sampled_dataset_kvpairs;
+        for (uint32_t i = 0; i < original_dataset_kvpairs_size; i++) // Binomial distribution (i.e., n times Bernoulli trials)
+        {
+            if (tmp_bernoulli_distribution(tmp_random_gen)) // Return true with probability p of dataset_sample_ratio_
+            {
+                const std::pair<Key, Value>& tmp_dataset_kvpair = dataset_kvpairs_[i];
+                const Key& tmp_key = tmp_dataset_kvpair.first;
+
+                // Update sampled dataset kvpairs
+                const uint32_t prev_sampled_dataset_kvpairs_size = tmp_sampled_dataset_kvpairs.size();
+                tmp_sampled_dataset_kvpairs.push_back(tmp_dataset_kvpair);
+
+                // Update sampled dataset lookup table
+                assert(tmp_sampled_dataset_lookup_table.find(tmp_key) == tmp_sampled_dataset_lookup_table.end());
+                tmp_sampled_dataset_lookup_table.insert(std::pair(tmp_key, prev_sampled_dataset_kvpairs_size));
+
+                // Check if achieve sampled dataset size
+                if (tmp_sampled_dataset_kvpairs.size() >= sampled_dataset_kvpairs_size)
+                {
+                    break;
+                }
+            }
+        } // End of original dataset kvpairs
+        
+        // Replace original dataset kvpairs
+        dataset_kvpairs_.clear();
+        dataset_kvpairs_ = tmp_sampled_dataset_kvpairs;
+        tmp_sampled_dataset_kvpairs.clear();
+
+        // Replace original dataset lookup table
+        dataset_lookup_table_.clear();
+        dataset_lookup_table_ = tmp_sampled_dataset_lookup_table;
+        tmp_sampled_dataset_lookup_table.clear();
+
+        return;
+    }
+
     uint32_t ReplayedWorkloadWrapperBase::dumpDatasetFile_() const
     {
         assert(Util::isReplayedWorkload(getWorkloadName_()));
@@ -533,17 +611,33 @@ namespace covered
             {
                 const uint32_t original_dataset_size = dataset_kvpairs_.size();
                 dataset_kvpairs_.push_back(std::pair(key, value));
-                dataset_lookup_table_.insert(std::pair(key, original_dataset_size));
+                tmp_dataset_lookup_table_iter = dataset_lookup_table_.insert(std::pair(key, original_dataset_size)).first;
 
                 // Update dataset statistics
                 updateDatasetStatistics_(key, value, original_dataset_size);
             }
+            assert(tmp_dataset_lookup_table_iter != dataset_lookup_table_.end());
 
             if (needAllTraceFiles_) // Trace preprocessor
             {
                 total_workload_opcnt_ += 1; // NOTE: update total opcnt for trace preprocessing
 
-                // TODO: Update total_workload_keys_ and total_workload_value_sizes_ for trace preprocessor
+                if (dataset_sample_ratio_ < 1.0) // Update total workload key-values ONLY if need dataset sampling
+                {
+                    total_workload_keys_.push_back(key);
+
+                    const uint32_t original_kvidx = tmp_dataset_lookup_table_iter->second;
+                    assert(original_kvidx < dataset_kvpairs_.size());
+                    const Value& original_value = dataset_kvpairs_[original_kvidx].second;
+                    if (value.getValuesize() == original_value.getValuesize())
+                    {
+                        total_workload_value_sizes_.push_back(-1); // Read request
+                    }
+                    else
+                    {
+                        total_workload_value_sizes_.push_back(value.getValuesize()); // Write request (put or delete)
+                    }
+                }
             }
         }
         else if (needWorkloadItems_()) // Clients (partial trace files or workload file) for evaluation phase

@@ -47,12 +47,13 @@ namespace covered
 
         // Const shared variables
         std::string base_instance_name_;
+        double dataset_sample_ratio_; // Sample ratio for dataset (1.0: all dataset items; < 1.0: sample ratio of dataset items)
 
         // Const shared variables (ONLY for replayed traces)
         // (1) For role of preprocessor
         uint32_t total_workload_opcnt_; // Total opcnt of workloads in all clients
-        std::vector<Key> total_workload_keys_; // Keys of total workload in all clients (will be sampled if sample ratio < 1.0)
-        std::vector<int> total_workload_value_sizes_; // Value sizes of workload in all clients (< 0: read; = 0: delete; > 0: write; will be sampled if sample ratio < 1.0))
+        std::vector<Key> total_workload_keys_; // Keys of total workload in all clients (updated ONLY if sample ratio < 1.0 for sampling)
+        std::vector<int> total_workload_value_sizes_; // Value sizes of workload in all clients (< 0: read; = 0: delete; > 0: write; updated ONLY if sample ratio < 1.0 for sampling)
         // (2) For role of preprocessor, dataset loader, and cloud
         // NOTE: non-replayed traces can generate all information (dataset items, workload items, dataset statistics) by workload generator
         double average_dataset_keysize_; // Average dataset key size
@@ -83,6 +84,8 @@ namespace covered
         // (2) For role of trace preprocessor
 
         void verifyDatasetAndWorkloadAbsenceForPreprocessor_(); // Dataset and workload file (if sample ratio < 1) should NOT exist
+        void sampleDatasetAndWorkload_(); // Sample dataset and total workload items (if sample ratio < 1.0)
+        void sampleDatasetInternal_(); // Sample dataset items under sample ratio < 1.0 (update dataset_kvpairs_ and dataset_lookup_table_)
         uint32_t dumpDatasetFile_() const; // Dump dataset key-value pairs into dataset file; return dataset file size (in units of bytes)
 
         // (3) For role of dataset loader and cloud
