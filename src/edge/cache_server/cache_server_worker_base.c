@@ -437,7 +437,7 @@ namespace covered
                 if (current_is_target)
                 {
                     std::ostringstream oss;
-                    oss << "current edge node " << directory_info.getTargetEdgeIdx() << " should not be the target edge node for cooperative edge caching under a local cache miss of key " << key.getKeystr() << "!";
+                    oss << "current edge node " << directory_info.getTargetEdgeIdx() << " should not be the target edge node for cooperative edge caching under a local cache miss of key " << key.getKeyDebugstr() << "!";
                     Util::dumpWarnMsg(base_instance_name_, oss.str());
                     return is_finish; // NOTE: is_finish is still false, as edge is STILL running
                 }
@@ -499,7 +499,8 @@ namespace covered
         struct timespec issue_directory_lookup_req_start_timestamp = Util::getCurrentTimespec(); // Count timeout
 
         // Get destination address of beacon node
-        NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = tmp_edge_wrapper_ptr->getBeaconDstaddr_(key);
+        const uint32_t tmp_beacon_edge_idx = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
+        NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = tmp_edge_wrapper_ptr->getBeaconDstaddr_(tmp_beacon_edge_idx);
 
         while (true) // Timeout-and-retry mechanism
         {
@@ -533,7 +534,7 @@ namespace covered
                 else
                 {
                     std::ostringstream oss;
-                    oss << "edge timeout to wait for DirectoryLookupResponse for key " << key.getKeystr();
+                    oss << "edge timeout to wait for DirectoryLookupResponse for key " << key.getKeyDebugstr() << " from beacon " << tmp_beacon_edge_idx;
                     Util::dumpWarnMsg(base_instance_name_, oss.str());
                     continue; // Resend the control request message
                 }
@@ -620,7 +621,7 @@ namespace covered
                 else
                 {
                     std::ostringstream oss;
-                    oss << "edge timeout to wait for RedirectedGetResponse for key " << key.getKeystr();
+                    oss << "edge timeout to wait for RedirectedGetResponse for key " << key.getKeyDebugstr() << " from target " << directory_info.getTargetEdgeIdx();
                     Util::dumpWarnMsg(base_instance_name_, oss.str());
                     continue; // Resend the redirected request message
                 }
@@ -659,7 +660,7 @@ namespace covered
                 {
                     // NOTE: this is a minor yet normal case, as the target edge node has evicted the object yet the directory info in the beacon edge node has not been updated yet before answering the directory lookup request
                     std::ostringstream oss;
-                    oss << "redirectGetToTarget_(): target edge node does not cache the key " << key.getKeystr() << ", which may be already evicted after directory lookup yet before request redirection";
+                    oss << "redirectGetToTarget_(): target edge node does not cache the key " << key.getKeyDebugstr() << ", which may be already evicted after directory lookup yet before request redirection";
                     Util::dumpInfoMsg(base_instance_name_, oss.str());
 
                     is_cooperative_cached = false;
@@ -741,7 +742,7 @@ namespace covered
                 else
                 {
                     std::ostringstream oss;
-                    oss << "edge timeout to wait for GlobalGetResponse for key " << key.getKeystr();
+                    oss << "edge timeout to wait for GlobalGetResponse for key " << key.getKeyDebugstr() << " from cloud";
                     Util::dumpWarnMsg(base_instance_name_, oss.str());
                     continue; // Resend the global request message
                 }
@@ -1075,7 +1076,7 @@ namespace covered
                 else
                 {
                     std::ostringstream oss;
-                    oss << "edge timeout to wait for AcquireWritelockResponse for key " << key.getKeystr() << " from beacon " << beacon_edge_idx;
+                    oss << "edge timeout to wait for AcquireWritelockResponse for key " << key.getKeyDebugstr() << " from beacon " << beacon_edge_idx;
                     Util::dumpWarnMsg(base_instance_name_, oss.str());
                     continue; // Resend the control request message
                 }
@@ -1119,7 +1120,8 @@ namespace covered
         EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
         // Closest edge node must NOT be the beacon node if with interruption
-        bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon(key);
+        const uint32_t tmp_beacon_edge_idx = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
+        bool current_is_beacon = (tmp_beacon_edge_idx == tmp_edge_wrapper_ptr->getNodeIdx());
         assert(!current_is_beacon);
 
         bool is_finish = false;
@@ -1143,7 +1145,7 @@ namespace covered
                 else // Retry to receive a message if edge is still running
                 {
                     std::ostringstream oss;
-                    oss << "edge timeout to wait for FinishBlockRequest for key " << key.getKeystr();
+                    oss << "edge timeout to wait for FinishBlockRequest for key " << key.getKeyDebugstr() << " from beacon " << tmp_beacon_edge_idx;
                     Util::dumpWarnMsg(base_instance_name_, oss.str());
                     continue;
                 }
@@ -1180,7 +1182,7 @@ namespace covered
                 else // key NOT match
                 {
                     std::ostringstream oss;
-                    oss << "wait for key " << key.getKeystr() << " != received key " << tmp_key.getKeystr();
+                    oss << "wait for key " << key.getKeyDebugstr() << " != received key " << tmp_key.getKeystr();
                     Util::dumpWarnMsg(base_instance_name_, oss.str());
 
                     // Release the control request message
@@ -1279,7 +1281,7 @@ namespace covered
                 else
                 {
                     std::ostringstream oss;
-                    oss << "edge timeout to wait for GlobalPutResponse/GlobalDelResponse for key " << key.getKeystr();
+                    oss << "edge timeout to wait for GlobalPutResponse/GlobalDelResponse for key " << key.getKeyDebugstr() << " from cloud";
                     Util::dumpWarnMsg(base_instance_name_, oss.str());
                     continue; // Resend the global request message
                 }
@@ -1380,7 +1382,8 @@ namespace covered
         struct timespec issue_release_writelock_req_start_timestamp = Util::getCurrentTimespec();
 
         // Prepare destination address of beacon server
-        NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = tmp_edge_wrapper_ptr->getBeaconDstaddr_(key);
+        const uint32_t tmp_beacon_edge_idx = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
+        NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = tmp_edge_wrapper_ptr->getBeaconDstaddr_(tmp_beacon_edge_idx);
 
         while (true) // Timeout-and-retry mechanism
         {
@@ -1408,7 +1411,7 @@ namespace covered
                 else
                 {
                     std::ostringstream oss;
-                    oss << "edge timeout to wait for ReleaseWritelockResponse for key " << key.getKeystr();
+                    oss << "edge timeout to wait for ReleaseWritelockResponse for key " << key.getKeyDebugstr() << " from beacon " << tmp_beacon_edge_idx;
                     Util::dumpWarnMsg(base_instance_name_, oss.str());
                     continue; // Resend the control request message
                 }

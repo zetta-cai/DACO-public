@@ -131,7 +131,7 @@ namespace covered
         if (!is_exist) // key does not exist
         {
             std::ostringstream oss;
-            oss << "key " << key.getKeystr() << " does NOT exist in perkey_msimetadata_ for resetWriteflagForKeyIfExist()!";
+            oss << "key " << key.getKeyDebugstr() << " does NOT exist in perkey_msimetadata_ for resetWriteflagForKeyIfExist()!";
             Util::dumpWarnMsg(instance_name_, oss.str());
         }
         else // key exists

@@ -88,7 +88,7 @@ namespace covered
             {
                 // NOTE: this is possible under approximate value size for local uncached metadata
                 // std::ostringstream oss;
-                // oss << "Key " << key.getKeystr() << ": avg_object_size_ * object_cnt_ (" << avg_object_size_ << " * " << object_cnt_ << ") < object_size (" << object_size << ")";
+                // oss << "Key " << key.getKeyDebugstr() << ": avg_object_size_ * object_cnt_ (" << avg_object_size_ << " * " << object_cnt_ << ") < object_size (" << object_size << ")";
                 // Util::dumpWarnMsg(kClassName, oss.str());
 
                 avg_object_size_ = 0.0;

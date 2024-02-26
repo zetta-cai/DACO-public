@@ -54,7 +54,7 @@ namespace covered
 
         // Get closest edge network address to send local requests
         std::string closest_edge_ipstr = Util::getClosestEdgeIpstr(client_idx, clientcnt, edgecnt);
-        uint16_t closest_edge_cache_server_recvreq_port = Util::getClosestEdgeCacheServerRecvreqPort(client_idx, clientcnt, edgecnt);
+        uint16_t closest_edge_cache_server_recvreq_port = Util::getClosestEdgeCacheServerRecvreqPort(client_idx, clientcnt, edgecnt, closest_edge_idx_);
         closest_edge_cache_server_recvreq_dst_addr_ = NetworkAddr(closest_edge_ipstr, closest_edge_cache_server_recvreq_port);
 
         // (2) For receiving local responses
@@ -214,7 +214,7 @@ namespace covered
                 else
                 {
                     std::ostringstream oss;
-                    oss << "client timeout to wait for local response for key " << workload_item.getKey().getKeystr();
+                    oss << "client timeout to wait for local response for key " << workload_item.getKey().getKeystr() << "from edge " << closest_edge_idx_;
                     Util::dumpWarnMsg(instance_name_, oss.str());
                     continue; // Resend the local request message
                 }

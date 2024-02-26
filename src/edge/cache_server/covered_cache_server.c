@@ -394,7 +394,7 @@ namespace covered
                 else
                 {
                     std::ostringstream oss;
-                    oss << "edge timeout to wait for foreground directory update response after hybrid data fetching for key " << key.getKeystr();
+                    oss << "edge timeout to wait for foreground directory update response after hybrid data fetching for key " << key.getKeyDebugstr() << " from beacon " << dst_beacon_edge_idx_for_compression;
                     Util::dumpWarnMsg(instance_name_, oss.str());
                     continue; // Resend the control request message
                 }

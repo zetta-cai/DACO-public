@@ -34,7 +34,7 @@ namespace covered
     std::string Key::getKeyIntstr() const
     {
         const uint32_t keylen = keystr_.length();
-        assert(keylen == 4 || keylen == 8);
+        //assert(keylen == 4 || keylen == 8);
 
         std::string key_intstr = "";
         if (keylen == 4)
@@ -43,7 +43,7 @@ namespace covered
             memcpy(&keyint, keystr_.c_str(), sizeof(int32_t));
             key_intstr = std::to_string(keyint);
         }
-        else
+        else if (keylen == 8)
         {
             int64_t keyint = 0;
             memcpy(&keyint, keystr_.c_str(), sizeof(int64_t));
@@ -51,6 +51,16 @@ namespace covered
         }
 
         return key_intstr;
+    }
+
+    std::string Key::getKeyDebugstr() const
+    {
+        const std::string key_intstr = getKeyIntstr();
+        if (key_intstr != "")
+        {
+            return keystr_ + " (" + key_intstr + ")";
+        }
+        return keystr_;
     }
     
     uint32_t Key::getKeyPayloadSize() const

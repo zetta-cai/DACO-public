@@ -375,7 +375,7 @@ namespace covered
         if (!is_key_exist) // Key and dirinfo should exist when releasing the writelock
         {
             std::ostringstream oss;
-            oss << "key " << key.getKeystr() << " does not exist in CooperationWrapperBase::releaseLocalWritelock(), which may be evicted during the write";
+            oss << "key " << key.getKeyDebugstr() << " does not exist in CooperationWrapperBase::releaseLocalWritelock(), which may be evicted during the write";
             Util::dumpWarnMsg(base_instance_name_, oss.str());
         }
 

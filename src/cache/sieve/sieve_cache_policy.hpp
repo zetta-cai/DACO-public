@@ -172,7 +172,7 @@ namespace covered
             if (map_iter != key_lookup_.end()) // Previous list and map entry exist
             {
                 std::ostringstream oss;
-                oss << "key " << key.getKeystr() << " already exists in key_lookup_ (list size: " << sieve_queue_.size() << ") for admit()";
+                oss << "key " << key.getKeyDebugstr() << " already exists in key_lookup_ (list size: " << sieve_queue_.size() << ") for admit()";
                 Util::dumpWarnMsg(kClassName, oss.str());
                 return;
             }

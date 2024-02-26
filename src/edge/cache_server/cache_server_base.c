@@ -485,7 +485,8 @@ namespace covered
         struct timespec issue_directory_update_req_start_timestamp = Util::getCurrentTimespec();
 
         // Get destination address of beacon node
-        NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = edge_wrapper_ptr_->getBeaconDstaddr_(key);
+        const uint32_t beacon_edge_idx = edge_wrapper_ptr_->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
+        NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = edge_wrapper_ptr_->getBeaconDstaddr_(beacon_edge_idx);
 
         while (true) // Timeout-and-retry mechanism
         {
@@ -513,7 +514,7 @@ namespace covered
                 else
                 {
                     std::ostringstream oss;
-                    oss << "edge timeout to wait for DirectoryUpdateResponse for key " << key.getKeystr();
+                    oss << "edge timeout to wait for DirectoryUpdateResponse for key " << key.getKeyDebugstr() << " from beacon " << beacon_edge_idx;
                     Util::dumpWarnMsg(base_instance_name_, oss.str());
                     continue; // Resend the control request message
                 }
@@ -606,7 +607,7 @@ namespace covered
         if (total_victims.size() > 0)
         {
             std::ostringstream oss;
-            oss << "evict " << total_victims.size() << " victims for key " << key.getKeystr() << "(beacon node: " << edge_wrapper_ptr_->getCooperationWrapperPtr()->getBeaconEdgeIdx(key) << ") in local edge " << edge_wrapper_ptr_->getNodeIdx();
+            oss << "evict " << total_victims.size() << " victims for key " << key.getKeyDebugstr() << "(beacon node: " << edge_wrapper_ptr_->getCooperationWrapperPtr()->getBeaconEdgeIdx(key) << ") in local edge " << edge_wrapper_ptr_->getNodeIdx();
             uint32_t i = 0;
             for (std::unordered_map<Key, Value, KeyHasher>::const_iterator total_victims_const_iter = total_victims.begin(); total_victims_const_iter != total_victims.end(); total_victims_const_iter++)
             {
@@ -642,10 +643,11 @@ namespace covered
 
         // Track whether all keys have received directory update responses
         uint32_t acked_cnt = 0;
-        std::unordered_map<Key, bool, KeyHasher> acked_flags;
+        std::unordered_map<Key, std::pair<bool, uint32_t>, KeyHasher> acked_flags; // bool refers to whether ACK has been received, while uint32_t refers to beacon edge index for debugging if with timeout
         for (std::unordered_map<Key, Value, KeyHasher>::const_iterator victim_iter = total_victims.begin(); victim_iter != total_victims.end(); victim_iter++)
         {
-            acked_flags.insert(std::pair(victim_iter->first, false));
+            const uint32_t tmp_victim_beacon_edge_idx = edge_wrapper_ptr_->getCooperationWrapperPtr()->getBeaconEdgeIdx(victim_iter->first);
+            acked_flags.insert(std::pair(victim_iter->first, std::pair(false, tmp_victim_beacon_edge_idx)));
         }
 
         // Issue multiple directory update requests with is_admit = false simultaneously
@@ -655,14 +657,15 @@ namespace covered
         while (acked_cnt != total_victim_cnt)
         {
             // Send (total_victim_cnt - acked_cnt) directory update requests to the beacon nodes that have not acknowledged
-            for (std::unordered_map<Key, bool, KeyHasher>::const_iterator iter_for_request = acked_flags.begin(); iter_for_request != acked_flags.end(); iter_for_request++)
+            for (std::unordered_map<Key, std::pair<bool, uint32_t>, KeyHasher>::const_iterator iter_for_request = acked_flags.begin(); iter_for_request != acked_flags.end(); iter_for_request++)
             {
-                if (iter_for_request->second) // Skip the key that has received directory update response
+                if (iter_for_request->second.first) // Skip the key that has received directory update response
                 {
                     continue;
                 }
 
                 const Key& tmp_victim_key = iter_for_request->first; // key that has NOT received any directory update response
+                const uint32_t& tmp_victim_beacon_edge_idx = iter_for_request->second.second;
                 const Value& tmp_victim_value = total_victims.find(tmp_victim_key)->second; // Used for non-blocking placement notification if need hybrid data fetching for COVERED
                 bool current_is_beacon = edge_wrapper_ptr_->currentIsBeacon(tmp_victim_key);
                 if (current_is_beacon) // Evict local directory info for the victim key
@@ -674,8 +677,8 @@ namespace covered
                     }
 
                     // Update ack information
-                    assert(!acked_flags[tmp_victim_key]);
-                    acked_flags[tmp_victim_key] = true;
+                    assert(!acked_flags[tmp_victim_key].first);
+                    acked_flags[tmp_victim_key].first = true;
                     acked_cnt += 1;
                 }
                 else // Send directory update req with is_admit = false to evict remote directory info for the victim key
@@ -684,7 +687,7 @@ namespace covered
                     assert(directory_update_request_ptr != NULL);
 
                     // Push the control request into edge-to-edge propagation simulator to the beacon node
-                    NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = edge_wrapper_ptr_->getBeaconDstaddr_(tmp_victim_key);
+                    NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = edge_wrapper_ptr_->getBeaconDstaddr_(tmp_victim_beacon_edge_idx);
                     bool is_successful = edge_wrapper_ptr_->getEdgeToedgePropagationSimulatorParamPtr()->push(directory_update_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
                     assert(is_successful);
 
@@ -713,7 +716,7 @@ namespace covered
                     }
                     else
                     {
-                        Util::dumpWarnMsg(base_instance_name_, "edge timeout to wait for DirectoryUpdateResponse");
+                        Util::dumpWarnMsg(base_instance_name_, "edge timeout to wait for DirectoryUpdateResponse from " + Util::getAckedStatusStr(acked_flags, "beacon"));
                         break; // Break to resend the remaining control requests not acked yet
                     }
                 } // End of (is_timeout == true)
@@ -726,11 +729,11 @@ namespace covered
                     // Mark the key has been acknowledged with DirectoryUpdateResponse
                     const Key tmp_received_key = MessageBase::getKeyFromMessage(control_response_ptr);
                     bool is_match = false;
-                    for (std::unordered_map<Key, bool, KeyHasher>::iterator iter_for_response = acked_flags.begin(); iter_for_response != acked_flags.end(); iter_for_response++)
+                    for (std::unordered_map<Key, std::pair<bool, uint32_t>, KeyHasher>::iterator iter_for_response = acked_flags.begin(); iter_for_response != acked_flags.end(); iter_for_response++)
                     {
                         if (iter_for_response->first == tmp_received_key) // Match an un-acked key
                         {
-                            assert(iter_for_response->second == false); // Original ack flag should be false
+                            assert(iter_for_response->second.first == false); // Original ack flag should be false
 
                             // Update total bandwidth usage for received directory update (eviction) repsonse
                             BandwidthUsage directory_update_response_bandwidth_usage = control_response_ptr->getBandwidthUsageRef();
@@ -742,7 +745,7 @@ namespace covered
                             event_list.addEvents(control_response_ptr->getEventListRef());
 
                             // Update ack information
-                            iter_for_response->second = true;
+                            iter_for_response->second.first = true;
                             acked_cnt += 1;
                             is_match = true;
                             break;

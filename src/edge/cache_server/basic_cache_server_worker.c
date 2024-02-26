@@ -709,7 +709,7 @@ namespace covered
                     else
                     {
                         std::ostringstream oss;
-                        oss << "edge timeout to wait for BestGuessPlacementTriggerResponse for key " << key.getKeystr() << "from beacon " << dst_beacon_edge_idx_to_trigger_placement;
+                        oss << "edge timeout to wait for BestGuessPlacementTriggerResponse for key " << key.getKeyDebugstr() << "from beacon " << dst_beacon_edge_idx_to_trigger_placement;
                         Util::dumpWarnMsg(instance_name_, oss.str());
                         continue; // Resend the control request message
                     }

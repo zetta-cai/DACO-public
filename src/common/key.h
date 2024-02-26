@@ -22,8 +22,10 @@ namespace covered
         ~Key();
 
         uint32_t getKeyLength() const;
-        std::string getKeystr() const;
-        std::string getKeyIntstr() const;
+        std::string getKeystr() const; // Used for network and disk I/O
+
+        std::string getKeyIntstr() const; // Used to dump debug info if key is an integer
+        std::string getKeyDebugstr() const; // Used to dump debug info (keystr + key intstr if not empty)
 
         uint32_t getKeyPayloadSize() const;
         uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position) const;

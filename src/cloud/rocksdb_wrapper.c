@@ -109,7 +109,7 @@ namespace covered
         else
         {
             std::ostringstream oss;
-            oss << "fail to get key " << key.getKeystr() << " from RocksDB KVS (status: " << rocksdb_status.ToString() << ")";
+            oss << "fail to get key " << key.getKeyDebugstr() << " from RocksDB KVS (status: " << rocksdb_status.ToString() << ")";
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }

@@ -5,6 +5,7 @@
 #include "common/util.h"
 #include "core/popularity/edgeset.h"
 #include "message/data_message.h"
+#include "network/udp_pkt_socket.h" // TMPDEBUG24
 
 namespace covered
 {
@@ -68,6 +69,9 @@ namespace covered
             bool is_timeout = cloud_recvreq_socket_server_ptr_->recv(global_request_msg_payload);
             if (is_timeout == true)
             {
+                // TMPDEBUG24
+                Util::dumpWarnMsg(instance_name_, "cloud timeout to wait for global requests from edge nodes");
+
                 continue; // Retry to receive global request if cloud is still running
             } // End of (is_timeout == true)
             else
@@ -240,6 +244,14 @@ namespace covered
         struct timespec access_rocksdb_end_timestamp = Util::getCurrentTimespec();
         uint32_t access_rocksdb_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(access_rocksdb_end_timestamp, access_rocksdb_start_timestamp));
         event_list.addEvent(event_name, access_rocksdb_latency_us);
+
+        // TMPDEBUG24
+        if (access_rocksdb_latency_us >= (UdpPktSocket::SOCKET_TIMEOUT_SECONDS - 1) * 1000000) // Too large processing
+        {
+            std::ostringstream oss;
+            oss << "cloud rocksdb access latency " << access_rocksdb_latency_us << " us >= socket timeout " << (UdpPktSocket::SOCKET_TIMEOUT_SECONDS - 1) * 1000000 << " us";
+            Util::dumpWarnMsg(instance_name_, oss.str());
+        }
 
         if (is_finish) // Check is_finish
         {

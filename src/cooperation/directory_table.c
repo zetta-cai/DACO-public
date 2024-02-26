@@ -137,7 +137,7 @@ namespace covered
                 if (tmp_param.is_directory_already_exist) // directory_info should NOT exist for key
                 {                    
                     std::ostringstream oss;
-                    oss << "target edge index " << directory_info.getTargetEdgeIdx() << " already exists for key " << key.getKeystr() << " in update() with is_admit = true!";
+                    oss << "target edge index " << directory_info.getTargetEdgeIdx() << " already exists for key " << key.getKeyDebugstr() << " in update() with is_admit = true!";
                     Util::dumpWarnMsg(instance_name_, oss.str());
                 }
             }
@@ -156,7 +156,7 @@ namespace covered
                 if (!tmp_param.is_directory_already_exist) // directory_info should exist for key
                 {
                     std::ostringstream oss;
-                    oss << "target edge index " << directory_info.getTargetEdgeIdx() << " does NOT exist for key " << key.getKeystr() << " in update() with is_admit = false!";
+                    oss << "target edge index " << directory_info.getTargetEdgeIdx() << " does NOT exist for key " << key.getKeyDebugstr() << " in update() with is_admit = false!";
                     Util::dumpWarnMsg(instance_name_, oss.str());
                 }
 
@@ -165,7 +165,7 @@ namespace covered
             else // key does NOT exist
             {
                 std::ostringstream oss;
-                oss << "key " << key.getKeystr() << " does not exist in directory_hashtable_ in update() with is_admit = false!";
+                oss << "key " << key.getKeyDebugstr() << " does not exist in directory_hashtable_ in update() with is_admit = false!";
                 Util::dumpWarnMsg(instance_name_, oss.str());
 
                 metadata_update_requirement = MetadataUpdateRequirement(); // NO need to notify the last cache copy on metadata update for multiple-to-first due to empty-to-empty

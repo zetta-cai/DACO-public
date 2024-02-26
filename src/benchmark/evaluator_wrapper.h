@@ -66,11 +66,12 @@ namespace covered
         void notifyClientsToFinishrun_(); // Update per-slot/stable total aggregated statistics
         void notifyEdgeCloudToFinishrun_();
 
-        std::unordered_map<NetworkAddr, bool, NetworkAddrHasher> getAckedFlagsForAll_() const;
-        std::unordered_map<NetworkAddr, bool, NetworkAddrHasher> getAckedFlagsForClients_() const;
-        std::unordered_map<NetworkAddr, bool, NetworkAddrHasher> getAckedFlagsForEdgeCloud_() const;
-        void issueMsgToUnackedNodes_(MessageBase* message_ptr, const std::unordered_map<NetworkAddr, bool, NetworkAddrHasher>& acked_flags) const;
-        bool processMsgForAck_(MessageBase* message_ptr, std::unordered_map<NetworkAddr, bool, NetworkAddrHasher>& acked_flags);
+        // NOTE: for the pair of bool and std::string, bool refers to whether receiving the ACK flag, while std::string refers to the node identification information for debugging
+        std::unordered_map<NetworkAddr, std::pair<bool, std::string>, NetworkAddrHasher> getAckedFlagsForAll_() const;
+        std::unordered_map<NetworkAddr, std::pair<bool, std::string>, NetworkAddrHasher> getAckedFlagsForClients_() const;
+        std::unordered_map<NetworkAddr, std::pair<bool, std::string>, NetworkAddrHasher> getAckedFlagsForEdgeCloud_() const;
+        void issueMsgToUnackedNodes_(MessageBase* message_ptr, const std::unordered_map<NetworkAddr, std::pair<bool, std::string>, NetworkAddrHasher>& acked_flags) const;
+        bool processMsgForAck_(MessageBase* message_ptr, std::unordered_map<NetworkAddr, std::pair<bool, std::string>, NetworkAddrHasher>& acked_flags);
 
         void checkPointers_() const;
 

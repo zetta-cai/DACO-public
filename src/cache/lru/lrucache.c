@@ -28,7 +28,7 @@ namespace covered
 			if (!(list_iter->first == key))
 			{
 				std::ostringstream oss;
-				oss << "get() for key " << key.getKeystr() << " failed due to mismatched key of list_iter->first " << list_iter->first.getKeystr();
+				oss << "get() for key " << key.getKeyDebugstr() << " failed due to mismatched key of list_iter->first " << list_iter->first.getKeystr();
 				Util::dumpErrorMsg(kClassName, oss.str());
 				exit(1);
 			}
@@ -78,7 +78,7 @@ namespace covered
 			uint32_t list_index = static_cast<uint32_t>(std::distance(cache_items_list_.begin(), map_iter->second));
 			//uint32_t list_index = static_cast<uint32_t>(map_iter->second - cache_items_list_.begin());
 			std::ostringstream oss;
-			oss << "key " << key.getKeystr() << " already exists in cache_items_map_ (list index: " << list_index << "; list size: " << cache_items_list_.size() << ") for admit()";
+			oss << "key " << key.getKeyDebugstr() << " already exists in cache_items_map_ (list index: " << list_index << "; list size: " << cache_items_list_.size() << ") for admit()";
 			Util::dumpWarnMsg(kClassName, oss.str());
 			return;
 		}

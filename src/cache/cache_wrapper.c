@@ -528,7 +528,7 @@ namespace covered
         if (!is_exist) // key is locally cached yet not found in validity_map_, which may due to processing order issue
         {
             std::ostringstream oss;
-            oss << "key " << key.getKeystr() << " is locally cached yet not found in validity_map_!";
+            oss << "key " << key.getKeyDebugstr() << " is locally cached yet not found in validity_map_!";
             Util::dumpWarnMsg(instance_name_, oss.str());
             assert(is_valid == false);
         }
@@ -545,7 +545,7 @@ namespace covered
         if (!is_exist) // a key locally cached is not found in validity_map_
         {
             std::ostringstream oss;
-            oss << "key " << key.getKeystr() << " does not exist in validity_map_ for validateIfCached()";
+            oss << "key " << key.getKeyDebugstr() << " does not exist in validity_map_ for validateIfCached()";
             Util::dumpWarnMsg(instance_name_, oss.str());
         }
         return;
@@ -560,7 +560,7 @@ namespace covered
         if (!is_exist) // a key locally cached is not found in validity_map_
         {
             std::ostringstream oss;
-            oss << "key " << key.getKeystr() << " does not exist in validity_map_ for invalidateKeyForLocalCachedObject_()";
+            oss << "key " << key.getKeyDebugstr() << " does not exist in validity_map_ for invalidateKeyForLocalCachedObject_()";
             Util::dumpWarnMsg(instance_name_, oss.str());
         }
         return;
@@ -575,7 +575,7 @@ namespace covered
         if (is_exist) // a key not locally cached is found in validity_map_
         {
             std::ostringstream oss;
-            oss << "key " << key.getKeystr() << " already exists in validity_map_ for validateKeyForLocalUncachedObject_()";
+            oss << "key " << key.getKeyDebugstr() << " already exists in validity_map_ for validateKeyForLocalUncachedObject_()";
             Util::dumpWarnMsg(instance_name_, oss.str());
         }
         return;
@@ -590,7 +590,7 @@ namespace covered
         if (is_exist) // a key not locally cached is found in validity_map_
         {
             std::ostringstream oss;
-            oss << "key " << key.getKeystr() << " already exists in validity_map_ for invalidateKeyForLocalUncachedObject_()";
+            oss << "key " << key.getKeyDebugstr() << " already exists in validity_map_ for invalidateKeyForLocalUncachedObject_()";
             Util::dumpWarnMsg(instance_name_, oss.str());
         }
         return;

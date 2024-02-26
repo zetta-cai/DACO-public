@@ -23,6 +23,7 @@
 #include "cli/evaluator_cli.h"
 #include "common/config.h"
 #include "common/covered_common_header.h"
+#include "common/key.h"
 #include "network/network_addr.h"
 
 // Avoid conflicting macros
@@ -236,7 +237,7 @@ namespace covered
         static uint16_t getClientRecvmsgPort(const uint32_t& client_idx, const uint32_t& clientcnt);
         static uint32_t getClosestEdgeIdx(const uint32_t& client_idx, const uint32_t& clientcnt, const uint32_t& edgecnt);
         static std::string getClosestEdgeIpstr(const uint32_t& client_idx, const uint32_t& clientcnt, const uint32_t& edgecnt);
-        static uint16_t getClosestEdgeCacheServerRecvreqPort(const uint32_t& client_idx, const uint32_t& clientcnt, const uint32_t& edgecnt); // Calculate the recvreq port of the closest edge node for client
+        static uint16_t getClosestEdgeCacheServerRecvreqPort(const uint32_t& client_idx, const uint32_t& clientcnt, const uint32_t& edgecnt, uint32_t& closest_edge_idx); // Calculate the recvreq port of the closest edge node for client
         static uint32_t getGlobalClientWorkerIdx(const uint32_t& client_idx, const uint32_t& local_client_worker_idx, const uint32_t& perclient_workercnt);
         //static void parseGlobalClientWorkerIdx(const uint32_t& global_client_worker_idx, const uint32_t& perclient_workercnt, uint32_t& client_idx, uint32_t& local_client_worker_idx);
         static uint16_t getClientWorkerRecvrspPort(const uint32_t& client_idx, const uint32_t& clientcnt, const uint32_t& local_client_worker_idx, const uint32_t& perclient_workercnt);
@@ -262,6 +263,11 @@ namespace covered
         static uint32_t getFragmentCnt(const uint32_t& msg_payload_size);
         static uint32_t getFragmentOffset(const uint32_t& fragment_idx);
         static uint32_t getFragmentPayloadSize(const uint32_t& fragment_idx, const uint32_t& msg_payload_size);
+
+        static std::string getAckedStatusStr(const std::unordered_map<NetworkAddr, std::pair<bool, std::string>, NetworkAddrHasher>& acked_flags);
+        static std::string getAckedStatusStr(const std::unordered_map<NetworkAddr, std::pair<bool, uint32_t>, NetworkAddrHasher>& acked_flags, const std::string& rolestr);
+        static std::string getAckedStatusStr(const std::unordered_map<uint32_t, bool>& acked_flags, const std::string& rolestr);
+        static std::string getAckedStatusStr(const std::unordered_map<Key, std::pair<bool, uint32_t>, KeyHasher>& acked_flags, const std::string& rolestr);
 
         // (6) Intermediate files
 

@@ -164,7 +164,7 @@ namespace covered
         if (is_local_cached)
         {
             std::ostringstream oss;
-            oss << "key " << key.getKeystr() << " is already local cached before admitLocalCacheInternal_(), which should NOT happen under atomicity of DirectoryTable in CooperationWrapeprBase";
+            oss << "key " << key.getKeyDebugstr() << " is already local cached before admitLocalCacheInternal_(), which should NOT happen under atomicity of DirectoryTable in CooperationWrapeprBase";
             Util::dumpWarnMsg(instance_name_, oss.str());
 
             is_successful = true;

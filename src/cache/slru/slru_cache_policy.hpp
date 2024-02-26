@@ -192,7 +192,7 @@ namespace covered
             if (lookup_map_const_iter != key_lookup_.end()) // Previous list and map entry exist
             {
                 std::ostringstream oss;
-                oss << "key " << key.getKeystr() << " already exists in key_lookup_ (";
+                oss << "key " << key.getKeyDebugstr() << " already exists in key_lookup_ (";
                 for (int i = 0; i < n_seg_; i++)
                 {
                     oss << "lru_lists_[" << i << "].size() = " << lru_lists_[i].size();

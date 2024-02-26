@@ -96,7 +96,7 @@ void LHD::admit(const covered::Key& key, const covered::Value& value)
     if (indices_const_iter != indices.end()) // Already cached
     {
         std::ostringstream oss;
-        oss << "key " << key.getKeystr() << " already exists in LHD cache (cached objcnt: " << indices.size() << ") for admit()";
+        oss << "key " << key.getKeyDebugstr() << " already exists in LHD cache (cached objcnt: " << indices.size() << ") for admit()";
         covered::Util::dumpWarnMsg(kClassName, oss.str());
         return;
     }

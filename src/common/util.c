@@ -709,9 +709,9 @@ namespace covered
         return Config::getEdgeIpstr(closest_edge_idx, edgecnt, is_private_client_ipstr, is_launch_edge);
     }
 
-    uint16_t Util::getClosestEdgeCacheServerRecvreqPort(const uint32_t& client_idx, const uint32_t& clientcnt, const uint32_t& edgecnt)
+    uint16_t Util::getClosestEdgeCacheServerRecvreqPort(const uint32_t& client_idx, const uint32_t& clientcnt, const uint32_t& edgecnt, uint32_t& closest_edge_idx)
     {
-        uint32_t closest_edge_idx = getClosestEdgeIdx(client_idx, clientcnt, edgecnt);
+        closest_edge_idx = getClosestEdgeIdx(client_idx, clientcnt, edgecnt);
         return getEdgeCacheServerRecvreqPort(closest_edge_idx, edgecnt);
     }
 
@@ -943,6 +943,46 @@ namespace covered
         assert(fragment_payload_size >= 0);
         assert(fragment_payload_size <= UDP_MAX_FRAG_PAYLOAD);
         return fragment_payload_size;
+    }
+
+    std::string Util::getAckedStatusStr(const std::unordered_map<NetworkAddr, std::pair<bool, std::string>, NetworkAddrHasher>& acked_flags)
+    {
+        std::ostringstream oss;
+        for (std::unordered_map<NetworkAddr, std::pair<bool, std::string>, NetworkAddrHasher>::const_iterator iter = acked_flags.begin(); iter != acked_flags.end(); iter++)
+        {
+            oss << iter->second.second << " (" << Util::toString(iter->second.first) << ") ";
+        }
+        return oss.str();
+    }
+
+    std::string Util::getAckedStatusStr(const std::unordered_map<NetworkAddr, std::pair<bool, uint32_t>, NetworkAddrHasher>& acked_flags, const std::string& rolestr)
+    {
+        std::ostringstream oss;
+        for (std::unordered_map<NetworkAddr, std::pair<bool, uint32_t>, NetworkAddrHasher>::const_iterator iter = acked_flags.begin(); iter != acked_flags.end(); iter++)
+        {
+            oss << rolestr << " " << std::to_string(iter->second.second) << " (" << Util::toString(iter->second.first) << ") ";
+        }
+        return oss.str();
+    }
+
+    std::string Util::getAckedStatusStr(const std::unordered_map<uint32_t, bool>& acked_flags, const std::string& rolestr)
+    {
+        std::ostringstream oss;
+        for (std::unordered_map<uint32_t, bool>::const_iterator iter = acked_flags.begin(); iter != acked_flags.end(); iter++)
+        {
+            oss << rolestr << " " << iter->first << " (" << Util::toString(iter->second) << ") ";
+        }
+        return oss.str();
+    }
+
+    std::string Util::getAckedStatusStr(const std::unordered_map<Key, std::pair<bool, uint32_t>, KeyHasher>& acked_flags, const std::string& rolestr)
+    {
+        std::ostringstream oss;
+        for (std::unordered_map<Key, std::pair<bool, uint32_t>, KeyHasher>::const_iterator iter = acked_flags.begin(); iter != acked_flags.end(); iter++)
+        {
+            oss << rolestr << " " << std::to_string(iter->second.second) << " (" << Util::toString(iter->second.first) << ") ";
+        }
+        return oss.str();
     }
 
     // (6) Intermediate files

@@ -97,7 +97,7 @@ namespace covered
         if (!perkey_rwlock_ptr_->isWriteLocked(key))
         {
             std::ostringstream oss;
-            oss << "perkey_rwlock_ptr_ is NOT write locked for key " << key.getKeystr();
+            oss << "perkey_rwlock_ptr_ is NOT write locked for key " << key.getKeyDebugstr();
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }
@@ -139,7 +139,7 @@ namespace covered
         if (!perkey_rwlock_ptr_->isWriteLocked(key))
         {
             std::ostringstream oss;
-            oss << "perkey_rwlock_ptr_ is NOT write locked for key " << key.getKeystr();
+            oss << "perkey_rwlock_ptr_ is NOT write locked for key " << key.getKeyDebugstr();
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }
@@ -184,7 +184,7 @@ namespace covered
         if (!perkey_rwlock_ptr_->isWriteLocked(key))
         {
             std::ostringstream oss;
-            oss << "perkey_rwlock_ptr_ is NOT write locked for key " << key.getKeystr();
+            oss << "perkey_rwlock_ptr_ is NOT write locked for key " << key.getKeyDebugstr();
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }
@@ -261,7 +261,7 @@ namespace covered
         if (!perkey_rwlock_ptr_->isWriteLocked(key))
         {
             std::ostringstream oss;
-            oss << "perkey_rwlock_ptr_ is NOT write locked for key " << key.getKeystr();
+            oss << "perkey_rwlock_ptr_ is NOT write locked for key " << key.getKeyDebugstr();
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }

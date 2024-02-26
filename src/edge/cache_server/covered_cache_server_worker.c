@@ -770,7 +770,8 @@ namespace covered
                     assert(covered_placement_trigger_request_ptr != NULL);
 
                     // Push the control request into edge-to-edge propagation simulator to send to beacon node
-                    NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = tmp_edge_wrapper_ptr->getBeaconDstaddr_(key);
+                    const uint32_t tmp_beacon_edge_idx = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
+                    NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = tmp_edge_wrapper_ptr->getBeaconDstaddr_(tmp_beacon_edge_idx);
                     bool is_successful = tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(covered_placement_trigger_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
                     assert(is_successful);
 
@@ -790,7 +791,7 @@ namespace covered
                         else
                         {
                             std::ostringstream oss;
-                            oss << "edge timeout to wait for CoveredPlacementTriggerResponse for key " << key.getKeystr();
+                            oss << "edge timeout to wait for CoveredPlacementTriggerResponse for key " << key.getKeyDebugstr() << " from beacon " << tmp_beacon_edge_idx;
                             Util::dumpWarnMsg(instance_name_, oss.str());
                             continue; // Resend the control request message
                         }

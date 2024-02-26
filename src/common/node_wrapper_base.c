@@ -132,7 +132,7 @@ namespace covered
             bool is_timeout = node_recvmsg_socket_server_ptr_->recv(control_response_msg_payload);
             if (is_timeout)
             {
-                Util::dumpWarnMsg(base_instance_name_, "timeout to wait for InitializationResponse");
+                Util::dumpWarnMsg(base_instance_name_, "timeout to wait for InitializationResponse from evaluator");
                 continue; // Wait until receiving InitializationResponse from evaluator
             }
             else

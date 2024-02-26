@@ -41,6 +41,7 @@ namespace covered
         ClientWorkerParam* client_worker_param_ptr_;
 
         // (1) For sending local requests
+        uint32_t closest_edge_idx_; // Debug information if with timeout
         NetworkAddr closest_edge_cache_server_recvreq_dst_addr_; // Used by client worker to send local requests
 
         // (2) For receiveing local responses

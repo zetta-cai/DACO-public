@@ -283,7 +283,7 @@ namespace covered
                 assert(!lookup_map_const_iter->second.isGhost());
 
                 std::ostringstream oss;
-                oss << "key " << key.getKeystr() << " already exists in key_lookup_ (L1 data list size: " << L1_data_list_.size() << "; L2 data list size: " << L2_data_list_.size() << ") for admit()";
+                oss << "key " << key.getKeyDebugstr() << " already exists in key_lookup_ (L1 data list size: " << L1_data_list_.size() << "; L2 data list size: " << L2_data_list_.size() << ") for admit()";
                 Util::dumpWarnMsg(kClassName, oss.str());
                 return;
             }

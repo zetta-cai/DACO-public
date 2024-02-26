@@ -238,7 +238,7 @@ namespace covered
         if (has_aggregated_uncached_popularity == false)
         {
             std::ostringstream oss;
-            oss << "aggregated uncached popularity for key " << key.getKeystr() << " has already been erased due to multi-threading access -> NO need to clear local cached popularities for placement";
+            oss << "aggregated uncached popularity for key " << key.getKeyDebugstr() << " has already been erased due to multi-threading access -> NO need to clear local cached popularities for placement";
             Util::dumpInfoMsg(instance_name_, oss.str());
         }
         else
@@ -283,7 +283,7 @@ namespace covered
             // NOTE: as fast-path placement is performed in sender edge node which is NOT awared by beacon edge node, beacon edge node may NOT preserve the sender edge idx
             #else
             std::ostringstream oss;
-            oss << "Key " << key.getKeystr() << " has NO preserved edgeset for non-blocking placement deployment";
+            oss << "Key " << key.getKeyDebugstr() << " has NO preserved edgeset for non-blocking placement deployment";
             Util::dumpWarnMsg(instance_name_, oss.str());
             #endif
         }

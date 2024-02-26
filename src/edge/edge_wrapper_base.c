@@ -431,14 +431,7 @@ namespace covered
                     else
                     {
                         std::ostringstream oss;
-                        oss << "edge timeout to wait for InvalidationResponse for key " << key.getKeystr() << " from";
-                        for (std::unordered_map<uint32_t, bool>::const_iterator tmp_iter_for_debug = acked_flags.begin(); tmp_iter_for_debug != acked_flags.end(); tmp_iter_for_debug++)
-                        {
-                            if (!tmp_iter_for_debug->second)
-                            {
-                                oss << " edge " << tmp_iter_for_debug->first;
-                            }
-                        }
+                        oss << "edge timeout to wait for InvalidationResponse for key " << key.getKeyDebugstr() << " from " << Util::getAckedStatusStr(acked_flags, "edge");
                         Util::dumpWarnMsg(base_instance_name_, oss.str());
                         break; // Break to resend the remaining control requests not acked yet
                     }
@@ -525,19 +518,22 @@ namespace covered
 
         // Track whether notifictions to all closest edge nodes have been acknowledged
         uint32_t acked_edgecnt = 0;
-        std::unordered_map<NetworkAddr, bool, NetworkAddrHasher> acked_flags;
+        std::unordered_map<NetworkAddr, std::pair<bool, uint32_t>, NetworkAddrHasher> acked_flags; // NOTE: bool refers to whether ACK is received, while uint32_t refers to edge index for debugging if with timeout
         for (std::unordered_set<NetworkAddr, NetworkAddrHasher>::const_iterator iter_for_ackflag = blocked_edges.begin(); iter_for_ackflag != blocked_edges.end(); iter_for_ackflag++)
         {
-            acked_flags.insert(std::pair<NetworkAddr, bool>(*iter_for_ackflag, false));
+            const bool is_private_edge_ipstr = false; // NOTE: IP address for finishing blocking under MSI comes from directory lookup/update and acquire/release writelock requests, which MUST be public due to cross-edge communication
+            uint32_t tmp_dst_edge_idx = Util::getEdgeIdxFromCacheServerWorkerRecvreqAddr(*iter_for_ackflag, is_private_edge_ipstr, getNodeCnt());
+            
+            acked_flags.insert(std::pair<NetworkAddr, std::pair<bool, uint32_t>>(*iter_for_ackflag, std::pair(false, tmp_dst_edge_idx)));
         }
 
         // Issue all finish block requests simultaneously
         while (acked_edgecnt != blocked_edgecnt) // Timeout-and-retry mechanism
         {
             // Send (blocked_edgecnt - acked_edgecnt) control requests to the closest edge nodes that have not acknowledged notifications
-            for (std::unordered_map<NetworkAddr, bool, NetworkAddrHasher>::const_iterator iter_for_request = acked_flags.begin(); iter_for_request != acked_flags.end(); iter_for_request++)
+            for (std::unordered_map<NetworkAddr, std::pair<bool, uint32_t>, NetworkAddrHasher>::const_iterator iter_for_request = acked_flags.begin(); iter_for_request != acked_flags.end(); iter_for_request++)
             {
-                if (iter_for_request->second) // Skip the closest edge node that has acknowledged the notification
+                if (iter_for_request->second.first) // Skip the closest edge node that has acknowledged the notification
                 {
                     continue;
                 }
@@ -545,8 +541,7 @@ namespace covered
                 const NetworkAddr& tmp_edge_cache_server_worker_recvreq_dst_addr = iter_for_request->first; // cache server address of a blocked closest edge node
 
                 // NOTE: dst edge idx to finish blocking MUST NOT be the current local/remote beacon edge node, as requests on a being-written object MUST poll instead of block if sender is beacon
-                const bool is_private_edge_ipstr = false; // NOTE: IP address for finishing blocking under MSI comes from directory lookup/update and acquire/release writelock requests, which MUST be public due to cross-edge communication
-                uint32_t tmp_dst_edge_idx = Util::getEdgeIdxFromCacheServerWorkerRecvreqAddr(tmp_edge_cache_server_worker_recvreq_dst_addr, is_private_edge_ipstr, getNodeCnt());
+                const uint32_t tmp_dst_edge_idx = iter_for_request->second.second;
                 assert(tmp_dst_edge_idx != node_idx_);
    
                 // Issue finish block request to dst edge node
@@ -576,7 +571,7 @@ namespace covered
                     }
                     else
                     {
-                        Util::dumpWarnMsg(base_instance_name_, "edge timeout to wait for FinishBlockResponse");
+                        Util::dumpWarnMsg(base_instance_name_, "edge timeout to wait for FinishBlockResponse from " + Util::getAckedStatusStr(acked_flags, "edge"));
                         break; // Break to resend the remaining control requests not acked yet
                     }
                 } // End of (is_timeout == true)
@@ -593,11 +588,11 @@ namespace covered
 
                     // Mark the closest edge node has acknowledged the FinishBlockRequest
                     bool is_match = false;
-                    for (std::unordered_map<NetworkAddr, bool, NetworkAddrHasher>::iterator iter_for_response = acked_flags.begin(); iter_for_response != acked_flags.end(); iter_for_response++)
+                    for (std::unordered_map<NetworkAddr, std::pair<bool, uint32_t>, NetworkAddrHasher>::iterator iter_for_response = acked_flags.begin(); iter_for_response != acked_flags.end(); iter_for_response++)
                     {
                         if (iter_for_response->first == tmp_edge_cache_server_worker_recvreq_source_addr) // Match a blocked edge node
                         {
-                            assert(iter_for_response->second == false); // Original ack flag should be false
+                            assert(iter_for_response->second.first == false); // Original ack flag should be false
 
                             // Update total bandwidth usage for received finish block response
                             BandwidthUsage finish_block_response_bandwidth_usage = control_response_ptr->getBandwidthUsageRef();
@@ -609,7 +604,7 @@ namespace covered
                             event_list.addEvents(control_response_ptr->getEventListRef());
 
                             // Update ack information
-                            iter_for_response->second = true;
+                            iter_for_response->second.first = true;
                             acked_edgecnt += 1;
                             is_match = true;
                             break;

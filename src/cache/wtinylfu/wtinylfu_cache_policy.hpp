@@ -177,7 +177,7 @@ namespace covered
             if (lookup_map_const_iter != key_lookup_for_window_.end()) // Previous list and map entry exist
             {
                 std::ostringstream oss;
-                oss << "key " << key.getKeystr() << " already exists in key_lookup_for_window_ (window cache size: " << window_cache_.size() << ") for admit()";
+                oss << "key " << key.getKeyDebugstr() << " already exists in key_lookup_for_window_ (window cache size: " << window_cache_.size() << ") for admit()";
                 Util::dumpWarnMsg(kClassName, oss.str());
                 return;
             }
@@ -187,7 +187,7 @@ namespace covered
             if (is_local_cached)
             {
                 std::ostringstream oss;
-                oss << "key " << key.getKeystr() << " already exists in main_cache_ for admit()";
+                oss << "key " << key.getKeyDebugstr() << " already exists in main_cache_ for admit()";
                 Util::dumpWarnMsg(kClassName, oss.str());
                 return;
             }

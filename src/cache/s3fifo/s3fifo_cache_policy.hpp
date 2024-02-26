@@ -233,7 +233,7 @@ namespace covered
                 }
 
                 std::ostringstream oss;
-                oss << "key " << key.getKeystr() << " already exists in " << lookup_table_name << " (list size: " << queue_size << ") for admit()";
+                oss << "key " << key.getKeyDebugstr() << " already exists in " << lookup_table_name << " (list size: " << queue_size << ") for admit()";
                 Util::dumpWarnMsg(kClassName, oss.str());
                 return;
             }

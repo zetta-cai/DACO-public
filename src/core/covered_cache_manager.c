@@ -289,9 +289,7 @@ namespace covered
                 // NOTE: we perform placement calculation only when add/update a new local uncached popularity -> at least one local uncached popularity in the top-k list
                 // NOTE: getAggregatedUncachedPopularity() will check and deep copy aggregated uncache popularity atomically -> tmp_topk_list_length should > 0 if has_aggregated_uncached_popularity = true
                 std::ostringstream oss;
-                oss << "top-list length should > 0 if aggregated uncached popularity exists, yet is zero now when calculate placement for key " << key.getKeystr();
-                // TMPDEBUG24
-                oss << "; key intstr: " << key.getKeyIntstr();
+                oss << "top-list length should > 0 if aggregated uncached popularity exists, yet is zero now when calculate placement for key " << key.getKeyDebugstr();
                 Util::dumpErrorMsg(instance_name_, oss.str());
                 exit(1);
             }
@@ -476,7 +474,7 @@ namespace covered
                     }
                     else
                     {
-                        Util::dumpWarnMsg(instance_name_, "edge timeout to wait for CoveredVictimFetchResponse");
+                        Util::dumpWarnMsg(instance_name_, "edge timeout to wait for CoveredVictimFetchResponse from " + Util::getAckedStatusStr(acked_flags, "edge"));
                         break; // Break to resend the remaining control requests not acked yet
                     }
                 } // End of (is_timeout == true)

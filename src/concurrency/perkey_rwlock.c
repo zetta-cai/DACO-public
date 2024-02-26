@@ -91,7 +91,7 @@ namespace covered
 
             #ifdef DEBUG_PERKEY_RWLOCK
             std::ostringstream oss;
-            oss << "acquire a read lock for key " << key.getKeystr() << " with rwlock_index " << rwlock_index << " in " << context_name;
+            oss << "acquire a read lock for key " << key.getKeyDebugstr() << " with rwlock_index " << rwlock_index << " in " << context_name;
             Util::dumpDebugMsg(instance_name_, oss.str());
             #endif
         }
@@ -110,7 +110,7 @@ namespace covered
 
         #ifdef DEBUG_PERKEY_RWLOCK
         std::ostringstream oss;
-        oss << "release a read lock for key " << key.getKeystr() << " with rwlock_index " << rwlock_index << " in " << context_name;
+        oss << "release a read lock for key " << key.getKeyDebugstr() << " with rwlock_index " << rwlock_index << " in " << context_name;
         Util::dumpDebugMsg(instance_name_, oss.str());
         #endif
 
@@ -147,7 +147,7 @@ namespace covered
 
             #ifdef DEBUG_PERKEY_RWLOCK
             std::ostringstream oss;
-            oss << "acquire a write lock for key " << key.getKeystr() << " with rwlock_index " << rwlock_index << " in " << context_name;
+            oss << "acquire a write lock for key " << key.getKeyDebugstr() << " with rwlock_index " << rwlock_index << " in " << context_name;
             Util::dumpDebugMsg(instance_name_, oss.str());
             #endif
         }
@@ -166,7 +166,7 @@ namespace covered
         
         #ifdef DEBUG_PERKEY_RWLOCK
         std::ostringstream oss;
-        oss << "release a write lock for key " << key.getKeystr() << " with rwlock_index " << rwlock_index << " in " << context_name;
+        oss << "release a write lock for key " << key.getKeyDebugstr() << " with rwlock_index " << rwlock_index << " in " << context_name;
         Util::dumpDebugMsg(instance_name_, oss.str());
         #endif
 
