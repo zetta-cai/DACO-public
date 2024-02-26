@@ -115,8 +115,10 @@ namespace covered
     const std::string Config::TRACE_DIRPATH_KEYSTR("trace_dirpath");
     const std::string Config::TRACE_DIRPATH_RELATIVE_WIKIIMAGE_TRACE_FILEPATHS_KEYSTR("trace_dirpath_relative_wikiimage_trace_filepaths");
     const std::string Config::TRACE_DIRPATH_RELATIVE_WIKITEXT_TRACE_FILEPATHS_KEYSTR("trace_dirpath_relative_wikitext_trace_filepaths");
+    const std::string Config::TRACE_WIKIIMAGE_DATASET_SAMPLE_RATIO_KEYSTR("trace_wikiimage_dataset_sample_ratio");
     const std::string Config::TRACE_WIKIIMAGE_KEYCNT_KEYSTR("trace_wikiimage_keycnt");
     const std::string Config::TRACE_WIKIIMAGE_TOTAL_OPCNT_KEYSTR("trace_wikiimage_total_opcnt");
+    const std::string Config::TRACE_WIKITEXT_DATASET_SAMPLE_RATIO_KEYSTR("trace_wikitext_dataset_sample_ratio");
     const std::string Config::TRACE_WIKITEXT_KEYCNT_KEYSTR("trace_wikitext_keycnt");
     const std::string Config::TRACE_WIKITEXT_TOTAL_OPCNT_KEYSTR("trace_wikitext_total_opcnt");
     const std::string Config::VERSION_KEYSTR("version");
@@ -178,8 +180,10 @@ namespace covered
     std::string Config::trace_dirpath_("data");
     std::vector<std::string> Config::wikiimage_trace_filepaths_(0);
     std::vector<std::string> Config::wikitext_trace_filepaths_(0);
+    double Config::trace_wikiimage_dataset_sample_ratio_ = 0.01;
     uint32_t Config::trace_wikiimage_keycnt_ = 0;
     uint32_t Config::trace_wikiimage_total_opcnt_ = 0;
+    double Config::trace_wikitext_dataset_sample_ratio_ = 0.01;
     uint32_t Config::trace_wikitext_keycnt_ = 0;
     uint32_t Config::trace_wikitext_total_opcnt_ = 0;
     std::string Config::version_("1.0");
@@ -427,6 +431,11 @@ namespace covered
                         wikitext_trace_filepaths_.push_back(trace_dirpath_ + "/" + trace_dirpath_relative_wikitext_trace_filepath);
                     }
                 }
+                kv_ptr = find_(TRACE_WIKIIMAGE_DATASET_SAMPLE_RATIO_KEYSTR);
+                if (kv_ptr != NULL)
+                {
+                    trace_wikiimage_dataset_sample_ratio_ = kv_ptr->value().get_double();
+                }
                 kv_ptr = find_(TRACE_WIKIIMAGE_KEYCNT_KEYSTR);
                 if (kv_ptr != NULL)
                 {
@@ -438,6 +447,11 @@ namespace covered
                 {
                     int64_t tmp_opcnt = kv_ptr->value().get_int64();
                     trace_wikiimage_total_opcnt_ = Util::toUint32(tmp_opcnt);
+                }
+                kv_ptr = find_(TRACE_WIKITEXT_DATASET_SAMPLE_RATIO_KEYSTR);
+                if (kv_ptr != NULL)
+                {
+                    trace_wikitext_dataset_sample_ratio_ = kv_ptr->value().get_double();
                 }
                 kv_ptr = find_(TRACE_WIKITEXT_KEYCNT_KEYSTR);
                 if (kv_ptr != NULL)
@@ -870,9 +884,55 @@ namespace covered
         return wikitext_trace_filepaths_;
     }
 
+    double Config::getTraceDatasetSampleRatio(const std::string& workload_name)
+    {
+        checkIsValid_();
+
+        // NOTE: dataset sample ratio ONLY works for replayed traces, as non-replayed traces can directly change dataset sizes
+        if (!Util::isReplayedWorkload(workload_name))
+        {
+            std::ostringstream oss;
+            oss << "dataset sample ratio is only for replayed traces, yet workload " << workload_name << " is non-replayed!";
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
+
+        // NOTE: NOT use static variables in Util module due to undefined order of static variable initialization in C++
+        double dataset_sample_ratio = 0.0;
+        if (workload_name == "wikiimage")
+        {
+            dataset_sample_ratio = trace_wikiimage_dataset_sample_ratio_;
+        }
+        else if (workload_name == "wikitext")
+        {
+            dataset_sample_ratio = trace_wikitext_dataset_sample_ratio_;
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "please run trace_preprocessor and update config.json for " << workload_name << "!";
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
+
+        assert(dataset_sample_ratio > 0);
+        assert(dataset_sample_ratio <= 1.0);
+
+        return dataset_sample_ratio;
+    }
+
     uint32_t Config::getTraceKeycnt(const std::string& workload_name)
     {
         checkIsValid_();
+
+        // NOTE: keycnt in config.json ONLY works for replayed traces, as non-replayed traces get dataset size from CLI module
+        if (!Util::isReplayedWorkload(workload_name))
+        {
+            std::ostringstream oss;
+            oss << "keycnt in config.json is only for replayed traces, yet workload " << workload_name << " is non-replayed!";
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
 
         // NOTE: NOT use static variables in Util module due to undefined order of static variable initialization in C++
         if (workload_name == "wikiimage")
@@ -895,6 +955,15 @@ namespace covered
     uint32_t Config::getTraceTotalOpcnt(const std::string& workload_name)
     {
         checkIsValid_();
+
+        // NOTE: total opcnt in config.json ONLY works for replayed traces, as non-replayed traces get total opcnt from CLI module
+        if (!Util::isReplayedWorkload(workload_name))
+        {
+            std::ostringstream oss;
+            oss << "total opcnt in config.json is only for replayed traces, yet workload " << workload_name << " is non-replayed!";
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
 
         // NOTE: NOT use static variables in Util module due to undefined order of static variable initialization in C++
         if (workload_name == "wikiimage")
@@ -1121,7 +1190,7 @@ namespace covered
         oss << "Propagation item buffer size from edge to cloud: " << propagation_item_buffer_size_edge_tocloud_ << std::endl;
         oss << "Propagation item buffer size from cloud to edge: " << propagation_item_buffer_size_cloud_toedge_ << std::endl;
         oss << "Trace dirpath: " << trace_dirpath_ << std::endl;
-        oss << "Wikiimage trace filepaths: ";
+        oss << "Wikiimage trace filepaths (unsampled traces): ";
         for (uint32_t i = 0; i < wikiimage_trace_filepaths_.size(); i++)
         {
             oss << wikiimage_trace_filepaths_[i];
@@ -1134,7 +1203,7 @@ namespace covered
                 oss << std::endl;
             }
         }
-        oss << "Wikitext trace filepaths: ";
+        oss << "Wikitext trace filepaths (unsampled traces): ";
         for (uint32_t i = 0; i < wikitext_trace_filepaths_.size(); i++)
         {
             oss << wikitext_trace_filepaths_[i];
@@ -1147,8 +1216,10 @@ namespace covered
                 oss << std::endl;
             }
         }
+        oss << "Trae wikiimage dataset sample ratio: " << trace_wikiimage_dataset_sample_ratio_ << std::endl;
         oss << "Trace wikiimage keycnt: " << trace_wikiimage_keycnt_ << std::endl;
         oss << "Trace wikiimage total opcnt: " << trace_wikiimage_total_opcnt_ << std::endl;
+        oss << "Trace wikitext dataset sample ratio: " << trace_wikitext_dataset_sample_ratio_ << std::endl;
         oss << "Trace wikitext keycnt: " << trace_wikitext_keycnt_ << std::endl;
         oss << "Trace wikitext total opcnt: " << trace_wikitext_total_opcnt_ << std::endl;
         oss << "Version: " << version_ << std::endl;

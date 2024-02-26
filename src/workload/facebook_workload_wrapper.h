@@ -1,5 +1,5 @@
 /*
- * FacebookWorkloadWrapper: encapsulate the config parser and workload generator in cachebench for Facebook/Meta CDN trace (https://cachelib.org/docs/Cache_Library_User_Guides/Cachebench_Overview/) (thread safe).
+ * FacebookWorkloadWrapper: encapsulate the config parser and workload generator (generate keycnt dataset key-value pairs with Util::DATASET_KVPAIR_GENERATION_SEED as the seed and opcnt/clientcnt workload requests/items with client_idx as the seed) in cachebench for Facebook/Meta CDN trace (https://cachelib.org/docs/Cache_Library_User_Guides/Cachebench_Overview/) (thread safe).
  * 
  * NOTE: CacheBench generates workload items by the following random seeds.
  * -> We use Util::DATASET_KVPAIR_GENERATION_SEED as deterministic seed to generate the same key-value pairs (i.e., dataset) for all clients.
