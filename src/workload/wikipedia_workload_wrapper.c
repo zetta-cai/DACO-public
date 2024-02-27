@@ -79,13 +79,7 @@ namespace covered
 
             if (is_achieve_max_eval_workload_loadcnt)
             {
-                assert(needWorkloadItems_()); // Must be clients for evaluation
-                assert(getTotalWorkloadOpcntRef_() == 0);
-
-                oss.clear();
-                oss.str("");
-                oss << "achieve max workload load cnt for evaluation: " << getMaxEvalWorkloadLoadcnt_() << "; # of loaded operations: " << getEvalWorkloadOpcntRef_() << "; current client workload size: " << getCurclientWorkloadKeysConstRef_().size();
-                Util::dumpNormalMsg(instance_name_, oss.str());
+                dumpInfoIfAchieveMaxLoadCnt_();
                 break;
             }
         } // End of trace files

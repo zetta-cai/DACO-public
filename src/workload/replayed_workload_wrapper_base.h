@@ -65,7 +65,7 @@ namespace covered
         std::unordered_map<Key, uint32_t, KeyHasher> dataset_lookup_table_; // Fast indexing for dataset key-value pairs (will be sampled if sample ratio < 1.0)
         std::vector<std::pair<Key, Value>> dataset_kvpairs_; // Key-value pairs of dataset (will be sampled if sample ratio < 1.0)
         // (3) For role of clients during evaluation
-        std::unordered_map<Key, Value, KeyHasher> curclient_partial_dataset_kvmap_; // Key-value map of partial dataset accessed by workload in current client (compare with original value sizes for workload item types)
+        std::unordered_map<Key, Value, KeyHasher> curclient_partial_dataset_kvmap_; // Key-value map of partial dataset accessed by workload in current client (compare with original value sizes for workload item types; ONLY used by clients to calculate coded value sizes, if load partial trace files under sample ratio of 1.0)
         std::vector<Key> curclient_workload_keys_; // Keys of workload in the current client
         std::vector<int> curclient_workload_value_sizes_; // Value sizes of workload in the current client (< 0: read; = 0: delete; > 0: write)
         uint32_t eval_workload_opcnt_; // Evaluation opcnt of workloads in all clients
@@ -75,33 +75,35 @@ namespace covered
     protected:
         // Helper functions (ONLY for replayed traces)
 
-        // (1) For role of preprocessor, dataset loader, and cloud
-
-        uint32_t& getTotalWorkloadOpcntRef_();
-        const std::vector<Key>& getCurclientWorkloadKeysConstRef_() const;
-        uint32_t& getEvalWorkloadOpcntRef_();
-
-        // (2) For role of trace preprocessor
+        // (1) For role of trace preprocessor
 
         void verifyDatasetAndWorkloadAbsenceForPreprocessor_(); // Dataset and workload file (if sample ratio < 1) should NOT exist
-        void sampleDatasetAndWorkload_(); // Sample dataset and total workload items (if sample ratio < 1.0)
-        void sampleDatasetInternal_(); // Sample dataset items under sample ratio < 1.0 (update dataset_kvpairs_ and dataset_lookup_table_)
+        void sampleDatasetAndWorkload_(); // Sample dataset and total workload items (if sample ratio < 1.0; will update dataset_kvpairs_, dataset_lookup_table_, dataset statistics, total_workload_keys_, total_workload_value_sizes_, and total_workload_opcnt_)
+        void sampleDatasetInternal_(); // Sample dataset items under sample ratio < 1.0 (update dataset_kvpairs_, dataset_lookup_table_, and dataset statistics)
+        void sampleWorkloadInternal_(); // Sample total workload items under sample ratio < 1.0 (update total_workload_keys_, total_workload_value_sizes_, and total_workload_opcnt_)
         uint32_t dumpDatasetFile_() const; // Dump dataset key-value pairs into dataset file; return dataset file size (in units of bytes)
+        uint32_t dumpWorkloadFile_() const; // Dump total workload key-value pairs into workload file; return workload file size (in units of bytes)
 
-        // (3) For role of dataset loader and cloud
+        // (2) For role of dataset loader and cloud
 
         uint32_t loadDatasetFile_(); // Load dataset key-value pairs to update dataset_kvpairs_, dataset_lookup_table_, and dataset statistics; return dataset file size (in units of bytes)
 
-        // (4) For role of cloud for warmup speedup
+        // (3) For role of cloud for warmup speedup
 
         void quickDatasetGet_(const Key& key, Value& value) const;
         void quickDatasetPut_(const Key& key, const Value& value);
         void quickDatasetDel_(const Key& key);
 
+        // (4) For role of clients during evaluation
+
+        uint32_t loadWorkloadFile_(); // Load total workload key-value pairs to update curclient_workload_keys_, curclient_workload_value_sizes_, and eval_workload_opcnt_ (NO need curclient_partial_dataset_kvmap_); return partial workload file size (in units of bytes)
+        void dumpInfoIfAchieveMaxLoadCnt_() const; // Dump info if clients achieve max evaluation workload loadcnt
+
         // (5) Common utilities
 
-        bool updateDatasetOrWorkload_(const Key& key, const Value& value); // Update dataset (from all trace files or dataset file) or workload (from partial trace files or workload file) with the key-value pair (return true if clients achieve max evaluation workload loadcnt)
+        bool updateDatasetOrWorkload_(const Key& key, const Value& value); // Update dataset (from all trace files or dataset file) or workload (from partial trace files or partial workload file) with the key-value pair (return true if clients achieve max evaluation workload loadcnt)
         void updateDatasetStatistics_(const Key& key, const Value& value, const uint32_t& original_dataset_size); // Update dataset statistics (e.g., average/min/max dataset key/value size)
+        void resetDatasetStatistics_(); // Reset dataset statistics (e.g., average/min/max dataset key/value size) for sampling
     };
 }
 

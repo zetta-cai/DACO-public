@@ -25,12 +25,7 @@ namespace covered
         total_workload_value_sizes_.clear();
 
         // For role of preprocessor, dataset loader, and cloud
-        average_dataset_keysize_ = 0;
-        average_dataset_valuesize_ = 0;
-        min_dataset_keysize_ = 0;
-        min_dataset_valuesize_ = 0;
-        max_dataset_keysize_ = 0;
-        max_dataset_valuesize_ = 0;
+        resetDatasetStatistics_();
         dataset_lookup_table_.clear();
         dataset_kvpairs_.clear();
 
@@ -124,23 +119,34 @@ namespace covered
 
             parseTraceFiles_(); // Update dataset and total workload (if sample ratio < 1.0) for trace preprocessor
 
-            // Sample dataset and total workload (if sample ratio < 1.0)
+            // Sample dataset and total workload (if sample ratio < 1.0; will update dataset_kvpairs_, dataset_lookup_table_, dataset statistics, total_workload_keys_, total_workload_value_sizes_, and total_workload_opcnt_)
             sampleDatasetAndWorkload_();
 
             // Dump dataset file by trace preprocessor for dataset loader and cloud
             const uint32_t dataset_filesize = dumpDatasetFile_();
-
-            // TODO: Dump sampled workload file (if sample ratio < 1.0)
-
             std::ostringstream oss;
             oss << "dump dataset file (" << dataset_filesize << " bytes) for workload " << getWorkloadName_();
             Util::dumpNormalMsg(base_instance_name_, oss.str());
+
+            // Dump sampled workload file (if sample ratio < 1.0)
+            if (dataset_sample_ratio_ < 1.0)
+            {
+                const uint32_t workload_filesize = dumpWorkloadFile_();
+                oss.clear();
+                oss.str("");
+                oss << "dump workload file (" << workload_filesize << " bytes) for workload " << getWorkloadName_();
+                Util::dumpNormalMsg(base_instance_name_, oss.str());
+            }
         }
         else if (needWorkloadItems_()) // Need partial trace files for workload items (clients)
         {
             if (dataset_sample_ratio_ < 1.0)
             {
-                // TODO: Load sampled workload file
+                const uint32_t workload_filesize = loadWorkloadFile_(); // Load partial workload file for clients (will update curclient_workload_keys_, curclient_workload_value_sizes_, and eval_workload_opcnt_; NO need curclient_partial_dataset_kvmap_)
+                
+                std::ostringstream oss;
+                oss << "load partial workload file (" << workload_filesize << " bytes) for workload " << getWorkloadName_();
+                Util::dumpNormalMsg(base_instance_name_, oss.str());
             }
             else
             {
@@ -290,34 +296,7 @@ namespace covered
         return;
     }
 
-    // (1) For role of preprocessor, dataset loader, and cloud
-
-    uint32_t& ReplayedWorkloadWrapperBase::getTotalWorkloadOpcntRef_()
-    {
-        // For role of preprocessor
-        assert(Util::isReplayedWorkload(getWorkloadName_()));
-        assert(needAllTraceFiles_);
-
-        return total_workload_opcnt_;
-    }
-
-    const std::vector<Key>& ReplayedWorkloadWrapperBase::getCurclientWorkloadKeysConstRef_() const
-    {
-        // For role of clients during evaluation
-        assert(needWorkloadItems_());
-
-        return curclient_workload_keys_;
-    }
-
-    uint32_t& ReplayedWorkloadWrapperBase::getEvalWorkloadOpcntRef_()
-    {
-        // For role of clients during evaluation
-        assert(needWorkloadItems_());
-
-        return eval_workload_opcnt_;
-    }
-
-    // (2) For role of preprocessor
+    // (1) For role of preprocessor
 
     void ReplayedWorkloadWrapperBase::verifyDatasetAndWorkloadAbsenceForPreprocessor_()
     {
@@ -375,10 +354,15 @@ namespace covered
         }
         else if (dataset_sample_ratio_ > 0.0 && dataset_sample_ratio_ < 1.0) // Need sampling for dataset and workload items
         {
-            // Sample dataset kvpairs (will update dataset_kvpairs_ and dataset_lookup_table_)
+            std::ostringstream oss;
+            oss << "Sample dataset and workload items with sample ratio " << dataset_sample_ratio_;
+            Util::dumpNormalMsg(base_instance_name_, oss.str());
+
+            // Sample dataset kvpairs (will update dataset_kvpairs_, dataset_lookup_table_, and dataset statistics)
             sampleDatasetInternal_();
 
-            // TODO: Sample workload items (will update total_workload_keys_ and total_workload_value_sizes_)
+            // Sample workload items (will update total_workload_keys_, total_workload_value_sizes_, and total_workload_opcnt_)
+            sampleWorkloadInternal_();
         }
         else
         {
@@ -393,6 +377,10 @@ namespace covered
 
     void ReplayedWorkloadWrapperBase::sampleDatasetInternal_()
     {
+        assert(dataset_sample_ratio_ > 0.0 && dataset_sample_ratio_ < 1.0);
+
+        resetDatasetStatistics_(); // Reset dataset statistics for sampling
+
         // Approach 1: use std::bernoulli_distribution with probability of dataset_sample_ratio to make a decision for each dataset item -> after n independent trials (time complexity is O(n)), will finally get dataset_sample_ratio items
 
         // Approach 2: use std::shuffle to randomly rearrange the order of dataset kvpairs, and then choose the first dataset_sample_ratio items -> time complexity of std::shuffle is O(n), which needs to generate n random numbers to swap items from end to begin of dataset kvpairs
@@ -420,6 +408,9 @@ namespace covered
                 assert(tmp_sampled_dataset_lookup_table.find(tmp_key) == tmp_sampled_dataset_lookup_table.end());
                 tmp_sampled_dataset_lookup_table.insert(std::pair(tmp_key, prev_sampled_dataset_kvpairs_size));
 
+                // Update dataset statistics for sampled dataset items
+                updateDatasetStatistics_(tmp_key, tmp_dataset_kvpair.second, prev_sampled_dataset_kvpairs_size);
+
                 // Check if achieve sampled dataset size
                 if (tmp_sampled_dataset_kvpairs.size() >= sampled_dataset_kvpairs_size)
                 {
@@ -441,18 +432,60 @@ namespace covered
         return;
     }
 
+    void ReplayedWorkloadWrapperBase::sampleWorkloadInternal_()
+    {
+        assert(dataset_sample_ratio_ > 0.0 && dataset_sample_ratio_ < 1.0);
+
+        total_workload_opcnt_ = 0; // Reset total workload opcnt for sampling
+
+        // NOTE: dataset_kvpairs_ and dataset_lookup_table_ have already been sampled by sampledDatasetInternal_() before this function
+
+        // Choose workload items based on sampled dataset kvpairs
+        std::vector<Key> sampled_total_workload_keys;
+        std::vector<int> sampled_total_workload_value_sizes;
+        assert(total_workload_keys_.size() == total_workload_value_sizes_.size());
+        for (uint32_t i = 0; i < total_workload_keys_.size(); i++)
+        {
+            const Key& tmp_key = total_workload_keys_[i];
+            std::unordered_map<Key, uint32_t, KeyHasher>::const_iterator tmp_iter = dataset_lookup_table_.find(tmp_key);
+            if (tmp_iter != dataset_lookup_table_.end()) // Key exists in sampled dataset kvpairs
+            {
+                // Update sampled total workload keys and value sizes
+                sampled_total_workload_keys.push_back(tmp_key);
+                sampled_total_workload_value_sizes.push_back(total_workload_value_sizes_[i]);
+
+                // Update total workload opcnt
+                total_workload_opcnt_ += 1;
+            }
+        }
+
+        // Replace original total workload keys
+        total_workload_keys_.clear();
+        total_workload_keys_ = sampled_total_workload_keys;
+        sampled_total_workload_keys.clear();
+
+        // Replace original total workload value sizes
+        total_workload_value_sizes_.clear();
+        total_workload_value_sizes_ = sampled_total_workload_value_sizes;
+        sampled_total_workload_value_sizes.clear();
+
+        return;
+    }
+
     uint32_t ReplayedWorkloadWrapperBase::dumpDatasetFile_() const
     {
         assert(Util::isReplayedWorkload(getWorkloadName_()));
         assert(needAllTraceFiles_()); // Trace preprocessor
 
-        const std::string tmp_dataset_filepath = Util::getDatasetFilepath(getWorkloadName_());
-        assert(!Util::isFileExist(tmp_dataset_filepath, true)); // Must NOT exist (already verified by verifyDatasetFile_() before)
+        assert(dataset_sample_ratio_ > 0.0 && dataset_sample_ratio_ <= 1.0); // NOTE: even if without sampling (i.e., dataset_sample_ratio_ == 1.0), we still need to dump dataset file for dataset loader and cloud (to avoid re-parsing all trace files for each client and cloud)
+
+        const std::string tmp_dataset_filepath = Util::getSampledDatasetFilepath(getWorkloadName_());
+        assert(!Util::isFileExist(tmp_dataset_filepath, true)); // Must NOT exist (already verified by verifyDatasetAndWorkloadFile_() before)
 
         // Create and open a binary file for dumping dataset by trace preprocessor
         // NOTE: trace preprocessor is a single-thread program and hence ONLY one dataset file will be created for each given workload
         std::ostringstream oss;
-        oss << "open file " << tmp_dataset_filepath << " for dumping dataset of " << getWorkloadName_();
+        oss << "open file " << tmp_dataset_filepath << " for dumping sampled dataset of " << getWorkloadName_() << " with sample ratio " << dataset_sample_ratio_;
         Util::dumpNormalMsg(base_instance_name_, oss.str());
         std::fstream* fs_ptr = Util::openFile(tmp_dataset_filepath, std::ios_base::out | std::ios_base::binary);
         assert(fs_ptr != NULL);
@@ -492,30 +525,80 @@ namespace covered
         return size - 0;
     }
 
-    // (1.3) For role of dataset loader and cloud (ONLY for replayed traces)
+    uint32_t ReplayedWorkloadWrapperBase::dumpWorkloadFile_() const
+    {
+        assert(Util::isReplayedWorkload(getWorkloadName_()));
+        assert(needAllTraceFiles_()); // Trace preprocessor
+
+        assert(dataset_sample_ratio_ > 0.0 && dataset_sample_ratio_ < 1.0); // NOTE: we do NOT need to sample workload items and dump workload file if without sampling (i.e., dataset_sample_ratio_ == 1.0), as clients can directly load partial trace files for evaluation
+
+        const std::string tmp_workload_filepath = Util::getSampledWorkloadFilepath(getWorkloadName_());
+        assert(!Util::isFileExist(tmp_workload_filepath, true)); // Must NOT exist (already verified by verifyDatasetAndWorkloadFile_() before)
+
+        // Create and open a binary file for dumping sampled workload items by trace preprocessor
+        // NOTE: trace preprocessor is a single-thread program and hence ONLY one workload file will be created for each given workload
+        std::ostringstream oss;
+        oss << "open file " << tmp_workload_filepath << " for dumping sampled workload items of " << getWorkloadName_() << " with sample ratio " << dataset_sample_ratio_;
+        Util::dumpNormalMsg(base_instance_name_, oss.str());
+        std::fstream* fs_ptr = Util::openFile(tmp_workload_filepath, std::ios_base::out | std::ios_base::binary);
+        assert(fs_ptr != NULL);
+
+        // Dump key-value pairs of dataset
+        // Format: sampled workload size, key, coded value size, key coded value size, ...
+        uint32_t size = 0;
+        // (0) sampled workload size
+        const uint32_t sampled_workload_size = total_workload_keys_.size();
+        assert(sampled_workload_size > 0);
+        fs_ptr->write((const char*)&sampled_workload_size, sizeof(uint32_t));
+        size += sizeof(uint32_t);
+        // (1) key-valuesize pairs
+        for (uint32_t i = 0; i < sampled_workload_size; i++)
+        {
+            // Key
+            const Key& tmp_key = total_workload_keys_[i];
+            DynamicArray tmp_dynamic_array_for_key(tmp_key.getKeyPayloadSize());
+            const uint32_t key_serialize_size = tmp_key.serialize(tmp_dynamic_array_for_key, 0);
+            tmp_dynamic_array_for_key.writeBinaryFile(0, fs_ptr, key_serialize_size);
+            size += key_serialize_size;
+
+            // Coded value size (< 0: read; = 0: delete; > 0: write)
+            const int tmp_coded_value_size = total_workload_value_sizes_[i];
+            fs_ptr->write((const char*)&tmp_coded_value_size, sizeof(int));
+            size += sizeof(int);
+        }
+
+        // Close file and release ofstream
+        fs_ptr->close();
+        delete fs_ptr;
+        fs_ptr = NULL;
+
+        return size - 0;
+    }
+
+    // (2) For role of dataset loader and cloud (ONLY for replayed traces)
 
     uint32_t ReplayedWorkloadWrapperBase::loadDatasetFile_()
     {
         assert(Util::isReplayedWorkload(getWorkloadName_()));
         assert(getWorkloadUsageRole_() == WORKLOAD_USAGE_ROLE_LOADER || getWorkloadUsageRole_() == WORKLOAD_USAGE_ROLE_CLOUD); // dataset loader and cloud
 
-        const std::string tmp_dataset_filepath = Util::getDatasetFilepath(getWorkloadName_());
+        const std::string tmp_sampled_dataset_filepath = Util::getSampledDatasetFilepath(getWorkloadName_());
 
-        bool is_exist = Util::isFileExist(tmp_dataset_filepath, true);
+        bool is_exist = Util::isFileExist(tmp_sampled_dataset_filepath, true);
         if (!is_exist)
         {
             // File does not exist
             std::ostringstream oss;
-            oss << "dataset file " << tmp_dataset_filepath << " does not exist -> please run trace_preprocessor before dataset loader and evaluation!";
+            oss << "dataset file " << tmp_sampled_dataset_filepath << " does not exist -> please run trace_preprocessor before dataset loader and evaluation!";
             Util::dumpErrorMsg(base_instance_name_, oss.str());
             exit(1);
         }
 
-        // Open the existing binary file for total aggregated statistics
+        // Open the existing binary file for sampled dataset items
         std::ostringstream oss;
-        oss << "open file " << tmp_dataset_filepath << " for loading dataset of " << getWorkloadName_();
+        oss << "open file " << tmp_sampled_dataset_filepath << " for loading dataset of " << getWorkloadName_();
         Util::dumpNormalMsg(base_instance_name_, oss.str());
-        std::fstream* fs_ptr = Util::openFile(tmp_dataset_filepath, std::ios_base::in | std::ios_base::binary);
+        std::fstream* fs_ptr = Util::openFile(tmp_sampled_dataset_filepath, std::ios_base::in | std::ios_base::binary);
         assert(fs_ptr != NULL);
 
         // Load dataset key-value pairs from dataset file
@@ -552,7 +635,7 @@ namespace covered
         return size - 0;
     }
 
-    // (1.4) For role of cloud for warmup speedup (ONLY for replayed traces)
+    // (3) For role of cloud for warmup speedup (ONLY for replayed traces)
 
     void ReplayedWorkloadWrapperBase::quickDatasetGet_(const Key& key, Value& value) const
     {
@@ -597,7 +680,88 @@ namespace covered
         return;
     }
 
-    // (1.5) Common utilities (ONLY for replayed traces)
+    // (4) For role of clients during evaluation
+
+    uint32_t ReplayedWorkloadWrapperBase::loadWorkloadFile_()
+    {
+        assert(Util::isReplayedWorkload(getWorkloadName_()));
+        assert(needWorkloadItems_()); // clients for evaluation
+
+        const std::string tmp_sampled_workload_filepath = Util::getSampledWorkloadFilepath(getWorkloadName_());
+
+        bool is_exist = Util::isFileExist(tmp_sampled_workload_filepath, true);
+        if (!is_exist)
+        {
+            // File does not exist
+            std::ostringstream oss;
+            oss << "sampled workload file " << tmp_sampled_workload_filepath << " does not exist -> please run trace_preprocessor before dataset loader and evaluation!";
+            Util::dumpErrorMsg(base_instance_name_, oss.str());
+            exit(1);
+        }
+
+        // Open the existing binary file for sampled workload items
+        std::ostringstream oss;
+        oss << "open file " << tmp_sampled_workload_filepath << " for loading sampled workload items of " << getWorkloadName_();
+        Util::dumpNormalMsg(base_instance_name_, oss.str());
+        std::fstream* fs_ptr = Util::openFile(tmp_sampled_workload_filepath, std::ios_base::in | std::ios_base::binary);
+        assert(fs_ptr != NULL);
+
+        // Load sampled workload key-valuesize pairs from dataset file
+        // Format: sampled workload size, key, coded value size, key, coded value size, ...
+        uint32_t size = 0;
+        // (0) sampled workload size
+        uint32_t sampled_workload_size = 0;
+        fs_ptr->read((char *)&sampled_workload_size, sizeof(uint32_t));
+        size += sizeof(uint32_t);
+        // (1) key-valuesize pairs
+        for (uint32_t i = 0; i < sampled_workload_size; i++)
+        {
+            // Key
+            Key tmp_key;
+            uint32_t key_deserialize_size = tmp_key.deserialize(fs_ptr);
+            size += key_deserialize_size;
+
+            // Coded value size
+            int tmp_coded_value_size = -1;
+            fs_ptr->read((char *)&tmp_coded_value_size, sizeof(int));
+            size += sizeof(int);
+
+            // Update current client workload key-value pairs
+            curclient_workload_keys_.push_back(tmp_key);
+            curclient_workload_value_sizes_.push_back(tmp_coded_value_size);
+
+            // Check per-client-worker max workload loadcnt limitation
+            eval_workload_opcnt_ += 1; // NOTE: update eval opcnt for clients during evaluation
+            if (eval_workload_opcnt_ >= getMaxEvalWorkloadLoadcnt_()) // Clients for evaluation
+            {
+                dumpInfoIfAchieveMaxLoadCnt_();
+                break; // Stop parsing trace files
+            }
+        }
+
+        // Close file and release ofstream
+        fs_ptr->close();
+        delete fs_ptr;
+        fs_ptr = NULL;
+
+        // NOTE: NO need curclient_partial_dataset_kvmap_
+        assert(curclient_partial_dataset_kvmap_.size() == 0);
+
+        return size - 0;
+    }
+
+    void ReplayedWorkloadWrapperBase::dumpInfoIfAchieveMaxLoadCnt_() const
+    {
+        assert(needWorkloadItems_()); // Must be clients for evaluation
+        assert(total_workload_opcnt_ == 0); // Clients will update eval workload opcnt instead of total workload opcnt (ONLY used by trace preprocessor)
+
+        std::ostringstream oss;
+        oss << "achieve max workload load cnt for evaluation: " << getMaxEvalWorkloadLoadcnt_() << "; # of loaded operations: " << eval_workload_opcnt_ << "; current client workload size: " << curclient_workload_keys_.size();
+        Util::dumpNormalMsg(base_instance_name_, oss.str());
+        return;
+    }
+
+    // (5) Common utilities (ONLY for replayed traces)
 
     bool ReplayedWorkloadWrapperBase::updateDatasetOrWorkload_(const Key& key, const Value& value)
     {
@@ -618,7 +782,7 @@ namespace covered
             }
             assert(tmp_dataset_lookup_table_iter != dataset_lookup_table_.end());
 
-            if (needAllTraceFiles_) // Trace preprocessor
+            if (needAllTraceFiles_()) // Trace preprocessor
             {
                 total_workload_opcnt_ += 1; // NOTE: update total opcnt for trace preprocessing
 
@@ -640,9 +804,9 @@ namespace covered
                 }
             }
         }
-        else if (needWorkloadItems_()) // Clients (partial trace files or workload file) for evaluation phase
+        else if (needWorkloadItems_()) // Clients (partial trace files or partial workload file) for evaluation phase
         {
-            // NOTE: ONLY consider corresponding data lines from partial trace files, or corresponding workload items from workload file
+            // NOTE: ONLY consider corresponding data lines from partial trace files, or corresponding workload items from partial workload file
             if (eval_workload_opcnt_ % getClientcnt_() == getClientIdx_()) // The current key-value pair is partitioned to the current client
             {
                 std::unordered_map<Key, Value, KeyHasher>::iterator tmp_partial_dataset_kvmap_iter = curclient_partial_dataset_kvmap_.find(key);
@@ -707,6 +871,18 @@ namespace covered
             max_dataset_keysize_ = std::max(max_dataset_keysize_, key.getKeyLength());
             max_dataset_valuesize_ = std::max(max_dataset_valuesize_, value.getValuesize());
         }
+
+        return;
+    }
+
+    void ReplayedWorkloadWrapperBase::resetDatasetStatistics_()
+    {
+        average_dataset_keysize_ = 0;
+        average_dataset_valuesize_ = 0;
+        min_dataset_keysize_ = 0;
+        min_dataset_valuesize_ = 0;
+        max_dataset_keysize_ = 0;
+        max_dataset_valuesize_ = 0;
 
         return;
     }
