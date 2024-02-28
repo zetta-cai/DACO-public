@@ -53,7 +53,7 @@ namespace covered
         bool is_to_cli_string_;
 
         // uint32_t clientcnt_;
-        bool is_warmup_speedup_; // Come from --disable_warmup_speedup
+        bool is_warmup_speedup_; // Come from --disable_warmup_speedup (warmup speedup skips multiple latencies, including network propagation latency, RocksDB access latency, and value content emission latency)
         uint32_t max_eval_workload_loadcnt_scale_; // Must > warmup_reqcnt_scale_
         uint32_t perclient_opcnt_;
         uint32_t perclient_workercnt_;

@@ -793,13 +793,13 @@ namespace covered
             {
                 total_workload_opcnt_ += 1; // NOTE: update total opcnt for trace preprocessing
 
-                // Dump progress info of loading current trace file
-                if (total_workload_opcnt_ % 1000000 == 0)
-                {
-                    std::ostringstream oss;
-                    oss << "load " << total_workload_opcnt_ << " data lines...";
-                    Util::dumpNormalMsg(base_instance_name_, oss.str());
-                }
+                // // Dump progress info of loading current trace file
+                // if (total_workload_opcnt_ % 1000000 == 0)
+                // {
+                //     std::ostringstream oss;
+                //     oss << "load " << total_workload_opcnt_ << " data lines...";
+                //     Util::dumpNormalMsg(base_instance_name_, oss.str());
+                // }
 
                 if (dataset_sample_ratio_ < 1.0) // Update total workload key-values ONLY if need dataset sampling
                 {

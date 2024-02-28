@@ -142,25 +142,6 @@ namespace covered
                 if (skip_propagation_latency) // Warmup speedup is enabled
                 {
                     cloud_wrapper_ptr_->getWorkloadGeneratorPtr()->quickDatasetGet(tmp_key, tmp_value);
-
-                    // TMPDEBUG24
-                    // Timeout keys: 2118491453, -1398896847, and -239953799
-                    int64_t tmp_keyint1 = 2118491453;
-                    Key tmp_key1 = Key(std::string((const char*)&tmp_keyint1, sizeof(int64_t)));
-                    Value tmp_value1;
-                    cloud_wrapper_ptr_->getWorkloadGeneratorPtr()->quickDatasetGet(tmp_key1, tmp_value1);
-                    int64_t tmp_keyint2 = -1398896847;
-                    Key tmp_key2 = Key(std::string((const char*)&tmp_keyint2, sizeof(int64_t)));
-                    Value tmp_value2;
-                    cloud_wrapper_ptr_->getWorkloadGeneratorPtr()->quickDatasetGet(tmp_key2, tmp_value2);
-                    int64_t tmp_keyint3 = -239953799;
-                    Key tmp_key3 = Key(std::string((const char*)&tmp_keyint3, sizeof(int64_t)));
-                    Value tmp_value3;
-                    cloud_wrapper_ptr_->getWorkloadGeneratorPtr()->quickDatasetGet(tmp_key3, tmp_value3);
-                    std::ostringstream tmposs;
-                    tmposs << "tmp_value1 size: " << tmp_value1.getValuesize() << "; tmp_value2 size: " << tmp_value2.getValuesize() << "; tmp_value3 size: " << tmp_value3.getValuesize();
-                    Util::dumpNormalMsg(instance_name_, tmposs.str());
-                    exit(1);
                 }
                 else // Normal backend storage access (evaluation phase, or warmup phase without warmup speedup)
                 {

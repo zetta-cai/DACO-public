@@ -103,7 +103,14 @@ void WorkloadGenerator::quickDatasetGet(const std::string& key, uint32_t& value_
 {
   // Lookup key
   std::unordered_map<std::string, uint32_t>::const_iterator tmp_iter = dataset_lookup_table_.find(key);
-  assert(tmp_iter != dataset_lookup_table_.end()); // Must exist
+  if (tmp_iter == dataset_lookup_table_.end())
+  {
+    // Must exist
+    std::ostringstream oss;
+    oss << "key " << key << " should exist in dataset_lookup_table_ (lookup table size: " << dataset_lookup_table_.size() << "; dataset size: " << reqs_.size() << ")";
+    Util::dumpErrorMsg(kClassName, oss.str());
+    exit(1);
+  }
 
   // Get value size
   const uint32_t reqs_index = tmp_iter->second;
