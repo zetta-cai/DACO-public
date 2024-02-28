@@ -532,7 +532,7 @@ namespace covered
         EventList event_list;
 
         // Update total bandwidth usage for received placement trigger request
-        uint32_t cross_edge_placement_trigger_req_bandwidth_bytes = control_request_ptr->getMsgPayloadSize();
+        uint32_t cross_edge_placement_trigger_req_bandwidth_bytes = control_request_ptr->getMsgBandwidthSize();
         total_bandwidth_usage.update(BandwidthUsage(0, cross_edge_placement_trigger_req_bandwidth_bytes, 0, 0, 1, 0));
 
         // (i) NOTE: JUST similar as processing release writelock request
@@ -610,7 +610,7 @@ namespace covered
         // Get background eventlist and bandwidth usage to update background counter for beacon server
         const EventList& background_event_list = covered_placement_redirected_get_response_ptr->getEventListRef();
         BandwidthUsage background_bandwidth_usage = covered_placement_redirected_get_response_ptr->getBandwidthUsageRef();
-        uint32_t cross_edge_redirected_get_rsp_bandwidth_bytes = covered_placement_redirected_get_response_ptr->getMsgPayloadSize();
+        uint32_t cross_edge_redirected_get_rsp_bandwidth_bytes = covered_placement_redirected_get_response_ptr->getMsgBandwidthSize();
         background_bandwidth_usage.update(BandwidthUsage(0, cross_edge_redirected_get_rsp_bandwidth_bytes, 0, 0, 1, 0));
         edge_wrapper_ptr_->getEdgeBackgroundCounterForBeaconServerRef().updateBandwidthUsgae(background_bandwidth_usage);
         edge_wrapper_ptr_->getEdgeBackgroundCounterForBeaconServerRef().addEvents(background_event_list);
@@ -651,7 +651,7 @@ namespace covered
         // Get background eventlist and bandwidth usage to update background counter for beacon server
         const EventList& background_event_list = covered_placement_global_get_response_ptr->getEventListRef();
         BandwidthUsage background_bandwidth_usage = covered_placement_global_get_response_ptr->getBandwidthUsageRef();
-        uint32_t edge_cloud_global_get_rsp_bandwidth_bytes = covered_placement_global_get_response_ptr->getMsgPayloadSize();
+        uint32_t edge_cloud_global_get_rsp_bandwidth_bytes = covered_placement_global_get_response_ptr->getMsgBandwidthSize();
         background_bandwidth_usage.update(BandwidthUsage(0, 0, edge_cloud_global_get_rsp_bandwidth_bytes, 0, 0, 1));
         edge_wrapper_ptr_->getEdgeBackgroundCounterForBeaconServerRef().updateBandwidthUsgae(background_bandwidth_usage);
         edge_wrapper_ptr_->getEdgeBackgroundCounterForBeaconServerRef().addEvents(background_event_list);

@@ -57,6 +57,13 @@ namespace covered
         return msg_payload_size;
     }
 
+    uint32_t KeyValueHitflagVictimsetEdgesetMessage::getMsgBandwidthSizeInternal_() const
+    {
+        // key payload + ideal value content size + hitflag + victim syncset payload + edgeset payload
+        uint32_t msg_bandwidth_size = key_.getKeyPayloadSize() + value_.getValuesize() + sizeof(uint8_t) + victim_syncset_.getVictimSyncsetPayloadSize() + edgeset_.getEdgesetPayloadSize();
+        return msg_bandwidth_size;
+    }
+
     uint32_t KeyValueHitflagVictimsetEdgesetMessage::serializeInternal_(DynamicArray& msg_payload, const uint32_t& position) const
     {
         uint32_t size = position;

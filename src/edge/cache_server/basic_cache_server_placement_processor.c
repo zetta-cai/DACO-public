@@ -39,7 +39,7 @@ namespace covered
 
         // Update bandwidth usage for received request
         const BestGuessBgplacePlacementNotifyRequest* const bestguess_placement_notify_request_ptr = static_cast<const BestGuessBgplacePlacementNotifyRequest*>(data_request_ptr);
-        total_bandwidth_usage.update(BandwidthUsage(0, bestguess_placement_notify_request_ptr->getMsgPayloadSize(), 0, 0, 1, 0));
+        total_bandwidth_usage.update(BandwidthUsage(0, bestguess_placement_notify_request_ptr->getMsgBandwidthSize(), 0, 0, 1, 0));
 
         // Vtime synchronization
         const uint32_t source_edge_idx = bestguess_placement_notify_request_ptr->getSourceIndex();

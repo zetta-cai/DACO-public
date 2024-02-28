@@ -1559,19 +1559,41 @@ namespace covered
     {
         checkIsValid_();
 
-        uint32_t msg_payload_size = 0;
+        uint32_t msg_payload_size = getCommonMsghdrSize_() + getMsgPayloadSizeInternal_();
+        
+        return msg_payload_size;
+    }
+
+    uint32_t MessageBase::getMsgBandwidthSize() const
+    {
+        checkIsValid_();
+
+        uint32_t msg_bandwidth_size = getCommonMsghdrSize_() + getMsgBandwidthSizeInternal_();
+        
+        return msg_bandwidth_size;
+    }
+
+    uint32_t MessageBase::getCommonMsghdrSize_() const
+    {
+        uint32_t common_msghdr_size = 0;
         if (is_response_) // NOTE: ONLY response message has bandwidth usage and event list
         {
-            // Message type size + source index + source addr + bandwidth usage + event list (0 if without event tracking) + skip_propagation_latency flag + internal payload size
-            msg_payload_size = sizeof(uint32_t) + sizeof(uint32_t) + source_addr_.getAddrPayloadSize() + bandwidth_usage_.getBandwidthUsagePayloadSize() + event_list_.getEventListPayloadSize() + sizeof(bool) + getMsgPayloadSizeInternal_();
+            // Message type size + source index + source addr + bandwidth usage + event list (0 if without event tracking) + skip_propagation_latency flag
+            common_msghdr_size = sizeof(uint32_t) + sizeof(uint32_t) + source_addr_.getAddrPayloadSize() + bandwidth_usage_.getBandwidthUsagePayloadSize() + event_list_.getEventListPayloadSize() + sizeof(bool);
         }
         else // NOTE: request message does NOT have bandwidth usage and event list
         {
-            // Message type size + source index + source addr + skip_propagation_latency flag + internal payload size
-            msg_payload_size = sizeof(uint32_t) + sizeof(uint32_t) + source_addr_.getAddrPayloadSize() + sizeof(bool) + getMsgPayloadSizeInternal_();
+            // Message type size + source index + source addr + skip_propagation_latency flag
+            common_msghdr_size = sizeof(uint32_t) + sizeof(uint32_t) + source_addr_.getAddrPayloadSize() + sizeof(bool);
         }
-        
-        return msg_payload_size;
+
+        return common_msghdr_size;
+    }
+
+    uint32_t MessageBase::getMsgBandwidthSizeInternal_() const
+    {
+        // NOTE: the same as getMsgPayloadSizeInternal_() by default as NO value content in most messages -> for the messages with value content (restricted by Value::MAX_VALUE_CONTENT_SIZE), the corresponding classes will override this function to calculate msg bandwidth size based on ideal value content size
+        return getMsgPayloadSizeInternal_();
     }
 
     uint32_t MessageBase::serialize(DynamicArray& msg_payload) const

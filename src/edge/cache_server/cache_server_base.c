@@ -530,7 +530,7 @@ namespace covered
 
                 // Update total bandwidth usage for received directory update (admission) response
                 BandwidthUsage directory_update_response_bandwidth_usage = control_response_ptr->getBandwidthUsageRef();
-                uint32_t cross_edge_directory_update_rsp_bandwidth_bytes = control_response_ptr->getMsgPayloadSize();
+                uint32_t cross_edge_directory_update_rsp_bandwidth_bytes = control_response_ptr->getMsgBandwidthSize();
                 directory_update_response_bandwidth_usage.update(BandwidthUsage(0, cross_edge_directory_update_rsp_bandwidth_bytes, 0, 0, 1, 0));
                 total_bandwidth_usage.update(directory_update_response_bandwidth_usage);
 
@@ -737,7 +737,7 @@ namespace covered
 
                             // Update total bandwidth usage for received directory update (eviction) repsonse
                             BandwidthUsage directory_update_response_bandwidth_usage = control_response_ptr->getBandwidthUsageRef();
-                            uint32_t cross_edge_directory_update_rsp_bandwidth_bytes = control_response_ptr->getMsgPayloadSize();
+                            uint32_t cross_edge_directory_update_rsp_bandwidth_bytes = control_response_ptr->getMsgBandwidthSize();
                             directory_update_response_bandwidth_usage.update(BandwidthUsage(0, cross_edge_directory_update_rsp_bandwidth_bytes, 0, 0, 1, 0));
                             total_bandwidth_usage.update(directory_update_response_bandwidth_usage);
 

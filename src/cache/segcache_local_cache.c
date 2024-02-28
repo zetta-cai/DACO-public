@@ -351,7 +351,7 @@ namespace covered
         key_bstr.len = static_cast<uint32_t>(keystr.length());
         key_bstr.data = keystr.data();
 
-        std::string valuestr = value.generateValuestr();
+        std::string valuestr = value.generateValuestrForStorage();
         struct bstring value_bstr;
         value_bstr.len = static_cast<uint32_t>(valuestr.length());
         value_bstr.data = valuestr.data();

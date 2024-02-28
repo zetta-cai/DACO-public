@@ -160,7 +160,8 @@ namespace covered
         const EventList& getEventListRef() const;
         bool isSkipPropagationLatency() const;
 
-        uint32_t getMsgPayloadSize() const;
+        uint32_t getMsgPayloadSize() const; // Real transmitted bytes for serialize/deserialize of network packets
+        uint32_t getMsgBandwidthSize() const; // Ideal transmitted bytes for bandwidth usage calculation
 
         // Offset of message must be 0 in message payload
         // Message payload format: message_type + source index + internal payload
@@ -193,7 +194,9 @@ namespace covered
 
         static uint32_t deserializeMessageTypeFromMsgPayload(const DynamicArray& msg_payload, MessageType& message_type);
 
+        uint32_t getCommonMsghdrSize_() const;
         virtual uint32_t getMsgPayloadSizeInternal_() const = 0;
+        virtual uint32_t getMsgBandwidthSizeInternal_() const;
 
         virtual uint32_t serializeInternal_(DynamicArray& msg_payload, const uint32_t& size) const = 0;
         virtual uint32_t deserializeInternal_(const DynamicArray& msg_payload, const uint32_t& size) = 0;

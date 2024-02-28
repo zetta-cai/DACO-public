@@ -36,6 +36,13 @@ namespace covered
         return msg_payload_size;
     }
 
+    uint32_t KeyValueMessage::getMsgBandwidthSizeInternal_() const
+    {
+        // key payload + ideal value content size
+        uint32_t msg_bandwidth_size = key_.getKeyPayloadSize() + value_.getValuesize();
+        return msg_bandwidth_size;
+    }
+
     uint32_t KeyValueMessage::serializeInternal_(DynamicArray& msg_payload, const uint32_t& position) const
     {
         uint32_t size = position;

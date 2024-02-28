@@ -1199,6 +1199,11 @@ namespace covered
 
     std::string Util::getRandomString(const uint32_t& length)
     {
+        if (length == 0)
+        {
+            return "";
+        }
+
         std::string random_string(length, '0');
         for (uint32_t i = 0; i < length; i++)
         {

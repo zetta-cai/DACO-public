@@ -126,7 +126,7 @@ namespace covered
             }
             else
             {
-                std::string valuestr = value.generateValuestr();
+                std::string valuestr = value.generateValuestrForStorage();
                 assert(valuestr.size() == value.getValuesize());
                 std::memcpy(allocate_handle->getMemory(), valuestr.data(), value.getValuesize());
                 cachelib_cache_ptr_->insertOrReplace(allocate_handle); // Must replace
@@ -170,7 +170,7 @@ namespace covered
         }
         else
         {
-            std::string valuestr = value.generateValuestr();
+            std::string valuestr = value.generateValuestrForStorage();
             assert(valuestr.size() == value.getValuesize());
             std::memcpy(allocate_handle->getMemory(), valuestr.data(), value.getValuesize());
             cachelib_cache_ptr_->insertOrReplace(allocate_handle); // Must insert

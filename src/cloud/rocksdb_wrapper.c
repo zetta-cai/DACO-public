@@ -126,7 +126,7 @@ namespace covered
         std::string valuesize_str = std::string((char*)&value_size, sizeof(uint32_t));
         rocksdb::Status rocksdb_status = db_ptr_->Put(rocksdb::WriteOptions(), key_str, valuesize_str);
         #else
-        std::string value_str = value.generateValuestr();
+        std::string value_str = value.generateValuestrForStorage();
         rocksdb::Status rocksdb_status = db_ptr_->Put(rocksdb::WriteOptions(), key_str, value_str);
         #endif
         assert(rocksdb_status.ok());

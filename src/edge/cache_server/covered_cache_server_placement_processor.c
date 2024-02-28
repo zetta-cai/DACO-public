@@ -42,7 +42,7 @@ namespace covered
 
         // Update bandwidth usage for received request
         const CoveredBgplacePlacementNotifyRequest* const covered_placement_notify_request_ptr = static_cast<const CoveredBgplacePlacementNotifyRequest*>(data_request_ptr);
-        total_bandwidth_usage.update(BandwidthUsage(0, covered_placement_notify_request_ptr->getMsgPayloadSize(), 0, 0, 1, 0));
+        total_bandwidth_usage.update(BandwidthUsage(0, covered_placement_notify_request_ptr->getMsgBandwidthSize(), 0, 0, 1, 0));
 
         // Victim synchronization
         const uint32_t source_edge_idx = covered_placement_notify_request_ptr->getSourceIndex();

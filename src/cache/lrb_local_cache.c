@@ -205,7 +205,7 @@ namespace covered
     SimpleRequest LrbLocalCache::buildRequest_(const Key& key, const Value& value)
     {
         const int64_t objsize = key.getKeyLength() + value.getValuesize();
-        SimpleRequest req(0, objsize, true, key.getKeystr(), value.generateValuestr());
+        SimpleRequest req(0, objsize, true, key.getKeystr(), value.generateValuestrForStorage());
 
         return req;
     }

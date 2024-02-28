@@ -7,6 +7,8 @@
 
 namespace covered
 {
+    const uint32_t Value::MAX_VALUE_CONTENT_SIZE = 0; // NOT transmit value content in network packets by default (just impl trick yet NOT affect evaluation results; see NOTE in header file)
+
     const std::string Value::kClassName("Value");
 
     Value::Value()
@@ -39,20 +41,9 @@ namespace covered
         return valuesize_;
     }
 
-    std::string Value::generateValuestr() const
+    std::string Value::generateValuestrForStorage() const
     {
-        std::string valuestr = "";
-        if (Config::isGenerateRandomValuestr())
-        {
-            // Randomly generate characters to fill up value content
-            valuestr = Util::getRandomString(valuesize_);
-        }
-        else
-        {
-            // Note: now we use '0' to fill up value content
-            valuestr = std::string(valuesize_, '0');
-        }
-        return valuestr;
+        return generateValuestr_(valuesize_);
     }
 
     uint32_t Value::getValuePayloadSize(const bool& is_space_efficient) const
@@ -60,9 +51,9 @@ namespace covered
         // is deleted + value size
         uint32_t value_payload_size = sizeof(bool) + sizeof(uint32_t);
         // value
-        if (!is_space_efficient)
+        if (!is_space_efficient) // For network packets
         {
-            value_payload_size += valuesize_;
+            value_payload_size += getValuesizeForNetwork_(valuesize_);
         }
         return value_payload_size;
     }
@@ -75,11 +66,14 @@ namespace covered
         uint32_t bigendian_valuesize = htonl(valuesize_);
         msg_payload.deserialize(size, (const char*)&bigendian_valuesize, sizeof(uint32_t));
         size += sizeof(uint32_t);
-        if (!is_space_efficient)
+        if (!is_space_efficient) // For network packets
         {
-            std::string valuestr = generateValuestr();
-            msg_payload.deserialize(size, (const char*)(valuestr.data()), valuesize_);
-            size += valuesize_;
+            std::string valuestr_for_network = generateValuestrForNetwork_();
+            if (valuestr_for_network.length() > 0)
+            {
+                msg_payload.deserialize(size, (const char*)(valuestr_for_network.data()), valuestr_for_network.length());
+                size += valuestr_for_network.length();
+            }
         }
         return size - position;
     }
@@ -93,11 +87,12 @@ namespace covered
         msg_payload.serialize(size, (char *)&bigendian_valuesize, sizeof(uint32_t));
         valuesize_ = ntohl(bigendian_valuesize);
         size += sizeof(uint32_t);
-        if (!is_space_efficient)
+        if (!is_space_efficient) // For network packets
         {
             // Note: we ignore the value content yet still consume space
-            // msg_payload.arraycpy(size, value_content, 0, valuesize_);
-            size += valuesize_;
+            const uint32_t value_size_for_network = getValuesizeForNetwork_(valuesize_);
+            // msg_payload.arraycpy(size, value_content, 0, value_size_for_network);
+            size += value_size_for_network;
         }
         return size - position;
     }
@@ -111,12 +106,7 @@ namespace covered
         fs_ptr->read((char*)&bitendian_valuesize, sizeof(uint32_t));
         valuesize_ = ntohl(bitendian_valuesize);
         size += sizeof(uint32_t);
-        if (!is_space_efficient)
-        {
-            // Note: we ignore the value content
-            // fs_ptr->read(value_content.getBytesRef().data(), valuesize_);
-            size += valuesize_;
-        }
+        assert(is_space_efficient); // Must be space efficient due to for file I/O (dataset/workload file for replayed traces)
         return size;
     }
 
@@ -125,5 +115,45 @@ namespace covered
         is_deleted_ = other.is_deleted_;
         valuesize_ = other.valuesize_;
         return *this;
+    }
+
+    std::string Value::generateValuestrForNetwork_() const
+    {
+        return generateValuestr_(getValuesizeForNetwork_(valuesize_));
+    }
+
+    uint32_t Value::getValuesizeForNetwork_(const uint32_t& value_size)
+    {
+        uint32_t value_size_for_network = 0;
+        if (value_size > MAX_VALUE_CONTENT_SIZE)
+        {
+            value_size_for_network = MAX_VALUE_CONTENT_SIZE;
+        }
+        else
+        {
+            value_size_for_network = value_size;
+        }
+        assert(value_size_for_network <= MAX_VALUE_CONTENT_SIZE);
+
+        return value_size_for_network;
+    }
+
+    std::string Value::generateValuestr_(const uint32_t& value_size)
+    {
+        std::string valuestr = "";
+        if (value_size > 0)
+        {
+            if (Config::isGenerateRandomValuestr())
+            {
+                // Randomly generate characters to fill up value content
+                valuestr = Util::getRandomString(value_size);
+            }
+            else
+            {
+                // Note: now we use '0' to fill up value content
+                valuestr = std::string(value_size, '0');
+            }
+        }
+        return valuestr;
     }
 }

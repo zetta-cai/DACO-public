@@ -283,7 +283,7 @@ namespace covered
 
         req.is_keybased_req = true;
         req.key = key.getKeystr();
-        req.value = value.generateValuestr();
+        req.value = value.generateValuestrForStorage();
 
         return req;
     }

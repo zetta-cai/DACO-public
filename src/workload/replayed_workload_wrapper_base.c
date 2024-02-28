@@ -644,7 +644,14 @@ namespace covered
 
         // Check dataset lookup table
         std::unordered_map<Key, uint32_t, KeyHasher>::const_iterator tmp_iter = dataset_lookup_table_.find(key);
-        assert(tmp_iter != dataset_lookup_table_.end()); // Key must exist
+        if (tmp_iter == dataset_lookup_table_.end())
+        {
+            // Key must exist
+            std::ostringstream oss;
+            oss << "key " << key.getKeyDebugstr() << " does not exist in dataset (lookup table size: " << dataset_lookup_table_.size() << "; dataset size: " << dataset_kvpairs_.size() << ") for quick get!";
+            Util::dumpErrorMsg(base_instance_name_, oss.str());
+            exit(1);
+        }
 
         // Get value
         const uint32_t dataset_kvpairs_index = tmp_iter->second;
@@ -785,6 +792,14 @@ namespace covered
             if (needAllTraceFiles_()) // Trace preprocessor
             {
                 total_workload_opcnt_ += 1; // NOTE: update total opcnt for trace preprocessing
+
+                // Dump progress info of loading current trace file
+                if (total_workload_opcnt_ % 1000000 == 0)
+                {
+                    std::ostringstream oss;
+                    oss << "load " << total_workload_opcnt_ << " data lines...";
+                    Util::dumpNormalMsg(base_instance_name_, oss.str());
+                }
 
                 if (dataset_sample_ratio_ < 1.0) // Update total workload key-values ONLY if need dataset sampling
                 {
