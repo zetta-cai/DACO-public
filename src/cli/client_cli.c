@@ -9,7 +9,7 @@ namespace covered
     const bool ClientCLI::DEFAULT_IS_WARMUP_SPEEDUP = true;
     const uint32_t ClientCLI::DEFAULT_PERCLIENT_OPCNT = 1000000;
     const uint32_t ClientCLI::DEFAULT_PERCLIENT_WORKERCNT = 1;
-    const uint32_t ClientCLI::DEFAULT_WARMUP_REQCNT_SCALE = 5;
+    const uint32_t ClientCLI::DEFAULT_WARMUP_REQCNT_SCALE = 10; // Use 10 * keycnt as warmup reqcnt to warmup all methods sufficiently
 
     const std::string ClientCLI::kClassName("ClientCLI");
 

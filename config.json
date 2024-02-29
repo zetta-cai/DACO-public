@@ -44,8 +44,8 @@
     "trace_dirpath_relative_wikiimage_trace_filepaths": ["wikiimage/cache-u-00", "wikiimage/cache-u-01", "wikiimage/cache-u-02", "wikiimage/cache-u-03", "wikiimage/cache-u-04", "wikiimage/cache-u-05", "wikiimage/cache-u-06", "wikiimage/cache-u-07", "wikiimage/cache-u-08", "wikiimage/cache-u-09", "wikiimage/cache-u-10", "wikiimage/cache-u-11", "wikiimage/cache-u-12", "wikiimage/cache-u-13", "wikiimage/cache-u-14", "wikiimage/cache-u-15", "wikiimage/cache-u-16", "wikiimage/cache-u-17", "wikiimage/cache-u-18", "wikiimage/cache-u-19", "wikiimage/cache-u-20"],
     "trace_dirpath_relative_wikitext_trace_filepaths": ["wikitext/cache-t-00", "wikitext/cache-t-01", "wikitext/cache-t-02", "wikitext/cache-t-03", "wikitext/cache-t-04", "wikitext/cache-t-05", "wikitext/cache-t-06", "wikitext/cache-t-07", "wikitext/cache-t-08", "wikitext/cache-t-09", "wikitext/cache-t-10", "wikitext/cache-t-11", "wikitext/cache-t-12", "wikitext/cache-t-13", "wikitext/cache-t-14", "wikitext/cache-t-15", "wikitext/cache-t-16", "wikitext/cache-t-17", "wikitext/cache-t-18", "wikitext/cache-t-19", "wikitext/cache-t-20"],
     "trace_sample_opcnt": 1000000,
-    "trace_wikiimage_keycnt": 550269,
-    "trace_wikitext_keycnt": 591809,
+    "trace_wikiimage_keycnt": 591809,
+    "trace_wikitext_keycnt": 550269,
     "version": "1.0",
     "physical_machines": [
         {

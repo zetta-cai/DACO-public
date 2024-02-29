@@ -5,9 +5,10 @@
 
 namespace covered
 {
-    const uint32_t PropagationCLI::DEFAULT_PROPAGATION_LATENCY_CLIENTEDGE_US = 1000;
-    const uint32_t PropagationCLI::DEFAULT_PROPAGATION_LATENCY_CROSSEDGE_US = 10000;
-    const uint32_t PropagationCLI::DEFAULT_PROPAGATION_LATENCY_EDGECLOUD_US = 100000;
+    // NOTE: here client-edge, cross-edge, and edge-cloud propagation latency are single-trip latency, which should be counted twice within an RTT -> set default single-trip propagation latency as 0.5/5/50ms such that default propagation RTT is 1/10/100ms
+    const uint32_t PropagationCLI::DEFAULT_PROPAGATION_LATENCY_CLIENTEDGE_US = 500;
+    const uint32_t PropagationCLI::DEFAULT_PROPAGATION_LATENCY_CROSSEDGE_US = 5000;
+    const uint32_t PropagationCLI::DEFAULT_PROPAGATION_LATENCY_EDGECLOUD_US = 50000;
 
     const std::string PropagationCLI::kClassName("PropagationCLI");
 

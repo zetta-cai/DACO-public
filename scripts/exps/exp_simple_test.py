@@ -10,9 +10,10 @@ exp_simple_test_settings = {
     "clientcnt": 4,
     "edgecnt": 4,
     "keycnt": 100000,
-    "capacity_mb": 10253,
-    "cache_name": "covered",
-    "workload_name": "wikitext"
+    "capacity_mb": 1024,
+    "cache_name": "bestguess",
+    "workload_name": "facebook",
+    "warmup_reqcnt_scale": 10
 }
 
 # For dataset loader
