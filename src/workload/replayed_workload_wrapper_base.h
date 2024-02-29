@@ -3,11 +3,18 @@
  *
  * NOTE: basically follow WorkloadWrapperBase, yet with some variables and functions specific for replayed workloads.
  * 
+ * NOTE: we randomly sample dataset items due to limitation of memory capacity in our testbed, yet still keep the original workload distribution.
+ * --> Approach 1: use std::bernoulli_distribution with probability of dataset_sample_ratio to make a decision for each dataset item -> after n independent trials (time complexity is O(n)), will finally get dataset_sample_ratio items
+ * --> Approach 2: use std::shuffle to randomly rearrange the order of dataset kvpairs, and then choose the first dataset_sample_ratio items -> time complexity of std::shuffle is O(n), which needs to generate n random numbers to swap items from end to begin of dataset kvpairs
+ * --> Here we use approach 1, which can perform sampling for each dataset item individually, while std::shuffle in approach 2 needs all dataset items before sampling and require 3 memory copies due to in-place swapping.
+ * 
  * By Siyuan Sheng (2024.02.26).
  */
 
 #ifndef REPLAYED_WORKLOAD_WRAPPER_BASE_H
 #define REPLAYED_WORKLOAD_WRAPPER_BASE_H
+
+#include <random> // std::mt19937 and std::bernoulli_distribution
 
 #include "workload/workload_wrapper_base.h"
 
@@ -54,6 +61,8 @@ namespace covered
         uint32_t total_workload_opcnt_; // Total opcnt of workloads in all clients
         std::vector<Key> total_workload_keys_; // Keys of total workload in all clients (updated ONLY if sample ratio < 1.0 for sampling)
         std::vector<int> total_workload_value_sizes_; // Value sizes of workload in all clients (< 0: read; = 0: delete; > 0: write; updated ONLY if sample ratio < 1.0 for sampling)
+        std::mt19937* dataset_sample_randgen_ptr_; // Random number generator for sampling dataset items
+        std::bernoulli_distribution* dataset_sample_dist_ptr_; // Bernoulli distribution for sampling dataset items
         // (2) For role of preprocessor, dataset loader, and cloud
         // NOTE: non-replayed traces can generate all information (dataset items, workload items, dataset statistics) by workload generator
         double average_dataset_keysize_; // Average dataset key size
@@ -62,7 +71,7 @@ namespace covered
         uint32_t min_dataset_valuesize_; // Minimum dataset value size
         uint32_t max_dataset_keysize_; // Maximum dataset key size
         uint32_t max_dataset_valuesize_; // Maximum dataset value size
-        std::unordered_map<Key, uint32_t, KeyHasher> dataset_lookup_table_; // Fast indexing for dataset key-value pairs (will be sampled if sample ratio < 1.0)
+        std::unordered_map<Key, std::pair<uint32_t, bool>, KeyHasher> dataset_lookup_table_; // Fast indexing for dataset key-value pairs (will be sampled if sample ratio < 1.0); uint32_t for original value size, and bool for whether the dataset item is sampled
         std::vector<std::pair<Key, Value>> dataset_kvpairs_; // Key-value pairs of dataset (will be sampled if sample ratio < 1.0)
         // (3) For role of clients during evaluation
         std::unordered_map<Key, Value, KeyHasher> curclient_partial_dataset_kvmap_; // Key-value map of partial dataset accessed by workload in current client (compare with original value sizes for workload item types; ONLY used by clients to calculate coded value sizes, if load partial trace files under sample ratio of 1.0)
@@ -78,9 +87,6 @@ namespace covered
         // (1) For role of trace preprocessor
 
         void verifyDatasetAndWorkloadAbsenceForPreprocessor_(); // Dataset and workload file (if sample ratio < 1) should NOT exist
-        void sampleDatasetAndWorkload_(); // Sample dataset and total workload items (if sample ratio < 1.0; will update dataset_kvpairs_, dataset_lookup_table_, dataset statistics, total_workload_keys_, total_workload_value_sizes_, and total_workload_opcnt_)
-        void sampleDatasetInternal_(); // Sample dataset items under sample ratio < 1.0 (update dataset_kvpairs_, dataset_lookup_table_, and dataset statistics)
-        void sampleWorkloadInternal_(); // Sample total workload items under sample ratio < 1.0 (update total_workload_keys_, total_workload_value_sizes_, and total_workload_opcnt_)
         uint32_t dumpDatasetFile_() const; // Dump dataset key-value pairs into dataset file; return dataset file size (in units of bytes)
         uint32_t dumpWorkloadFile_() const; // Dump total workload key-value pairs into workload file; return workload file size (in units of bytes)
 
