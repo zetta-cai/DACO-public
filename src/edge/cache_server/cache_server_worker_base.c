@@ -544,10 +544,11 @@ namespace covered
                 // Update cross-edge latency for latency-aware weight tuning if NOT timeout
                 const struct timespec tmp_content_discovery_end_timestamp = Util::getCurrentTimespec();
                 const double tmp_content_discovery_cross_edge_rtt_us = Util::getDeltaTimeUs(tmp_content_discovery_end_timestamp, tmp_content_discovery_start_timestamp);
-                uint32_t tmp_content_discovery_cross_edge_latency_us = static_cast<uint32_t>(tmp_content_discovery_cross_edge_rtt_us / 2.0);
+                uint32_t tmp_content_discovery_cross_edge_latency_us = static_cast<uint32_t>(tmp_content_discovery_cross_edge_rtt_us);
                 if (skip_propagation_latency) // Compensate propagation latency for warmup speedup
                 {
-                    tmp_content_discovery_cross_edge_latency_us += tmp_edge_wrapper_ptr->getPropagationLatencyCrossedgeUs();
+                    // NOTE: cross-edge propagation latency from CLI is a single trip latency, which should be counted twice for RTT
+                    tmp_content_discovery_cross_edge_latency_us += 2 * tmp_edge_wrapper_ptr->getPropagationLatencyCrossedgeUs();
                 }
 
                 // Receive the control response message successfully
@@ -631,10 +632,11 @@ namespace covered
                 // Update cross-edge latency for latency-aware weight tuning if NOT timeout
                 const struct timespec tmp_request_direction_end_timestamp = Util::getCurrentTimespec();
                 const double tmp_request_redirection_cross_edge_rtt_us = Util::getDeltaTimeUs(tmp_request_direction_end_timestamp, tmp_request_redirection_start_timestamp);
-                uint32_t tmp_request_redirection_cross_edge_latency_us = static_cast<uint32_t>(tmp_request_redirection_cross_edge_rtt_us / 2.0);
+                uint32_t tmp_request_redirection_cross_edge_latency_us = static_cast<uint32_t>(tmp_request_redirection_cross_edge_rtt_us);
                 if (skip_propagation_latency) // Compensate propagation latency for warmup speedup
                 {
-                    tmp_request_redirection_cross_edge_latency_us += tmp_edge_wrapper_ptr->getPropagationLatencyCrossedgeUs();
+                    // NOTE: cross-edge propagation latency from CLI is a single trip latency, which should be counted twice for RTT
+                    tmp_request_redirection_cross_edge_latency_us += 2 * tmp_edge_wrapper_ptr->getPropagationLatencyCrossedgeUs();
                 }
 
                 // Receive the redirected response message successfully
@@ -752,10 +754,11 @@ namespace covered
                 // Update edge-cloud latency for latency-aware weight tuning if NOT timeout
                 const struct timespec tmp_cloud_access_end_timestamp = Util::getCurrentTimespec();
                 const double tmp_cloud_access_edge_cloud_rtt_us = Util::getDeltaTimeUs(tmp_cloud_access_end_timestamp, tmp_cloud_access_start_timestamp);
-                uint32_t tmp_cloud_access_edge_cloud_latency_us = static_cast<uint32_t>(tmp_cloud_access_edge_cloud_rtt_us / 2.0);
+                uint32_t tmp_cloud_access_edge_cloud_latency_us = static_cast<uint32_t>(tmp_cloud_access_edge_cloud_rtt_us);
                 if (skip_propagation_latency) // Compensate propagation latency for warmup speedup
                 {
-                    tmp_cloud_access_edge_cloud_latency_us += tmp_edge_wrapper_ptr->getPropagationLatencyEdgecloudUs();
+                    // NOTE: edge-cloud propagation latency from CLI is a single trip latency, which should be counted twice for RTT
+                    tmp_cloud_access_edge_cloud_latency_us += 2 * tmp_edge_wrapper_ptr->getPropagationLatencyEdgecloudUs();
                 }
 
                 // Receive the global response message successfully
