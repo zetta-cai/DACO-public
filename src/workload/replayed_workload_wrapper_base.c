@@ -406,6 +406,11 @@ namespace covered
             tmp_dynamic_array_for_key.writeBinaryFile(0, fs_ptr, key_serialize_size);
             size += key_serialize_size;
 
+            // Must be sampled key
+            std::unordered_map<Key, std::pair<uint32_t, bool>, KeyHasher>::const_iterator tmp_iter = dataset_lookup_table_.find(tmp_key);
+            assert(tmp_iter != dataset_lookup_table_.end());
+            assert(tmp_iter->second.second);
+
             // Value
             const Value& tmp_value = dataset_kvpairs_[i].second;
             DynamicArray tmp_dynamic_array_for_value(tmp_value.getValuePayloadSize(is_value_space_efficient));
@@ -692,7 +697,10 @@ namespace covered
                 }
 
                 const uint32_t original_dataset_size = dataset_kvpairs_.size();
-                dataset_kvpairs_.push_back(std::pair(key, value));
+                if (is_sampled)
+                {
+                    dataset_kvpairs_.push_back(std::pair(key, value));
+                }
                 tmp_dataset_lookup_table_iter = dataset_lookup_table_.insert(std::pair(key, std::pair(original_dataset_size, is_sampled))).first;
 
                 if (is_sampled)
