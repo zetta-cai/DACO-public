@@ -26,10 +26,10 @@ namespace covered
         static const std::string WORKLOAD_USAGE_ROLE_CLIENT;
         static const std::string WORKLOAD_USAGE_ROLE_CLOUD;
 
-        static WorkloadWrapperBase* getWorkloadGeneratorByWorkloadName(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role);
-        // static WorkloadWrapperBase* getWorkloadGeneratorByWorkloadName(const uint64_t& capacity_bytes, const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role); // (OBSOLETE due to already checking objsize in LocalCacheBase)
+        static WorkloadWrapperBase* getWorkloadGeneratorByWorkloadName(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const uint32_t& max_eval_workload_loadcnt = 0);
+        // static WorkloadWrapperBase* getWorkloadGeneratorByWorkloadName(const uint64_t& capacity_bytes, const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const uint32_t& max_eval_workload_loadcnt = 0); // (OBSOLETE due to already checking objsize in LocalCacheBase)
 
-        WorkloadWrapperBase(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role);
+        WorkloadWrapperBase(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const uint32_t& max_eval_workload_loadcnt);
         virtual ~WorkloadWrapperBase();
 
         // Access by the single thread of client wrapper (NO need to be thread safe)
@@ -38,6 +38,7 @@ namespace covered
         // Access by multiple client workers (thread safe)
         virtual WorkloadItem generateWorkloadItem(const uint32_t& local_client_worker_idx) = 0;
         virtual uint32_t getPracticalKeycnt() const = 0;
+        virtual uint32_t getTotalOpcnt() const = 0;
         virtual WorkloadItem getDatasetItem(const uint32_t itemidx) = 0; // Get a dataset key-value pair item with the index of itemidx
 
         // Get average/min/max dataset key/value size
@@ -70,6 +71,7 @@ namespace covered
         const uint32_t client_idx_;
         const uint32_t perclient_opcnt_;
         const uint32_t perclient_workercnt_;
+        const uint32_t max_eval_workload_loadcnt_; // ONLY used in evaluation phase
         // For all roles
         const uint32_t keycnt_;
         const std::string workload_name_;
@@ -81,6 +83,7 @@ namespace covered
         const uint32_t getClientIdx_() const;
         const uint32_t getPerclientOpcnt_() const;
         const uint32_t getPerclientWorkercnt_() const;
+        const uint32_t getMaxEvalWorkloadLoadcnt_() const;
         // For all roles
         const uint32_t getKeycnt_() const;
         const std::string getWorkloadName_() const;

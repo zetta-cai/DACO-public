@@ -15,10 +15,13 @@ namespace covered
 {
     const std::string FacebookWorkloadWrapper::kClassName("FacebookWorkloadWrapper");
 
-    FacebookWorkloadWrapper::FacebookWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role) : WorkloadWrapperBase(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role)
+    FacebookWorkloadWrapper::FacebookWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const uint32_t& max_eval_workload_loadcnt) : WorkloadWrapperBase(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role, max_eval_workload_loadcnt)
     {
         // NOTE: Facebook CDN is not replayed trace and NO need for trace preprocessing (also NO need to dump dataset file)
         assert(!needAllTraceFiles_()); // Must NOT trace preprocessor
+
+        // NOTE: NOT used by facebook workload wrapper
+        UNUSED(max_eval_workload_loadcnt);
 
         // Differentiate facebook workload generator in different clients
         std::ostringstream oss;
@@ -123,6 +126,16 @@ namespace covered
         // NOTE: CacheLib CDN generator will remove redundant keys, so the number of generated key-value pairs will be slightly smaller than keycnt -> we do NOT fix CacheLib as the keycnt gap is very limited and we aim to avoid changing its workload distribution.
         int64_t dataset_size = workload_generator_->getAllKeys().size();
         return Util::toUint32(dataset_size);
+    }
+
+    uint32_t FacebookWorkloadWrapper::getTotalOpcnt() const
+    {
+        checkIsValid_();
+        checkPointers_();
+
+        assert(false); // Should NOT arrive here, as ONLY trace preprocessor invokes this function, while Facebook does NOT need trace preprocessing!
+
+        return getPerclientOpcnt_() * getClientcnt_();
     }
 
     WorkloadItem FacebookWorkloadWrapper::getDatasetItem(const uint32_t itemidx)

@@ -26,6 +26,7 @@ namespace covered
 
         // uint32_t getClientcnt() const;
         bool isWarmupSpeedup() const;
+        uint32_t getMaxEvalWorkloadLoadcntScale() const;
         uint32_t getPerclientOpcnt() const;
         uint32_t getPerclientWorkercnt() const;
         uint32_t getWarmupReqcntScale() const;
@@ -35,6 +36,7 @@ namespace covered
     private:
         //static const uint32_t DEFAULT_CLIENTCNT;
         static const bool DEFAULT_IS_WARMUP_SPEEDUP;
+        static const uint32_t DEFAULT_MAX_EVAL_WORKLOAD_LOADCNT_SCALE;
         static const uint32_t DEFAULT_PERCLIENT_OPCNT;
         static const uint32_t DEFAULT_PERCLIENT_WORKERCNT;
         static const uint32_t DEFAULT_WARMUP_REQCNT_SCALE;
@@ -52,6 +54,7 @@ namespace covered
 
         // uint32_t clientcnt_;
         bool is_warmup_speedup_; // Come from --disable_warmup_speedup (warmup speedup skips multiple latencies, including network propagation latency, RocksDB access latency, and value content emission latency)
+        uint32_t max_eval_workload_loadcnt_scale_; // Must > warmup_reqcnt_scale_
         uint32_t perclient_opcnt_;
         uint32_t perclient_workercnt_;
         uint32_t warmup_reqcnt_scale_; // Client needs it for per-client-worker warmup reqcnt limitation; evaluator needs it for switching warmup/stresstest phase

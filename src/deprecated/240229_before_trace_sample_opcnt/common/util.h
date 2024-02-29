@@ -311,6 +311,7 @@ namespace covered
         static uint16_t getNodePort_(const int64_t& start_port, const uint32_t& node_idx, const uint32_t& nodecnt, const uint32_t& machine_cnt);
 
         // (6) Intermediate files
+        static std::string getDatasetSampleRatioSuffix_(const double& dataset_sample_ratio);
         static std::string getInfixForEvaluatorStatisticsFilepath_(EvaluatorCLI* evaluator_cli_ptr);
 
         // (8) Others

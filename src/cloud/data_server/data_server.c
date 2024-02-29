@@ -69,9 +69,6 @@ namespace covered
             bool is_timeout = cloud_recvreq_socket_server_ptr_->recv(global_request_msg_payload);
             if (is_timeout == true)
             {
-                // TMPDEBUG24
-                Util::dumpWarnMsg(instance_name_, "cloud timeout to wait for global requests from edge nodes");
-
                 continue; // Retry to receive global request if cloud is still running
             } // End of (is_timeout == true)
             else

@@ -53,7 +53,7 @@ int main(int argc, char **argv) {
     oss.str("");
 
     const uint32_t dataset_keycnt = workload_generator_ptr->getPracticalKeycnt();
-    oss << "unique key count (dataset size): " << dataset_keycnt << std::endl;
+    oss << "unique key count (dataset size): " << dataset_keycnt << "; total opcnt of all clients (workload size): " << workload_generator_ptr->getTotalOpcnt() << std::endl;
 
     const uint32_t avg_dataset_keysize = workload_generator_ptr->getAvgDatasetKeysize();
     const uint32_t avg_dataset_valuesize = workload_generator_ptr->getAvgDatasetValuesize();

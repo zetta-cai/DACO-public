@@ -13,6 +13,8 @@ client_machine_idxes = JsonUtil.getValueForKeystr(Common.scriptname, "client_mac
 cloud_machine_idx = JsonUtil.getValueForKeystr(Common.scriptname, "cloud_machine_index")
 physical_machines = JsonUtil.getValueForKeystr(Common.scriptname, "physical_machines")
 
+trace_sample_opcnt = JsonUtil.getValueForKeystr(Common.scriptname, "trace_sample_opcnt")
+
 if Common.cur_machine_idx not in client_machine_idxes:
     LogUtil.die(Common.scriptname, "This script is only allowed to run on client machines")
 
@@ -23,27 +25,14 @@ for i in range(len(replayed_workloads)):
         "workload_name": tmp_workload
     }
 
-    # Get dataset sample ratio string
-    tmp_dataset_sample_ratio_keystr = "trace_{}_dataset_sample_ratio".format(tmp_workload)
-    tmp_dataset_sample_ratio = JsonUtil.getValueForKeystr(Common.scriptname, tmp_dataset_sample_ratio_keystr)
-    if tmp_dataset_sample_ratio == 1.0:
-        tmp_dataset_sample_ratio_str = ""
-    elif tmp_dataset_sample_ratio > 0.0 and tmp_dataset_sample_ratio < 1.0:
-        tmp_dataset_sample_ratio_str = str(tmp_dataset_sample_ratio)
-        assert(tmp_dataset_sample_ratio_str[0:2] == "0.")
-        tmp_dataset_sample_ratio_str = tmp_dataset_sample_ratio_str[1:] # Convert 0.1 to ".1", 0.01 to ".01", etc
-        tmp_dataset_sample_ratio_str = tmp_dataset_sample_ratio_str.rstrip('0') # Remove trailing zeros
-    else:
-        LogUtil.die(Common.scriptname, "Invalid dataset sample ratio: {} for workload {}".format(tmp_dataset_sample_ratio, tmp_workload))
-
     # NOTE: MUST be the same as dataset filepath in src/common/util.c
-    tmp_dataset_filepath = "{}/{}.dataset{}".format(trace_dirpath, tmp_workload, tmp_dataset_sample_ratio_str)
-    tmp_workload_filepath = "{}/{}.workload{}".format(trace_dirpath, tmp_workload, tmp_dataset_sample_ratio_str)
+    tmp_dataset_filepath = "{}/{}.dataset.{}".format(trace_dirpath, tmp_workload, trace_sample_opcnt)
+    tmp_workload_filepath = "{}/{}.workload.{}".format(trace_dirpath, tmp_workload, trace_sample_opcnt)
 
     # (1) Launch trace preprocessor (will generate dataset file)
     is_generate_dataset_file = False
-    if os.path.exists(tmp_dataset_filepath) and (tmp_dataset_sample_ratio == 1.0 or os.path.exists(tmp_workload_filepath)):
-        LogUtil.prompt(Common.scriptname, "Dataset file {} and workload file {} (if sample ratio < 1.0) already exist, skip trace preprocessing...".format(tmp_dataset_filepath, tmp_workload_filepath))
+    if os.path.exists(tmp_dataset_filepath) and os.path.exists(tmp_workload_filepath):
+        LogUtil.prompt(Common.scriptname, "Dataset file {} and workload file {} already exist, skip trace preprocessing...".format(tmp_dataset_filepath, tmp_workload_filepath))
     else:
         LogUtil.prompt(Common.scriptname, "preprocess workload {} in current machine...".format(tmp_workload))
         tmp_trace_preprocessor = TracePreprocessor(trace_preprocessor_logfile = tmp_log_filename, **tmp_settings)

@@ -98,9 +98,12 @@ namespace covered
         static const std::string TRACE_DIRPATH_KEYSTR;
         static const std::string TRACE_DIRPATH_RELATIVE_WIKIIMAGE_TRACE_FILEPATHS_KEYSTR;
         static const std::string TRACE_DIRPATH_RELATIVE_WIKITEXT_TRACE_FILEPATHS_KEYSTR;
-        static const std::string TRACE_SAMPLE_OPCNT_KEYSTR;
+        static const std::string TRACE_WIKIIMAGE_DATASET_SAMPLE_RATIO_KEYSTR;
         static const std::string TRACE_WIKIIMAGE_KEYCNT_KEYSTR;
+        static const std::string TRACE_WIKIIMAGE_TOTAL_OPCNT_KEYSTR;
+        static const std::string TRACE_WIKITEXT_DATASET_SAMPLE_RATIO_KEYSTR;
         static const std::string TRACE_WIKITEXT_KEYCNT_KEYSTR;
+        static const std::string TRACE_WIKITEXT_TOTAL_OPCNT_KEYSTR;
         static const std::string VERSION_KEYSTR;
 
         // For all physical machines
@@ -159,8 +162,9 @@ namespace covered
         static std::string getTraceDirpath();
         static std::vector<std::string> getWikiimageTraceFilepaths();
         static std::vector<std::string> getWikitextTraceFilepaths();
-        static uint32_t getTraceSampleOpcnt(const std::string& workload_name);
+        static double getTraceDatasetSampleRatio(const std::string& workload_name);
         static uint32_t getTraceKeycnt(const std::string& workload_name);
+        static uint32_t getTraceTotalOpcnt(const std::string& workload_name);
         static std::string getVersion();
 
         // For current physical machine
@@ -250,9 +254,12 @@ namespace covered
         static std::string trace_dirpath_; // Dirpath for trace files
         static std::vector<std::string> wikiimage_trace_filepaths_; // Wikipedia image trace file paths (unsampled traces) under trace dirpath
         static std::vector<std::string> wikitext_trace_filepaths_; // Wikipedia text trace file paths (unsampled traces) under trace dirpath
-        static uint32_t trace_sample_opcnt_; // Number of operations to sample from each replayed trace
+        static double trace_wikiimage_dataset_sample_ratio_; // Sample ratio of Wikipedia image trace
         static uint32_t trace_wikiimage_keycnt_; // Dataset size of Wikipedia image trace
+        static uint32_t trace_wikiimage_total_opcnt_; // Total workload size of Wikipedia image trace
+        static double trace_wikitext_dataset_sample_ratio_; // Sample ratio of Wikipedia text trace
         static uint32_t trace_wikitext_keycnt_; // Dataset size of Wikipedia text trace
+        static uint32_t trace_wikitext_total_opcnt_; // Total workload size of Wikipedia text trace
         static std::string version_; // Version of COVERED
 
         // For all physical machines

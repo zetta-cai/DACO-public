@@ -13,7 +13,7 @@ namespace covered
 {
     const std::string WikipediaWorkloadWrapper::kClassName("WikipediaWorkloadWrapper");
 
-    WikipediaWorkloadWrapper::WikipediaWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role) : ReplayedWorkloadWrapperBase(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role)
+    WikipediaWorkloadWrapper::WikipediaWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const uint32_t& max_eval_workload_loadcnt) : ReplayedWorkloadWrapperBase(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role, max_eval_workload_loadcnt)
     {
         // Differentiate facebook workload generator in different clients
         std::ostringstream oss;
@@ -27,12 +27,10 @@ namespace covered
 
     // Wiki-specific helper functions
 
-    // (1) For role of preprocessor (all trace files)
+    // (1) For role of preprocessor (all trace files) and clients (partial trace files)
 
-    void WikipediaWorkloadWrapper::parseTraceFiles_(const uint32_t& preprocess_phase)
+    void WikipediaWorkloadWrapper::parseTraceFiles_()
     {
-        assert(needAllTraceFiles_()); // Must be trace preprocessor
-
         uint32_t column_cnt = 0;
         uint32_t key_column_idx = 0;
         uint32_t value_column_idx = 0;
@@ -66,7 +64,7 @@ namespace covered
         oss << "load " << getWorkloadName_() << " trace files...";
         Util::dumpNormalMsg(instance_name_, oss.str());
         
-        bool is_achieve_trace_sample_opcnt = false;
+        bool is_achieve_max_eval_workload_loadcnt = false;
         for (uint32_t tmp_fileidx = 0; tmp_fileidx < trace_filecnt; tmp_fileidx++) // For each trace file
         {
             const std::string tmp_filepath = trace_filepaths[tmp_fileidx];
@@ -77,10 +75,11 @@ namespace covered
             Util::dumpNormalMsg(instance_name_, oss.str());
 
             // Process the current trace file
-            parseCurrentFile_(tmp_filepath, key_column_idx, value_column_idx, column_cnt, is_achieve_trace_sample_opcnt, preprocess_phase);
+            parseCurrentFile_(tmp_filepath, key_column_idx, value_column_idx, column_cnt, is_achieve_max_eval_workload_loadcnt);
 
-            if (is_achieve_trace_sample_opcnt)
+            if (is_achieve_max_eval_workload_loadcnt)
             {
+                dumpInfoIfAchieveMaxLoadCnt_();
                 break;
             }
         } // End of trace files
@@ -88,7 +87,7 @@ namespace covered
         return;
     }
 
-    void WikipediaWorkloadWrapper::parseCurrentFile_(const std::string& tmp_filepath, const uint32_t& key_column_idx, const uint32_t& value_column_idx, const uint32_t& column_cnt, bool& is_achieve_trace_sample_opcnt, const uint32_t& preprocess_phase)
+    void WikipediaWorkloadWrapper::parseCurrentFile_(const std::string& tmp_filepath, const uint32_t& key_column_idx, const uint32_t& value_column_idx, const uint32_t& column_cnt, bool& is_achieve_max_eval_workload_loadcnt)
     {
         // Check if file exists
         bool is_exist = Util::isFileExist(tmp_filepath, true);
@@ -125,29 +124,12 @@ namespace covered
             // Parse the current mmap block in TSV format
             char* tmp_line_startpos = tmp_block_buffer;
             char* tmp_block_buffer_endpos = tmp_block_buffer + tmp_mmap_block_size - 1;
-            while (!is_achieve_trace_sample_opcnt && tmp_line_startpos <= tmp_block_buffer_endpos) // For lines in the current mmap block of the current trace file
+            while (!is_achieve_max_eval_workload_loadcnt && tmp_line_startpos <= tmp_block_buffer_endpos) // For lines in the current mmap block of the current trace file
             {
                 // Find the end of the current line
                 bool is_achieve_trace_file_end = false;
-                // OBSOLETE as strchr may NOT be terminated for the last line of the current file, which does NOT have \n and also may NOT have \0
-                //char* tmp_line_endpos = strchr(tmp_line_startpos, Util::LINE_SEP_CHAR);
-                // NOTE: search \n by a custom loop here to check terminate condition and thus avoid unterminated strchr
-                char* tmp_line_endpos = NULL;
-                char* tmp_line_searchpos = tmp_line_startpos;
-                while (tmp_line_searchpos <= tmp_block_buffer_endpos)
-                {
-                    if (*tmp_line_searchpos == Util::LINE_SEP_CHAR)
-                    {
-                        tmp_line_endpos = tmp_line_searchpos;
-                        break;
-                    }
-                    else
-                    {
-                        tmp_line_searchpos++;
-                    }
-                }
-
-                if (tmp_line_endpos == NULL) // Remaining tail data is NOT a complete line, or achieve the last line of current trace file
+                char* tmp_line_endpos = strchr(tmp_line_startpos, Util::LINE_SEP_CHAR);
+                if (tmp_line_endpos == NULL) // Remaining tail data is NOT a complete line
                 {
                     if (tmp_mmap_block_idx == mmap_block_cnt - 1) // The last mmap block
                     {
@@ -195,7 +177,7 @@ namespace covered
                     parseCurrentLine_(tmp_concat_line_startpos, tmp_concat_line_endpos, key_column_idx, value_column_idx, column_cnt, tmp_key, tmp_value);
 
                     // Update dataset and workload if necessary
-                    is_achieve_trace_sample_opcnt = updateDatasetOrSampleWorkload_(tmp_key, tmp_value, preprocess_phase);
+                    is_achieve_max_eval_workload_loadcnt = updateDatasetOrWorkload_(tmp_key, tmp_value);
                 }
 
                 // Release complete line if necessary
@@ -239,9 +221,9 @@ namespace covered
                 assert(prev_block_taildata == NULL);
             }
 
-            if (is_achieve_trace_sample_opcnt) // Stop parsing trace files
+            if (is_achieve_max_eval_workload_loadcnt) // Stop parsing trace files
             {
-                assert(needAllTraceFiles_()); // Must be trave preprocessor
+                assert(needWorkloadItems_()); // Must be clients for evaluation
                 break;
             }
         } // End of mmap blocks of the current trace file
@@ -292,7 +274,7 @@ namespace covered
             const char* tmp_column_endpos = tmp_concat_line_endpos; // \n
             if (tmp_column_idx != column_cnt - 1)
             {
-                tmp_column_endpos = strchr(tmp_column_startpos, Util::TSV_SEP_CHAR); // NOTE: for non-last column in the current line, strchr MUST can be terminated due to \t after each non-last column
+                tmp_column_endpos = strchr(tmp_column_startpos, Util::TSV_SEP_CHAR); // \t
                 assert(tmp_column_endpos != NULL);
             }
 
@@ -300,7 +282,7 @@ namespace covered
             if (tmp_column_idx == key_column_idx)
             {
                 char* tmp_key_endptr = NULL;
-                int64_t tmp_keyint = strtoll(tmp_column_startpos, &tmp_key_endptr, 10); // NOTE: strtoll MUST can be terminated due to \n (may be completed by completeLastLine_()) or \t after each column
+                int64_t tmp_keyint = strtoll(tmp_column_startpos, &tmp_key_endptr, 10);
                 assert(tmp_key_endptr == tmp_column_endpos); // The first invalid char MUST be the column/line separator
                 key = Key(std::string((const char*)&tmp_keyint, sizeof(int64_t)));
             }

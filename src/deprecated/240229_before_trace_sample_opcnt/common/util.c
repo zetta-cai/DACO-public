@@ -990,22 +990,51 @@ namespace covered
 
     std::string Util::getSampledDatasetFilepath(const std::string& workload_name)
     {
-        const uint32_t tmp_trace_sample_opcnt = Config::getTraceSampleOpcnt(workload_name);
+        const double tmp_dataset_sample_ratio = Config::getTraceDatasetSampleRatio(workload_name);
 
         // NOTE: MUST be the same as dataset filepath in scripts/tools/preprocess_traces.py
         const std::string tmp_dirpath = Config::getTraceDirpath();
-        const std::string tmp_dataset_filepath = tmp_dirpath + "/" + workload_name + ".dataset." + std::to_string(tmp_trace_sample_opcnt); // E.g., data/wikitext.dataset.1000000
+        const std::string tmp_dataset_filepath = tmp_dirpath + "/" + workload_name + ".dataset" + getDatasetSampleRatioSuffix_(tmp_dataset_sample_ratio); // E.g., data/wikitext.dataset.01
         return tmp_dataset_filepath;
     }
 
     std::string Util::getSampledWorkloadFilepath(const std::string& workload_name)
     {
-        const uint32_t tmp_trace_sample_opcnt = Config::getTraceSampleOpcnt(workload_name);
+        const double tmp_dataset_sample_ratio = Config::getTraceDatasetSampleRatio(workload_name);
+        assert(tmp_dataset_sample_ratio < 1.0); // NOTE: sample ratio of 1.0 does NOT need to sample original trace files into new workload file
 
-        // NOTE: MUST be the same as worload filepath in scripts/tools/preprocess_traces.py
+        // NOTE: MUST be the same as dataset filepath in scripts/tools/preprocess_traces.py
         const std::string tmp_dirpath = Config::getTraceDirpath();
-        const std::string tmp_workload_filepath = tmp_dirpath + "/" + workload_name + ".workload." + std::to_string(tmp_trace_sample_opcnt); // E.g., data/wikitext.workload.1000000
-        return tmp_workload_filepath;
+        const std::string tmp_dataset_filepath = tmp_dirpath + "/" + workload_name + ".workload" + getDatasetSampleRatioSuffix_(tmp_dataset_sample_ratio); // E.g., data/wikitext.workload.01
+        return tmp_dataset_filepath;
+    }
+
+    std::string Util::getDatasetSampleRatioSuffix_(const double& dataset_sample_ratio)
+    {
+        assert(dataset_sample_ratio > 0.0);
+        assert(dataset_sample_ratio <= 1.0);
+
+        if (dataset_sample_ratio == 1.0)
+        {
+            return "";
+        }
+        else // (0.0, 1.0)
+        {
+            // Must begin with "0."
+            std::string sample_ratio_str = std::to_string(dataset_sample_ratio);
+            assert(sample_ratio_str.substr(0, 2) == "0.");
+
+            // Convert 0.1 to ".1", 0.01 to ".01", etc.
+            std::string tmp_suffix = sample_ratio_str.substr(1);
+
+            // Remove trailing zeros
+            while (tmp_suffix.back() == '0')
+            {
+                tmp_suffix.pop_back();
+            }
+
+            return tmp_suffix;
+        }
     }
 
     std::string Util::getEvaluatorStatisticsDirpath(EvaluatorCLI* evaluator_cli_ptr)
