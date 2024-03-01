@@ -7,13 +7,12 @@ from .utils.simulator import *
 from .utils.total_statistics_loader import *
 
 exp_simple_test_settings = {
-    "clientcnt": 4,
-    "edgecnt": 4,
+    "clientcnt": 1,
+    "edgecnt": 1,
     "keycnt": 100000,
-    "capacity_mb": 1024,
-    "cache_name": "bestguess",
-    "workload_name": "facebook",
-    "warmup_reqcnt_scale": 10
+    "capacity_mb": 14223,
+    "cache_name": "covered",
+    "workload_name": "wikitext"
 }
 
 # For dataset loader

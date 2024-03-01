@@ -78,8 +78,8 @@ namespace covered
         // NOTE: we do NOT perform placement calculation for local/remote acquire writelock request, as newly-admitted cache copies will still be invalid after cache placement
         if (need_placement_calculation)
         {
-            const bool is_tracked_by_source_edge_node = collected_popularity.isTracked();
-            // NOTE: NO need to perform placement calculation if key is NOT tracked by source edge node, as removing old local uncached popularity if any will NEVER increase admission benefit
+            const bool is_tracked_by_source_edge_node = collected_popularity.isTracked() && !is_source_cached;
+            // NOTE: NO need to perform placement calculation if key is NOT tracked or already cached by source edge node, as removing old local uncached popularity if any will NEVER increase admission benefit
             if (is_tracked_by_source_edge_node)
             {
                 // Perform greedy-based placement calculation for trade-off-aware cache placement
@@ -286,12 +286,12 @@ namespace covered
 
             if (tmp_topk_list_length == 0)
             {
-                // NOTE: we perform placement calculation only when add/update a new local uncached popularity -> at least one local uncached popularity in the top-k list
-                // NOTE: getAggregatedUncachedPopularity() will check and deep copy aggregated uncache popularity atomically -> tmp_topk_list_length should > 0 if has_aggregated_uncached_popularity = true
+                // NOTE: in normal cases, we perform placement calculation only when add/update a new local uncached popularity -> at least one local uncached popularity in the top-k list
+                // --> getAggregatedUncachedPopularity() will check and deep copy aggregated uncache popularity atomically -> tmp_topk_list_length should > 0 if has_aggregated_uncached_popularity = true
+                // NOTE: in rare cases, e.g., two requests trigger placement for the same key simultaneously each add/update a new local uncached popularity, another request performs placement calculation first and uses up top-k list in the aggregated uncached popularity (yet not deleted due to still with positive sum of some local uncached popularities, which just not in top-k list), then the current request can get an aggregated uncached popularity yet with empty top-k list
                 std::ostringstream oss;
-                oss << "top-list length should > 0 if aggregated uncached popularity exists, yet is zero now when calculate placement for key " << key.getKeyDebugstr();
-                Util::dumpErrorMsg(instance_name_, oss.str());
-                exit(1);
+                oss << "top-list length should > 0 if aggregated uncached popularity exists, yet is zero now when calculate placement for key " << key.getKeyDebugstr() << ", which may be caused by a rare case of concurrent placements for the same key";
+                Util::dumpWarnMsg(instance_name_, oss.str());
             }
             assert(tmp_topk_list_length <= popularity_aggregator_ptr_->getTopkEdgecnt()); // At most EdgeCLI::covered_topk_edgecnt_ times
 

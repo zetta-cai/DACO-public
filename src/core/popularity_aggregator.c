@@ -87,27 +87,24 @@ namespace covered
         bool need_fast_path_hint = true; // For fast-path single-placement calculation
         #endif
 
-        bool is_tracked_by_source_edge_node = collected_popularity.isTracked(); // If key is tracked by local uncached metadata in the source edge node (i.e., if local uncached popularity is valid)
+        // Ignore local uncached popularity if necessary
+        // Condition 1: if key is tracked by local uncached metadata in the source edge node (i.e., if local uncached popularity is valid) (normal case)
+        // Condition 2: if key is cached by source edge node based on directory table (sender issues collected popularity before admitting local edge cache)
+        // --> NOTE: we do NOT add/update latest local uncached popularity if key has directory info for the source edge node, to avoid duplicate admission on the source edge node, after directory update request with is_admit = true clearing preserved edgeset in the beacon node, yet the source edge node has NOT admitted the object into local edge cache to clear local uncached metadata
+        // --> NOTE: this will delay the latest local uncached popularity of newly-evicted keys, after the source edge node has evicted the object and updated local uncached metadata for metadata preservation, yet directory update request with is_admit = false has NOT cleared directory info in the beacon node -> BUT acceptable as this is a corner case (newly-evicted keys are NOT popular enough and NO need to add/update latest local uncached popularity in most cases after eviciton)
+        bool is_tracked_by_source_edge_node = collected_popularity.isTracked() && !is_source_cached;
         #ifdef ENABLE_FAST_PATH_PLACEMENT
         if (is_tracked_by_source_edge_node)
         {
             // Tracked by sender local uncached metadata
             need_fast_path_hint = false;
         }
-        #endif
-
-        // Ignore local uncached popularity if necessary
-        if (is_source_cached) // Ignore local uncached popularity if key is cached by source edge node based on directory table
+        else if (is_source_cached)
         {
-            // NOTE: we do NOT add/update latest local uncached popularity if key has directory info for the source edge node, to avoid duplicate admission on the source edge node, after directory update request with is_admit = true clearing preserved edgeset in the beacon node, yet the source edge node has NOT admitted the object into local edge cache to clear local uncached metadata
-            // NOTE: this will delay the latest local uncached popularity of newly-evicted keys, after the source edge node has evicted the object and updated local uncached metadata for metadata preservation, yet directory update request with is_admit = false has NOT cleared directory info in the beacon node -> BUT acceptable as this is a corner case (newly-evicted keys are NOT popular enough and NO need to add/update latest local uncached popularity in most cases after eviciton)
-            is_tracked_by_source_edge_node = false;
-
-            #ifdef ENABLE_FAST_PATH_PLACEMENT
             // With dirinfo of sender (i.e., finish placement notification in sender)
             need_fast_path_hint = false;
-            #endif
         }
+        #endif
 
         perkey_preserved_edgeset_t::const_iterator perkey_preserved_edgeset_const_iter = perkey_preserved_edgeset_.find(key);
         if (perkey_preserved_edgeset_const_iter != perkey_preserved_edgeset_.end() && perkey_preserved_edgeset_const_iter->second.isPreserved(source_edge_idx)) // Ignore local uncached popularity if source edge node is in preserved edgeset
@@ -331,6 +328,7 @@ namespace covered
         // Prepare new aggregated uncached popularity for the new key
         AggregatedUncachedPopularity new_aggregated_uncached_popularity(key, edgecnt_);
         new_aggregated_uncached_popularity.update(source_edge_idx, local_uncached_popularity, topk_edgecnt_, object_size);
+        assert(new_aggregated_uncached_popularity.getTopkListLength() > 0); // At least one local uncached popularity of a node is tracked in the top-k list
 
         // Update benefit-popularity multimap and per-key lookup table for new aggregated uncached popularity
         addBenefitPopularityForNewKey_(edge_wrapper_ptr, key, new_aggregated_uncached_popularity, is_global_cached);
