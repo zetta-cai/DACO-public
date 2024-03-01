@@ -9,19 +9,10 @@ is_clear_tarball = True # whether to clear intermediate tarball files
 
 # (1) Create trace dirpath if not exist
 
-tmp_trace_dirpath_from_json = JsonUtil.getValueForKeystr(Common.scriptname, "trace_dirpath")
-
-# Get trace dirpath
-trace_dirpath = ""
-if tmp_trace_dirpath_from_json[0] == "/": # Absolute path
-    trace_dirpath = tmp_trace_dirpath_from_json
-else: # Relative path
-    trace_dirpath = "{}/{}".format(Common.proj_dirname, tmp_trace_dirpath_from_json)
-
 # Create trace dirpath if not exist
-if not os.path.exists(trace_dirpath):
-    LogUtil.prompt(Common.scriptname, "create {} as trace dirpath".format(trace_dirpath))
-    os.makedirs(trace_dirpath)
+if not os.path.exists(Common.trace_dirpath):
+    LogUtil.prompt(Common.scriptname, "create {} as trace dirpath".format(Common.trace_dirpath))
+    os.makedirs(Common.trace_dirpath)
 
 # (2) Download Wiki image CDN trace
 
@@ -32,7 +23,7 @@ tmp_trace_dirpath_relative_wikiimage_trace_filespaths_from_json = JsonUtil.getVa
 # Get wikiimage trace filepaths
 wikiimage_trace_filepaths = []
 for i in range(len(tmp_trace_dirpath_relative_wikiimage_trace_filespaths_from_json)):
-    wikiimage_trace_filepaths.append("{}/{}".format(trace_dirpath, tmp_trace_dirpath_relative_wikiimage_trace_filespaths_from_json[i]))
+    wikiimage_trace_filepaths.append("{}/{}".format(Common.trace_dirpath, tmp_trace_dirpath_relative_wikiimage_trace_filespaths_from_json[i]))
 
 # Create wikiimage trace dirpath if not exist
 wikiimage_trace_dirpath = os.path.dirname(wikiimage_trace_filepaths[0])
@@ -75,7 +66,7 @@ tmp_trace_dirpath_relative_wikitext_trace_filepaths_from_json = JsonUtil.getValu
 # Get wikitext trace filepaths
 wikitext_trace_filepaths = []
 for i in range(len(tmp_trace_dirpath_relative_wikitext_trace_filepaths_from_json)):
-    wikitext_trace_filepaths.append("{}/{}".format(trace_dirpath, tmp_trace_dirpath_relative_wikitext_trace_filepaths_from_json[i]))
+    wikitext_trace_filepaths.append("{}/{}".format(Common.trace_dirpath, tmp_trace_dirpath_relative_wikitext_trace_filepaths_from_json[i]))
 
 # Create wikitext trace dirpath if not exist
 wikitext_trace_dirpath = os.path.dirname(wikitext_trace_filepaths[0])

@@ -8,7 +8,6 @@ from ..exps.utils.trace_preprocessor import *
 replayed_workloads = ["wikitext", "wikiimage"]
 log_filenames = ["tmp_trace_preprocessor_for_{}.out".format(tmp_workload) for tmp_workload in replayed_workloads]
 
-trace_dirpath = JsonUtil.getValueForKeystr(Common.scriptname, "trace_dirpath")
 client_machine_idxes = JsonUtil.getValueForKeystr(Common.scriptname, "client_machine_indexes")
 cloud_machine_idx = JsonUtil.getValueForKeystr(Common.scriptname, "cloud_machine_index")
 physical_machines = JsonUtil.getValueForKeystr(Common.scriptname, "physical_machines")
@@ -26,8 +25,8 @@ for i in range(len(replayed_workloads)):
     }
 
     # NOTE: MUST be the same as dataset filepath in src/common/util.c
-    tmp_dataset_filepath = "{}/{}.dataset.{}".format(trace_dirpath, tmp_workload, trace_sample_opcnt)
-    tmp_workload_filepath = "{}/{}.workload.{}".format(trace_dirpath, tmp_workload, trace_sample_opcnt)
+    tmp_dataset_filepath = "{}/{}.dataset.{}".format(Common.trace_dirpath, tmp_workload, trace_sample_opcnt)
+    tmp_workload_filepath = "{}/{}.workload.{}".format(Common.trace_dirpath, tmp_workload, trace_sample_opcnt)
 
     # (1) Launch trace preprocessor (will generate dataset file)
     is_generate_dataset_file = False
@@ -69,8 +68,8 @@ for i in range(len(replayed_workloads)):
             # If cloud machine does NOT have the dataset file, copy it to cloud machine
             if need_copy_dataset_file:
                 # Mkdir for trace dirpath if not exist
-                LogUtil.prompt(Common.scriptname, "create trace directory {} if not exist in cloud machine...".format(trace_dirpath))
-                try_to_create_trace_dirpath_remote_cmd = ExpUtil.getRemoteCmd(cloud_machine_idx, "mkdir -p {}".format(trace_dirpath))
+                LogUtil.prompt(Common.scriptname, "create trace directory {} if not exist in cloud machine...".format(Common.trace_dirpath))
+                try_to_create_trace_dirpath_remote_cmd = ExpUtil.getRemoteCmd(cloud_machine_idx, "mkdir -p {}".format(Common.trace_dirpath))
                 try_to_create_trace_dirpath_subprocess = SubprocessUtil.runCmd(try_to_create_trace_dirpath_remote_cmd)
                 if try_to_create_trace_dirpath_subprocess.returncode != 0:
                     LogUtil.die(Common.scriptname, SubprocessUtil.getSubprocessErrstr(try_to_create_trace_dirpath_subprocess))

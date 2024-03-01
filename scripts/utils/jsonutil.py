@@ -20,3 +20,13 @@ class JsonUtil:
             LogUtil.die(scriptname, "Key not found in config.json: " + keystr)
         else:
             return cls.config_jsonobj_[keystr]
+    
+    @classmethod
+    def getFullPathForKeystr(cls, scriptname, keystr, proj_dirname):
+        tmp_path_fromjson = cls.getValueForKeystr(scriptname, keystr)
+        tmp_path = ""
+        if tmp_path_fromjson[0] == "/": # Absolute path
+            tmp_path = tmp_path_fromjson
+        else: # Relative path
+            tmp_path = "{}/{}".format(proj_dirname, tmp_path_fromjson)
+        return tmp_path

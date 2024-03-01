@@ -29,17 +29,16 @@ class Common:
         kernel_codename = SubprocessUtil.getSubprocessOutputstr(tmp_get_kernel_codename_subprocess).splitlines()[0].split()[-1]
 
     # NOTE: update library_path in config.json for new library installation path if necessary
-    tmp_library_dirpath_fromjson = JsonUtil.getValueForKeystr(scriptname, "library_dirpath")
-    lib_dirpath = ""
-    if tmp_library_dirpath_fromjson[0] == "/": # Absolute path
-        lib_dirpath = tmp_library_dirpath_fromjson
-    else: # Relative path
-        lib_dirpath = "{}/{}".format(proj_dirname, tmp_library_dirpath_fromjson)
-    if not os.path.exists(lib_dirpath):
+    lib_dirpath = JsonUtil.getFullPathForKeystr(scriptname, "library_dirpath", proj_dirname)
+    if not os.path.exists(lib_dirpath): # NOTE: all roles (e.g., client/edge/cloud/evaluator) need libraries
         LogUtil.prompt(scriptname, "{}: Create directory {}...".format(scriptname, lib_dirpath))
         os.mkdir(lib_dirpath)
     #else:
     #    LogUtil.dump(scriptname, "{}: {} exists (third-party libarary dirpath has been created)".format(scriptname, lib_dirpath))
+
+    # NOTE: update trace_dirpath in config.json for new trace directory path if necessary
+    trace_dirpath = JsonUtil.getFullPathForKeystr(scriptname, "trace_dirpath", proj_dirname)
+    # NOTE: NOT all roles need trace dirpath (ONLY clients and cloud need) -> NOT create trace dirpath here
 
     # Get current machine index for passfree SSH configuraiton and launch prototype
     LogUtil.prompt(scriptname, "get current machine index based on ifconfig")
