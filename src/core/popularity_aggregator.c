@@ -268,9 +268,13 @@ namespace covered
         perkey_preserved_edgeset_t::iterator perkey_preserved_edgeset_iter = perkey_preserved_edgeset_.find(key);
         if (perkey_preserved_edgeset_iter != perkey_preserved_edgeset_.end())
         {
-            bool is_empty = perkey_preserved_edgeset_iter->second.clearPreservedEdgeNode(source_edge_idx);
+            bool is_empty = perkey_preserved_edgeset_iter->second.clearPreservedEdgeNode(source_edge_idx); // Mark the corresponding bit in bitmap as false (not change space cost of preserved edgeset yet)
             if (is_empty) // All preserved edge nodes have received local/remote placement notification
             {
+                // Reduce space cost due to removing the preserved edgeset
+                size_bytes_ = Util::uint64Minus(size_bytes_, key.getKeyLength()); // Key
+                size_bytes_ = Util::uint64Minus(size_bytes_, perkey_preserved_edgeset_iter->second.getSizeForCapacity()); // Preserved edgeset
+
                 perkey_preserved_edgeset_.erase(perkey_preserved_edgeset_iter);
             }
         }

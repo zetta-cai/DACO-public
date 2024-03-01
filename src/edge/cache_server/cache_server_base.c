@@ -596,14 +596,6 @@ namespace covered
 
                 total_victims.insert(tmp_victims.begin(), tmp_victims.end());
 
-                // TMPDEBUG24
-                if (used_bytes >= 3350000000)
-                {
-                    std::ostringstream oss;
-                    oss << "evict " << tmp_victims.size() << " victims; used " << used_bytes << " bytes; capacity " << capacity_bytes << " bytes";
-                    Util::dumpNormalMsg(base_instance_name_, oss.str());
-                }
-
                 continue;
             }
         }

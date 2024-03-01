@@ -9,7 +9,10 @@ namespace covered
 {
     const std::string PreservedEdgeset::kClassName("PreservedEdgeset");
 
-    PreservedEdgeset::PreservedEdgeset(const uint32_t& edgecnt) : preserved_bitmap_(edgecnt, false) {}
+    PreservedEdgeset::PreservedEdgeset(const uint32_t& edgecnt) : preserved_bitmap_(edgecnt, false)
+    {
+        assert(preserved_bitmap_.size() > 0);
+    }
 
     PreservedEdgeset::~PreservedEdgeset() {}
 
@@ -78,6 +81,7 @@ namespace covered
 
     uint64_t PreservedEdgeset::getSizeForCapacity() const
     {
-        return preserved_bitmap_.size() * sizeof(bool);
+        // NOTE: std::vector<bool> is just an impl trick, while the actual space cost is actually one bit for each edge node
+        return (preserved_bitmap_.size() * sizeof(bool) - 1) / 8 + 1;
     }
 }

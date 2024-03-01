@@ -28,16 +28,6 @@ namespace covered
     {
         checkPointers_();
 
-        // TMPDEBUG24
-        uint64_t tmp_used_bytes = edge_wrapper_ptr_->getSizeForCapacity();
-        uint64_t tmp_capacity_bytes = edge_wrapper_ptr_->getCapacityBytes();
-        if (tmp_used_bytes >= 3350000000)
-        {
-            std::ostringstream oss;
-            oss << "admit key " << key.getKeyDebugstr() << " with value size " << value.getValuesize() << " bytes; used " << tmp_used_bytes << " bytes out of " << tmp_capacity_bytes << " bytes";
-            Util::dumpNormalMsg(instance_name_, oss.str());
-        }
-
         bool affect_victim_tracker = false; // If key is a local synced victim now
         const uint32_t beacon_edgeidx = edge_wrapper_ptr_->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
         edge_wrapper_ptr_->getEdgeCachePtr()->admit(key, value, is_neighbor_cached, is_valid, beacon_edgeidx, affect_victim_tracker);

@@ -214,7 +214,7 @@ namespace covered
                 else
                 {
                     std::ostringstream oss;
-                    oss << "client timeout to wait for local response for key " << workload_item.getKey().getKeyDebugstr() << "from edge " << closest_edge_idx_;
+                    oss << "client timeout to wait for local response for key " << workload_item.getKey().getKeyDebugstr() << " from edge " << closest_edge_idx_;
                     Util::dumpWarnMsg(instance_name_, oss.str());
                     continue; // Resend the local request message
                 }
