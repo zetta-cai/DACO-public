@@ -79,10 +79,6 @@ namespace covered
         warmup_reqcnt_limit_ = (total_warmup_reqcnt - 1) / total_client_workercnt + 1; // Get per-client-worker warmup reqcnt limitation
         assert(warmup_reqcnt_limit_ > 0);
         assert(warmup_reqcnt_limit_ * total_client_workercnt >= total_warmup_reqcnt); // Total # of issued warmup reqs MUST >= total # of required warmup reqs
-
-        // (4) Notify client wrapper that the current client worker has finished initialization
-
-        client_worker_param_ptr->markFinishInitialization();
     }
     
     ClientWorkerWrapper::~ClientWorkerWrapper()
@@ -102,6 +98,9 @@ namespace covered
         const uint32_t local_client_worker_idx = client_worker_param_ptr_->getLocalClientWorkerIdx();
         
         WorkloadWrapperBase* workload_generator_ptr = tmp_client_wrapper_ptr->getWorkloadWrapperPtr();
+
+        // Notify client wrapper that the current client worker has finished initialization
+        client_worker_param_ptr_->markFinishInitialization();
 
         // Block until client_running_ becomes true
         while (!tmp_client_wrapper_ptr->isNodeRunning()) {}

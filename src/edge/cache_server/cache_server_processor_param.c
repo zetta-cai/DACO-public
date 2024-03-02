@@ -6,7 +6,7 @@ namespace covered
 {
     const std::string CacheServerProcessorParam::kClassName("CacheServerProcessorParam");
 
-    CacheServerProcessorParam::CacheServerProcessorParam()
+    CacheServerProcessorParam::CacheServerProcessorParam() : SubthreadParamBase()
     {
         is_polling_based_ = false;
         cache_server_ptr_ = NULL;
@@ -14,7 +14,7 @@ namespace covered
         cache_server_item_blocking_buffer_ptr_ = NULL;
     }
 
-    CacheServerProcessorParam::CacheServerProcessorParam(CacheServerBase* cache_server_ptr, const uint32_t& data_request_buffer_size, const bool& is_polling_based)
+    CacheServerProcessorParam::CacheServerProcessorParam(CacheServerBase* cache_server_ptr, const uint32_t& data_request_buffer_size, const bool& is_polling_based) : SubthreadParamBase()
     {
         is_polling_based_ = is_polling_based;
         cache_server_ptr_ = cache_server_ptr;

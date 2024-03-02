@@ -23,28 +23,21 @@ namespace covered
 
     const std::string EvaluatorWrapper::kClassName("EvaluatorWrapper");
 
-    EvaluatorWrapperParam::EvaluatorWrapperParam()
+    EvaluatorWrapperParam::EvaluatorWrapperParam() : SubthreadParamBase()
     {
-        is_evaluator_initialized_ = false;
         evaluator_cli_ptr_ = NULL;
     }
 
-    EvaluatorWrapperParam::EvaluatorWrapperParam(const bool& is_evaluator_initialized, EvaluatorCLI* evaluator_cli_ptr)
+    EvaluatorWrapperParam::EvaluatorWrapperParam(EvaluatorCLI* evaluator_cli_ptr) : SubthreadParamBase()
     {
         assert(evaluator_cli_ptr != NULL);
 
-        is_evaluator_initialized_ = is_evaluator_initialized;
         evaluator_cli_ptr_ = evaluator_cli_ptr;
     }
 
     EvaluatorWrapperParam::~EvaluatorWrapperParam()
     {
         // NOTE: NO need to release evaluator_cli_ptr_, which is maintained outside EvaluatorWrapperParam
-    }
-
-    bool EvaluatorWrapperParam::isEvaluatorInitialized() const
-    {
-        return is_evaluator_initialized_;
     }
     
     EvaluatorCLI* EvaluatorWrapperParam::getEvaluatorCLIPtr() const
@@ -53,16 +46,8 @@ namespace covered
         return evaluator_cli_ptr_;
     }
 
-    void EvaluatorWrapperParam::setEvaluatorInitialized()
-    {
-        assert(!is_evaluator_initialized_);
-        is_evaluator_initialized_ = true;
-        return;
-    }
-
     EvaluatorWrapperParam& EvaluatorWrapperParam::operator=(const EvaluatorWrapperParam& other)
     {
-        is_evaluator_initialized_ = other.is_evaluator_initialized_;
         evaluator_cli_ptr_ = other.evaluator_cli_ptr_;
         return *this;
     }
@@ -76,7 +61,7 @@ namespace covered
         std::string evaluator_statistics_filepath = Util::getEvaluatorStatisticsFilepath(evaluator_cli_ptr);
 
         EvaluatorWrapper evaluator(evaluator_cli_ptr->getClientcnt(), evaluator_cli_ptr->getEdgecnt(), evaluator_cli_ptr->getKeycnt(), evaluator_cli_ptr->getWarmupReqcntScale(), evaluator_cli_ptr->getWarmupMaxDurationSec(), evaluator_cli_ptr->getStresstestDurationSec(), evaluator_statistics_filepath);
-        evaluator_wrapper_param.setEvaluatorInitialized(); // Such that simulator or prototype will continue to launch cloud, edge, and client nodes
+        evaluator_wrapper_param.markFinishInitialization(); // Such that simulator or prototype will continue to launch cloud, edge, and client nodes
 
         evaluator.start();
         

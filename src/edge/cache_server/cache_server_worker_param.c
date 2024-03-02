@@ -6,14 +6,14 @@ namespace covered
 {
     const std::string CacheServerWorkerParam::kClassName("CacheServerWorkerParam");
 
-    CacheServerWorkerParam::CacheServerWorkerParam()
+    CacheServerWorkerParam::CacheServerWorkerParam() : SubthreadParamBase()
     {
         cache_server_ptr_ = NULL;
         local_cache_server_worker_idx_ = 0;
         data_request_buffer_ptr_ = NULL;
     }
 
-    CacheServerWorkerParam::CacheServerWorkerParam(CacheServerBase* cache_server_ptr, const uint32_t& local_cache_server_worker_idx, const uint32_t& data_request_buffer_size)
+    CacheServerWorkerParam::CacheServerWorkerParam(CacheServerBase* cache_server_ptr, const uint32_t& local_cache_server_worker_idx, const uint32_t& data_request_buffer_size) : SubthreadParamBase()
     {
         cache_server_ptr_ = cache_server_ptr;
         local_cache_server_worker_idx_ = local_cache_server_worker_idx;

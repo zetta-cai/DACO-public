@@ -14,6 +14,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "common/subthread_param_base.h"
 #include "cli/evaluator_cli.h"
 #include "network/network_addr.h"
 #include "network/udp_msg_socket_client.h"
@@ -22,21 +23,17 @@
 
 namespace covered
 {
-    class EvaluatorWrapperParam
+    class EvaluatorWrapperParam : public SubthreadParamBase
     {
     public:
         EvaluatorWrapperParam();
-        EvaluatorWrapperParam(const bool& is_evaluator_initialized, EvaluatorCLI* evaluator_cli_ptr);
+        EvaluatorWrapperParam(EvaluatorCLI* evaluator_cli_ptr);
         ~EvaluatorWrapperParam();
 
-        bool isEvaluatorInitialized() const;
         EvaluatorCLI* getEvaluatorCLIPtr() const;
-
-        void setEvaluatorInitialized();
 
         EvaluatorWrapperParam& operator=(const EvaluatorWrapperParam& other);
     private:
-        volatile bool is_evaluator_initialized_;
         EvaluatorCLI* evaluator_cli_ptr_;
     };
 

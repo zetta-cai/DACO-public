@@ -92,6 +92,10 @@ namespace covered
         cloud_toedge_propagation_simulator_param_ptr_ = new PropagationSimulatorParam((NodeWrapperBase*)this, propagation_latency_edgecloud_us, Config::getPropagationItemBufferSizeCloudToedge());
         assert(cloud_toedge_propagation_simulator_param_ptr_ != NULL);
 
+        // Allocate cloud data server param
+        cloud_data_server_param_ptr_ = new CloudComponentParam(this);
+        assert(cloud_data_server_param_ptr_ != NULL);
+
         // Sub-threads
         cloud_toedge_propagation_simulator_thread_ = 0;
         data_server_thread_ = 0;
@@ -113,6 +117,11 @@ namespace covered
         assert(cloud_toedge_propagation_simulator_param_ptr_ != NULL);
         delete cloud_toedge_propagation_simulator_param_ptr_;
         cloud_toedge_propagation_simulator_param_ptr_ = NULL;
+
+        // Release cloud data server param
+        assert(cloud_data_server_param_ptr_ != NULL);
+        delete cloud_data_server_param_ptr_;
+        cloud_data_server_param_ptr_ = NULL;
     }
 
     WorkloadWrapperBase* CloudWrapper::getWorkloadGeneratorPtr() const
@@ -159,7 +168,21 @@ namespace covered
         //     exit(1);
         // }
         tmp_thread_name = "cloud-data-server-" + std::to_string(node_idx_);
-        ThreadLauncher::pthreadCreateHighPriority(ThreadLauncher::CLOUD_THREAD_ROLE, tmp_thread_name, &data_server_thread_, DataServer::launchDataServer, (void*)(this));
+        ThreadLauncher::pthreadCreateHighPriority(ThreadLauncher::CLOUD_THREAD_ROLE, tmp_thread_name, &data_server_thread_, DataServer::launchDataServer, (void*)(cloud_data_server_param_ptr_));
+
+        // Wait cloud-to-client propagation simulator to finish initialization
+        Util::dumpNormalMsg(instance_name_, "wait cloud-to-client simulator to finish initialization...");
+        while (!cloud_toedge_propagation_simulator_param_ptr_->isFinishInitialization())
+        {
+            usleep(SubthreadParamBase::INITIALIZATION_WAIT_INTERVAL_US);
+        }
+
+        // Wait cloud data server to finish initialization
+        Util::dumpNormalMsg(instance_name_, "wait cloud data server to finish initialization...");
+        while (!cloud_data_server_param_ptr_->isFinishInitialization())
+        {
+            usleep(SubthreadParamBase::INITIALIZATION_WAIT_INTERVAL_US);
+        }
 
         return;
     }

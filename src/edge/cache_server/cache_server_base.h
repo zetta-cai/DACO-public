@@ -26,8 +26,9 @@ namespace covered
 #include "concurrency/rwlock.h"
 #include "edge/cache_server/cache_server_processor_param.h"
 #include "edge/cache_server/cache_server_worker_param.h"
-#include "edge/edge_wrapper_base.h"
+#include "edge/edge_component_param.h"
 #include "edge/edge_custom_func_param_base.h"
+#include "edge/edge_wrapper_base.h"
 #include "hash/hash_wrapper_base.h"
 #include "network/udp_msg_socket_server.h"
 
@@ -36,9 +37,9 @@ namespace covered
     class CacheServerBase
     {
     public:
-        static void* launchCacheServer(void* edge_wrapper_ptr);
+        static void* launchCacheServer(void* edge_component_ptr);
 
-        CacheServerBase(EdgeWrapperBase* edge_wrapper_ptr);
+        CacheServerBase(EdgeComponentParam* edge_component_ptr);
         virtual ~CacheServerBase();
 
         void start();
@@ -68,7 +69,7 @@ namespace covered
         void checkPointers_() const;
         
         // Const shared variable
-        EdgeWrapperBase* edge_wrapper_ptr_;
+        EdgeComponentParam* edge_component_ptr_;
     private:
         static const bool IS_HIGH_PRIORITY_FOR_CACHE_PLACEMENT;
         static const bool IS_HIGH_PRIORITY_FOR_METADATA_UPDATE;

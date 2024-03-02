@@ -14,13 +14,14 @@ namespace covered
     class CacheServerWorkerParam;
 }
 
+#include "common/subthread_param_base.h"
 #include "concurrency/ring_buffer_impl.h"
 #include "edge/cache_server/cache_server_item.h"
 #include "edge/cache_server/cache_server_base.h"
 
 namespace covered
 {   
-    class CacheServerWorkerParam
+    class CacheServerWorkerParam : public SubthreadParamBase
     {
     public:
         CacheServerWorkerParam();

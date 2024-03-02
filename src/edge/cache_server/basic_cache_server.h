@@ -14,7 +14,7 @@ namespace covered
     class BasicCacheServer : public CacheServerBase
     {
     public:
-        BasicCacheServer(EdgeWrapperBase* edge_wrapper_ptr);
+        BasicCacheServer(EdgeComponentParam* edge_component_ptr);
         virtual ~BasicCacheServer();
 
         // (1) For local edge cache admission and remote directory admission (invoked by edge cache server worker for independent admission; or by placement processor for remote placement notification)

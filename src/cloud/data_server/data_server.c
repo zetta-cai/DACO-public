@@ -11,20 +11,22 @@ namespace covered
 {
     const std::string DataServer::kClassName("DataServer");
 
-    void* DataServer::launchDataServer(void* cloud_wrapper_ptr)
+    void* DataServer::launchDataServer(void* cloud_component_param_ptr)
     {
-        DataServer data_server((CloudWrapper*)cloud_wrapper_ptr);
+        DataServer data_server((CloudComponentParam*)cloud_component_param_ptr);
         data_server.start();
         
         pthread_exit(NULL);
         return NULL;
     }
 
-    DataServer::DataServer(CloudWrapper* cloud_wrapper_ptr) : cloud_wrapper_ptr_(cloud_wrapper_ptr)
+    DataServer::DataServer(CloudComponentParam* cloud_component_param_ptr) : cloud_component_param_ptr_(cloud_component_param_ptr)
     {
-        assert(cloud_wrapper_ptr != NULL);
-        uint32_t cloud_idx = cloud_wrapper_ptr->getNodeIdx();
-        uint32_t cloudcnt = cloud_wrapper_ptr->getNodeCnt();
+        assert(cloud_component_param_ptr != NULL);
+        CloudWrapper* tmp_cloud_wrapper_ptr = cloud_component_param_ptr->getCloudWrapperPtr();
+        assert(tmp_cloud_wrapper_ptr != NULL);
+        uint32_t cloud_idx = tmp_cloud_wrapper_ptr->getNodeIdx();
+        uint32_t cloudcnt = tmp_cloud_wrapper_ptr->getNodeCnt();
         assert(cloud_idx == 0 && cloudcnt == 1); // TODO: only 1 cloud node now
 
         // Differentiate cache servers in different edge nodes
@@ -49,7 +51,7 @@ namespace covered
 
     DataServer::~DataServer()
     {
-        // NO need to release cloud_wrapper_ptr_, which is released by CloudWrapper itself
+        // NO need to release tmp_cloud_wrapper_ptr, which is released by CloudWrapper itself
 
         // Release the socket server on recvreq port
         assert(cloud_recvreq_socket_server_ptr_ != NULL);
@@ -60,9 +62,13 @@ namespace covered
     void DataServer::start()
     {
         checkPointers_();
+        CloudWrapper* tmp_cloud_wrapper_ptr = cloud_component_param_ptr_->getCloudWrapperPtr();
+
+        // Notify cloud wrapper that cloud data server has finished initialization
+        cloud_component_param_ptr_->markFinishInitialization();
 
         bool is_finish = false; // Mark if local cloud node is finished
-        while (cloud_wrapper_ptr_->isNodeRunning()) // cloud_running_ is set as true by default
+        while (tmp_cloud_wrapper_ptr->isNodeRunning()) // cloud_running_ is set as true by default
         {
             // Receive the global request message
             DynamicArray global_request_msg_payload;
@@ -107,8 +113,9 @@ namespace covered
     bool DataServer::processGlobalRequest_(MessageBase* global_request_ptr, const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr)
     {
         checkPointers_();
+        CloudWrapper* tmp_cloud_wrapper_ptr = cloud_component_param_ptr_->getCloudWrapperPtr();
 
-        const uint32_t cloud_idx = cloud_wrapper_ptr_->getNodeIdx();
+        const uint32_t cloud_idx = tmp_cloud_wrapper_ptr->getNodeIdx();
 
         bool is_finish = false;
         BandwidthUsage total_bandwidth_usage;
@@ -138,14 +145,14 @@ namespace covered
                 #ifdef ENABLE_CLOUD_WARMUP_SPEEDUP
                 if (skip_propagation_latency) // Warmup speedup is enabled
                 {
-                    cloud_wrapper_ptr_->getWorkloadGeneratorPtr()->quickDatasetGet(tmp_key, tmp_value);
+                    tmp_cloud_wrapper_ptr->getWorkloadGeneratorPtr()->quickDatasetGet(tmp_key, tmp_value);
                 }
                 else // Normal backend storage access (evaluation phase, or warmup phase without warmup speedup)
                 {
-                    cloud_wrapper_ptr_->getCloudRocksdbPtr()->get(tmp_key, tmp_value);
+                    tmp_cloud_wrapper_ptr->getCloudRocksdbPtr()->get(tmp_key, tmp_value);
                 }
                 #else
-                cloud_wrapper_ptr_->getCloudRocksdbPtr()->get(tmp_key, tmp_value);
+                tmp_cloud_wrapper_ptr->getCloudRocksdbPtr()->get(tmp_key, tmp_value);
                 #endif
 
                 event_name = Event::CLOUD_GET_ROCKSDB_EVENT_NAME;
@@ -163,14 +170,14 @@ namespace covered
                 if (skip_propagation_latency) // Warmup speedup is enabled
                 {
                     // NOTE: we use an impl trick to NOT reflect writes into rocksdb for warmup speedup (NOT affect evaluation results on cache stable performance)
-                    cloud_wrapper_ptr_->getWorkloadGeneratorPtr()->quickDatasetPut(tmp_key, tmp_value);
+                    tmp_cloud_wrapper_ptr->getWorkloadGeneratorPtr()->quickDatasetPut(tmp_key, tmp_value);
                 }
                 else // Normal backend storage access (evaluation phase, or warmup phase without warmup speedup)
                 {
-                    cloud_wrapper_ptr_->getCloudRocksdbPtr()->put(tmp_key, tmp_value);
+                    tmp_cloud_wrapper_ptr->getCloudRocksdbPtr()->put(tmp_key, tmp_value);
                 }
                 #else
-                cloud_wrapper_ptr_->getCloudRocksdbPtr()->put(tmp_key, tmp_value);
+                tmp_cloud_wrapper_ptr->getCloudRocksdbPtr()->put(tmp_key, tmp_value);
                 #endif
 
                 event_name = Event::CLOUD_PUT_ROCKSDB_EVENT_NAME;
@@ -186,14 +193,14 @@ namespace covered
                 if (skip_propagation_latency) // Warmup speedup is enabled
                 {
                     // NOTE: we use an impl trick to NOT reflect writes into rocksdb for warmup speedup (NOT affect evaluation results on cache stable performance)
-                    cloud_wrapper_ptr_->getWorkloadGeneratorPtr()->quickDatasetDel(tmp_key);
+                    tmp_cloud_wrapper_ptr->getWorkloadGeneratorPtr()->quickDatasetDel(tmp_key);
                 }
                 else // Normal backend storage access (evaluation phase, or warmup phase without warmup speedup)
                 {
-                    cloud_wrapper_ptr_->getCloudRocksdbPtr()->remove(tmp_key);
+                    tmp_cloud_wrapper_ptr->getCloudRocksdbPtr()->remove(tmp_key);
                 }
                 #else
-                cloud_wrapper_ptr_->getCloudRocksdbPtr()->remove(tmp_key);
+                tmp_cloud_wrapper_ptr->getCloudRocksdbPtr()->remove(tmp_key);
                 #endif
 
                 event_name = Event::CLOUD_DEL_ROCKSDB_EVENT_NAME;
@@ -209,14 +216,14 @@ namespace covered
                 #ifdef ENABLE_CLOUD_WARMUP_SPEEDUP
                 if (skip_propagation_latency) // Warmup speedup is enabled (non-blocking data fetching during warmup phase)
                 {
-                    cloud_wrapper_ptr_->getWorkloadGeneratorPtr()->quickDatasetGet(tmp_key, tmp_value);
+                    tmp_cloud_wrapper_ptr->getWorkloadGeneratorPtr()->quickDatasetGet(tmp_key, tmp_value);
                 }
                 else // Normal backend storage access (evaluation phase, or warmup phase without warmup speedup)
                 {
-                    cloud_wrapper_ptr_->getCloudRocksdbPtr()->get(tmp_key, tmp_value);
+                    tmp_cloud_wrapper_ptr->getCloudRocksdbPtr()->get(tmp_key, tmp_value);
                 }
                 #else
-                cloud_wrapper_ptr_->getCloudRocksdbPtr()->get(tmp_key, tmp_value);
+                tmp_cloud_wrapper_ptr->getCloudRocksdbPtr()->get(tmp_key, tmp_value);
                 #endif
 
                 event_name = Event::BG_CLOUD_GET_ROCKSDB_EVENT_NAME;
@@ -309,7 +316,7 @@ namespace covered
         // Push the global response message into cloud-to-edge propagation simulator to edge cache server worker
         assert(global_response_ptr != NULL);
         assert(global_response_ptr->isGlobalDataResponse());
-        bool is_successful = cloud_wrapper_ptr_->getCloudToedgePropagationSimulatorParamPtr()->push(global_response_ptr, edge_cache_server_worker_recvrsp_dst_addr);
+        bool is_successful = tmp_cloud_wrapper_ptr->getCloudToedgePropagationSimulatorParamPtr()->push(global_response_ptr, edge_cache_server_worker_recvrsp_dst_addr);
         assert(is_successful);
 
         // NOTE: global_response_ptr will be released by cloud-to-edge propagation simulator
@@ -320,7 +327,8 @@ namespace covered
 
     void DataServer::checkPointers_() const
     {
-        assert(cloud_wrapper_ptr_ != NULL);
+        assert(cloud_component_param_ptr_ != NULL);
+        assert(cloud_component_param_ptr_->getCloudWrapperPtr() != NULL);
         assert(cloud_recvreq_socket_server_ptr_ != NULL);
         return;
     }

@@ -32,9 +32,6 @@ namespace covered
         // Allocate socket client to issue message
         propagation_simulator_socket_client_ptr_ = new UdpMsgSocketClient();
         assert(propagation_simulator_socket_client_ptr_ != NULL);
-
-        // Notify node that the current propagation simulator has finished initialization
-        propagation_simulator_param_ptr->markFinishInitialization();
     }
 
     PropagationSimulator::~PropagationSimulator()
@@ -50,6 +47,9 @@ namespace covered
     void PropagationSimulator::start()
     {
         checkPointers_();
+
+        // Notify node that the current propagation simulator has finished initialization
+        propagation_simulator_param_ptr_->markFinishInitialization();
 
         // NOTE: block for clients which is NOT running at first
         while (!propagation_simulator_param_ptr_->getNodeWrapperPtr()->isNodeRunning()) {}

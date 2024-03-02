@@ -29,6 +29,7 @@ namespace covered
 
     void SubthreadParamBase::markFinishInitialization()
     {
+        assert(!isFinishInitialization());
         is_finish_initialization_.store(true, Util::STORE_CONCURRENCY_ORDER);
     }
 }

@@ -14,6 +14,7 @@ namespace covered
     class CacheServerProcessorParam;
 }
 
+#include "common/subthread_param_base.h"
 #include "concurrency/blocking_ring_buffer_impl.h"
 #include "concurrency/ring_buffer_impl.h"
 #include "edge/cache_server/cache_server_item.h"
@@ -21,7 +22,7 @@ namespace covered
 
 namespace covered
 {   
-    class CacheServerProcessorParam
+    class CacheServerProcessorParam : public SubthreadParamBase
     {
     public:
         CacheServerProcessorParam();

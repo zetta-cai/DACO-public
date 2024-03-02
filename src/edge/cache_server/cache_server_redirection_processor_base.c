@@ -56,6 +56,9 @@ namespace covered
         checkPointers_();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_redirection_processor_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
+        // Notify edge cache server that the current edge cache server redirection processor has finished initialization
+        cache_server_redirection_processor_param_ptr_->markFinishInitialization();
+
         bool is_finish = false; // Mark if edge node is finished
         while (tmp_edge_wrapper_ptr->isNodeRunning()) // edge_running_ is set as true by default
         {

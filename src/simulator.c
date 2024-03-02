@@ -39,7 +39,7 @@ int main(int argc, char **argv) {
     // (2) Launch evaluator to control benchmark workflow
 
     pthread_t evaluator_thread;
-    covered::EvaluatorWrapperParam evaluator_param(false, (covered::EvaluatorCLI*)&simulator_cli);
+    covered::EvaluatorWrapperParam evaluator_param((covered::EvaluatorCLI*)&simulator_cli);
 
     covered::Util::dumpNormalMsg(main_class_name, "launch evaluator");
 
@@ -61,7 +61,7 @@ int main(int argc, char **argv) {
     // }
 
     // Block until evaluator is initialized
-    while (!evaluator_param.isEvaluatorInitialized()) {}
+    while (!evaluator_param.isFinishInitialization()) {}
 
     covered::Util::dumpNormalMsg(main_class_name, covered::EvaluatorWrapper::EVALUATOR_FINISH_INITIALIZATION_SYMBOL);
 

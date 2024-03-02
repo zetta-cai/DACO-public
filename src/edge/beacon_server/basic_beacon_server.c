@@ -29,9 +29,6 @@ namespace covered
         std::ostringstream oss;
         oss << kClassName << " edge" << edge_idx;
         instance_name_ = oss.str();
-
-        // Notify edge wrapper that edge beacon server has finished initialization
-        edge_beacon_server_param_ptr_->markFinishInitialization();
     }
 
     BasicBeaconServer::~BasicBeaconServer() {}

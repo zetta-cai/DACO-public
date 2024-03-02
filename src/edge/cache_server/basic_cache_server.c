@@ -8,13 +8,14 @@ namespace covered
 {
     const std::string BasicCacheServer::kClassName("BasicCacheServer");
 
-    BasicCacheServer::BasicCacheServer(EdgeWrapperBase* edge_wrapper_ptr) : CacheServerBase(edge_wrapper_ptr)
+    BasicCacheServer::BasicCacheServer(EdgeComponentParam* edge_component_ptr) : CacheServerBase(edge_component_ptr)
     {
-        assert(edge_wrapper_ptr->getCacheName() != Util::COVERED_CACHE_NAME);
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = getEdgeWrapperPtr();
+        assert(tmp_edge_wrapper_ptr->getCacheName() != Util::COVERED_CACHE_NAME);
 
         // Differentiate cache servers in different edge nodes
         std::ostringstream oss;
-        oss << kClassName << " edge" << edge_wrapper_ptr->getNodeIdx();
+        oss << kClassName << " edge" << tmp_edge_wrapper_ptr->getNodeIdx();
         instance_name_ = oss.str();
     }
 
@@ -26,10 +27,11 @@ namespace covered
     void BasicCacheServer::admitLocalEdgeCache_(const Key& key, const Value& value, const bool& is_neighbor_cached, const bool& is_valid) const
     {
         checkPointers_();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = getEdgeWrapperPtr();
 
         bool affect_victim_tracker = false; // If key is a local synced victim now
-        const uint32_t beacon_edgeidx = edge_wrapper_ptr_->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
-        edge_wrapper_ptr_->getEdgeCachePtr()->admit(key, value, is_neighbor_cached, is_valid, beacon_edgeidx, affect_victim_tracker);
+        const uint32_t beacon_edgeidx = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
+        tmp_edge_wrapper_ptr->getEdgeCachePtr()->admit(key, value, is_neighbor_cached, is_valid, beacon_edgeidx, affect_victim_tracker);
 
         return;
     }
@@ -37,15 +39,16 @@ namespace covered
     MessageBase* BasicCacheServer::getReqToAdmitBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, const NetworkAddr& source_addr, const bool& skip_propagation_latency, const bool& is_background) const
     {
         checkPointers_();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = getEdgeWrapperPtr();
 
         const bool is_admit = true; // Try to admit a new key as local cached object (NOTE: local edge cache has NOT been admitted yet)
-        uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
+        uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
 
         // NOTE: current edge node MUST NOT be the beacon edge node for the given key
-        const uint32_t dst_beacon_edge_idx_for_compression = edge_wrapper_ptr_->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
+        const uint32_t dst_beacon_edge_idx_for_compression = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
         assert(dst_beacon_edge_idx_for_compression != edge_idx);
 
-        const std::string cache_name = edge_wrapper_ptr_->getCacheName();
+        const std::string cache_name = tmp_edge_wrapper_ptr->getCacheName();
         MessageBase* directory_update_request_ptr = NULL;
         if (cache_name != Util::BESTGUESS_CACHE_NAME) // other baselines
         {
@@ -55,7 +58,7 @@ namespace covered
         {
             // Get local victim vtime for vtime synchronization
             GetLocalVictimVtimeFuncParam tmp_param_for_vtimesync;
-            edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
+            tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
             const uint64_t& local_victim_vtime = tmp_param_for_vtimesync.getLocalVictimVtimeRef();
 
             if (is_background) // Background admission issued by basic placement processor
@@ -76,6 +79,7 @@ namespace covered
     {
         checkPointers_();
         assert(control_response_ptr != NULL);
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = getEdgeWrapperPtr();
 
         bool need_vtime_sync = false;
         BestGuessSyncinfo bestguess_syncinfo;
@@ -118,7 +122,7 @@ namespace covered
         if (need_vtime_sync) // Vtime synchronization for BestGuess
         {
             UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(control_response_ptr->getSourceIndex(), bestguess_syncinfo.getVtime());
-            edge_wrapper_ptr_->getEdgeCachePtr()->customFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
+            tmp_edge_wrapper_ptr->getEdgeCachePtr()->customFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
         }
 
         UNUSED(is_neighbor_cached);
@@ -132,8 +136,9 @@ namespace covered
     void BasicCacheServer::evictLocalEdgeCache_(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size) const
     {
         checkPointers_();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = getEdgeWrapperPtr();
 
-        edge_wrapper_ptr_->getEdgeCachePtr()->evict(victims, required_size);
+        tmp_edge_wrapper_ptr->getEdgeCachePtr()->evict(victims, required_size);
 
         return;
     }
@@ -141,11 +146,12 @@ namespace covered
     bool BasicCacheServer::evictLocalDirectory_(const Key& key, const Value& value, const DirectoryInfo& directory_info, bool& is_being_written, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, const bool& is_background) const
     {
         checkPointers_();
-        CooperationWrapperBase* tmp_cooperation_wrapper_ptr = edge_wrapper_ptr_->getCooperationWrapperPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = getEdgeWrapperPtr();
+        CooperationWrapperBase* tmp_cooperation_wrapper_ptr = tmp_edge_wrapper_ptr->getCooperationWrapperPtr();
 
         bool is_finish = false;
 
-        uint32_t current_edge_idx = edge_wrapper_ptr_->getNodeIdx();
+        uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         const bool is_admit = false; // Evict a victim as local uncached object
         bool unused_is_neighbor_cached = false; // NOTE: ONLY need is_neighbor_cached for directory admission to initizalize cached metadata, yet NO need for directory eviction
         MetadataUpdateRequirement metadata_update_requirement;
@@ -159,16 +165,17 @@ namespace covered
     MessageBase* BasicCacheServer::getReqToEvictBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, const NetworkAddr& source_addr, const bool& skip_propagation_latency, const bool& is_background) const
     {
         checkPointers_();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = getEdgeWrapperPtr();
 
-        uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
+        uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         const bool is_admit = false; // Evict a victim as local uncached object (NOTE: local edge cache has already been evicted)
         MessageBase* directory_update_request_ptr = NULL;
 
         // NOTE: current edge node MUST NOT be the beacon edge node for the given key
-        const uint32_t dst_beacon_edge_idx_for_compression = edge_wrapper_ptr_->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
+        const uint32_t dst_beacon_edge_idx_for_compression = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
         assert(dst_beacon_edge_idx_for_compression != edge_idx);
     
-        const std::string cache_name = edge_wrapper_ptr_->getCacheName();
+        const std::string cache_name = tmp_edge_wrapper_ptr->getCacheName();
         if (cache_name != Util::BESTGUESS_CACHE_NAME) // other baselines
         {
             directory_update_request_ptr = new DirectoryUpdateRequest(key, is_admit, directory_info, edge_idx, source_addr, skip_propagation_latency);
@@ -177,7 +184,7 @@ namespace covered
         {
             // Get local victim vtime for vtime synchronization
             GetLocalVictimVtimeFuncParam tmp_param_for_vtimesync;
-            edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
+            tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
             const uint64_t& local_victim_vtime = tmp_param_for_vtimesync.getLocalVictimVtimeRef();
 
             if (is_background) // Background eviction issued by basic placement processor
@@ -198,6 +205,7 @@ namespace covered
     {
         checkPointers_();
         assert(control_response_ptr != NULL);
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = getEdgeWrapperPtr();
 
         bool is_finish = false;
 
@@ -235,7 +243,7 @@ namespace covered
         if (need_vtime_sync) // Vtime synchronization for BestGuess
         {
             UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(control_response_ptr->getSourceIndex(), bestguess_syncinfo.getVtime());
-            edge_wrapper_ptr_->getEdgeCachePtr()->customFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
+            tmp_edge_wrapper_ptr->getEdgeCachePtr()->customFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
         }
 
         UNUSED(recvrsp_source_addr);

@@ -14,7 +14,7 @@ namespace covered
     class CoveredCacheServer : public CacheServerBase
     {
     public:
-        CoveredCacheServer(EdgeWrapperBase* edge_wrapper_ptr);
+        CoveredCacheServer(EdgeComponentParam* edge_component_ptr);
         virtual ~CoveredCacheServer();
 
         // (1) For local edge cache admission and remote directory admission (invoked by edge cache server worker for independent admission; or by placement processor for remote placement notification)

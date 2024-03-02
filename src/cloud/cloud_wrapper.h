@@ -11,6 +11,7 @@
 
 #include "cloud/rocksdb_wrapper.h"
 #include "cli/cloud_cli.h"
+#include "cloud/cloud_component_param.h"
 #include "common/node_wrapper_base.h"
 #include "network/propagation_simulator_param.h"
 #include "workload/workload_wrapper_base.h"
@@ -59,6 +60,7 @@ namespace covered
         RocksdbWrapper* cloud_rocksdb_ptr_;
 
         PropagationSimulatorParam* cloud_toedge_propagation_simulator_param_ptr_;
+        CloudComponentParam* cloud_data_server_param_ptr_;
 
         // Sub-threads
         pthread_t cloud_toedge_propagation_simulator_thread_;

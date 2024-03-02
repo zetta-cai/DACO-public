@@ -11,6 +11,7 @@
 
 #include <string>
 
+#include "cloud/cloud_component_param.h"
 #include "cloud/cloud_wrapper.h"
 #include "message/message_base.h"
 #include "network/network_addr.h"
@@ -24,9 +25,9 @@ namespace covered
     class DataServer
     {
     public:
-        static void* launchDataServer(void* cloud_wrapper_ptr);
+        static void* launchDataServer(void* cloud_component_param_ptr);
         
-        DataServer(CloudWrapper* cloud_wrapper_ptr);
+        DataServer(CloudComponentParam* cloud_component_param_ptr);
         ~DataServer();
 
         void start();
@@ -38,7 +39,7 @@ namespace covered
         void checkPointers_() const;
 
         std::string instance_name_;
-        CloudWrapper* cloud_wrapper_ptr_;
+        CloudComponentParam* cloud_component_param_ptr_;
 
         // For receiving global requests
         NetworkAddr cloud_recvreq_source_addr_; // The same as that used by edge cache server worker to send global requests (const individual variable)

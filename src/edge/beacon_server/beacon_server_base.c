@@ -107,6 +107,9 @@ namespace covered
     {
         checkPointers_();
 
+        // Notify edge wrapper that edge beacon server has finished initialization
+        edge_beacon_server_param_ptr_->markFinishInitialization();
+
         bool is_finish = false; // Mark if edge node is finished
         while (edge_beacon_server_param_ptr_->getEdgeWrapperPtr()->isNodeRunning()) // edge_running_ is set as true by default
         {

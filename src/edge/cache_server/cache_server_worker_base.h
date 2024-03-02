@@ -185,7 +185,7 @@ namespace covered
         // Member variables
 
         // Const variable
-        const CacheServerWorkerParam* cache_server_worker_param_ptr_;
+        CacheServerWorkerParam* cache_server_worker_param_ptr_;
 
         // NOTE: we do NOT need per-key rwlock for serializability, which has been addressed by the ring buffer
 
