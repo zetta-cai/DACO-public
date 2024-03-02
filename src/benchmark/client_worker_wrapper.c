@@ -177,24 +177,10 @@ namespace covered
             // NOTE: local_request_ptr will be released by client-to-edge propagation simulator
             local_request_ptr = NULL;
 
-            // TMPDEBUG24
-            int64_t tmp_debug_int = -69916166;
-            if (workload_item.getKey() == Key(std::string((const char*)&tmp_debug_int, sizeof(int64_t))))
-            {
-                Util::dumpNormalMsg(instance_name_, "issue a local request for key -69916166");
-            }
-
             // Receive the message payload of local response from the closest edge node
             bool is_timeout = client_worker_recvrsp_socket_server_ptr_->recv(local_response_msg_payload);
             if (is_timeout)
             {
-                // TMPDEBUG24
-                if (workload_item.getKey() == Key(std::string((const char*)&tmp_debug_int, sizeof(int64_t))))
-                {
-                    Util::dumpNormalMsg(instance_name_, "timeout for key -69916166");
-                    exit(1);
-                }
-
                 if (!tmp_client_wrapper_ptr->isNodeRunning())
                 {
                     is_finish = true;

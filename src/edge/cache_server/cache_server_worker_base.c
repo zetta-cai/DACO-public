@@ -212,13 +212,6 @@ namespace covered
         Util::dumpVariablesForDebug(base_instance_name_, 5, "receive a local get request;", "type:", MessageBase::messageTypeToString(local_request_ptr->getMessageType()).c_str(), "keystr:", tmp_key.getKeystr().c_str());
         #endif
 
-        // TMPDEBUG24
-        int64_t tmp_debug_int = -69916166;
-        if (tmp_key == Key(std::string((const char*)&tmp_debug_int, sizeof(int64_t))))
-        {
-            Util::dumpNormalMsg(base_instance_name_, "receive a local request for key -69916166");
-        }
-
         checkPointers_();
         CacheServerBase* tmp_cache_server_ptr = cache_server_worker_param_ptr_->getCacheServerPtr();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
@@ -248,12 +241,6 @@ namespace covered
         #ifdef DEBUG_CACHE_SERVER_WORKER
         Util::dumpVariablesForDebug(base_instance_name_, 5, "acesss local edge cache;", "is_local_cached_and_valid:", Util::toString(is_local_cached_and_valid).c_str(), "keystr:", tmp_key.getKeystr().c_str());
         #endif
-
-        // TMPDEBUG24
-        if (tmp_key == Key(std::string((const char*)&tmp_debug_int, sizeof(int64_t))))
-        {
-            Util::dumpNormalMsg(base_instance_name_, "is_local_cached_and_valid: " + Util::toString(is_local_cached_and_valid));
-        }
 
         // Access cooperative edge cache for local cache miss or invalid object
         bool is_cooperative_cached = false;
@@ -290,12 +277,6 @@ namespace covered
             #endif
         }
 
-        // TMPDEBUG24
-        if (tmp_key == Key(std::string((const char*)&tmp_debug_int, sizeof(int64_t))))
-        {
-            Util::dumpNormalMsg(base_instance_name_, "is_cooperative_cached: " + Util::toString(is_cooperative_cached) + "; is_cooperative_valid: " + Util::toString(is_cooperative_valid));
-        }
-
         // Get data from cloud for global cache miss
         struct timespec get_cloud_start_timestamp = Util::getCurrentTimespec();
         if (!is_local_cached_and_valid && !is_cooperative_cached_and_valid) // (not cached or invalid) in both local and cooperative cache
@@ -309,12 +290,6 @@ namespace covered
         struct timespec get_cloud_end_timestamp = Util::getCurrentTimespec();
         uint32_t get_cloud_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(get_cloud_end_timestamp, get_cloud_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_GET_CLOUD_EVENT_NAME, get_cloud_latency_us); // Add intermediate event if with event tracking
-
-        // TMPDEBUG24
-        if (tmp_key == Key(std::string((const char*)&tmp_debug_int, sizeof(int64_t))))
-        {
-            Util::dumpNormalMsg(base_instance_name_, "fetch from cloud with value size: " + std::to_string(tmp_value.getValuesize()));
-        }
 
         // Update invalid object of local edge cache if necessary
         struct timespec update_invalid_local_cache_start_timestamp = Util::getCurrentTimespec();
@@ -361,12 +336,6 @@ namespace covered
 
         // NOTE: local_get_response_ptr will be released by edge-to-client propagation simulator
         local_get_response_ptr = NULL;
-
-        // TMPDEBUG24
-        if (tmp_key == Key(std::string((const char*)&tmp_debug_int, sizeof(int64_t))))
-        {
-            Util::dumpNormalMsg(base_instance_name_, "send back local response for key -69916166");
-        }
 
         return is_finish;
     }
