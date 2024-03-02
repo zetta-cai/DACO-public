@@ -9,13 +9,13 @@ namespace covered
     const std::string PropagationSimulatorParam::kClassName("PropagationSimulatorParam");
 
 
-    PropagationSimulatorParam::PropagationSimulatorParam() : propagation_latency_us_(0), rwlock_for_propagation_item_buffer_("rwlock_for_propagation_item_buffer_"), is_first_item_(true), prev_timespec_()
+    PropagationSimulatorParam::PropagationSimulatorParam() : SubthreadParamBase(), propagation_latency_us_(0), rwlock_for_propagation_item_buffer_("rwlock_for_propagation_item_buffer_"), is_first_item_(true), prev_timespec_()
     {
         propagation_item_buffer_ptr_ = NULL;
         instance_name_ = "";
     }
 
-    PropagationSimulatorParam::PropagationSimulatorParam(NodeWrapperBase* node_wrapper_ptr, const uint32_t& propagation_latency_us, const uint32_t& propagation_item_buffer_size) : node_wrapper_ptr_(node_wrapper_ptr), propagation_latency_us_(propagation_latency_us), rwlock_for_propagation_item_buffer_("rwlock_for_propagation_item_buffer_"), is_first_item_(true), prev_timespec_()
+    PropagationSimulatorParam::PropagationSimulatorParam(NodeWrapperBase* node_wrapper_ptr, const uint32_t& propagation_latency_us, const uint32_t& propagation_item_buffer_size) : SubthreadParamBase(), node_wrapper_ptr_(node_wrapper_ptr), propagation_latency_us_(propagation_latency_us), rwlock_for_propagation_item_buffer_("rwlock_for_propagation_item_buffer_"), is_first_item_(true), prev_timespec_()
     {
         assert(node_wrapper_ptr != NULL);
 
@@ -148,6 +148,8 @@ namespace covered
 
     const PropagationSimulatorParam& PropagationSimulatorParam::operator=(const PropagationSimulatorParam& other)
     {
+        SubthreadParamBase::operator=(other);
+
         node_wrapper_ptr_ = other.node_wrapper_ptr_;
         propagation_latency_us_ = other.propagation_latency_us_;
 

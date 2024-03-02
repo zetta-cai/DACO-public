@@ -16,7 +16,7 @@ namespace covered
     class CoveredBeaconServer : public BeaconServerBase
     {
     public:
-        CoveredBeaconServer(EdgeWrapperBase* edge_wrapper_ptr);
+        CoveredBeaconServer(EdgeComponentParam* edge_beacon_server_param_ptr);
         virtual ~CoveredBeaconServer();
     private:
         static const std::string kClassName;

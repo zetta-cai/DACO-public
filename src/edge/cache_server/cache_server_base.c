@@ -410,6 +410,13 @@ namespace covered
     {
         assert(data_requeset_ptr != NULL);
 
+        // TMPDEBUG24
+        int64_t tmp_debug_int = -69916166;
+        if (MessageBase::getKeyFromMessage(data_requeset_ptr) == Key(std::string((const char*)&tmp_debug_int, sizeof(int64_t))))
+        {
+            Util::dumpNormalMsg(base_instance_name_, "receive a local request for key -69916166");
+        }
+
         const uint32_t percacheserver_workercnt = edge_wrapper_ptr_->getPercacheserverWorkercnt();
 
         if (data_requeset_ptr->isLocalDataRequest()) // Local data requests

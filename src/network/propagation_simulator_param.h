@@ -16,12 +16,13 @@
 
 #include "concurrency/ring_buffer_impl.h"
 #include "concurrency/rwlock.h"
+#include "common/subthread_param_base.h"
 #include "common/node_wrapper_base.h"
 #include "network/propagation_item.h"
 
 namespace covered
 {
-    class PropagationSimulatorParam
+    class PropagationSimulatorParam : public SubthreadParamBase
     {
     public:
         PropagationSimulatorParam();

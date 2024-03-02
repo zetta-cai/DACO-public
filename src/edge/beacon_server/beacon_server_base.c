@@ -16,11 +16,11 @@ namespace covered
 {
     const std::string BeaconServerBase::kClassName("BeaconServerBase");
 
-    void* BeaconServerBase::launchBeaconServer(void* edge_wrapper_ptr)
+    void* BeaconServerBase::launchBeaconServer(void* edge_beacon_server_param_ptr)
     {
-        assert(edge_wrapper_ptr != NULL);
+        assert(edge_beacon_server_param_ptr != NULL);
 
-        BeaconServerBase* beacon_server_ptr = BeaconServerBase::getBeaconServerByCacheName((EdgeWrapperBase*)edge_wrapper_ptr);
+        BeaconServerBase* beacon_server_ptr = BeaconServerBase::getBeaconServerByCacheName((EdgeComponentParam*)edge_beacon_server_param_ptr);
         assert(beacon_server_ptr != NULL);
         beacon_server_ptr->start();
 
@@ -32,30 +32,30 @@ namespace covered
         return NULL;
     }
 
-    BeaconServerBase* BeaconServerBase::getBeaconServerByCacheName(EdgeWrapperBase* edge_wrapper_ptr)
+    BeaconServerBase* BeaconServerBase::getBeaconServerByCacheName(EdgeComponentParam* edge_beacon_server_param_ptr)
     {
         BeaconServerBase* beacon_server_ptr = NULL;
 
-        assert(edge_wrapper_ptr != NULL);
-        std::string cache_name = edge_wrapper_ptr->getCacheName();
+        assert(edge_beacon_server_param_ptr != NULL);
+        std::string cache_name = edge_beacon_server_param_ptr->getEdgeWrapperPtr()->getCacheName();
         if (cache_name == Util::COVERED_CACHE_NAME)
         {
-            beacon_server_ptr = new CoveredBeaconServer(edge_wrapper_ptr);
+            beacon_server_ptr = new CoveredBeaconServer(edge_beacon_server_param_ptr);
         }
         else
         {
-            beacon_server_ptr = new BasicBeaconServer(edge_wrapper_ptr);
+            beacon_server_ptr = new BasicBeaconServer(edge_beacon_server_param_ptr);
         }
 
         assert(beacon_server_ptr != NULL);
         return beacon_server_ptr;
     }
 
-    BeaconServerBase::BeaconServerBase(EdgeWrapperBase* edge_wrapper_ptr) : edge_wrapper_ptr_(edge_wrapper_ptr)
+    BeaconServerBase::BeaconServerBase(EdgeComponentParam* edge_beacon_server_param_ptr) : edge_beacon_server_param_ptr_(edge_beacon_server_param_ptr)
     {
-        assert(edge_wrapper_ptr != NULL);
-        const uint32_t edge_idx = edge_wrapper_ptr->getNodeIdx();
-        const uint32_t edgecnt = edge_wrapper_ptr->getNodeCnt();
+        assert(edge_beacon_server_param_ptr != NULL);
+        const uint32_t edge_idx = edge_beacon_server_param_ptr->getEdgeWrapperPtr()->getNodeIdx();
+        const uint32_t edgecnt = edge_beacon_server_param_ptr->getEdgeWrapperPtr()->getNodeCnt();
 
         // Differentiate cache servers of different edge nodes
         std::ostringstream oss;
@@ -90,7 +90,7 @@ namespace covered
 
     BeaconServerBase::~BeaconServerBase()
     {
-        // NOTE: no need to release edge_wrapper_ptr_, which will be released outside BeaconServerBase (e.g., simulator)
+        // NOTE: no need to release edge_beacon_server_param_ptr_, which will be released outside BeaconServerBase (e.g., simulator)
 
         // Release the socket server on recvreq port
         assert(edge_beacon_server_recvreq_socket_server_ptr_ != NULL);
@@ -108,7 +108,7 @@ namespace covered
         checkPointers_();
 
         bool is_finish = false; // Mark if edge node is finished
-        while (edge_wrapper_ptr_->isNodeRunning()) // edge_running_ is set as true by default
+        while (edge_beacon_server_param_ptr_->getEdgeWrapperPtr()->isNodeRunning()) // edge_running_ is set as true by default
         {
             // Receive the message payload of control requests
             DynamicArray control_request_msg_payload;
@@ -169,7 +169,7 @@ namespace covered
 
         // Current edge node must be the beacon node for the given key of the received control request
         const Key& tmp_key = MessageBase::getKeyFromMessage(control_request_ptr);
-        MYASSERT(edge_wrapper_ptr_->currentIsBeacon(tmp_key));
+        MYASSERT(edge_beacon_server_param_ptr_->getEdgeWrapperPtr()->currentIsBeacon(tmp_key));
 
         #ifdef DEBUG_BEACON_SERVER
         Util::dumpVariablesForDebug(base_instance_name_, 5, "receive a control request", "type:", MessageBase::messageTypeToString(control_request_ptr->getMessageType()).c_str(), "keystr:", MessageBase::getKeyFromMessage(control_request_ptr).getKeystr().c_str());
@@ -278,7 +278,7 @@ namespace covered
         assert(directory_lookup_response_ptr != NULL);
 
         // Push the directory lookup response into edge-to-edge propagation simulator to cache server worker
-        bool is_successful = edge_wrapper_ptr_->getEdgeToedgePropagationSimulatorParamPtr()->push(directory_lookup_response_ptr, edge_cache_server_worker_recvrsp_dst_addr);
+        bool is_successful = edge_beacon_server_param_ptr_->getEdgeWrapperPtr()->getEdgeToedgePropagationSimulatorParamPtr()->push(directory_lookup_response_ptr, edge_cache_server_worker_recvrsp_dst_addr);
         assert(is_successful);
 
         // NOTE: directory_lookup_response_ptr will be released by edge-to-edge propagation simulator
@@ -343,7 +343,7 @@ namespace covered
         assert(directory_update_response_ptr != NULL);
 
         // Push the directory update response into edge-to-edge propagation simulator to cache server worker
-        bool is_successful = edge_wrapper_ptr_->getEdgeToedgePropagationSimulatorParamPtr()->push(directory_update_response_ptr, edge_cache_server_worker_recvrsp_dst_addr);
+        bool is_successful = edge_beacon_server_param_ptr_->getEdgeWrapperPtr()->getEdgeToedgePropagationSimulatorParamPtr()->push(directory_update_response_ptr, edge_cache_server_worker_recvrsp_dst_addr);
         assert(is_successful);
 
         // NOTE: directory_update_response_ptr will be released by edge-to-edge propagation simulator
@@ -366,6 +366,8 @@ namespace covered
         const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();*/
 
         checkPointers_();
+
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = edge_beacon_server_param_ptr_->getEdgeWrapperPtr();
 
         bool is_finish = false;
         BandwidthUsage total_bandwidth_usage;
@@ -403,7 +405,7 @@ namespace covered
         if (lock_result == LockResult::kSuccess) // If acquiring write permission successfully
         {
             // Invalidate all cache copies
-            edge_wrapper_ptr_->parallelInvalidateCacheCopies(edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, tmp_key, all_dirinfo, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermedate responses if with event tracking
+            tmp_edge_wrapper_ptr->parallelInvalidateCacheCopies(edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, tmp_key, all_dirinfo, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermedate responses if with event tracking
         }
 
         // Prepare a acquire writelock response
@@ -411,7 +413,7 @@ namespace covered
         assert(acquire_writelock_response_ptr != NULL);
 
         // Push acquire writelock response into edge-to-edge propagation simulator to cache server worker
-        bool is_successful = edge_wrapper_ptr_->getEdgeToedgePropagationSimulatorParamPtr()->push(acquire_writelock_response_ptr, edge_cache_server_worker_recvrsp_dst_addr);
+        bool is_successful = tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(acquire_writelock_response_ptr, edge_cache_server_worker_recvrsp_dst_addr);
         assert(is_successful);
 
         // NOTE: acquire_writelock_response_ptr will be released by edge-to-edge propagation simulator
@@ -432,6 +434,8 @@ namespace covered
         const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();*/
 
         checkPointers_();
+
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = edge_beacon_server_param_ptr_->getEdgeWrapperPtr();
 
         bool is_finish = false;
         BandwidthUsage total_bandwidth_usage;
@@ -464,14 +468,14 @@ namespace covered
         bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
 
         // NOTE: notify blocked edge nodes if any after finishing writes, to avoid transmitting blocked_edges to cache server of the closest edge node
-        is_finish = edge_wrapper_ptr_->parallelNotifyEdgesToFinishBlock(edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, tmp_key, blocked_edges, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermedate responses if with event tracking
+        is_finish = tmp_edge_wrapper_ptr->parallelNotifyEdgesToFinishBlock(edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, tmp_key, blocked_edges, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermedate responses if with event tracking
 
         // Prepare a release writelock response
         MessageBase* release_writelock_response_ptr = getRspToReleaseLocalWritelock_(control_request_ptr, best_placement_edgeset, need_hybrid_fetching, total_bandwidth_usage, event_list);
         assert(release_writelock_response_ptr != NULL);
 
         // Push release writelock response into edge-to-edge propagation simulator to cache server worker
-        bool is_successful = edge_wrapper_ptr_->getEdgeToedgePropagationSimulatorParamPtr()->push(release_writelock_response_ptr, edge_cache_server_worker_recvrsp_dst_addr);
+        bool is_successful = tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(release_writelock_response_ptr, edge_cache_server_worker_recvrsp_dst_addr);
         assert(is_successful);
 
         // NOTE: release_writelock_response_ptr will be released by edge-to-edge propagation simulator
@@ -486,7 +490,7 @@ namespace covered
     {
         checkPointers_();
 
-        bool is_empty_before_reset = edge_wrapper_ptr_->getEdgeBackgroundCounterForBeaconServerRef().loadAndReset(bandwidth_usage, event_list);
+        bool is_empty_before_reset = edge_beacon_server_param_ptr_->getEdgeWrapperPtr()->getEdgeBackgroundCounterForBeaconServerRef().loadAndReset(bandwidth_usage, event_list);
         UNUSED(is_empty_before_reset);
 
         return;
@@ -496,7 +500,8 @@ namespace covered
 
     void BeaconServerBase::checkPointers_() const
     {
-        assert(edge_wrapper_ptr_ != NULL);
+        assert(edge_beacon_server_param_ptr_ != NULL);
+        assert(edge_beacon_server_param_ptr_->getEdgeWrapperPtr());
         assert(edge_beacon_server_recvreq_socket_server_ptr_ != NULL);
         assert(edge_beacon_server_recvrsp_socket_server_ptr_ != NULL);
     }

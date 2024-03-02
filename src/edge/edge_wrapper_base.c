@@ -110,6 +110,14 @@ namespace covered
         edge_tocloud_propagation_simulator_param_ptr_ = new PropagationSimulatorParam((NodeWrapperBase*)this, propagation_latency_edgecloud_us, Config::getPropagationItemBufferSizeEdgeTocloud());
         assert(edge_tocloud_propagation_simulator_param_ptr_ != NULL);
 
+        // Allocate edge beacon server param
+        edge_beacon_server_param_ptr_ = new EdgeComponentParam(this);
+        assert(edge_beacon_server_param_ptr_ != NULL);
+
+        // Allocate edge cache server param
+        edge_cache_server_param_ptr_ = new EdgeComponentParam(this);
+        assert(edge_cache_server_param_ptr_ != NULL);
+
         // Sub-threads
         edge_toclient_propagation_simulator_thread_ = 0;
         edge_toedge_propagation_simulator_thread_ = 0;
@@ -164,6 +172,16 @@ namespace covered
         assert(edge_tocloud_propagation_simulator_param_ptr_ != NULL);
         delete edge_tocloud_propagation_simulator_param_ptr_;
         edge_tocloud_propagation_simulator_param_ptr_ = NULL;
+
+        // Release edge beacon server param
+        assert(edge_beacon_server_param_ptr_ != NULL);
+        delete edge_beacon_server_param_ptr_;
+        edge_beacon_server_param_ptr_ = NULL;
+
+        // Release edge cache server param
+        assert(edge_cache_server_param_ptr_ != NULL);
+        delete edge_cache_server_param_ptr_;
+        edge_cache_server_param_ptr_ = NULL;
 
         // Release local cache admission ring buffer
         assert(local_cache_admission_buffer_ptr_ != NULL);
@@ -226,6 +244,18 @@ namespace covered
     {
         assert(edge_tocloud_propagation_simulator_param_ptr_ != NULL);
         return edge_tocloud_propagation_simulator_param_ptr_;
+    }
+
+    EdgeComponentParam* EdgeWrapperBase::getEdgeBeaconServerParamPtr() const
+    {
+        assert(edge_beacon_server_param_ptr_ != NULL);
+        return edge_beacon_server_param_ptr_;
+    }
+
+    EdgeComponentParam* EdgeWrapperBase::getEdgeCacheServerParamPtr() const
+    {
+        assert(edge_cache_server_param_ptr_ != NULL);
+        return edge_cache_server_param_ptr_;
     }
 
     RingBuffer<LocalCacheAdmissionItem>* EdgeWrapperBase::getLocalCacheAdmissionBufferPtr() const
@@ -690,7 +720,7 @@ namespace covered
         //     exit(1);
         // }
         tmp_thread_name = "edge-beacon-server-" + std::to_string(node_idx_);
-        ThreadLauncher::pthreadCreateHighPriority(ThreadLauncher::EDGE_THREAD_ROLE, tmp_thread_name, &beacon_server_thread_, BeaconServerBase::launchBeaconServer, (void*)(this));
+        ThreadLauncher::pthreadCreateHighPriority(ThreadLauncher::EDGE_THREAD_ROLE, tmp_thread_name, &beacon_server_thread_, BeaconServerBase::launchBeaconServer, (void*)(edge_beacon_server_param_ptr_));
 
         // Launch cache server
         //pthread_returncode = pthread_create(&cache_server_thread_, NULL, CacheServerBase::launchCacheServer, (void*)(this));
@@ -702,7 +732,42 @@ namespace covered
         //     exit(1);
         // }
         tmp_thread_name = "edge-cache-server-" + std::to_string(node_idx_);
-        ThreadLauncher::pthreadCreateHighPriority(ThreadLauncher::EDGE_THREAD_ROLE, tmp_thread_name, &cache_server_thread_, CacheServerBase::launchCacheServer, (void*)(this));
+        ThreadLauncher::pthreadCreateHighPriority(ThreadLauncher::EDGE_THREAD_ROLE, tmp_thread_name, &cache_server_thread_, CacheServerBase::launchCacheServer, (void*)(edge_cache_server_param_ptr_));
+
+        // Wait edge-to-client propagation simulator to finish initialization
+        Util::dumpNormalMsg(base_instance_name_, "wait edge-to-client propagation simulator to finish initialization...");
+        while (!edge_toclient_propagation_simulator_param_ptr_->isFinishInitialization())
+        {
+            usleep(SubthreadParamBase::INITIALIZATION_WAIT_INTERVAL_US);
+        }
+
+        // Wait edge-to-edge propagation simulator to finish initialization
+        Util::dumpNormalMsg(base_instance_name_, "wait edge-to-edge propagation simulator to finish initialization...");
+        while (!edge_toedge_propagation_simulator_param_ptr_->isFinishInitialization())
+        {
+            usleep(SubthreadParamBase::INITIALIZATION_WAIT_INTERVAL_US);
+        }
+
+        // Wait edge-to-cloud propagation simulator to finish initialization
+        Util::dumpNormalMsg(base_instance_name_, "wait edge-to-cloud propagation simulator to finish initialization...");
+        while (!edge_tocloud_propagation_simulator_param_ptr_->isFinishInitialization())
+        {
+            usleep(SubthreadParamBase::INITIALIZATION_WAIT_INTERVAL_US);
+        }
+
+        // Wait edge beacon server to finish initialization
+        Util::dumpNormalMsg(base_instance_name_, "wait edge beacon server to finish initialization...");
+        while (!edge_beacon_server_param_ptr_->isFinishInitialization())
+        {
+            usleep(SubthreadParamBase::INITIALIZATION_WAIT_INTERVAL_US);
+        }
+
+        // Wait edge cache server to finish initialization
+        Util::dumpNormalMsg(base_instance_name_, "wait edge cache server to finish initialization...");
+        while (!edge_cache_server_param_ptr_->isFinishInitialization())
+        {
+            usleep(SubthreadParamBase::INITIALIZATION_WAIT_INTERVAL_US);
+        }
 
         return;
     }

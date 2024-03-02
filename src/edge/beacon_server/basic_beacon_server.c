@@ -17,16 +17,21 @@ namespace covered
 {
     const std::string BasicBeaconServer::kClassName("BasicBeaconServer");
 
-    BasicBeaconServer::BasicBeaconServer(EdgeWrapperBase* edge_wrapper_ptr) : BeaconServerBase(edge_wrapper_ptr)
+    BasicBeaconServer::BasicBeaconServer(EdgeComponentParam* edge_beacon_server_param_ptr) : BeaconServerBase(edge_beacon_server_param_ptr)
     {
-        assert(edge_wrapper_ptr_ != NULL);
-        assert(edge_wrapper_ptr_->getCacheName() != Util::COVERED_CACHE_NAME);
-        uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
+        assert(edge_beacon_server_param_ptr != NULL);
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = edge_beacon_server_param_ptr->getEdgeWrapperPtr();
+        assert(tmp_edge_wrapper_ptr != NULL);
+        assert(tmp_edge_wrapper_ptr->getCacheName() != Util::COVERED_CACHE_NAME);
+        uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
 
         // Differentiate BasicBeaconServer in different edge nodes
         std::ostringstream oss;
         oss << kClassName << " edge" << edge_idx;
         instance_name_ = oss.str();
+
+        // Notify edge wrapper that edge beacon server has finished initialization
+        edge_beacon_server_param_ptr_->markFinishInitialization();
     }
 
     BasicBeaconServer::~BasicBeaconServer() {}
@@ -37,6 +42,8 @@ namespace covered
     {
         assert(control_request_ptr != NULL);
         const uint32_t source_edge_idx = control_request_ptr->getSourceIndex();
+
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = edge_beacon_server_param_ptr_->getEdgeWrapperPtr();
 
         bool is_finish = false;
 
@@ -56,7 +63,7 @@ namespace covered
 
             // Vtime synchronization
             UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(source_edge_idx, syncinfo.getVtime());
-            edge_wrapper_ptr_->getEdgeCachePtr()->customFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
+            tmp_edge_wrapper_ptr->getEdgeCachePtr()->customFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
         }
         else
         {
@@ -69,7 +76,7 @@ namespace covered
         // Lookup local content directory
         is_being_written = false;
         bool is_source_cached = false;
-        edge_wrapper_ptr_->getCooperationWrapperPtr()->lookupDirectoryTableByBeaconServer(tmp_key, source_edge_idx, edge_cache_server_worker_recvreq_dst_addr, is_being_written, is_valid_directory_exist, directory_info, is_source_cached);
+        tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->lookupDirectoryTableByBeaconServer(tmp_key, source_edge_idx, edge_cache_server_worker_recvreq_dst_addr, is_being_written, is_valid_directory_exist, directory_info, is_source_cached);
         UNUSED(is_source_cached);
 
         UNUSED(best_placement_edgeset);
@@ -85,8 +92,10 @@ namespace covered
         checkPointers_();
 
         assert(control_request_ptr != NULL);
+
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = edge_beacon_server_param_ptr_->getEdgeWrapperPtr();
         
-        uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
+        uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         const MessageType message_type = control_request_ptr->getMessageType();
         MessageBase* directory_lookup_response_ptr = NULL;
         if (message_type == MessageType::kDirectoryLookupRequest)
@@ -102,7 +111,7 @@ namespace covered
         {
             // Get local victim vtime for vtime synchronization
             GetLocalVictimVtimeFuncParam tmp_param_for_vtimesync;
-            edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
+            tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
             const uint64_t& local_victim_vtime = tmp_param_for_vtimesync.getLocalVictimVtimeRef();
 
             // Get key and skip_propagation_latency from control request if any
@@ -133,6 +142,8 @@ namespace covered
         // Foreground directory updates for baselines
         assert(control_request_ptr != NULL);
 
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = edge_beacon_server_param_ptr_->getEdgeWrapperPtr();
+
         bool is_finish = false;
 
         Key tmp_key;
@@ -151,7 +162,7 @@ namespace covered
             // Update local directory information in cooperation wrapper
             is_being_written = false;
             MetadataUpdateRequirement unused_metadata_update_requirement;
-            edge_wrapper_ptr_->getCooperationWrapperPtr()->updateDirectoryTable(tmp_key, source_edge_idx, is_admit, directory_info, is_being_written, is_neighbor_cached, unused_metadata_update_requirement);
+            tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->updateDirectoryTable(tmp_key, source_edge_idx, is_admit, directory_info, is_being_written, is_neighbor_cached, unused_metadata_update_requirement);
             UNUSED(unused_metadata_update_requirement); // ONLY used by COVERED
         }
         else if (message_type == MessageType::kBestGuessDirectoryUpdateRequest || message_type == MessageType::kBestGuessBgplaceDirectoryUpdateRequest)
@@ -163,13 +174,13 @@ namespace covered
 
             // Vtime synchronization
             UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(bestguess_directory_update_request_ptr->getSourceIndex(), bestguess_directory_update_request_ptr->getSyncinfo().getVtime());
-            edge_wrapper_ptr_->getEdgeCachePtr()->customFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
+            tmp_edge_wrapper_ptr->getEdgeCachePtr()->customFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
 
             if (is_admit) // Foreground/background directory admission (i.e., validation for BestGuess) by local/remote placement notification
             {
                 // Validate dirinfo preserved in directory table when triggering best-guess placement
                 ValidateDirectoryTableForPreservedDirinfoFuncParam tmp_param_for_validation(tmp_key, source_edge_idx, directory_info, is_being_written, is_neighbor_cached);
-                edge_wrapper_ptr_->getCooperationWrapperPtr()->customFunc(ValidateDirectoryTableForPreservedDirinfoFuncParam::FUNCNAME, &tmp_param_for_validation);
+                tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->customFunc(ValidateDirectoryTableForPreservedDirinfoFuncParam::FUNCNAME, &tmp_param_for_validation);
                 assert(!tmp_param_for_validation.isNeighborCachedRef()); // NOTE: sender MUST be the single placement of the object
                 assert(tmp_param_for_validation.isSuccessfulValidationConstRef()); // NOTE: key and dirinfo MUST exist in directory table for validation
             }
@@ -178,7 +189,7 @@ namespace covered
                 // Update local directory information in cooperation wrapper
                 is_being_written = false;
                 MetadataUpdateRequirement unused_metadata_update_requirement;
-                edge_wrapper_ptr_->getCooperationWrapperPtr()->updateDirectoryTable(tmp_key, source_edge_idx, is_admit, directory_info, is_being_written, is_neighbor_cached, unused_metadata_update_requirement);
+                tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->updateDirectoryTable(tmp_key, source_edge_idx, is_admit, directory_info, is_being_written, is_neighbor_cached, unused_metadata_update_requirement);
                 UNUSED(unused_metadata_update_requirement); // ONLY used by COVERED
             }
         }
@@ -203,7 +214,9 @@ namespace covered
         assert(control_request_ptr != NULL);
 
         checkPointers_();
-        const uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = edge_beacon_server_param_ptr_->getEdgeWrapperPtr();
+        
+        const uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
 
         Key tmp_key;
         bool skip_propagation_latency = false;
@@ -226,7 +239,7 @@ namespace covered
 
             // Get local victim vtime for vtime synchronization
             GetLocalVictimVtimeFuncParam tmp_param_for_vtimesync;
-            edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
+            tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
             const uint64_t& local_victim_vtime = tmp_param_for_vtimesync.getLocalVictimVtimeRef();
 
             if (message_type == MessageType::kBestGuessDirectoryUpdateRequest) // Foreground directory admission/eviction by local placement notification or value update
@@ -261,6 +274,8 @@ namespace covered
         assert(control_request_ptr != NULL);
         const uint32_t source_edge_idx = control_request_ptr->getSourceIndex();
 
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = edge_beacon_server_param_ptr_->getEdgeWrapperPtr();
+
         bool is_finish = false;
 
         const MessageType message_type = control_request_ptr->getMessageType();
@@ -278,7 +293,7 @@ namespace covered
 
             // Vtime synchronization
             UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(source_edge_idx, syncinfo.getVtime());
-            edge_wrapper_ptr_->getEdgeCachePtr()->customFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
+            tmp_edge_wrapper_ptr->getEdgeCachePtr()->customFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
         }
         else
         {
@@ -290,7 +305,7 @@ namespace covered
 
         // Get result of acquiring local write lock
         bool is_source_cached = false;
-        lock_result = edge_wrapper_ptr_->getCooperationWrapperPtr()->acquireLocalWritelockByBeaconServer(tmp_key, source_edge_idx, edge_cache_server_worker_recvreq_dst_addr, all_dirinfo, is_source_cached);
+        lock_result = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->acquireLocalWritelockByBeaconServer(tmp_key, source_edge_idx, edge_cache_server_worker_recvreq_dst_addr, all_dirinfo, is_source_cached);
         UNUSED(is_source_cached);
 
         UNUSED(total_bandwidth_usage);
@@ -301,7 +316,9 @@ namespace covered
     MessageBase* BasicBeaconServer::getRspToAcquireLocalWritelock_(MessageBase* control_request_ptr, const LockResult& lock_result, const BandwidthUsage& total_bandwidth_usage, const EventList& event_list) const
     {
         checkPointers_();
-        uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
+
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = edge_beacon_server_param_ptr_->getEdgeWrapperPtr();
+        uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
 
         assert(control_request_ptr != NULL);
 
@@ -323,7 +340,7 @@ namespace covered
 
             // Get local victim vtime for vtime synchronization
             GetLocalVictimVtimeFuncParam tmp_param_for_vtimesync;
-            edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
+            tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
             const uint64_t& local_victim_vtime = tmp_param_for_vtimesync.getLocalVictimVtimeRef();
 
             acquire_writelock_response_ptr = new BestGuessAcquireWritelockResponse(tmp_key, lock_result, BestGuessSyncinfo(local_victim_vtime), edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
@@ -346,6 +363,8 @@ namespace covered
         const MessageType message_type = control_request_ptr->getMessageType();
         uint32_t sender_edge_idx = control_request_ptr->getSourceIndex();
 
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = edge_beacon_server_param_ptr_->getEdgeWrapperPtr();
+
         bool is_finish = false;
 
         // Get key from request
@@ -363,7 +382,7 @@ namespace covered
 
             // Vtime synchronization
             UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(sender_edge_idx, syncinfo.getVtime());
-            edge_wrapper_ptr_->getEdgeCachePtr()->customFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
+            tmp_edge_wrapper_ptr->getEdgeCachePtr()->customFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
         }
         else
         {
@@ -376,7 +395,7 @@ namespace covered
         // Release local write lock and validate sender directory info if any
         DirectoryInfo sender_directory_info(sender_edge_idx);
         bool is_source_cached = false;
-        blocked_edges = edge_wrapper_ptr_->getCooperationWrapperPtr()->releaseLocalWritelock(tmp_key, sender_edge_idx, sender_directory_info, is_source_cached);
+        blocked_edges = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->releaseLocalWritelock(tmp_key, sender_edge_idx, sender_directory_info, is_source_cached);
         UNUSED(is_source_cached);
 
         UNUSED(best_placement_edgeset);
@@ -393,6 +412,8 @@ namespace covered
         assert(control_request_ptr != NULL);
         const MessageType message_type = control_request_ptr->getMessageType();
 
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = edge_beacon_server_param_ptr_->getEdgeWrapperPtr();
+
         MessageBase* release_writelock_response_ptr = NULL;
         if (message_type == MessageType::kReleaseWritelockRequest)
         {
@@ -400,7 +421,7 @@ namespace covered
             Key tmp_key = release_writelock_request_ptr->getKey();
             bool skip_propagation_latency = release_writelock_request_ptr->isSkipPropagationLatency();
 
-            uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
+            uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
             release_writelock_response_ptr = new ReleaseWritelockResponse(tmp_key, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         }
         else if (message_type == MessageType::kBestGuessReleaseWritelockRequest)
@@ -411,10 +432,10 @@ namespace covered
 
             // Get local victim vtime for vtime synchronization
             GetLocalVictimVtimeFuncParam tmp_param_for_vtimesync;
-            edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
+            tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
             const uint64_t& local_victim_vtime = tmp_param_for_vtimesync.getLocalVictimVtimeRef();
 
-            uint32_t edge_idx = edge_wrapper_ptr_->getNodeIdx();
+            uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
             release_writelock_response_ptr = new BestGuessReleaseWritelockResponse(tmp_key, BestGuessSyncinfo(local_victim_vtime), edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
         }
         else
@@ -479,8 +500,10 @@ namespace covered
 
         checkPointers_();
 
-        assert(edge_wrapper_ptr_->getCacheName() == Util::BESTGUESS_CACHE_NAME);
-        const uint32_t current_beacon_edge_idx = edge_wrapper_ptr_->getNodeIdx();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = edge_beacon_server_param_ptr_->getEdgeWrapperPtr();
+
+        assert(tmp_edge_wrapper_ptr->getCacheName() == Util::BESTGUESS_CACHE_NAME);
+        const uint32_t current_beacon_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
 
         bool is_finish = false;
         BandwidthUsage total_bandwidth_usage;
@@ -503,16 +526,16 @@ namespace covered
 
         // Vtime synchronization
         UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(source_edge_idx, syncinfo.getVtime());
-        edge_wrapper_ptr_->getEdgeCachePtr()->customFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
+        tmp_edge_wrapper_ptr->getEdgeCachePtr()->customFunc(UpdateNeighborVictimVtimeParam::FUNCNAME, &tmp_param_for_neighborvtime);
 
         // Try to preserve invalid dirinfo in directory table for trigger flag
         PreserveDirectoryTableIfGlobalUncachedFuncParam tmp_param_for_preserve(key, DirectoryInfo(placement_edge_idx));
-        edge_wrapper_ptr_->getCooperationWrapperPtr()->customFunc(PreserveDirectoryTableIfGlobalUncachedFuncParam::FUNCNAME, &tmp_param_for_preserve);
+        tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->customFunc(PreserveDirectoryTableIfGlobalUncachedFuncParam::FUNCNAME, &tmp_param_for_preserve);
         const bool is_triggered = tmp_param_for_preserve.isSuccessfulPreservationConstRef();
 
         // Get local victim vtime for vtime synchronization
         GetLocalVictimVtimeFuncParam tmp_param_for_localvtime;
-        edge_wrapper_ptr_->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_localvtime);
+        tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_localvtime);
         const uint64_t& local_victim_vtime = tmp_param_for_localvtime.getLocalVictimVtimeRef();
 
         if (is_triggered) // The first placement trigger of global uncached object
@@ -525,30 +548,30 @@ namespace covered
             }
             else if (placement_edge_idx == current_beacon_edge_idx) // Local placement
             {
-                assert(edge_wrapper_ptr_->getCooperationWrapperPtr()->getBeaconEdgeIdx(key) == current_beacon_edge_idx); // Current MUST be the beacon node of the key
+                assert(tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key) == current_beacon_edge_idx); // Current MUST be the beacon node of the key
 
                 // Admit local beacon directory
                 bool is_being_written = false;
                 bool unused_is_neighbor_cached = false; // ONLY used by COVERED for local cached reward calculation
-                edge_wrapper_ptr_->admitLocalDirectory_(key, DirectoryInfo(placement_edge_idx), is_being_written, unused_is_neighbor_cached, skip_propagation_latency);
+                tmp_edge_wrapper_ptr->admitLocalDirectory_(key, DirectoryInfo(placement_edge_idx), is_being_written, unused_is_neighbor_cached, skip_propagation_latency);
                 assert(!unused_is_neighbor_cached); // (i) MUST be false due to ONLY preserving dirinfo for the first placement trigger of global miss; (ii) is_neighbor_cached will NOT be used by BestGuess local edge cachce
 
                 // Notify placement processor to admit local edge cache (NOTE: NO need to admit directory) and trigger local cache eviciton in the background
                 const bool is_valid = !is_being_written;
-                bool is_successful = edge_wrapper_ptr_->getLocalCacheAdmissionBufferPtr()->push(LocalCacheAdmissionItem(key, value, unused_is_neighbor_cached, is_valid, skip_propagation_latency));
+                bool is_successful = tmp_edge_wrapper_ptr->getLocalCacheAdmissionBufferPtr()->push(LocalCacheAdmissionItem(key, value, unused_is_neighbor_cached, is_valid, skip_propagation_latency));
                 assert(is_successful);
             }
             else // Remote placement notification
             {
                 // Prepare BestGuess placement notify request
-                const bool is_being_written = edge_wrapper_ptr_->getCooperationWrapperPtr()->isBeingWritten(key);
+                const bool is_being_written = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->isBeingWritten(key);
                 const bool is_valid = !is_being_written;
                 BestGuessBgplacePlacementNotifyRequest* bestguess_placement_notify_request_ptr = new BestGuessBgplacePlacementNotifyRequest(key, value, is_valid, BestGuessSyncinfo(local_victim_vtime), current_beacon_edge_idx, edge_beacon_server_recvreq_source_addr_, skip_propagation_latency);
                 assert(bestguess_placement_notify_request_ptr != NULL);
 
                 // Issue remote placement notification to placement node with key and value
-                NetworkAddr placement_edge_cache_server_recvreq_dst_addr = edge_wrapper_ptr_->getTargetDstaddr(DirectoryInfo(placement_edge_idx)); // Send to cache server of the placement edge node for cache server placement processor
-                bool is_successful = edge_wrapper_ptr_->getEdgeToedgePropagationSimulatorParamPtr()->push(bestguess_placement_notify_request_ptr, placement_edge_cache_server_recvreq_dst_addr);
+                NetworkAddr placement_edge_cache_server_recvreq_dst_addr = tmp_edge_wrapper_ptr->getTargetDstaddr(DirectoryInfo(placement_edge_idx)); // Send to cache server of the placement edge node for cache server placement processor
+                bool is_successful = tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(bestguess_placement_notify_request_ptr, placement_edge_cache_server_recvreq_dst_addr);
                 assert(is_successful);
 
                 bestguess_placement_notify_request_ptr = NULL; // NOTE: bestguess_placement_notify_request_ptr will be released by edge-to-edge propagation simulator
@@ -562,7 +585,7 @@ namespace covered
         assert(best_guess_placement_trigger_response_ptr != NULL);
 
         // Push the response into edge-to-edge propagation simulator to cache server worker
-        bool is_successful = edge_wrapper_ptr_->getEdgeToedgePropagationSimulatorParamPtr()->push(best_guess_placement_trigger_response_ptr, edge_cache_server_worker_recvrsp_dst_addr);
+        bool is_successful = tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(best_guess_placement_trigger_response_ptr, edge_cache_server_worker_recvrsp_dst_addr);
         assert(is_successful);
 
         // NOTE: best_guess_placement_trigger_response_ptr will be released by edge-to-edge propagation simulator

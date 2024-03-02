@@ -216,6 +216,25 @@ namespace covered
             ThreadLauncher::pthreadCreateHighPriority(ThreadLauncher::CLIENT_THREAD_ROLE, tmp_thread_name, &client_worker_threads_[local_client_worker_idx], ClientWorkerWrapper::launchClientWorker, (void*)(&(client_worker_params_[local_client_worker_idx])));
         }
 
+        // Wait client-to-edge propagation simulator to finish initialization
+        Util::dumpNormalMsg(instance_name_, "wait client-to-edge simulator to finish initialization...");
+        while (!client_toedge_propagation_simulator_param_ptr_->isFinishInitialization())
+        {
+            usleep(SubthreadParamBase::INITIALIZATION_WAIT_INTERVAL_US);
+        }
+
+        // Wait perclient_workercnt worker threads to finish initialization
+        std::ostringstream oss;
+        oss << "wait " << perclient_workercnt_ << " workers to finish initialization...";
+        Util::dumpNormalMsg(instance_name_, oss.str());
+        for (uint32_t local_client_worker_idx = 0; local_client_worker_idx < perclient_workercnt_; local_client_worker_idx++)
+        {
+            while (!client_worker_params_[local_client_worker_idx].isFinishInitialization())
+            {
+                usleep(SubthreadParamBase::INITIALIZATION_WAIT_INTERVAL_US);
+            }
+        }
+
         return;
     }
 

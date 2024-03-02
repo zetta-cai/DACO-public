@@ -79,6 +79,10 @@ namespace covered
         warmup_reqcnt_limit_ = (total_warmup_reqcnt - 1) / total_client_workercnt + 1; // Get per-client-worker warmup reqcnt limitation
         assert(warmup_reqcnt_limit_ > 0);
         assert(warmup_reqcnt_limit_ * total_client_workercnt >= total_warmup_reqcnt); // Total # of issued warmup reqs MUST >= total # of required warmup reqs
+
+        // (4) Notify client wrapper that the current client worker has finished initialization
+
+        client_worker_param_ptr->markFinishInitialization();
     }
     
     ClientWorkerWrapper::~ClientWorkerWrapper()
@@ -103,7 +107,6 @@ namespace covered
         while (!tmp_client_wrapper_ptr->isNodeRunning()) {}
 
         // Current worker thread start to issue requests and receive responses
-        // uint32_t tmp_i = 0; // TMPDEBUG
         const bool is_warmup_speedup = tmp_client_wrapper_ptr->isWarmupSpeedup(); // NOTE: warmup speedup will skip propagation latency in network and disk I/O latency in cloud
         while (tmp_client_wrapper_ptr->isNodeRunning())
         {
@@ -127,20 +130,6 @@ namespace covered
             // Generate key-value request based on a specific workload
             WorkloadItem workload_item = workload_generator_ptr->generateWorkloadItem(local_client_worker_idx);
 
-            // TMPDEBUG (50% PUT)
-            // if (tmp_i % 2 == 0)
-            // {
-            //     workload_item = WorkloadItem(workload_item.getKey(), workload_item.getValue(), WorkloadItemType::kWorkloadItemPut);
-            // }
-            // tmp_i++;
-
-            // TMPDEBUG
-            //WorkloadItem workload_item(Key("123"), Value(200), WorkloadItemType::kWorkloadItemGet);
-            //if (tmp_client_wrapper_ptr->node_idx_ != 0)
-            //{
-            //    sleep(0.5);
-            //}
-
             DynamicArray local_response_msg_payload;
             uint32_t rtt_us = 0;
             bool is_finish = false;
@@ -159,16 +148,6 @@ namespace covered
                 continue; // NOT update to avoid affecting cur-slot raw/aggregated statistics especially for warmup speedup
             }*/
             processLocalResponse_(workload_item, local_response_msg_payload, rtt_us, is_stresstest_phase);
-
-            // TMPDEBUG
-            //is_finish = issueItemToEdge_(workload_item, local_response_msg_payload, rtt_us);
-            //if (is_finish) // Check is_finish
-            //{
-            //    continue; // Go to check if client is still running
-            //}
-            //processLocalResponse_(local_response_msg_payload, rtt_us);
-
-            //break; // TMPDEBUG
         }
 
         return;
@@ -180,9 +159,6 @@ namespace covered
         ClientWrapper* tmp_client_wrapper_ptr = client_worker_param_ptr_->getClientWrapperPtr();
         
         bool is_finish = false; // Mark if local client is finished
-
-        // TMPDEBUG
-        //WorkloadItem workload_item(tmp_workload_item.getKey(), Value(200000), WorkloadItemType::kWorkloadItemPut);
 
         struct timespec sendreq_timestamp = Util::getCurrentTimespec();
         while (true) // Timeout-and-retry mechanism
@@ -202,10 +178,24 @@ namespace covered
             // NOTE: local_request_ptr will be released by client-to-edge propagation simulator
             local_request_ptr = NULL;
 
+            // TMPDEBUG24
+            int64_t tmp_debug_int = -69916166;
+            if (workload_item.getKey() == Key(std::string((const char*)&tmp_debug_int, sizeof(int64_t))))
+            {
+                Util::dumpNormalMsg(instance_name_, "issue a local request for key -69916166");
+            }
+
             // Receive the message payload of local response from the closest edge node
             bool is_timeout = client_worker_recvrsp_socket_server_ptr_->recv(local_response_msg_payload);
             if (is_timeout)
             {
+                // TMPDEBUG24
+                if (workload_item.getKey() == Key(std::string((const char*)&tmp_debug_int, sizeof(int64_t))))
+                {
+                    Util::dumpNormalMsg(instance_name_, "timeout for key -69916166");
+                    exit(1);
+                }
+
                 if (!tmp_client_wrapper_ptr->isNodeRunning())
                 {
                     is_finish = true;

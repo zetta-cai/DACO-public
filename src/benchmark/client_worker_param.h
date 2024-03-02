@@ -7,6 +7,7 @@
 #ifndef CLIENT_WORKER_PARAM_H
 #define CLIENT_WORKER_PARAM_H
 
+#include <atomic>
 #include <string>
 
 namespace covered
@@ -15,10 +16,11 @@ namespace covered
 }
 
 #include "benchmark/client_wrapper.h"
+#include "common/subthread_param_base.h"
 
 namespace covered
 {
-    class ClientWorkerParam
+    class ClientWorkerParam : public SubthreadParamBase
     {
     public:
         ClientWorkerParam();

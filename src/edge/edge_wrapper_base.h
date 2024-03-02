@@ -28,6 +28,7 @@ namespace covered
 #include "concurrency/ring_buffer_impl.h"
 #include "cooperation/cooperation_wrapper_base.h"
 #include "cooperation/directory/dirinfo_set.h"
+#include "edge/edge_component_param.h"
 #include "edge/edge_custom_func_param_base.h"
 #include "edge/cache_server/cache_server_base.h"
 #include "edge/utils/background_counter.h"
@@ -74,6 +75,8 @@ namespace covered
         PropagationSimulatorParam* getEdgeToclientPropagationSimulatorParamPtr() const;
         PropagationSimulatorParam* getEdgeToedgePropagationSimulatorParamPtr() const;
         PropagationSimulatorParam* getEdgeTocloudPropagationSimulatorParamPtr() const;
+        EdgeComponentParam* getEdgeBeaconServerParamPtr() const;
+        EdgeComponentParam* getEdgeCacheServerParamPtr() const;
         RingBuffer<LocalCacheAdmissionItem>* getLocalCacheAdmissionBufferPtr() const;
         BackgroundCounter& getEdgeBackgroundCounterForBeaconServerRef();
 
@@ -145,6 +148,8 @@ namespace covered
         PropagationSimulatorParam* edge_toclient_propagation_simulator_param_ptr_; // thread safe
         PropagationSimulatorParam* edge_toedge_propagation_simulator_param_ptr_; // thread safe
         PropagationSimulatorParam* edge_tocloud_propagation_simulator_param_ptr_; // thread safe
+        EdgeComponentParam* edge_beacon_server_param_ptr_; // thread safe
+        EdgeComponentParam* edge_cache_server_param_ptr_; // thread safe
     private:
         std::string base_instance_name_;
 

@@ -6,13 +6,13 @@ namespace covered
 {
     const std::string ClientWorkerParam::kClassName("ClientWorkerParam");
 
-    ClientWorkerParam::ClientWorkerParam()
+    ClientWorkerParam::ClientWorkerParam() : SubthreadParamBase()
     {
         client_wrapper_ptr_ = NULL;
         local_client_worker_idx_ = 0;
     }
 
-    ClientWorkerParam::ClientWorkerParam(ClientWrapper* client_wrapper_ptr, uint32_t local_client_worker_idx)
+    ClientWorkerParam::ClientWorkerParam(ClientWrapper* client_wrapper_ptr, uint32_t local_client_worker_idx) : SubthreadParamBase()
     {
         if (client_wrapper_ptr == NULL)
         {
@@ -30,6 +30,8 @@ namespace covered
 
     const ClientWorkerParam& ClientWorkerParam::operator=(const ClientWorkerParam& other)
     {
+        SubthreadParamBase::operator=(other);
+
         if (other.client_wrapper_ptr_ == NULL)
         {
             Util::dumpErrorMsg(kClassName, "other.client_wrapper_ptr_ is NULL!");

@@ -5,7 +5,7 @@
 #include "common/util.h"
 #include "core/popularity/edgeset.h"
 #include "message/data_message.h"
-#include "network/udp_pkt_socket.h" // TMPDEBUG24
+#include "network/udp_pkt_socket.h" // To report abnormal rocksdb accesses with extremely large latency
 
 namespace covered
 {
@@ -242,11 +242,20 @@ namespace covered
         uint32_t access_rocksdb_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(access_rocksdb_end_timestamp, access_rocksdb_start_timestamp));
         event_list.addEvent(event_name, access_rocksdb_latency_us);
 
-        // TMPDEBUG24
-        if (access_rocksdb_latency_us >= (UdpPktSocket::SOCKET_TIMEOUT_SECONDS - 1) * 1000000) // Too large processing
+        // Report abnormal rocksdb accesses with extremely large latency
+        uint32_t abnormal_latency_threshold_us = 0;
+        if (UdpPktSocket::SOCKET_TIMEOUT_SECONDS > 1)
+        {
+            abnormal_latency_threshold_us = (UdpPktSocket::SOCKET_TIMEOUT_SECONDS - 1) * 1000000;
+        }
+        else
+        {
+            abnormal_latency_threshold_us = 1 * 1000000;
+        }
+        if (access_rocksdb_latency_us >= abnormal_latency_threshold_us) // Too large processing latency
         {
             std::ostringstream oss;
-            oss << "cloud rocksdb access latency " << access_rocksdb_latency_us << " us >= socket timeout " << (UdpPktSocket::SOCKET_TIMEOUT_SECONDS - 1) * 1000000 << " us";
+            oss << "cloud rocksdb access latency " << access_rocksdb_latency_us << " us >= abnormal latency threshold " << abnormal_latency_threshold_us << " us";
             Util::dumpWarnMsg(instance_name_, oss.str());
         }
 
