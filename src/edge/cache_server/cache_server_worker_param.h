@@ -26,6 +26,7 @@ namespace covered
     public:
         CacheServerWorkerParam();
         CacheServerWorkerParam(CacheServerBase* cache_server_ptr, const uint32_t& local_cache_server_worker_idx, const uint32_t& data_request_buffer_size);
+        CacheServerWorkerParam(const CacheServerWorkerParam& other);
         ~CacheServerWorkerParam();
 
         const CacheServerWorkerParam& operator=(const CacheServerWorkerParam& other);

@@ -48,6 +48,8 @@ namespace covered
 
     EvaluatorWrapperParam& EvaluatorWrapperParam::operator=(const EvaluatorWrapperParam& other)
     {
+        SubthreadParamBase::operator=(other);
+        
         evaluator_cli_ptr_ = other.evaluator_cli_ptr_;
         return *this;
     }

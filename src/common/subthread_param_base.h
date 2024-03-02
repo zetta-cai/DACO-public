@@ -18,6 +18,7 @@ namespace covered
         static const uint32_t INITIALIZATION_WAIT_INTERVAL_US;
 
         SubthreadParamBase();
+        SubthreadParamBase(const SubthreadParamBase& other);
         ~SubthreadParamBase();
 
         const SubthreadParamBase& operator=(const SubthreadParamBase& other);

@@ -12,6 +12,11 @@ namespace covered
     {
     }
 
+    SubthreadParamBase::SubthreadParamBase(const SubthreadParamBase& other)
+    {
+        *this = other;
+    }
+
     SubthreadParamBase::~SubthreadParamBase()
     {
     }

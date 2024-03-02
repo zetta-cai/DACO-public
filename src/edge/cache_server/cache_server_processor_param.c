@@ -81,6 +81,8 @@ namespace covered
 
     const CacheServerProcessorParam& CacheServerProcessorParam::operator=(const CacheServerProcessorParam& other)
     {
+        SubthreadParamBase::operator=(other);
+        
         is_polling_based_ = other.is_polling_based_;
 
         // Shallow copy is okay, as cache_server_ptr_ is maintained outside CacheServerProcessorParam (e.g., by a sub-thread of EdgeWrapper)

@@ -24,6 +24,11 @@ namespace covered
         assert(data_request_buffer_ptr_ != NULL);
     }
 
+    CacheServerWorkerParam::CacheServerWorkerParam(const CacheServerWorkerParam& other) : SubthreadParamBase(other)
+    {
+        *this = other;
+    }
+
     CacheServerWorkerParam::~CacheServerWorkerParam()
     {
         // NOTE: no need to release cache_server_ptr_, which will be released outside CacheServerWorkerParam (e.g., by a sub-thread of EdgeWrapper)
@@ -48,6 +53,8 @@ namespace covered
 
     const CacheServerWorkerParam& CacheServerWorkerParam::operator=(const CacheServerWorkerParam& other)
     {
+        SubthreadParamBase::operator=(other);
+        
         // Shallow copy is okay, as cache_server_ptr_ is maintained outside CacheServerWorkerParam (e.g., by a sub-thread of EdgeWrapper)
         cache_server_ptr_ = other.cache_server_ptr_;
 

@@ -9,6 +9,11 @@
 
 #include <string>
 
+namespace covered
+{
+    class CloudWrapper; // Forward declaration
+}
+
 #include "cloud/rocksdb_wrapper.h"
 #include "cli/cloud_cli.h"
 #include "cloud/cloud_component_param.h"
