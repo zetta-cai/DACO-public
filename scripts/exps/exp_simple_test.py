@@ -9,10 +9,10 @@ from .utils.total_statistics_loader import *
 exp_simple_test_settings = {
     "clientcnt": 4,
     "edgecnt": 4,
-    "keycnt": 100000,
-    "capacity_mb": 1778,
-    "cache_name": "covered",
-    "workload_name": "wikitext"
+    "keycnt": 1000000,
+    "capacity_mb": 3899,
+    "cache_name": "gdsf",
+    "workload_name": "wikiimage"
 }
 
 # For dataset loader

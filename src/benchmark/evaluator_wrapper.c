@@ -261,10 +261,10 @@ namespace covered
                 // Finish warmup phase
                 if (is_achieve_warmup_reqcnt && is_achieve_warmup_max_duration)
                 {
-                    // Cache object hit ratio becomes stable
+                    // Cache object hit ratio becomes "stable"
                     double stable_object_hit_ratio = total_statistics_tracker_ptr_->getCurslotTotalAggregatedStatistics().getTotalObjectHitRatio();
                     std::ostringstream oss;
-                    oss << "cache object hit ratio becomes stable at " << stable_object_hit_ratio << " -> finish warmup phase";
+                    oss << "cache object hit ratio at the end of warmup phase is " << stable_object_hit_ratio << " (NOT use this cache hit ratio, as some clients already stop issuing requests at the end of warmup phase to keep strict warmup reqcnt limit; will use cache stable results after warmup) -> finish warmup phase";
                     Util::dumpNormalMsg(kClassName, oss.str());
 
                     // Notify all clients to finish warmup phase (i.e., enter stresstest phase)
