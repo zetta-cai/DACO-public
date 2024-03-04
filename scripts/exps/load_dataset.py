@@ -20,7 +20,7 @@ for tmp_workload in nonreplayed_workloads:
 
         # Get log file name
         tmp_log_filepath = "{}/tmp_dataset_loader_for_{}_key{}.out".format(Common.output_log_dirpath, tmp_workload, tmp_keycnt)
-        SubprocessUtil.tryToCreateDirectory(scriptname, os.path.dirname(tmp_log_filepath))
+        SubprocessUtil.tryToCreateDirectory(Common.scriptname, os.path.dirname(tmp_log_filepath))
         log_filepaths.append(tmp_log_filepath)
 
         # Check rocksdb dirpath
@@ -49,7 +49,7 @@ for tmp_workload in replayed_workloads:
 
     # Get log file name
     tmp_log_filepath = "{}/tmp_dataset_loader_for_{}_key{}.out".format(Common.output_log_dirpath, tmp_workload, tmp_keycnt)
-    SubprocessUtil.tryToCreateDirectory(scriptname, os.path.dirname(tmp_log_filepath))
+    SubprocessUtil.tryToCreateDirectory(Common.scriptname, os.path.dirname(tmp_log_filepath))
     log_filepaths.append(tmp_log_filepath)
 
     # Check rocksdb dirpath

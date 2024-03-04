@@ -23,12 +23,12 @@ if not os.path.exists(Common.trace_dirpath):
 
 LogUtil.prompt(Common.scriptname, "download Wiki image CDN trace...")
 
-tmp_trace_dirpath_relative_wikiimage_trace_filespaths_from_json = JsonUtil.getValueForKeystr(Common.scriptname, "trace_dirpath_relative_wikiimage_trace_filespaths")
+tmp_trace_dirpath_relative_wikiimage_trace_filepaths_from_json = JsonUtil.getValueForKeystr(Common.scriptname, "trace_dirpath_relative_wikiimage_trace_filepaths")
 
 # Get wikiimage trace filepaths
 wikiimage_trace_filepaths = []
-for i in range(len(tmp_trace_dirpath_relative_wikiimage_trace_filespaths_from_json)):
-    wikiimage_trace_filepaths.append("{}/{}".format(Common.trace_dirpath, tmp_trace_dirpath_relative_wikiimage_trace_filespaths_from_json[i]))
+for i in range(len(tmp_trace_dirpath_relative_wikiimage_trace_filepaths_from_json)):
+    wikiimage_trace_filepaths.append("{}/{}".format(Common.trace_dirpath, tmp_trace_dirpath_relative_wikiimage_trace_filepaths_from_json[i]))
 
 # Create wikiimage trace dirpath if not exist
 wikiimage_trace_dirpath = os.path.dirname(wikiimage_trace_filepaths[0])
