@@ -95,8 +95,8 @@ for tmp_machine_idx in range(len(physical_machines)):
     check_authorized_keys_filepath_subprocess = SubprocessUtil.runCmd(check_authorized_keys_filepath_cmd)
     if check_authorized_keys_filepath_subprocess.returncode != 0: # authorized_keys_filepath not found
         need_create_authorized_keys = True
-    elif SubprocessUtil.getSubprocessOutputstr(check_authorized_keys_filepath_subprocess) == "": # authorized_keys_filepath not found
-        need_create_authorized_keys = True
+    # elif SubprocessUtil.getSubprocessOutputstr(check_authorized_keys_filepath_subprocess) == "": # authorized_keys_filepath not found (OBSOLETE: existing empty directory could return empty string)
+    #     need_create_authorized_keys = True
     else: # authorized_keys_filepath is found
         need_create_authorized_keys = False
     

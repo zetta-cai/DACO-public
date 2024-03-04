@@ -8,11 +8,14 @@ from .cliutil import *
 from .exputil import *
 
 class Simulator:
-    def __init__(self, **kwargs):
+    def __init__(self, simulator_logfile = None, **kwargs):
         # For launched componenets
         self.is_successful_finish_ = False
 
         self.cliutil_instance_ = CLIUtil(**kwargs)
+        self.simulator_logfile_ = "tmp_simulator.out"
+        if simulator_logfile is not None:
+            self.simulator_logfile_ = simulator_logfile
     
     def run(self):
         # NOTE: client/edge/cloud/evaluator machine idx MUST be current machine idx, which will also be checked by src/common/config.c after launching simulator
@@ -31,8 +34,7 @@ class Simulator:
 
         # (1) Launch simulator
         ## Get launch simulator command
-        simulator_logfile = "tmp_simulator.out"
-        launch_simulator_cmd = "nohup ./simulator {} >{} 2>&1 &".format(self.cliutil_instance_.getSimulatorCLIStr(), simulator_logfile)
+        launch_simulator_cmd = "nohup ./simulator {} >{} 2>&1 &".format(self.cliutil_instance_.getSimulatorCLIStr(), self.simulator_logfile_)
         ## Execute command
         launch_simulator_subprocess = SubprocessUtil.runCmd(launch_simulator_cmd)
         if launch_simulator_subprocess.returncode != 0:
@@ -41,7 +43,7 @@ class Simulator:
         # (2) Periodically check whether simulator finishes benchmark
         LogUtil.prompt(Common.scriptname, "wait for simulator to finish benchmark...")
         ## Get check simulator finish benchmark command
-        check_simulator_finish_benchmark_cmd = "cat {} | grep '{}'".format(simulator_logfile, Common.EVALUATOR_FINISH_BENCHMARK_SYMBOL)
+        check_simulator_finish_benchmark_cmd = "cat {} | grep '{}'".format(self.simulator_logfile_, Common.EVALUATOR_FINISH_BENCHMARK_SYMBOL)
         while True:
             ## Periodically check
             time.sleep(5)

@@ -2,24 +2,32 @@
 # cleanup_testbed: kill all related threads launched in testbed.
 
 from ..common import *
-from ..exps.utils.exputil import *
-from ..exps.utils.trace_preprocessor import *
+from .utils.exputil import *
+from .utils.trace_preprocessor import *
 
-replayed_workloads = ["wikitext", "wikiimage"]
-log_filenames = ["tmp_trace_preprocessor_for_{}.out".format(tmp_workload) for tmp_workload in replayed_workloads]
-
+# Get configuration settings from config.json
 client_machine_idxes = JsonUtil.getValueForKeystr(Common.scriptname, "client_machine_indexes")
 cloud_machine_idx = JsonUtil.getValueForKeystr(Common.scriptname, "cloud_machine_index")
 physical_machines = JsonUtil.getValueForKeystr(Common.scriptname, "physical_machines")
-
 trace_sample_opcnt = JsonUtil.getValueForKeystr(Common.scriptname, "trace_sample_opcnt")
 
+# Check if current machine is a client machine
 if Common.cur_machine_idx not in client_machine_idxes:
     LogUtil.die(Common.scriptname, "This script is only allowed to run on client machines")
 
+# Used to hint users for keycnt and dataset size
+log_filepaths = []
+
+# Preprocess all replayed traces
+replayed_workloads = ["wikitext", "wikiimage"]
 for i in range(len(replayed_workloads)):
     tmp_workload = replayed_workloads[i]
-    tmp_log_filename = log_filenames[i]
+
+    # Get log file name
+    tmp_log_filepath = "{}/tmp_trace_preprocessor_for_{}.out".format(Common.output_log_dirpath, tmp_workload)
+    log_filepaths.append(tmp_log_filepath)
+
+    # Get settings for trace preprocessor
     tmp_settings = {
         "workload_name": tmp_workload
     }
@@ -34,11 +42,10 @@ for i in range(len(replayed_workloads)):
         LogUtil.prompt(Common.scriptname, "Dataset file {} and workload file {} already exist, skip trace preprocessing...".format(tmp_dataset_filepath, tmp_workload_filepath))
     else:
         LogUtil.prompt(Common.scriptname, "preprocess workload {} in current machine...".format(tmp_workload))
-        tmp_trace_preprocessor = TracePreprocessor(trace_preprocessor_logfile = tmp_log_filename, **tmp_settings)
+        tmp_trace_preprocessor = TracePreprocessor(trace_preprocessor_logfile = tmp_log_filepath, **tmp_settings)
         tmp_trace_preprocessor.run()
 
         is_generate_dataset_file = True
-        
 
     # (2) Copy dataset file to cloud machine if not exist
     if Common.cur_machine_idx == client_machine_idxes[0]: # NOTE: ONLY copy if the current machine is the first client machine to avoid duplicate copying
@@ -60,8 +67,8 @@ for i in range(len(replayed_workloads)):
             check_cloud_dataset_filepath_subprocess = SubprocessUtil.runCmd(check_cloud_dataset_filepath_remote_cmd)
             if check_cloud_dataset_filepath_subprocess.returncode != 0: # cloud dataset file not found
                 need_copy_dataset_file = True
-            elif SubprocessUtil.getSubprocessOutputstr(check_cloud_dataset_filepath_subprocess) == "": # cloud dataset file not found
-                need_copy_dataset_file = True
+            # elif SubprocessUtil.getSubprocessOutputstr(check_cloud_dataset_filepath_subprocess) == "": # cloud dataset file not found (OBSOLETE: existing empty directory could return empty string)
+            #     need_copy_dataset_file = True
             else: # cloud dataset file is found
                 need_copy_dataset_file = False
 
@@ -82,6 +89,6 @@ for i in range(len(replayed_workloads)):
                 if copy_dataset_file_subprocess.returncode != 0:
                     LogUtil.die(Common.scriptname, SubprocessUtil.getSubprocessErrstr(copy_dataset_file_subprocess))
 
-# (3) Hint users to check keycnt and total opcnt in log files, and update config.json if necessary
-# NOTE: we comment the following code as we have already updated config.json with correct keycnt and total opcnt
-#LogUtil.emphasize(Common.scriptname, "Please check keycnt and total opcnt in the following log files to update config.json accordingly if necessary:\n{}".format(log_filenames))
+# (3) Hint users to check keycnt and dataset size in log files, and update keycnt in config.json if necessary
+# NOTE: we comment the following code as we have already updated config.json with correct keycnt, and calculate cache memory capacity in corresponding exps correctly
+#LogUtil.emphasize(Common.scriptname, "Please check keycnt and dataset size in the following log files, and update keycnt in config.json accordingly if necessary:\n{}".format(log_filepaths))

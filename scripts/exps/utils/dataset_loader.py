@@ -8,11 +8,14 @@ from .cliutil import *
 from .exputil import *
 
 class DatasetLoader:
-    def __init__(self, **kwargs):
+    def __init__(self, dataset_loader_logfile = None, **kwargs):
         # For launched componenets
         self.is_successful_finish_ = False
 
         self.cliutil_instance_ = CLIUtil(**kwargs)
+        self.dataset_loader_logfile_ = "tmp_dataset_loader.out"
+        if dataset_loader_logfile is not None:
+            self.dataset_loader_logfile_ = dataset_loader_logfile
     
     def run(self):
         # NOTE: current machine idx MUST be cloud machine idx for loading phase
@@ -22,8 +25,7 @@ class DatasetLoader:
 
         # (1) Launch dataset loader
         ## Get launch dataset loader command
-        dataset_loader_logfile = "tmp_dataset_loader.out"
-        launch_dataset_loader_cmd = "nohup ./dataset_loader {} >{} 2>&1 &".format(self.cliutil_instance_.getDatasetLoaderCLIStr(), dataset_loader_logfile)
+        launch_dataset_loader_cmd = "nohup ./dataset_loader {} >{} 2>&1 &".format(self.cliutil_instance_.getDatasetLoaderCLIStr(), self.dataset_loader_logfile_)
         ## Execute command
         launch_dataset_loader_subprocess = SubprocessUtil.runCmd(launch_dataset_loader_cmd)
         if launch_dataset_loader_subprocess.returncode != 0:
@@ -32,7 +34,7 @@ class DatasetLoader:
         # (2) Periodically check whether dataset loader finishes benchmark
         LogUtil.prompt(Common.scriptname, "wait for dataset loader to finish loading phase...")
         ## Get check dataset loader finish loading command
-        check_dataset_loader_finish_loading_cmd = "cat {} | grep '{}'".format(dataset_loader_logfile, Common.DATASET_LOADER_FINISH_LOADING_SYMBOL)
+        check_dataset_loader_finish_loading_cmd = "cat {} | grep '{}'".format(self.dataset_loader_logfile_, Common.DATASET_LOADER_FINISH_LOADING_SYMBOL)
         while True:
             ## Periodically check
             time.sleep(5)

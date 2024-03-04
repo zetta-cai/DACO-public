@@ -10,9 +10,10 @@ class Common:
 
     # Common variables
 
+    ## (1) General settings
+
     scriptname = sys.argv[0]
     scriptpath = os.path.abspath(scriptname)
-    proj_dirname = scriptpath[0:scriptpath.find("/scripts")] # [0, index of "/scripts")
 
     username = os.getenv("SUDO_USER") # Get original username if sudo is used
     if username is None: # SUDO_USER is None if sudo is not used
@@ -27,18 +28,34 @@ class Common:
         LogUtil.die(scriptname, "failed to get kernel codename (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(tmp_get_kernel_codename_subprocess)))
     else:
         kernel_codename = SubprocessUtil.getSubprocessOutputstr(tmp_get_kernel_codename_subprocess).splitlines()[0].split()[-1]
+    
+    ## (2) Path settings
+    
+    proj_dirname = scriptpath[0:scriptpath.find("/scripts")] # [0, index of "/scripts")
 
     # NOTE: update library_path in config.json for new library installation path if necessary
     lib_dirpath = JsonUtil.getFullPathForKeystr(scriptname, "library_dirpath", proj_dirname)
-    if not os.path.exists(lib_dirpath): # NOTE: all roles (e.g., client/edge/cloud/evaluator) need libraries
+    # NOTE: all roles (e.g., client/edge/cloud/evaluator) need libraries -> create library dirpath here
+    if not os.path.exists(lib_dirpath):
         LogUtil.prompt(scriptname, "{}: Create directory {}...".format(scriptname, lib_dirpath))
         os.mkdir(lib_dirpath)
     #else:
     #    LogUtil.dump(scriptname, "{}: {} exists (third-party libarary dirpath has been created)".format(scriptname, lib_dirpath))
 
     # NOTE: update trace_dirpath in config.json for new trace directory path if necessary
-    trace_dirpath = JsonUtil.getFullPathForKeystr(scriptname, "trace_dirpath", proj_dirname)
     # NOTE: NOT all roles need trace dirpath (ONLY clients and cloud need) -> NOT create trace dirpath here
+    trace_dirpath = JsonUtil.getFullPathForKeystr(scriptname, "trace_dirpath", proj_dirname)
+
+    # NOTE: update cloud_rocksdb_basedir in config.json for new rocksdb base directory path if necessary
+    # NOTE: NOT all roles need rocksdb base dirpath (ONLY cloud needs) -> NOT create rocksdb base dirpath here
+    cloud_rocksdb_basedir = JsonUtil.getFullPathForKeystr(scriptname, "cloud_rocksdb_basedir", proj_dirname)
+
+    # NOTE: update output_dirpath in config.json for intermediate files (e.g., evaluator statistics and evaluation logs) if necessary
+    # NOTE: NOT all roles need output dirpath (ONLY clients, cloud, and evaluator needs) -> NOT create output dirpath here
+    output_dirpath = JsonUtil.getFullPathForKeystr(scriptname, "output_dirpath", proj_dirname)
+    output_log_dirpath = "{}/log".format(output_dirpath)
+
+    ## (3) Machine settings
 
     # Get current machine index for passfree SSH configuraiton and launch prototype
     LogUtil.prompt(scriptname, "get current machine index based on ifconfig")
@@ -58,6 +75,8 @@ class Common:
             break
     if cur_machine_idx == -1:
         LogUtil.die(scriptname, "cannot find current machine ip in config.json")
+    
+    ## (4) Symbol settings
 
     # NOTE: used by C++ programs evaluator and simulator -> MUST be the same as src/benchmark/evaluator_wrapper.c
     EVALUATOR_FINISH_INITIALIZATION_SYMBOL = "Evaluator initialized"
@@ -71,3 +90,7 @@ class Common:
 
     # NOTE: used by C++ program trace_preprocessor -> MUST be the same as src/trace_preprocessor.c
     TRACE_PREPROCESSOR_FINISH_SYMBOL = "Trace preprocessor done"
+
+    ## (5) Experiment settings
+
+    exp_round_number = 1 # Run each experiment for exp_round_number times

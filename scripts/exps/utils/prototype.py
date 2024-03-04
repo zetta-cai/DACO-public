@@ -8,12 +8,15 @@ from .cliutil import *
 from .exputil import *
 
 class Prototype:
-    def __init__(self, **kwargs):
+    def __init__(self, evaluator_logfile = None, **kwargs):
         # For launched componenets
         self.is_successful_finish_ = False
         self.permachine_launched_components_ = {}
 
         self.cliutil_instance_ = CLIUtil(**kwargs)
+        self.evaluator_logfile_ = "tmp_evaluator.out"
+        if evaluator_logfile is not None:
+            self.evaluator_logfile_ = evaluator_logfile
 
     def run(self):
         physical_machines = JsonUtil.getValueForKeystr(Common.scriptname, "physical_machines")
@@ -22,8 +25,7 @@ class Prototype:
         ## Launch evaluator in background
         evaluator_machine_idx = JsonUtil.getValueForKeystr(Common.scriptname, "evaluator_machine_index")
         evaluator_component = "./evaluator"
-        evaluator_logfile = "tmp_evaluator.out"
-        launch_evaluator_subprocess = ExpUtil.launchComponent(evaluator_machine_idx, evaluator_component, self.cliutil_instance_.getEvaluatorCLIStr(), evaluator_logfile)
+        launch_evaluator_subprocess = ExpUtil.launchComponent(evaluator_machine_idx, evaluator_component, self.cliutil_instance_.getEvaluatorCLIStr(), self.evaluator_logfile_)
         ## Update launched components
         if evaluator_machine_idx not in self.permachine_launched_components_:
             self.permachine_launched_components_[evaluator_machine_idx] = []
@@ -35,7 +37,7 @@ class Prototype:
         ## Wait for evaluator initialization
         time.sleep(0.5)
         ## Get verify evaluator finish initialization command
-        verify_evaluator_initialization_cmd =  "cd {} && cat {} | grep '{}'".format(Common.proj_dirname, evaluator_logfile, Common.EVALUATOR_FINISH_INITIALIZATION_SYMBOL)
+        verify_evaluator_initialization_cmd =  "cd {} && cat {} | grep '{}'".format(Common.proj_dirname, self.evaluator_logfile_, Common.EVALUATOR_FINISH_INITIALIZATION_SYMBOL)
         if evaluator_machine_idx != Common.cur_machine_idx:
             verify_evaluator_initialization_cmd = ExpUtil.getRemoteCmd(evaluator_machine_idx, verify_evaluator_initialization_cmd)
         ## Verify existence of evaluator finish initialization symbol

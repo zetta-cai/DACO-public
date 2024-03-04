@@ -114,10 +114,6 @@ int main(int argc, char **argv) {
     const uint32_t perclient_opcnt = 0; // No need workload items
     covered::WorkloadWrapperBase* workload_generator_ptr = covered::WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, covered::WorkloadWrapperBase::WORKLOAD_USAGE_ROLE_LOADER); // Track dataset items
     assert(workload_generator_ptr != NULL);
-    
-    covered::Util::dumpVariablesForDebug(main_class_name, 4, "average dataset key size:", std::to_string(workload_generator_ptr->getAvgDatasetKeysize()).c_str(), "average dataset value size:", std::to_string(workload_generator_ptr->getAvgDatasetValuesize()).c_str());
-    covered::Util::dumpVariablesForDebug(main_class_name, 4, "min dataset key size:", std::to_string(workload_generator_ptr->getMinDatasetKeysize()).c_str(), "min dataset value size:", std::to_string(workload_generator_ptr->getMinDatasetValuesize()).c_str());
-    covered::Util::dumpVariablesForDebug(main_class_name, 4, "max dataset key size:", std::to_string(workload_generator_ptr->getMaxDatasetKeysize()).c_str(), "max dataset value size:", std::to_string(workload_generator_ptr->getMaxDatasetValuesize()).c_str());
 
     // Create dataset loader parameters
     struct DatasetLoaderParam dataset_loader_params[dataset_loadercnt];
@@ -130,7 +126,28 @@ int main(int argc, char **argv) {
         tmp_dataset_loader_param.workload_generator_ptr = workload_generator_ptr;
     }
 
-    // (3) Launch dataset loaders for loading phase
+    // (3) Dump workload properties
+
+    oss.clear();
+    oss.str("");
+
+    const uint32_t dataset_keycnt = workload_generator_ptr->getPracticalKeycnt();
+    oss << "unique key count (dataset size): " << dataset_keycnt << std::endl;
+
+    const uint32_t avg_dataset_keysize = workload_generator_ptr->getAvgDatasetKeysize();
+    const uint32_t avg_dataset_valuesize = workload_generator_ptr->getAvgDatasetValuesize();
+    const uint64_t dataset_capacity_size = (static_cast<uint64_t>(avg_dataset_keysize) + static_cast<uint64_t>(avg_dataset_valuesize)) * static_cast<uint64_t>(dataset_keycnt);
+    const uint32_t dataset_capacity_mb = static_cast<uint32_t>(B2MB(dataset_capacity_size));
+    oss << "average dataset key size: " << avg_dataset_keysize << "; average dataset value size: " << avg_dataset_valuesize << "; dataset_capacity_mb: " << dataset_capacity_mb << std::endl;
+    
+    oss << "min dataset key size: " << workload_generator_ptr->getMinDatasetKeysize() << "; min dataset value size: " << workload_generator_ptr->getMinDatasetValuesize() << std::endl;
+    oss << "max dataset key size: " << workload_generator_ptr->getMaxDatasetKeysize() << "; max dataset value size: " << workload_generator_ptr->getMaxDatasetValuesize();
+
+    covered::Util::dumpNormalMsg(main_class_name, oss.str());
+
+    // (4) Launch dataset loaders for loading phase
+    
+    // Launch dataset loaders
     covered::Util::dumpNormalMsg(main_class_name, "launch dataset loaders...");
     pthread_t dataset_loader_threads[dataset_loadercnt];
     for (uint32_t dataset_loader_idx = 0; dataset_loader_idx < dataset_loadercnt; dataset_loader_idx++)
@@ -147,7 +164,7 @@ int main(int argc, char **argv) {
         // }
     }
 
-    // (4) Wait for dataset loaders
+    // (5) Wait for dataset loaders
     int pthread_returncode = 0;
     covered::Util::dumpNormalMsg(main_class_name, "wait for all dataset loaders...");
     for (uint32_t dataset_loader_idx = 0; dataset_loader_idx < dataset_loadercnt; dataset_loader_idx++)
@@ -163,7 +180,7 @@ int main(int argc, char **argv) {
     }
     covered::Util::dumpNormalMsg(main_class_name, "all dataset loaders are done");
 
-    // (5) Sleep for compaction
+    // (6) Sleep for compaction
 
     oss.clear();
     oss.str("");

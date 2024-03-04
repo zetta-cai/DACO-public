@@ -5,7 +5,7 @@
 
 namespace covered
 {
-    const uint32_t WorkloadCLI::DEFAULT_KEYCNT = 10000;
+    const uint32_t WorkloadCLI::DEFAULT_KEYCNT = 1000000; // 1M workload items by default
     const std::string WorkloadCLI::DEFAULT_WORKLOAD_NAME = "facebook"; // NOTE: NOT use UTil::FACEBOOK_WORKLOAD_NAME due to undefined initialization order of C++ static variables
 
     const std::string WorkloadCLI::kClassName("WorkloadCLI");

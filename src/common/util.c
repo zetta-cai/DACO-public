@@ -1013,7 +1013,7 @@ namespace covered
         assert(evaluator_cli_ptr != NULL);
 
         std::ostringstream oss;
-        oss << Config::getOutputDirpath() << "/" << getInfixForEvaluatorStatisticsFilepath_(evaluator_cli_ptr);
+        oss << Config::getOutputDirpath() << "/statistics/" << getInfixForEvaluatorStatisticsFilepath_(evaluator_cli_ptr);
         std::string client_statistics_dirpath = oss.str();
         return client_statistics_dirpath;
     }
@@ -1052,6 +1052,7 @@ namespace covered
         // TODO: only support 1 cloud node now!
         assert(cloud_idx == 0);
 
+        // NOTE: MUST be consistent with scripts/exps/load_dataset.py
         std::ostringstream oss;
         oss << getCloudRocksdbBasedirForWorkload(keycnt, workload_name) << "/cloud" << cloud_idx << ".db";
         std::string cloud_rocksdb_dirpath = oss.str();

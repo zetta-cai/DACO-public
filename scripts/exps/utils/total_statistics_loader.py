@@ -8,11 +8,14 @@ from .cliutil import *
 from .exputil import *
 
 class TotalStatisticsLoader:
-    def __init__(self, **kwargs):
+    def __init__(self, total_statistics_loader_logfile = None, **kwargs):
         # For launched componenets
         self.is_successful_finish_ = False
 
         self.cliutil_instance_ = CLIUtil(**kwargs)
+        self.total_statistics_loader_logfile_ = "tmp_total_statistics_loader.out"
+        if total_statistics_loader_logfile is not None:
+            self.total_statistics_loader_logfile_ = total_statistics_loader_logfile
     
     def run(self):
         # NOTE: current machine idx MUST be evaluator machine idx for statistics reloading
@@ -22,8 +25,7 @@ class TotalStatisticsLoader:
 
         # (1) Launch total statistics loader
         ## Get launch total statistics loader command
-        total_statistics_loader_logfile = "tmp_total_statistics_loader.out"
-        launch_total_statistics_loader_cmd = "nohup ./total_statistics_loader {} >{} 2>&1 &".format(self.cliutil_instance_.getTotalStatisticsLoaderCLIStr(), total_statistics_loader_logfile)
+        launch_total_statistics_loader_cmd = "nohup ./total_statistics_loader {} >{} 2>&1 &".format(self.cliutil_instance_.getTotalStatisticsLoaderCLIStr(), self.total_statistics_loader_logfile_)
         ## Execute command
         launch_total_statistics_loader_subprocess = SubprocessUtil.runCmd(launch_total_statistics_loader_cmd)
         if launch_total_statistics_loader_subprocess.returncode != 0:
@@ -32,7 +34,7 @@ class TotalStatisticsLoader:
         # (2) Periodically check whether total statistics loader finishes benchmark
         LogUtil.prompt(Common.scriptname, "wait for total statistics loader to finish reloading phase...")
         ## Get check total statistics loader finish reloading command
-        check_total_statistics_loader_finish_reloading_cmd = "cat {} | grep '{}'".format(total_statistics_loader_logfile, Common.TOTAL_STATISTICS_LOADER_FINISH_RELOADING_SYMBOL)
+        check_total_statistics_loader_finish_reloading_cmd = "cat {} | grep '{}'".format(self.total_statistics_loader_logfile_, Common.TOTAL_STATISTICS_LOADER_FINISH_RELOADING_SYMBOL)
         while True:
             ## Periodically check
             time.sleep(1)

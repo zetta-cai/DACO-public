@@ -145,75 +145,6 @@ namespace covered
         return WorkloadItem(tmp_covered_key, tmp_covered_value, WorkloadItemType::kWorkloadItemPut);
     }
 
-    void FacebookWorkloadWrapper::initWorkloadParameters_()
-    {
-        // Load workload config file for Facebook CDN trace
-        CacheBenchConfig facebook_config(Config::getFacebookConfigFilepath());
-        //facebook_cache_config_ = facebook_config.getCacheConfig();
-        facebook_stressor_config_ = facebook_config.getStressorConfig();
-
-        if (needWorkloadItems_()) // Clients
-        {
-            for (uint32_t tmp_local_client_worker_idx = 0; tmp_local_client_worker_idx < getPerclientWorkercnt_(); tmp_local_client_worker_idx++)
-            {
-                uint32_t tmp_global_client_worker_idx = Util::getGlobalClientWorkerIdx(getClientIdx_(), tmp_local_client_worker_idx, getPerclientWorkercnt_());
-
-                // Each per-client worker uses worker_idx as deterministic seed to create a random generator and get different requests
-                // NOTE: we use global_client_worker_idx to randomly generate requests from workload items
-                std::mt19937_64* tmp_client_worker_item_randgen_ptr_ = new std::mt19937_64(tmp_global_client_worker_idx);
-                // (OBSOLETE: homogeneous cache access patterns is a WRONG assumption -> we should ONLY follow homogeneous workload distribution yet still with heterogeneous cache access patterns) NOTE: we use WORKLOAD_KVPAIR_GENERATION_SEED to generate requests with homogeneous cache access patterns
-                //std::mt19937_64* tmp_client_worker_item_randgen_ptr_ = new std::mt19937_64(Util::WORKLOAD_KVPAIR_GENERATION_SEED);
-                if (tmp_client_worker_item_randgen_ptr_ == NULL)
-                {
-                    Util::dumpErrorMsg(instance_name_, "failed to create a random generator for requests!");
-                    exit(1);
-                }
-
-                client_worker_item_randgen_ptrs_[tmp_local_client_worker_idx] = tmp_client_worker_item_randgen_ptr_;
-            }
-        }
-
-        return;
-    }
-
-    void FacebookWorkloadWrapper::overwriteWorkloadParameters_()
-    {
-        uint32_t tmp_perclientworker_opcnt = 0;
-        uint32_t tmp_perclient_workercnt = 0;
-        if (needWorkloadItems_())
-        {
-            tmp_perclient_workercnt = getPerclientWorkercnt_();
-            tmp_perclientworker_opcnt = getPerclientOpcnt_() / tmp_perclient_workercnt;
-        }
-
-        facebook_stressor_config_.numOps = static_cast<uint64_t>(tmp_perclientworker_opcnt);
-        facebook_stressor_config_.numThreads = static_cast<uint64_t>(tmp_perclient_workercnt);
-        facebook_stressor_config_.numKeys = static_cast<uint64_t>(getKeycnt_());
-
-        // NOTE: opPoolDistribution is {1.0}, which generates 0 with a probability of 1.0
-        op_pool_dist_ptr_ = new std::discrete_distribution<>(facebook_stressor_config_.opPoolDistribution.begin(), facebook_stressor_config_.opPoolDistribution.end());
-        if (op_pool_dist_ptr_ == NULL)
-        {
-            Util::dumpErrorMsg(instance_name_, "failed to create operation pool distribution!");
-            exit(1);
-        }
-    }
-
-    void FacebookWorkloadWrapper::createWorkloadGenerator_()
-    {
-        // facebook::cachelib::cachebench::WorkloadGenerator will generate keycnt key-value pairs by generateReqs() and generate perclient_opcnt_ requests by generateKeyDistributions() in constructor
-        uint32_t tmp_client_idx = 0;
-        if (needWorkloadItems_()) // Clients
-        {
-            tmp_client_idx = getClientIdx_(); // Use client idx as random seed to generate workload items for the current client
-        }
-        else // Dataset loader and cloud
-        {
-            tmp_client_idx = 0; // NOTE: ONLY need dataset items, yet NOT use workload items -> client idx makes no sense
-        }
-        workload_generator_ = makeGenerator_(facebook_stressor_config_, tmp_client_idx);
-    }
-
     // Get average/min/max dataset key/value size
 
     double FacebookWorkloadWrapper::getAvgDatasetKeysize() const
@@ -309,6 +240,75 @@ namespace covered
         quickDatasetPut(key, Value()); // Use default value with is_deleted = true and value size = 0 as delete operation
 
         return;
+    }
+
+    void FacebookWorkloadWrapper::initWorkloadParameters_()
+    {
+        // Load workload config file for Facebook CDN trace
+        CacheBenchConfig facebook_config(Config::getFacebookConfigFilepath());
+        //facebook_cache_config_ = facebook_config.getCacheConfig();
+        facebook_stressor_config_ = facebook_config.getStressorConfig();
+
+        if (needWorkloadItems_()) // Clients
+        {
+            for (uint32_t tmp_local_client_worker_idx = 0; tmp_local_client_worker_idx < getPerclientWorkercnt_(); tmp_local_client_worker_idx++)
+            {
+                uint32_t tmp_global_client_worker_idx = Util::getGlobalClientWorkerIdx(getClientIdx_(), tmp_local_client_worker_idx, getPerclientWorkercnt_());
+
+                // Each per-client worker uses worker_idx as deterministic seed to create a random generator and get different requests
+                // NOTE: we use global_client_worker_idx to randomly generate requests from workload items
+                std::mt19937_64* tmp_client_worker_item_randgen_ptr_ = new std::mt19937_64(tmp_global_client_worker_idx);
+                // (OBSOLETE: homogeneous cache access patterns is a WRONG assumption -> we should ONLY follow homogeneous workload distribution yet still with heterogeneous cache access patterns) NOTE: we use WORKLOAD_KVPAIR_GENERATION_SEED to generate requests with homogeneous cache access patterns
+                //std::mt19937_64* tmp_client_worker_item_randgen_ptr_ = new std::mt19937_64(Util::WORKLOAD_KVPAIR_GENERATION_SEED);
+                if (tmp_client_worker_item_randgen_ptr_ == NULL)
+                {
+                    Util::dumpErrorMsg(instance_name_, "failed to create a random generator for requests!");
+                    exit(1);
+                }
+
+                client_worker_item_randgen_ptrs_[tmp_local_client_worker_idx] = tmp_client_worker_item_randgen_ptr_;
+            }
+        }
+
+        return;
+    }
+
+    void FacebookWorkloadWrapper::overwriteWorkloadParameters_()
+    {
+        uint32_t tmp_perclientworker_opcnt = 0;
+        uint32_t tmp_perclient_workercnt = 0;
+        if (needWorkloadItems_())
+        {
+            tmp_perclient_workercnt = getPerclientWorkercnt_();
+            tmp_perclientworker_opcnt = getPerclientOpcnt_() / tmp_perclient_workercnt;
+        }
+
+        facebook_stressor_config_.numOps = static_cast<uint64_t>(tmp_perclientworker_opcnt);
+        facebook_stressor_config_.numThreads = static_cast<uint64_t>(tmp_perclient_workercnt);
+        facebook_stressor_config_.numKeys = static_cast<uint64_t>(getKeycnt_());
+
+        // NOTE: opPoolDistribution is {1.0}, which generates 0 with a probability of 1.0
+        op_pool_dist_ptr_ = new std::discrete_distribution<>(facebook_stressor_config_.opPoolDistribution.begin(), facebook_stressor_config_.opPoolDistribution.end());
+        if (op_pool_dist_ptr_ == NULL)
+        {
+            Util::dumpErrorMsg(instance_name_, "failed to create operation pool distribution!");
+            exit(1);
+        }
+    }
+
+    void FacebookWorkloadWrapper::createWorkloadGenerator_()
+    {
+        // facebook::cachelib::cachebench::WorkloadGenerator will generate keycnt key-value pairs by generateReqs() and generate perclient_opcnt_ requests by generateKeyDistributions() in constructor
+        uint32_t tmp_client_idx = 0;
+        if (needWorkloadItems_()) // Clients
+        {
+            tmp_client_idx = getClientIdx_(); // Use client idx as random seed to generate workload items for the current client
+        }
+        else // Dataset loader and cloud
+        {
+            tmp_client_idx = 0; // NOTE: ONLY need dataset items, yet NOT use workload items -> client idx makes no sense
+        }
+        workload_generator_ = makeGenerator_(facebook_stressor_config_, tmp_client_idx);
     }
 
     // (1) For the role of clients, dataset loader, and cloud
