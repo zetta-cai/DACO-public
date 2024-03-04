@@ -7,6 +7,11 @@ from ..common import *
 
 is_clear_tarball = True # whether to clear intermediate tarball files
 
+# Check if current machine is a client machine
+client_machine_idxes = JsonUtil.getValueForKeystr(Common.scriptname, "client_machine_indexes")
+if Common.cur_machine_idx not in client_machine_idxes:
+    LogUtil.die(Common.scriptname, "This script is only allowed to run on client machines")
+
 # (1) Create trace dirpath if not exist
 
 # Create trace dirpath if not exist

@@ -33,14 +33,12 @@ for tmp_round_index in round_indexes:
     # Create log dirpath if necessary
     if not os.path.exists(tmp_log_dirpath):
         LogUtil.prompt(Common.scriptname, "Create log dirpath {} for the current round {}...".format(tmp_log_dirpath, tmp_round_index))
-        create_log_dirpath_cmd = "mkdir -p {}".format(tmp_log_dirpath)
-        create_log_dirpath_subprocess = SubprocessUtil.runCmd(create_log_dirpath_cmd)
-        if create_log_dirpath_subprocess.returncode != 0:
-            LogUtil.die(Common.scriptname, "failed to create log dirpath {} (errmsg: {})".format(tmp_log_dirpath, SubprocessUtil.getSubprocessErrstr(create_log_dirpath_subprocess)))
+        SubprocessUtil.tryToCreateDirectory(scriptname, tmp_log_dirpath, keep_silent = True)
     
     # Run prototype for each cache name
     for tmp_cache_name in cache_names:
         tmp_log_filepath = "{}/tmp_evaluator_for_{}.out".format(tmp_log_dirpath, tmp_cache_name)
+        SubprocessUtil.tryToCreateDirectory(scriptname, os.path.dirname(tmp_log_filepath))
 
         # Check log filepath
         if os.exists(tmp_log_filepath):

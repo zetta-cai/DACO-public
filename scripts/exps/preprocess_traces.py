@@ -25,6 +25,7 @@ for i in range(len(replayed_workloads)):
 
     # Get log file name
     tmp_log_filepath = "{}/tmp_trace_preprocessor_for_{}.out".format(Common.output_log_dirpath, tmp_workload)
+    SubprocessUtil.tryToCreateDirectory(scriptname, os.path.dirname(tmp_log_filepath))
     log_filepaths.append(tmp_log_filepath)
 
     # Get settings for trace preprocessor

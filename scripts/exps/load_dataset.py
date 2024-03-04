@@ -20,6 +20,7 @@ for tmp_workload in nonreplayed_workloads:
 
         # Get log file name
         tmp_log_filepath = "{}/tmp_dataset_loader_for_{}_key{}.out".format(Common.output_log_dirpath, tmp_workload, tmp_keycnt)
+        SubprocessUtil.tryToCreateDirectory(scriptname, os.path.dirname(tmp_log_filepath))
         log_filepaths.append(tmp_log_filepath)
 
         # Check rocksdb dirpath
@@ -44,10 +45,11 @@ for tmp_workload in replayed_workloads:
     # Get keycnt for the replayed trace
     tmp_keycnt = JsonUtil.getValueForKeystr(Common.scriptname, "trace_{}_keycnt".format(tmp_workload))
     if tmp_keycnt <= 0:
-        LogUtil.die(Common.scriptname, "Invalid keycnt {} for replayed trace {}, please preprocess the trace before loading!".format(tmp_keycnt, tmp_workload)
+        LogUtil.die(Common.scriptname, "Invalid keycnt {} for replayed trace {}, please preprocess the trace before loading!".format(tmp_keycnt, tmp_workload))
 
     # Get log file name
     tmp_log_filepath = "{}/tmp_dataset_loader_for_{}_key{}.out".format(Common.output_log_dirpath, tmp_workload, tmp_keycnt)
+    SubprocessUtil.tryToCreateDirectory(scriptname, os.path.dirname(tmp_log_filepath))
     log_filepaths.append(tmp_log_filepath)
 
     # Check rocksdb dirpath

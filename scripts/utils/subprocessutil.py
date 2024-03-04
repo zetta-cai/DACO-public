@@ -47,6 +47,16 @@ class SubprocessUtil:
             tmp_subprocess_outputstr = tmp_subprocess_outputbytes.decode("utf-8")
         return tmp_subprocess_outputstr
 
+    @staticmethod
+    def tryToCreateDirectory(scriptname, dirpath, keep_silent=False):
+        if not os.path.exists(dirpath):
+            if not keep_silent:
+                LogUtil.prompt(scriptname, "create directory {}...".format(dirpath))
+            tmp_mkdirs_cmd = "mkdir -p {}".format(dirpath)
+            tmp_mkdirs_subprocess = SubprocessUtil.runCmd(tmp_mkdirs_cmd)
+            if tmp_mkdirs_subprocess.returncode != 0:
+                LogUtil.die(Common.scriptname, "failed to create directory {} (errmsg: {})".format(dirpath, SubprocessUtil.getSubprocessErrstr(tmp_mkdirs_subprocess)))
+
     ## (2) For softwares from tarball or apt
 
     @classmethod
@@ -133,8 +143,7 @@ class SubprocessUtil:
     @classmethod
     def downloadTarball(cls, scriptname, download_filepath, download_url):
         tmp_parent_dirpath = os.path.dirname(download_filepath)
-        if not os.path.exists(tmp_parent_dirpath):
-            os.mkdir(tmp_parent_dirpath)
+        SubprocessUtil.tryToCreateDirectory(scriptname, tmp_parent_dirpath)
 
         tmp_download_filename = os.path.basename(download_filepath)
         if not os.path.exists(download_filepath):

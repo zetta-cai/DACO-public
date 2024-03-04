@@ -36,11 +36,7 @@ class Common:
     # NOTE: update library_path in config.json for new library installation path if necessary
     lib_dirpath = JsonUtil.getFullPathForKeystr(scriptname, "library_dirpath", proj_dirname)
     # NOTE: all roles (e.g., client/edge/cloud/evaluator) need libraries -> create library dirpath here
-    if not os.path.exists(lib_dirpath):
-        LogUtil.prompt(scriptname, "{}: Create directory {}...".format(scriptname, lib_dirpath))
-        os.mkdir(lib_dirpath)
-    #else:
-    #    LogUtil.dump(scriptname, "{}: {} exists (third-party libarary dirpath has been created)".format(scriptname, lib_dirpath))
+    SubprocessUtil.tryToCreateDirectory(scriptname, lib_dirpath)
 
     # NOTE: update trace_dirpath in config.json for new trace directory path if necessary
     # NOTE: NOT all roles need trace dirpath (ONLY clients and cloud need) -> NOT create trace dirpath here
