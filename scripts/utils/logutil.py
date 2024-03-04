@@ -26,23 +26,23 @@ class LogUtil:
     @classmethod
     def dump(cls, scriptname, dumpmsg):
         cls.checkColorama()
-        print("{}: {}".format(scriptname, dumpmsg))
+        print("{}: {}".format(scriptname, dumpmsg), flush = True)
 
     @classmethod
     def prompt(cls, scriptname, promptmsg):
         cls.checkColorama()
         if cls.with_colorama_:
-            print(cls.Fore_.GREEN + "{}: {}".format(scriptname, promptmsg) + cls.Style_.RESET_ALL)
+            print(cls.Fore_.GREEN + "{}: {}".format(scriptname, promptmsg) + cls.Style_.RESET_ALL, flush = True)
         else:
-            print("{}: {}".format(scriptname, promptmsg))
+            print("{}: {}".format(scriptname, promptmsg), flush = True)
 
     @classmethod
     def warn(cls, scriptname, warnmsg):
         cls.checkColorama()
         if cls.with_colorama_:
-            print(cls.Fore_.YELLOW + "[WARN] {}: {}".format(scriptname, warnmsg) + cls.Style_.RESET_ALL)
+            print(cls.Fore_.YELLOW + "[WARN] {}: {}".format(scriptname, warnmsg) + cls.Style_.RESET_ALL, flush = True)
         else:
-            print("[WARN] {}: {}".format(scriptname, warnmsg))
+            print("[WARN] {}: {}".format(scriptname, warnmsg), flush = True)
 
     @classmethod
     def die(cls, scriptname, errmsg):
@@ -53,14 +53,14 @@ class LogUtil:
     def dieNoExit(cls, scriptname, errmsg):
         cls.checkColorama()
         if cls.with_colorama_:
-            print(cls.Fore_.RED + "[ERROR] {}: {}".format(scriptname, errmsg) + cls.Style_.RESET_ALL, file=sys.stderr)
+            print(cls.Fore_.RED + "[ERROR] {}: {}".format(scriptname, errmsg) + cls.Style_.RESET_ALL, file=sys.stderr, flush = True)
         else:
-            print("[ERROR] {}: {}".format(scriptname, errmsg), file=sys.stderr)
+            print("[ERROR] {}: {}".format(scriptname, errmsg), file=sys.stderr, flush = True)
 
     @classmethod
     def emphasize(cls, scriptname, emphasize_msg):
         cls.checkColorama()
         if cls.with_colorama_:
-            print(cls.Fore_.MAGENTA + "{}: {}".format(scriptname, emphasize_msg) + cls.Style_.RESET_ALL)
+            print(cls.Fore_.MAGENTA + "{}: {}".format(scriptname, emphasize_msg) + cls.Style_.RESET_ALL, flush = True)
         else:
-            print("{}: {}".format(scriptname, emphasize_msg))
+            print("{}: {}".format(scriptname, emphasize_msg), flush = True)

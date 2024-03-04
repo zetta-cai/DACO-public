@@ -22,7 +22,7 @@ class SubprocessUtil:
     @staticmethod
     def runCmd(cmdstr, is_capture_output=True, keep_silent=False):
         if not keep_silent:
-            print("[shell] {}".format(cmdstr))
+            print("[shell] {}".format(cmdstr), flush = True)
         # Deprecated due to only supported by python >= 3.7
         #tmp_subprocess = subprocess.run(cmdstr, shell=True, capture_output=is_capture_output)
         if not is_capture_output:

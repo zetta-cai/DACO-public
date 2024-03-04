@@ -103,7 +103,7 @@ class Prototype:
         # (6) Periodically check whether evaluator finishes benchmark
         LogUtil.prompt(Common.scriptname, "wait for prototype to finish benchmark...")
         ## Get check evaluator finish benchmark command
-        check_evaluator_finish_benchmark_cmd = "cd {} && cat {} | grep '{}'".format(Common.proj_dirname, evaluator_logfile, Common.EVALUATOR_FINISH_BENCHMARK_SYMBOL)
+        check_evaluator_finish_benchmark_cmd = "cd {} && cat {} | grep '{}'".format(Common.proj_dirname, self.evaluator_logfile_, Common.EVALUATOR_FINISH_BENCHMARK_SYMBOL)
         if evaluator_machine_idx != Common.cur_machine_idx:
             check_evaluator_finish_benchmark_cmd = ExpUtil.getRemoteCmd(evaluator_machine_idx, check_evaluator_finish_benchmark_cmd)
         while True:

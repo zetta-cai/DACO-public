@@ -27,7 +27,7 @@ cache_names = ["covered", "shark", "bestguess", "arc", "cachelib", "fifo", "froz
 
 # Run the experiments with multiple rounds
 for tmp_round_index in round_indexes:
-    tmp_log_dirpath = "{}/round{}".format(Common.output_log_dirpath, tmp_round_index)
+    tmp_log_dirpath = "{}/exp_performance_existing/round{}".format(Common.output_log_dirpath, tmp_round_index)
     log_dirpaths.append(tmp_log_dirpath)
 
     # Create log dirpath if necessary
@@ -41,7 +41,7 @@ for tmp_round_index in round_indexes:
         SubprocessUtil.tryToCreateDirectory(Common.scriptname, os.path.dirname(tmp_log_filepath))
 
         # Check log filepath
-        if os.exists(tmp_log_filepath):
+        if os.path.exists(tmp_log_filepath):
             LogUtil.prompt(Common.scriptname, "Log filepath {} already exists, skip {} for the current round {}...".format(tmp_log_filepath, tmp_cache_name, tmp_round_index))
             continue
 
