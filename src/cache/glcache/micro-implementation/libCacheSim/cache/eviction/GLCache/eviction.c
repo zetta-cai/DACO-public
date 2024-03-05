@@ -138,7 +138,14 @@ void GLCache_merge_segs(cache_t *cache, bucket_t *bucket, segment_t **segs, cach
         }
 
         cache->n_obj -= 1;
-        cache->occupied_size -= (cache_obj->obj_size + cache->per_obj_metadata_size);
+        if (cache->occupied_size >= (cache_obj->obj_size + cache->per_obj_metadata_size))
+        {
+          cache->occupied_size -= (cache_obj->obj_size + cache->per_obj_metadata_size);
+        }
+        else
+        {
+          cache->occupied_size = 0;
+        }
       }
       obj_evict_update(cache, cache_obj);
       cache_obj->GLCache.in_cache = 0;
@@ -201,7 +208,14 @@ int evict_one_seg(cache_t *cache, segment_t *seg, cache_obj_t *evicted_obj) {
 
       n_cleaned += 1;
       cache->n_obj -= 1;
-      cache->occupied_size -= (cache_obj->obj_size + cache->per_obj_metadata_size);
+      if (cache->occupied_size >= (cache_obj->obj_size + cache->per_obj_metadata_size))
+      {
+        cache->occupied_size -= (cache_obj->obj_size + cache->per_obj_metadata_size);
+      }
+      else
+      {
+        cache->occupied_size = 0;
+      }
     }
 
     if (seg->selected_for_training && cache_obj->GLCache.seen_after_snapshot == 1) {

@@ -106,8 +106,9 @@ cache_t *GLCache_init(const common_cache_params_t ccache_params,
   if (ccache_params.consider_obj_metadata) {
     // Siyuan: fix incorrect object-level metadata size
     //cache->per_obj_metadata_size = 2 + 1 + 8;  // freq, bool, history
-    // NOTE: NOT consider key and value size here, as glcache will increase/decrease obj_size during admission (see GLCache_insert) and eviction (GLCache_evict)
-    cache->per_obj_metadata_size = sizeof(struct cache_obj *) + sizeof(obj_id_t) + sizeof(uint32_t) + sizeof(void *) + 4 * sizeof(int64_t) + sizeof(int32_t) + sizeof(int16_t) * 4; // hash_next pointer, obj_id, obj_size, segment pointer + next/last access rtime/vtime + freq + segment idx + active + in_cache + seen_after_snapshot
+    // NOTE: NOT consider common object-level metadata including hash_next pointer, obj_id, and obj_size (sizeof(struct cache_obj *) + sizeof(obj_id_t) + sizeof(uint32_t)), which glcache will increase/decrease segment space cost during segment allocation (see allocate_new_seg in segment.c) and releasing (see clean_one_seg in segment.c)
+    // NOTE: NOT consider key and value size here, as glcache will increase/decrease obj_size during admission (see GLCache_insert), eviction (GLCache_evict), and value updates (GLCache_check)
+    cache->per_obj_metadata_size = sizeof(void *) + 4 * sizeof(int64_t) + sizeof(int32_t) + sizeof(int16_t) * 4; // GLCache-specific object-level metadata: segment pointer + next/last access rtime/vtime + freq + segment idx + active + in_cache + seen_after_snapshot
   } else {
     cache->per_obj_metadata_size = 0;
   }
@@ -323,7 +324,14 @@ cache_ck_res_e GLCache_check(cache_t *cache, request_t *req,
       else if (cache_obj->obj_size < original_obj_size)
       {
         seg->n_byte -= (original_obj_size - cache_obj->obj_size);
-        cache->occupied_size -= (original_obj_size - cache_obj->obj_size);
+        if (cache->occupied_size >= (original_obj_size - cache_obj->obj_size))
+        {
+          cache->occupied_size -= (original_obj_size - cache_obj->obj_size);
+        }
+        else
+        {
+          cache->occupied_size = 0;
+        }
       }
     }
 

@@ -324,7 +324,7 @@ namespace covered
         if (control_request_ptr->getExtraCommonMsghdr().isMonitored())
         {
             std::ostringstream tmposs;
-            tmposs << "processReqToUpdateLocalDirectory_ for key " << MessageBase::getKeyFromMessage(control_request_ptr).getKeyDebugstr() << " from edge " << control_request_ptr->getSourceIndex();
+            tmposs << "after processReqToUpdateLocalDirectory_ for key " << MessageBase::getKeyFromMessage(control_request_ptr).getKeyDebugstr() << " from edge " << control_request_ptr->getSourceIndex();
             Util::dumpNormalMsg(base_instance_name_, tmposs.str());
         }
 

@@ -72,6 +72,15 @@ int clean_one_seg(cache_t *cache, segment_t *seg) {
   my_free(sizeof(cache_obj_t) * params->n_obj, seg->objs); // Siyuan: NO double free due to hashtable->external_obj = true!!!
   my_free(sizeof(segment_t), seg);
 
+  if (cache->occupied_size >= (sizeof(segment_t) + sizeof(cache_obj_t) * params->segment_size))
+  {
+    cache->occupied_size -= (sizeof(segment_t) + sizeof(cache_obj_t) * params->segment_size);
+  }
+  else
+  {
+    cache->occupied_size = 0;
+  }
+
   return n_cleaned;
 }
 
@@ -117,6 +126,8 @@ segment_t *allocate_new_seg(cache_t *cache, int bucket_id) {
   new_seg->seg_id = params->n_allocated_segs++;
   new_seg->bucket_id = bucket_id;
   new_seg->rank = -1;
+
+  cache->occupied_size += sizeof(segment_t) + sizeof(cache_obj_t) * params->segment_size;
 
   return new_seg;
 }

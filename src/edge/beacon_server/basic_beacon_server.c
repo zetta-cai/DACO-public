@@ -159,7 +159,7 @@ namespace covered
             // Update local directory information in cooperation wrapper
             is_being_written = false;
             MetadataUpdateRequirement unused_metadata_update_requirement;
-            tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->updateDirectoryTable(tmp_key, source_edge_idx, is_admit, directory_info, is_being_written, is_neighbor_cached, unused_metadata_update_requirement);
+            tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->updateDirectoryTable(tmp_key, source_edge_idx, is_admit, directory_info, is_being_written, is_neighbor_cached, unused_metadata_update_requirement, control_request_ptr->getExtraCommonMsghdr().isMonitored()); // TMPDEBUG24
             UNUSED(unused_metadata_update_requirement); // ONLY used by COVERED
         }
         else if (message_type == MessageType::kBestGuessDirectoryUpdateRequest || message_type == MessageType::kBestGuessBgplaceDirectoryUpdateRequest)
@@ -203,6 +203,15 @@ namespace covered
         UNUSED(need_hybrid_fetching);
         UNUSED(total_bandwidth_usage);
         UNUSED(event_list);
+
+        // TMPDEBUG24
+        if (control_request_ptr->getExtraCommonMsghdr().isMonitored())
+        {
+            std::ostringstream tmposs;
+            tmposs << "at the end of processReqToUpdateLocalDirectory_ for key " << MessageBase::getKeyFromMessage(control_request_ptr).getKeyDebugstr() << " from edge " << control_request_ptr->getSourceIndex() << "; is_finish: " << Util::toString(is_finish);
+            Util::dumpNormalMsg(instance_name_, tmposs.str());
+        }
+
         return is_finish;
     }
 

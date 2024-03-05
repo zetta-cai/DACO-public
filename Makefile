@@ -44,13 +44,13 @@ LDDIR += -L/usr/lib/x86_64-linux-gnu
 ##############################################################################
 # Executable files
 
-dataset_loader: src/dataset_loader.o $(LINK_OBJECTS)
-	$(LINK) $^ $(LDLIBS) -o $@
+dataset_loader: src/dataset_loader.o $(LINK_OBJECTS) $(CLOUD_OBJECTS)
+	$(LINK) $^ $(ROCKSDB_LDLIBS) $(LDLIBS) -o $@
 DEPS += src/dataset_loader.d
 CLEANS += src/dataset_loader.o
 
-simulator: src/simulator.o $(LINK_OBJECTS)
-	$(LINK) $^ $(LDLIBS) -o $@
+simulator: src/simulator.o $(LINK_OBJECTS) $(CLOUD_OBJECTS)
+	$(LINK) $^ $(ROCKSDB_LDLIBS) $(LDLIBS) -o $@
 DEPS += src/simulator.d
 CLEANS += src/simulator.o
 
@@ -64,8 +64,8 @@ edge: src/edge.o $(LINK_OBJECTS)
 DEPS += src/edge.d
 CLEANS += src/edge.o
 
-cloud: src/cloud.o $(LINK_OBJECTS)
-	$(LINK) $^ $(LDLIBS) -o $@
+cloud: src/cloud.o $(LINK_OBJECTS) $(CLOUD_OBJECTS)
+	$(LINK) $^ $(ROCKSDB_LDLIBS) $(LDLIBS) -o $@
 DEPS += src/cloud.d
 CLEANS += src/cloud.o
 
