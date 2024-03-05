@@ -4,7 +4,7 @@ namespace covered
 {
     const std::string KeyValueDirectoryVictimsetEdgesetMessage::kClassName("KeyValueDirectoryVictimsetEdgesetMessage");
 
-    KeyValueDirectoryVictimsetEdgesetMessage::KeyValueDirectoryVictimsetEdgesetMessage(const Key& key, const Value& value, const DirectoryInfo& directory_info, const VictimSyncset& victim_syncset, const Edgeset& edgeset, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency) : MessageBase(message_type, source_index, source_addr, bandwidth_usage, event_list, skip_propagation_latency)
+    KeyValueDirectoryVictimsetEdgesetMessage::KeyValueDirectoryVictimsetEdgesetMessage(const Key& key, const Value& value, const DirectoryInfo& directory_info, const VictimSyncset& victim_syncset, const Edgeset& edgeset, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr) : MessageBase(message_type, source_index, source_addr, bandwidth_usage, event_list, extra_common_msghdr)
     {
         key_ = key;
         value_ = value;

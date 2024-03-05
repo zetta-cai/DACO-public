@@ -25,13 +25,13 @@ namespace covered
 
         // (1.2) Access cooperative edge cache to fetch data from neighbor edge nodes
 
-        virtual bool lookupLocalDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const override; // Return if edge node is finished
+        virtual bool lookupLocalDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr) const override; // Return if edge node is finished
 
         virtual bool needLookupBeaconDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const override;
-        virtual MessageBase* getReqToLookupBeaconDirectory_(const Key& key, const bool& skip_propagation_latency) const override;
+        virtual MessageBase* getReqToLookupBeaconDirectory_(const Key& key, const ExtraCommonMsghdr& extra_common_msghdr) const override;
         virtual void processRspToLookupBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, FastPathHint& fast_path_hint, const uint32_t& content_discovery_cross_edge_latency_us) const override;
         
-        virtual MessageBase* getReqToRedirectGet_(const uint32_t& dst_edge_idx_for_compression, const Key& key, const bool& skip_propagation_latency) const override;
+        virtual MessageBase* getReqToRedirectGet_(const uint32_t& dst_edge_idx_for_compression, const Key& key, const ExtraCommonMsghdr& extra_common_msghdr) const override;
         virtual void processRspToRedirectGet_(MessageBase* redirected_response_ptr, Value& value, Hitflag& hitflag, const uint32_t& request_redirection_cross_edge_latency_us) const override;
 
         // (1.3) Access cloud
@@ -44,12 +44,12 @@ namespace covered
 
         // (1.5) After getting value from local/neighbor/cloud
 
-        virtual bool afterFetchingValue_(const Key& key, const Value& value, const bool& is_tracked_before_fetch_value, const bool& is_cooperative_cached, const Edgeset& best_placement_edgeset, const bool& need_hybrid_fetching, const FastPathHint& fast_path_hint, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const override; // Return if edge is finished
+        virtual bool afterFetchingValue_(const Key& key, const Value& value, const bool& is_tracked_before_fetch_value, const bool& is_cooperative_cached, const Edgeset& best_placement_edgeset, const bool& need_hybrid_fetching, const FastPathHint& fast_path_hint, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr) const override; // Return if edge is finished
 
         // (2.1) Acquire write lock and block for MSI protocol
 
-        virtual bool acquireLocalWritelock_(const Key& key, LockResult& lock_result, DirinfoSet& all_dirinfo, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) override; // Return if edge node is finished
-        virtual MessageBase* getReqToAcquireBeaconWritelock_(const Key& key, const bool& skip_propagation_latency) const override;
+        virtual bool acquireLocalWritelock_(const Key& key, LockResult& lock_result, DirinfoSet& all_dirinfo, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr) override; // Return if edge node is finished
+        virtual MessageBase* getReqToAcquireBeaconWritelock_(const Key& key, const ExtraCommonMsghdr& extra_common_msghdr) const override;
         virtual void processRspToAcquireBeaconWritelock_(MessageBase* control_response_ptr, LockResult& lock_result) const override;
 
         virtual void processReqToFinishBlock_(MessageBase* control_request_ptr) const override;
@@ -62,13 +62,13 @@ namespace covered
 
         // (2.4) Release write lock for MSI protocol
 
-        virtual bool releaseLocalWritelock_(const Key& key, const Value& value, std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) override; // Return if edge node is finished
-        virtual MessageBase* getReqToReleaseBeaconWritelock_(const Key& key, const bool& skip_propagation_latency) const override;
-        virtual bool processRspToReleaseBeaconWritelock_(MessageBase* control_response_ptr, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const override;
+        virtual bool releaseLocalWritelock_(const Key& key, const Value& value, std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr) override; // Return if edge node is finished
+        virtual MessageBase* getReqToReleaseBeaconWritelock_(const Key& key, const ExtraCommonMsghdr& extra_common_msghdr) const override;
+        virtual bool processRspToReleaseBeaconWritelock_(MessageBase* control_response_ptr, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr) const override;
 
         // (2.5) After writing value into cloud and local edge cache if any
 
-        virtual bool afterWritingValue_(const Key& key, const Value& value, const LockResult& lock_result, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const override; // Return if edge is finished
+        virtual bool afterWritingValue_(const Key& key, const Value& value, const LockResult& lock_result, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr) const override; // Return if edge is finished
 
         // (3) Process redirected requests (see src/cache_server/cache_server_redirection_processor.*)
 
@@ -81,8 +81,8 @@ namespace covered
         virtual void constCustomFunc(const std::string& funcname, EdgeCustomFuncParamBase* func_param_ptr) const override;
 
         // Trigger best-guess placement/replacement for getrsp & putrsp
-        bool triggerBestGuessPlacementInternal_(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // Return if edge is finished
-        bool getBestGuessTriggerFlag_(const Key& key, const Value& value, const uint32_t& placement_edge_idx, const bool& skip_propagation_latency, bool& is_triggered) const;
+        bool triggerBestGuessPlacementInternal_(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr) const; // Return if edge is finished
+        bool getBestGuessTriggerFlag_(const Key& key, const Value& value, const uint32_t& placement_edge_idx, const ExtraCommonMsghdr& extra_common_msghdr, bool& is_triggered) const;
 
         // Const variable
         std::string instance_name_;

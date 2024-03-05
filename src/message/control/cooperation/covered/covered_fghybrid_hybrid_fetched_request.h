@@ -21,7 +21,7 @@ namespace covered
     class CoveredFghybridHybridFetchedRequest : public KeyValueVictimsetEdgesetMessage
     {
     public:
-        CoveredFghybridHybridFetchedRequest(const Key& key, const Value& value, const VictimSyncset& victim_syncset, const Edgeset& edgeset, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& skip_propagation_latency);
+        CoveredFghybridHybridFetchedRequest(const Key& key, const Value& value, const VictimSyncset& victim_syncset, const Edgeset& edgeset, const uint32_t& source_index, const NetworkAddr& source_addr, const ExtraCommonMsghdr& extra_common_msghdr);
         CoveredFghybridHybridFetchedRequest(const DynamicArray& msg_payload);
         virtual ~CoveredFghybridHybridFetchedRequest();
     private:

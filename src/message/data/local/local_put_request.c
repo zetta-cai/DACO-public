@@ -4,7 +4,7 @@ namespace covered
 {
     const std::string LocalPutRequest::kClassName("LocalPutRequest");
 
-    LocalPutRequest::LocalPutRequest(const Key& key, const Value& value, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& skip_propagation_latency) : KeyValueMessage(key, value, MessageType::kLocalPutRequest, source_index, source_addr, BandwidthUsage(), EventList(), skip_propagation_latency)
+    LocalPutRequest::LocalPutRequest(const Key& key, const Value& value, const uint32_t& source_index, const NetworkAddr& source_addr, const ExtraCommonMsghdr& extra_common_msghdr) : KeyValueMessage(key, value, MessageType::kLocalPutRequest, source_index, source_addr, BandwidthUsage(), EventList(), extra_common_msghdr)
     {
     }
 

@@ -148,9 +148,9 @@ namespace covered
         // Prepare CoveredVictimFetchResponse with total_bandwidth_usage and event_list
         const uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         const NetworkAddr edge_cache_server_recvreq_source_addr = cache_server_victim_fetch_processor_param_ptr_->getCacheServerPtr()->getEdgeCacheServerRecvreqPublicSourceAddr(); // NOTE: cross-edge communication for victim fetching uses public IP address
-        const bool skip_propagation_latency = covered_victim_fetch_request_ptr->isSkipPropagationLatency();
-        //MessageBase* covered_victim_fetch_response_ptr = new CoveredVictimFetchResponse(local_victim_fetchset, local_victim_syncset, current_edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, skip_propagation_latency);
-        MessageBase* covered_victim_fetch_response_ptr = new CoveredVictimFetchResponse(local_victim_fetchset, current_edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, skip_propagation_latency);
+        const ExtraCommonMsghdr extra_common_msghdr = covered_victim_fetch_request_ptr->getExtraCommonMsghdr();
+        //MessageBase* covered_victim_fetch_response_ptr = new CoveredVictimFetchResponse(local_victim_fetchset, local_victim_syncset, current_edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, extra_common_msghdr);
+        MessageBase* covered_victim_fetch_response_ptr = new CoveredVictimFetchResponse(local_victim_fetchset, current_edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, extra_common_msghdr);
         assert(covered_victim_fetch_response_ptr != NULL);
 
         // Push CoveredVictimFetchResponse into edge-to-edge propagation simulator to send back to the beacon edge node

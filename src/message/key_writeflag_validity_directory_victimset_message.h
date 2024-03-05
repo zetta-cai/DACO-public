@@ -22,7 +22,7 @@ namespace covered
     class KeyWriteflagValidityDirectoryVictimsetMessage : public MessageBase
     {
     public:
-        KeyWriteflagValidityDirectoryVictimsetMessage(const Key& key, const bool& is_being_written, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const VictimSyncset& victim_syncset, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency);
+        KeyWriteflagValidityDirectoryVictimsetMessage(const Key& key, const bool& is_being_written, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const VictimSyncset& victim_syncset, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr);
         KeyWriteflagValidityDirectoryVictimsetMessage(const DynamicArray& msg_payload);
         virtual ~KeyWriteflagValidityDirectoryVictimsetMessage();
 

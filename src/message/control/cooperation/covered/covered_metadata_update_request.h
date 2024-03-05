@@ -20,8 +20,8 @@ namespace covered
     class CoveredMetadataUpdateRequest : public KeyByteMessage
     {
     public:
-        //CoveredMetadataUpdateRequest(const Key& key, const bool& is_neighbor_cached, const VictimSyncset& victim_syncset, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& skip_propagation_latency);
-        CoveredMetadataUpdateRequest(const Key& key, const bool& is_neighbor_cached, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& skip_propagation_latency);
+        //CoveredMetadataUpdateRequest(const Key& key, const bool& is_neighbor_cached, const VictimSyncset& victim_syncset, const uint32_t& source_index, const NetworkAddr& source_addr, const ExtraCommonMsghdr& extra_common_msghdr);
+        CoveredMetadataUpdateRequest(const Key& key, const bool& is_neighbor_cached, const uint32_t& source_index, const NetworkAddr& source_addr, const ExtraCommonMsghdr& extra_common_msghdr);
         CoveredMetadataUpdateRequest(const DynamicArray& msg_payload);
         virtual ~CoveredMetadataUpdateRequest();
 

@@ -6,7 +6,7 @@ namespace covered
 {
     const std::string UintTwoAggstatMessage::kClassName("UintTwoAggstatMessage");
 
-    UintTwoAggstatMessage::UintTwoAggstatMessage(const uint32_t& unsigned_integer, const AggregatedStatisticsBase& first_aggregated_statistics, const AggregatedStatisticsBase& second_aggregated_statistics, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency) : MessageBase(message_type, source_index, source_addr, bandwidth_usage, event_list, skip_propagation_latency)
+    UintTwoAggstatMessage::UintTwoAggstatMessage(const uint32_t& unsigned_integer, const AggregatedStatisticsBase& first_aggregated_statistics, const AggregatedStatisticsBase& second_aggregated_statistics, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr) : MessageBase(message_type, source_index, source_addr, bandwidth_usage, event_list, extra_common_msghdr)
     {
         unsigned_integer_ = unsigned_integer;
         first_aggregated_statistics_ = first_aggregated_statistics;

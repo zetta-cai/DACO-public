@@ -15,6 +15,7 @@
 #include "common/value.h"
 #include "edge/edge_custom_func_param_base.h"
 #include "event/event_list.h"
+#include "message/extra_common_msghdr.h"
 #include "message/message_base.h"
 
 namespace covered
@@ -26,14 +27,14 @@ namespace covered
     public:
         static const std::string FUNCNAME; // trigger best-guess placement/replacement policy
 
-        TriggerBestGuessPlacementFuncParam(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency);
+        TriggerBestGuessPlacementFuncParam(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr);
         virtual ~TriggerBestGuessPlacementFuncParam();
 
         const Key& getKeyConstRef() const;
         const Value& getValueConstRef() const;
         BandwidthUsage& getTotalBandwidthUsageRef() const;
         EventList& getEventListRef() const;
-        bool isSkipPropagationLatency() const;
+        ExtraCommonMsghdr getExtraCommonMsghdr() const;
 
         bool isFinish() const;
         void setIsFinish(const bool& is_finish);
@@ -44,7 +45,7 @@ namespace covered
         const Value& value_const_ref_;
         BandwidthUsage& bandwidth_usage_ref_;
         EventList& event_list_ref_;
-        const bool skip_propagation_latency_;
+        const ExtraCommonMsghdr extra_common_msghdr_;
 
         bool is_finish_;
     };

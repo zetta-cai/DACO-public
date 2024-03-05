@@ -19,7 +19,7 @@ namespace covered
     class BestGuessRedirectedGetResponse : public KeyValueByteSyncinfoMessage
     {
     public:
-        BestGuessRedirectedGetResponse(const Key& key, const Value& value, const Hitflag& hitflag, const BestGuessSyncinfo& syncinfo, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency);
+        BestGuessRedirectedGetResponse(const Key& key, const Value& value, const Hitflag& hitflag, const BestGuessSyncinfo& syncinfo, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr);
         BestGuessRedirectedGetResponse(const DynamicArray& msg_payload);
         virtual ~BestGuessRedirectedGetResponse();
 

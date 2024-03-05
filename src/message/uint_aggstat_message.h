@@ -18,7 +18,7 @@ namespace covered
     class UintAggstatMessage : public MessageBase
     {
     public:
-        UintAggstatMessage(const uint32_t& unsigned_integer, const AggregatedStatisticsBase& aggregated_statistics, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency);
+        UintAggstatMessage(const uint32_t& unsigned_integer, const AggregatedStatisticsBase& aggregated_statistics, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr);
         UintAggstatMessage(const DynamicArray& msg_payload);
         virtual ~UintAggstatMessage();
 

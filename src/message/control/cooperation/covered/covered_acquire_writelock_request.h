@@ -18,7 +18,7 @@ namespace covered
     class CoveredAcquireWritelockRequest : public KeyCollectpopVictimsetMessage
     {
     public:
-        CoveredAcquireWritelockRequest(const Key& key, const CollectedPopularity& collected_popularity, const VictimSyncset& victim_syncset, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& skip_propagation_latency);
+        CoveredAcquireWritelockRequest(const Key& key, const CollectedPopularity& collected_popularity, const VictimSyncset& victim_syncset, const uint32_t& source_index, const NetworkAddr& source_addr, const ExtraCommonMsghdr& extra_common_msghdr);
         CoveredAcquireWritelockRequest(const DynamicArray& msg_payload);
         virtual ~CoveredAcquireWritelockRequest();
     private:

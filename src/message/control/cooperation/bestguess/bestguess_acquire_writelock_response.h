@@ -18,7 +18,7 @@ namespace covered
     class BestGuessAcquireWritelockResponse : public KeyByteSyncinfoMessage
     {
     public:
-        BestGuessAcquireWritelockResponse(const Key& key, const LockResult& lock_result, const BestGuessSyncinfo& syncinfo, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency);
+        BestGuessAcquireWritelockResponse(const Key& key, const LockResult& lock_result, const BestGuessSyncinfo& syncinfo, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr);
         BestGuessAcquireWritelockResponse(const DynamicArray& msg_payload);
         virtual ~BestGuessAcquireWritelockResponse();
 

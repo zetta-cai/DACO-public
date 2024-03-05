@@ -5,7 +5,7 @@ namespace covered
     const std::string FinishrunResponse::kClassName("FinishrunResponse");
 
     // NOTE: use BandwidthUsage() as we do NOT need to count benchmark control messages for data plane bandwidth usage
-    FinishrunResponse::FinishrunResponse(const uint32_t& last_slot_idx, const AggregatedStatisticsBase& last_slot_aggregated_statistics, const AggregatedStatisticsBase& stable_aggregated_statistics, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list) : UintTwoAggstatMessage(last_slot_idx, last_slot_aggregated_statistics, stable_aggregated_statistics, MessageType::kFinishrunResponse, source_index, source_addr, BandwidthUsage(), event_list, true)
+    FinishrunResponse::FinishrunResponse(const uint32_t& last_slot_idx, const AggregatedStatisticsBase& last_slot_aggregated_statistics, const AggregatedStatisticsBase& stable_aggregated_statistics, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list) : UintTwoAggstatMessage(last_slot_idx, last_slot_aggregated_statistics, stable_aggregated_statistics, MessageType::kFinishrunResponse, source_index, source_addr, BandwidthUsage(), event_list, ExtraCommonMsghdr())
     {
     }
 

@@ -61,8 +61,8 @@ namespace covered
 
         // Selective popularity aggregation after remote directory lookup
         const CollectedPopularity& collected_popularity = covered_directory_lookup_request_ptr->getCollectedPopularityRef();
-        const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
-        AfterDirectoryLookupHelperFuncParam tmp_param_after_dirlookup(tmp_key, source_edge_idx, collected_popularity, is_global_cached, is_source_cached, best_placement_edgeset, need_hybrid_fetching, &fast_path_hint, edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        const ExtraCommonMsghdr extra_common_msghdr = control_request_ptr->getExtraCommonMsghdr();
+        AfterDirectoryLookupHelperFuncParam tmp_param_after_dirlookup(tmp_key, source_edge_idx, collected_popularity, is_global_cached, is_source_cached, best_placement_edgeset, need_hybrid_fetching, &fast_path_hint, edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, total_bandwidth_usage, event_list, extra_common_msghdr);
         tmp_edge_wrapper_ptr->constCustomFunc(AfterDirectoryLookupHelperFuncParam::FUNCNAME, &tmp_param_after_dirlookup);
         is_finish = tmp_param_after_dirlookup.isFinishConstRef();
 
@@ -75,10 +75,10 @@ namespace covered
         EdgeWrapperBase* tmp_edge_wrapper_ptr = edge_beacon_server_param_ptr_->getEdgeWrapperPtr();
         CoveredCacheManager* covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
-        // Get key and skip_propagation_latency from directory lookup request
+        // Get key and extra_common_msghdr from directory lookup request
         assert(control_request_ptr != NULL);
         const Key tmp_key = MessageBase::getKeyFromMessage(control_request_ptr);
-        const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
+        const ExtraCommonMsghdr extra_common_msghdr = control_request_ptr->getExtraCommonMsghdr();
 
         // Prepare victim syncset for piggybacking-based victim synchronization
         const uint32_t dst_edge_idx_for_compression = control_request_ptr->getSourceIndex();
@@ -94,21 +94,21 @@ namespace covered
             // NOTE: if need_hybrid_fetching == true, key MUST be tracked by sender local uncached metadata and hence NO need fast-path single-placement calculation
 
             // NOTE: beacon node uses best_placement_edgeset to tell the closest edge node if to perform hybrid data fetching and trigger non-blocking placement notification
-            covered_directory_lookup_response_ptr = new CoveredFghybridDirectoryLookupResponse(tmp_key, is_being_written, is_valid_directory_exist, directory_info, victim_syncset, best_placement_edgeset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            covered_directory_lookup_response_ptr = new CoveredFghybridDirectoryLookupResponse(tmp_key, is_being_written, is_valid_directory_exist, directory_info, victim_syncset, best_placement_edgeset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, extra_common_msghdr);
         }
         else // Normal directory lookup response
         {
             #ifdef ENABLE_FAST_PATH_PLACEMENT
             if (!fast_path_hint.isValid()) // Normal directory lookup rsp w/o fast-path placement
             {
-                covered_directory_lookup_response_ptr = new CoveredDirectoryLookupResponse(tmp_key, is_being_written, is_valid_directory_exist, directory_info, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+                covered_directory_lookup_response_ptr = new CoveredDirectoryLookupResponse(tmp_key, is_being_written, is_valid_directory_exist, directory_info, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, extra_common_msghdr);
             }
             else // Corresponding local getreq may be the first cache miss w/o objsize -> need fast-path placement
             {
-                covered_directory_lookup_response_ptr = new CoveredFastpathDirectoryLookupResponse(tmp_key, is_being_written, is_valid_directory_exist, directory_info, victim_syncset, fast_path_hint, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+                covered_directory_lookup_response_ptr = new CoveredFastpathDirectoryLookupResponse(tmp_key, is_being_written, is_valid_directory_exist, directory_info, victim_syncset, fast_path_hint, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, extra_common_msghdr);
             }
             #else
-            covered_directory_lookup_response_ptr = new CoveredDirectoryLookupResponse(tmp_key, is_being_written, is_valid_directory_exist, directory_info, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            covered_directory_lookup_response_ptr = new CoveredDirectoryLookupResponse(tmp_key, is_being_written, is_valid_directory_exist, directory_info, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, extra_common_msghdr);
             #endif
         }
         assert(covered_directory_lookup_response_ptr != NULL);
@@ -128,7 +128,7 @@ namespace covered
         // Get key and directory update information from control request
         uint32_t source_edge_idx = control_request_ptr->getSourceIndex();
         assert(source_edge_idx != tmp_edge_wrapper_ptr->getNodeIdx()); // Sender is NOT beacon
-        const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
+        const ExtraCommonMsghdr extra_common_msghdr = control_request_ptr->getExtraCommonMsghdr();
 
         MessageType message_type = control_request_ptr->getMessageType();
         Key tmp_key;
@@ -232,7 +232,7 @@ namespace covered
                 // NOTE: For COVERED, both directory eviction (triggered by value update and local/remote placement notification) and directory admission (triggered by only-sender hybrid data fetching, fast-path single placement, and local/remote placement notification) can be foreground and background
 
                 // Issue metadata update request if necessary, update victim dirinfo, and clear preserved edgeset after remote directory admission
-                AfterDirectoryAdmissionHelperFuncParam tmp_param(tmp_key, source_edge_idx, metadata_update_requirement, directory_info, skip_propagation_latency);
+                AfterDirectoryAdmissionHelperFuncParam tmp_param(tmp_key, source_edge_idx, metadata_update_requirement, directory_info, extra_common_msghdr);
                 tmp_edge_wrapper_ptr->constCustomFunc(AfterDirectoryAdmissionHelperFuncParam::FUNCNAME, &tmp_param);
             }
             else // Evict a victim as local uncached object
@@ -245,7 +245,7 @@ namespace covered
                 const bool is_background = control_request_ptr->isBackgroundRequest();
 
                 // Issue metadata update request if necessary, update victim dirinfo, assert NO local uncached popularity, and perform selective popularity aggregation after remote directory eviction
-                AfterDirectoryEvictionHelperFuncParam tmp_param(tmp_key, source_edge_idx, metadata_update_requirement, directory_info, collected_popularity, is_global_cached, best_placement_edgeset, need_hybrid_fetching, edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency, is_background);
+                AfterDirectoryEvictionHelperFuncParam tmp_param(tmp_key, source_edge_idx, metadata_update_requirement, directory_info, collected_popularity, is_global_cached, best_placement_edgeset, need_hybrid_fetching, edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, total_bandwidth_usage, event_list, extra_common_msghdr, is_background);
                 tmp_edge_wrapper_ptr->constCustomFunc(AfterDirectoryEvictionHelperFuncParam::FUNCNAME, &tmp_param);
                 is_finish = tmp_param.isFinishConstRef();
                 if (is_finish)
@@ -275,7 +275,7 @@ namespace covered
             }
 
             // Trigger non-blocking placement notification for the extra hybrid fetching result
-            NonblockNotifyForPlacementFuncParam tmp_param(tmp_key, tmp_value, extra_placement_edgeset, skip_propagation_latency);
+            NonblockNotifyForPlacementFuncParam tmp_param(tmp_key, tmp_value, extra_placement_edgeset, extra_common_msghdr);
             tmp_edge_wrapper_ptr->constCustomFunc(NonblockNotifyForPlacementFuncParam::FUNCNAME, &tmp_param);
         }
 
@@ -287,7 +287,7 @@ namespace covered
         assert(control_request_ptr != NULL);
 
         const Key tmp_key = MessageBase::getKeyFromMessage(control_request_ptr);
-        const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
+        const ExtraCommonMsghdr extra_common_msghdr = control_request_ptr->getExtraCommonMsghdr();
 
         checkPointers_();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = edge_beacon_server_param_ptr_->getEdgeWrapperPtr();
@@ -305,20 +305,20 @@ namespace covered
         {
             assert(!need_hybrid_fetching); // NOTE: ONLY foreground directory eviction could trigger hybrid data fetching
 
-            control_response_ptr = new CoveredBgplaceDirectoryUpdateResponse(tmp_key, is_being_written, is_neighbor_cached, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            control_response_ptr = new CoveredBgplaceDirectoryUpdateResponse(tmp_key, is_being_written, is_neighbor_cached, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, extra_common_msghdr);
         }
         else if (message_type == MessageType::kCoveredFghybridHybridFetchedRequest) // Foreground request to notify the result of excluding-sender hybrid data fetching for COVERED (NO directory update)
         {
             assert(!need_hybrid_fetching); // NOTE: ONLY foreground directory eviction could trigger hybrid data fetching
 
             UNUSED(is_neighbor_cached); // NOTE: excluding-sender hybrid data fetching does NOT need t provide is_neighbor_cached for sender due to NO placement
-            control_response_ptr = new CoveredFghybridHybridFetchedResponse(tmp_key, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            control_response_ptr = new CoveredFghybridHybridFetchedResponse(tmp_key, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, extra_common_msghdr);
         }
         else if (message_type == MessageType::kCoveredFghybridDirectoryAdmitRequest) // Foreground directory admission with including-sender hybrid data fetching for COVERED
         {
             assert(!need_hybrid_fetching); // NOTE: ONLY foreground directory eviction could trigger hybrid data fetching
 
-            control_response_ptr = new CoveredFghybridDirectoryAdmitResponse(tmp_key, is_being_written, is_neighbor_cached, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            control_response_ptr = new CoveredFghybridDirectoryAdmitResponse(tmp_key, is_being_written, is_neighbor_cached, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, extra_common_msghdr);
         }
         else if (message_type == MessageType::kCoveredDirectoryUpdateRequest) // Foreground directory updates (with only-sender hybrid data fetching or fast-path single placement for COVERED if is_admit = true; with value update for COVERED is is_admit = false)
         {
@@ -330,11 +330,11 @@ namespace covered
                 assert(!covered_directory_update_request_ptr->isValidDirectoryExist());
 
                 // NOTE: beacon node uses best_placement_edgeset to tell the closest edge node if to perform hybrid data fetching and trigger non-blocking placement notification
-                control_response_ptr = new CoveredFghybridDirectoryEvictResponse(tmp_key, is_being_written, victim_syncset, best_placement_edgeset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+                control_response_ptr = new CoveredFghybridDirectoryEvictResponse(tmp_key, is_being_written, victim_syncset, best_placement_edgeset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, extra_common_msghdr);
             }
             else // Normal directory update response (foreground directory admission/eviction)
             {
-                control_response_ptr = new CoveredDirectoryUpdateResponse(tmp_key, is_being_written, is_neighbor_cached, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+                control_response_ptr = new CoveredDirectoryUpdateResponse(tmp_key, is_being_written, is_neighbor_cached, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, extra_common_msghdr);
             }
         }
         else
@@ -380,8 +380,8 @@ namespace covered
 
         // Selective popularity aggregation after remote acquire writelock
         const CollectedPopularity& collected_popularity = covered_acquire_writelock_request_ptr->getCollectedPopularityRef();
-        const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
-        AfterWritelockAcquireHelperFuncParam tmp_param_after_acquirelock(tmp_key, source_edge_idx, collected_popularity, is_global_cached, is_source_cached, edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        const ExtraCommonMsghdr extra_common_msghdr = control_request_ptr->getExtraCommonMsghdr();
+        AfterWritelockAcquireHelperFuncParam tmp_param_after_acquirelock(tmp_key, source_edge_idx, collected_popularity, is_global_cached, is_source_cached, edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, total_bandwidth_usage, event_list, extra_common_msghdr);
         tmp_edge_wrapper_ptr->constCustomFunc(AfterWritelockAcquireHelperFuncParam::FUNCNAME, &tmp_param_after_acquirelock);
         is_finish = tmp_param_after_acquirelock.isFinishConstRef();
 
@@ -394,16 +394,16 @@ namespace covered
         EdgeWrapperBase* tmp_edge_wrapper_ptr = edge_beacon_server_param_ptr_->getEdgeWrapperPtr();
         CoveredCacheManager* covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
-        // Get key and skip_propagation_latency from acquire writelock request
+        // Get key and extra_common_msghdr from acquire writelock request
         Key tmp_key = MessageBase::getKeyFromMessage(control_request_ptr);
-        bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
+        ExtraCommonMsghdr extra_common_msghdr = control_request_ptr->getExtraCommonMsghdr();
 
         // Prepare victim syncset for piggybacking-based victim synchronization
         const uint32_t dst_edge_idx_for_compression = control_request_ptr->getSourceIndex();
         VictimSyncset victim_syncset = covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx_for_compression, tmp_edge_wrapper_ptr->getCacheMarginBytes());
 
         uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
-        MessageBase* covered_acquire_writelock_response_ptr = new CoveredAcquireWritelockResponse(tmp_key, lock_result, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        MessageBase* covered_acquire_writelock_response_ptr = new CoveredAcquireWritelockResponse(tmp_key, lock_result, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, extra_common_msghdr);
         assert(covered_acquire_writelock_response_ptr != NULL);
 
         return covered_acquire_writelock_response_ptr;
@@ -438,8 +438,8 @@ namespace covered
 
         // Selective popularity aggregation after remote release writelock
         const CollectedPopularity& collected_popularity = covered_release_writelock_request_ptr->getCollectedPopularityRef();
-        const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
-        AfterWritelockReleaseHelperFuncParam tmp_param_after_releaselock(tmp_key, sender_edge_idx, collected_popularity, is_source_cached, best_placement_edgeset, need_hybrid_fetching, edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        const ExtraCommonMsghdr extra_common_msghdr = control_request_ptr->getExtraCommonMsghdr();
+        AfterWritelockReleaseHelperFuncParam tmp_param_after_releaselock(tmp_key, sender_edge_idx, collected_popularity, is_source_cached, best_placement_edgeset, need_hybrid_fetching, edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, total_bandwidth_usage, event_list, extra_common_msghdr);
         tmp_edge_wrapper_ptr->constCustomFunc(AfterWritelockReleaseHelperFuncParam::FUNCNAME, &tmp_param_after_releaselock);
         is_finish = tmp_param_after_releaselock.isFinishConstRef();
         if (is_finish)
@@ -456,9 +456,9 @@ namespace covered
         EdgeWrapperBase* tmp_edge_wrapper_ptr = edge_beacon_server_param_ptr_->getEdgeWrapperPtr();
         CoveredCacheManager* covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
 
-        // Get key and skip_propagation_latency from release writelock request
+        // Get key and extra_common_msghdr from release writelock request
         Key tmp_key = MessageBase::getKeyFromMessage(control_request_ptr);
-        bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
+        ExtraCommonMsghdr extra_common_msghdr = control_request_ptr->getExtraCommonMsghdr();
 
         // Prepare victim syncset for piggybacking-based victim synchronization
         const uint32_t dst_edge_idx_for_compression = control_request_ptr->getSourceIndex();
@@ -468,11 +468,11 @@ namespace covered
         MessageBase* covered_release_writelock_response_ptr = NULL;
         if (need_hybrid_fetching)
         {
-            covered_release_writelock_response_ptr = new CoveredFghybridReleaseWritelockResponse(tmp_key, victim_syncset, best_placement_edgeset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            covered_release_writelock_response_ptr = new CoveredFghybridReleaseWritelockResponse(tmp_key, victim_syncset, best_placement_edgeset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, extra_common_msghdr);
         }
         else // Normal release writelock response
         {
-            covered_release_writelock_response_ptr = new CoveredReleaseWritelockResponse(tmp_key, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            covered_release_writelock_response_ptr = new CoveredReleaseWritelockResponse(tmp_key, victim_syncset, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, extra_common_msghdr);
         }
         assert(covered_release_writelock_response_ptr != NULL);
 
@@ -553,7 +553,7 @@ namespace covered
         const Key& tmp_key = covered_placement_trigger_request_ptr->getKey();
         const CollectedPopularity& collected_popularity = covered_placement_trigger_request_ptr->getCollectedPopularityRef();
         const VictimSyncset& neighbor_victim_syncset = covered_placement_trigger_request_ptr->getVictimSyncsetRef();
-        const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
+        const ExtraCommonMsghdr extra_common_msghdr = control_request_ptr->getExtraCommonMsghdr();
 
         // Victim synchronization
         UpdateCacheManagerForNeighborVictimSyncsetFuncParam tmp_param_for_victimsync(sender_edge_idx, neighbor_victim_syncset);
@@ -565,7 +565,7 @@ namespace covered
         Edgeset best_placement_edgeset;
         bool need_hybrid_fetching = false;
         tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->isGlobalAndSourceCached(tmp_key, sender_edge_idx, is_global_cached, is_source_cached);
-        AfterWritelockReleaseHelperFuncParam tmp_param_after_releaselock(tmp_key, sender_edge_idx, collected_popularity, is_source_cached, best_placement_edgeset, need_hybrid_fetching, edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        AfterWritelockReleaseHelperFuncParam tmp_param_after_releaselock(tmp_key, sender_edge_idx, collected_popularity, is_source_cached, best_placement_edgeset, need_hybrid_fetching, edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, total_bandwidth_usage, event_list, extra_common_msghdr);
         tmp_edge_wrapper_ptr->constCustomFunc(AfterWritelockReleaseHelperFuncParam::FUNCNAME, &tmp_param_after_releaselock);
         is_finish = tmp_param_after_releaselock.isFinishConstRef();
         if (is_finish)
@@ -584,11 +584,11 @@ namespace covered
         MessageBase* covered_placement_trigger_response_ptr = NULL;
         if (need_hybrid_fetching) // Placement trigger response w/ hybrid fetching
         {
-            covered_placement_trigger_response_ptr = new CoveredFghybridPlacementTriggerResponse(tmp_key, local_victim_syncset, best_placement_edgeset, current_edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            covered_placement_trigger_response_ptr = new CoveredFghybridPlacementTriggerResponse(tmp_key, local_victim_syncset, best_placement_edgeset, current_edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, extra_common_msghdr);
         }
         else // Normal placement trigger response
         {
-            covered_placement_trigger_response_ptr = new CoveredPlacementTriggerResponse(tmp_key, local_victim_syncset, current_edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            covered_placement_trigger_response_ptr = new CoveredPlacementTriggerResponse(tmp_key, local_victim_syncset, current_edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, extra_common_msghdr);
         }
         assert(covered_placement_trigger_response_ptr != NULL);
 
@@ -628,20 +628,20 @@ namespace covered
         // Get Hitflag for non-blocking placement deployment
         const Key tmp_key = covered_placement_redirected_get_response_ptr->getKey();
         const Hitflag tmp_hitflag = covered_placement_redirected_get_response_ptr->getHitflag();
-        const bool skip_propagation_latency = redirected_get_response_ptr->isSkipPropagationLatency();
+        const ExtraCommonMsghdr extra_common_msghdr = redirected_get_response_ptr->getExtraCommonMsghdr();
         const Edgeset& best_placement_edgeset = covered_placement_redirected_get_response_ptr->getEdgesetRef();
         assert(best_placement_edgeset.size() <= tmp_edge_wrapper_ptr->getTopkEdgecntForPlacement()); // At most k placement edge nodes each time
         if (tmp_hitflag == Hitflag::kCooperativeHit)
         {
             // Perform non-blocking placement notification for neighbor data fetching
             const Value tmp_value = covered_placement_redirected_get_response_ptr->getValue();
-            NonblockNotifyForPlacementFuncParam tmp_param(tmp_key, tmp_value, best_placement_edgeset, skip_propagation_latency);
+            NonblockNotifyForPlacementFuncParam tmp_param(tmp_key, tmp_value, best_placement_edgeset, extra_common_msghdr);
             tmp_edge_wrapper_ptr->constCustomFunc(NonblockNotifyForPlacementFuncParam::FUNCNAME, &tmp_param);
         }
         else // Cooperative invalid or global miss
         {
             // NOTE: as we have replied the sender without hybrid data fetching before, beacon server directly fetches data from cloud by itself here in a non-blocking manner (this is a corner case, as valid dirinfo has cooperative hit in most time)
-            NonblockDataFetchFromCloudForPlacementFuncParam tmp_param(tmp_key, best_placement_edgeset, skip_propagation_latency);
+            NonblockDataFetchFromCloudForPlacementFuncParam tmp_param(tmp_key, best_placement_edgeset, extra_common_msghdr);
             tmp_edge_wrapper_ptr->constCustomFunc(NonblockDataFetchFromCloudForPlacementFuncParam::FUNCNAME, &tmp_param);
         }
 
@@ -670,10 +670,10 @@ namespace covered
         // Perform non-blocking placement notification for cloud data fetching
         const Key& tmp_key = covered_placement_global_get_response_ptr->getKey();
         const Value& tmp_value = covered_placement_global_get_response_ptr->getValue();
-        const bool skip_propagation_latency = global_get_response_ptr->isSkipPropagationLatency();
+        const ExtraCommonMsghdr extra_common_msghdr = global_get_response_ptr->getExtraCommonMsghdr();
         const Edgeset& best_placement_edgeset = covered_placement_global_get_response_ptr->getEdgesetRef();
         assert(best_placement_edgeset.size() <= tmp_edge_wrapper_ptr->getTopkEdgecntForPlacement()); // At most k placement edge nodes each time
-        NonblockNotifyForPlacementFuncParam tmp_param(tmp_key, tmp_value, best_placement_edgeset, skip_propagation_latency);
+        NonblockNotifyForPlacementFuncParam tmp_param(tmp_key, tmp_value, best_placement_edgeset, extra_common_msghdr);
         tmp_edge_wrapper_ptr->constCustomFunc(NonblockNotifyForPlacementFuncParam::FUNCNAME, &tmp_param);
     }
 }

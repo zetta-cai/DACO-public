@@ -231,12 +231,6 @@ namespace covered
         assert(control_request_ptr != NULL);
         assert(edge_cache_server_worker_recvrsp_dst_addr.isValidAddr());
         
-        // Get key from control request if any
-        /*assert(control_request_ptr->getMessageType() == MessageType::kDirectoryLookupRequest);
-        const DirectoryLookupRequest* const directory_lookup_request_ptr = static_cast<const DirectoryLookupRequest*>(control_request_ptr);
-        Key tmp_key = directory_lookup_request_ptr->getKey();
-        const bool skip_propagation_latency = directory_lookup_request_ptr->isSkipPropagationLatency();*/
-
         checkPointers_();
 
         bool is_finish = false;
@@ -295,28 +289,19 @@ namespace covered
         assert(control_request_ptr != NULL);
         assert(edge_cache_server_worker_recvrsp_dst_addr.isValidAddr());
 
-        // Get key, admit/evict,and directory info from control request if any
-        /*assert(control_request_ptr->getMessageType() == MessageType::kDirectoryUpdateRequest);
-        const DirectoryUpdateRequest* const directory_update_request_ptr = static_cast<const DirectoryUpdateRequest*>(control_request_ptr);
-        //uint32_t tmp_edge_idx = directory_update_request_ptr->getSourceIndex();
-        Key tmp_key = directory_update_request_ptr->getKey();
-        const bool skip_propagation_latency = directory_update_request_ptr->isSkipPropagationLatency();
-        bool is_admit = directory_update_request_ptr->isValidDirectoryExist();
-        DirectoryInfo directory_info = directory_update_request_ptr->getDirectoryInfo();*/
-
         checkPointers_();
 
         bool is_finish = false;
         BandwidthUsage total_bandwidth_usage;
         EventList event_list;
 
-        // // TMPDEBUG24
-        // if (tmp_reqcnt_ >= 1000000)
-        // {
-        //     // std::ostringstream tmposs;
-        //     // tmposs << "processDirectoryUpdateRequest_ for key " << MessageBase::getKeyFromMessage(control_request_ptr).getKeyDebugstr() << " from edge " << control_request_ptr->getSourceIndex();
-        //     // Util::dumpNormalMsg(base_instance_name_, tmposs.str());
-        // }
+        // TMPDEBUG24
+        if (control_request_ptr->getExtraCommonMsghdr().isMonitored())
+        {
+            std::ostringstream tmposs;
+            tmposs << "processDirectoryUpdateRequest_ for key " << MessageBase::getKeyFromMessage(control_request_ptr).getKeyDebugstr() << " from edge " << control_request_ptr->getSourceIndex();
+            Util::dumpNormalMsg(base_instance_name_, tmposs.str());
+        }
 
         // Update total bandwidth usage for received directory update request
         uint32_t cross_edge_directory_update_req_bandwidth_bytes = control_request_ptr->getMsgBandwidthSize();
@@ -370,12 +355,6 @@ namespace covered
         assert(control_request_ptr != NULL);
         assert(edge_cache_server_worker_recvrsp_dst_addr.isValidAddr());
 
-        // Get key from control request if any
-        /*assert(control_request_ptr->getMessageType() == MessageType::kAcquireWritelockRequest);
-        const AcquireWritelockRequest* const acquire_writelock_request_ptr = static_cast<const AcquireWritelockRequest*>(control_request_ptr);
-        Key tmp_key = acquire_writelock_request_ptr->getKey();
-        const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();*/
-
         checkPointers_();
 
         EdgeWrapperBase* tmp_edge_wrapper_ptr = edge_beacon_server_param_ptr_->getEdgeWrapperPtr();
@@ -410,13 +389,13 @@ namespace covered
         event_list.addEvent(Event::EDGE_BEACON_SERVER_ACQUIRE_LOCAL_WRITELOCK_EVENT_NAME, acquire_local_writelock_latency_us);
 
         Key tmp_key = MessageBase::getKeyFromMessage(control_request_ptr);
-        bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
+        ExtraCommonMsghdr extra_common_msghdr = control_request_ptr->getExtraCommonMsghdr();
 
         // NOTE: we invalidate cache copies by beacon code to avoid transmitting all_dirinfo to cache server of the closest edge node
         if (lock_result == LockResult::kSuccess) // If acquiring write permission successfully
         {
             // Invalidate all cache copies
-            tmp_edge_wrapper_ptr->parallelInvalidateCacheCopies(edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, tmp_key, all_dirinfo, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermedate responses if with event tracking
+            tmp_edge_wrapper_ptr->parallelInvalidateCacheCopies(edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, tmp_key, all_dirinfo, total_bandwidth_usage, event_list, extra_common_msghdr); // Add events of intermedate responses if with event tracking
         }
 
         // Prepare a acquire writelock response
@@ -437,12 +416,6 @@ namespace covered
     {
         assert(control_request_ptr != NULL);
         assert(edge_cache_server_worker_recvrsp_dst_addr.isValidAddr());
-
-        // Get key from control request if any
-        /*assert(control_request_ptr->getMessageType() == MessageType::kReleaseWritelockRequest);
-        const ReleaseWritelockRequest* const release_writelock_request_ptr = static_cast<const ReleaseWritelockRequest*>(control_request_ptr);
-        Key tmp_key = release_writelock_request_ptr->getKey();
-        const bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();*/
 
         checkPointers_();
 
@@ -476,10 +449,10 @@ namespace covered
         event_list.addEvent(Event::EDGE_BEACON_SERVER_RELEASE_LOCAL_WRITELOCK_EVENT_NAME, release_local_writelock_latency_us);
 
         Key tmp_key = MessageBase::getKeyFromMessage(control_request_ptr);
-        bool skip_propagation_latency = control_request_ptr->isSkipPropagationLatency();
+        ExtraCommonMsghdr extra_common_msghdr = control_request_ptr->getExtraCommonMsghdr();
 
         // NOTE: notify blocked edge nodes if any after finishing writes, to avoid transmitting blocked_edges to cache server of the closest edge node
-        is_finish = tmp_edge_wrapper_ptr->parallelNotifyEdgesToFinishBlock(edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, tmp_key, blocked_edges, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermedate responses if with event tracking
+        is_finish = tmp_edge_wrapper_ptr->parallelNotifyEdgesToFinishBlock(edge_beacon_server_recvrsp_socket_server_ptr_, edge_beacon_server_recvrsp_source_addr_, tmp_key, blocked_edges, total_bandwidth_usage, event_list, extra_common_msghdr); // Add events of intermedate responses if with event tracking
 
         // Prepare a release writelock response
         MessageBase* release_writelock_response_ptr = getRspToReleaseLocalWritelock_(control_request_ptr, best_placement_edgeset, need_hybrid_fetching, total_bandwidth_usage, event_list);

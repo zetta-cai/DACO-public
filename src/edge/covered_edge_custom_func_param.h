@@ -16,6 +16,7 @@
 #include "core/popularity/fast_path_hint.h"
 #include "core/victim/victim_syncset.h"
 #include "edge/edge_custom_func_param_base.h"
+#include "message/extra_common_msghdr.h"
 #include "message/message_base.h"
 #include "network/udp_msg_socket_server.h"
 
@@ -90,7 +91,7 @@ namespace covered
     public:
         static const std::string FUNCNAME; // try to trigger fast-path cache placement calculation for get response (or trigger normal placement if current is beacon)
 
-        TryToTriggerCachePlacementForGetrspFuncParam(const Key& key, const Value& value, const CollectedPopularity& collected_popularity_after_fetch_value, const FastPathHint& fast_path_hint, const bool& is_global_cached, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency);
+        TryToTriggerCachePlacementForGetrspFuncParam(const Key& key, const Value& value, const CollectedPopularity& collected_popularity_after_fetch_value, const FastPathHint& fast_path_hint, const bool& is_global_cached, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr);
         ~TryToTriggerCachePlacementForGetrspFuncParam();
 
         const Key& getKeyConstRef() const;
@@ -100,7 +101,7 @@ namespace covered
         bool isGlobalCached() const;
         BandwidthUsage& getTotalBandwidthUsageRef() const;
         EventList& getEventListRef() const;
-        bool isSkipPropagationLatency() const;
+        ExtraCommonMsghdr getExtraCommonMsghdr() const;
 
         bool& isFinishRef();
         const bool& isFinishConstRef() const;
@@ -114,7 +115,7 @@ namespace covered
         const bool is_global_cached_;
         BandwidthUsage& bandwidth_usage_ref_;
         EventList& event_list_ref_;
-        const bool skip_propagation_latency_;
+        const ExtraCommonMsghdr extra_common_msghdr_;
 
         bool is_finish_;
     };
@@ -126,7 +127,7 @@ namespace covered
     public:
         static const std::string FUNCNAME; // try to trigger non-blocking placement deployment after hybrid data fetching (or directly issue placement notifications if current is beacon)
 
-        TryToTriggerPlacementNotificationAfterHybridFetchFuncParam(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency);
+        TryToTriggerPlacementNotificationAfterHybridFetchFuncParam(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr);
         ~TryToTriggerPlacementNotificationAfterHybridFetchFuncParam();
 
         const Key& getKeyConstRef() const;
@@ -134,7 +135,7 @@ namespace covered
         const Edgeset& getBestPlacementEdgesetConstRef() const;
         BandwidthUsage& getTotalBandwidthUsageRef() const;
         EventList& getEventListRef() const;
-        bool isSkipPropagationLatency() const;
+        ExtraCommonMsghdr getExtraCommonMsghdr() const;
 
         bool& isFinishRef();
         const bool& isFinishConstRef() const;
@@ -146,7 +147,7 @@ namespace covered
         const Edgeset& best_placement_edgeset_const_ref_;
         BandwidthUsage& bandwidth_usage_ref_;
         EventList& event_list_ref_;
-        const bool skip_propagation_latency_;
+        const ExtraCommonMsghdr extra_common_msghdr_;
 
         bool is_finish_;
     };
@@ -160,7 +161,7 @@ namespace covered
     public:
         static const std::string FUNCNAME; // trigger non-blocking placement deployment after hybrid data fetching
 
-        NotifyBeaconForPlacementAfterHybridFetchFuncParam(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency);
+        NotifyBeaconForPlacementAfterHybridFetchFuncParam(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr);
         ~NotifyBeaconForPlacementAfterHybridFetchFuncParam();
 
         const NetworkAddr& getRecvrspSourceAddrConstRef() const;
@@ -217,12 +218,12 @@ namespace covered
     public:
         static const std::string FUNCNAME; // Non-blocking data fetching from local (beacon) or neighbor for non-blocking placement deployment
 
-        NonblockDataFetchForPlacementFuncParam(const Key& key, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency, const bool& sender_is_beacon, bool& need_hybrid_fetching);
+        NonblockDataFetchForPlacementFuncParam(const Key& key, const Edgeset& best_placement_edgeset, const ExtraCommonMsghdr& extra_common_msghdr, const bool& sender_is_beacon, bool& need_hybrid_fetching);
         ~NonblockDataFetchForPlacementFuncParam();
 
         const Key& getKeyConstRef() const;
         const Edgeset& getBestPlacementEdgesetConstRef() const;
-        bool isSkipPropagationLatency() const;
+        ExtraCommonMsghdr getExtraCommonMsghdr() const;
         bool isSenderBeacon() const;
         bool& needHybridFetchingRef();
     private:
@@ -230,7 +231,7 @@ namespace covered
 
         const Key& key_const_ref_;
         const Edgeset& best_placement_edgeset_const_ref_;
-        const bool skip_propagation_latency_;
+        const ExtraCommonMsghdr extra_common_msghdr_;
         const bool sender_is_beacon_;
         bool& need_hybrid_fetching_ref_;
     };
@@ -242,18 +243,18 @@ namespace covered
     public:
         static const std::string FUNCNAME; // Non-blocking data fetching from cloud for non-blocking placement deployment
 
-        NonblockDataFetchFromCloudForPlacementFuncParam(const Key& key, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency);
+        NonblockDataFetchFromCloudForPlacementFuncParam(const Key& key, const Edgeset& best_placement_edgeset, const ExtraCommonMsghdr& extra_common_msghdr);
         ~NonblockDataFetchFromCloudForPlacementFuncParam();
 
         const Key& getKeyConstRef() const;
         const Edgeset& getBestPlacementEdgesetConstRef() const;
-        bool isSkipPropagationLatency() const;
+        ExtraCommonMsghdr getExtraCommonMsghdr() const;
     private:
         static const std::string kClassName;
 
         const Key& key_const_ref_;
         const Edgeset& best_placement_edgeset_const_ref_;
-        const bool skip_propagation_latency_;
+        const ExtraCommonMsghdr extra_common_msghdr_;
     };
 
     // NonblockNotifyForPlacementFuncParam
@@ -263,20 +264,20 @@ namespace covered
     public:
         static const std::string FUNCNAME; // Non-blocking placement notification for non-blocking placement deployment
 
-        NonblockNotifyForPlacementFuncParam(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, const bool& skip_propagation_latency);
+        NonblockNotifyForPlacementFuncParam(const Key& key, const Value& value, const Edgeset& best_placement_edgeset, const ExtraCommonMsghdr& extra_common_msghdr);
         ~NonblockNotifyForPlacementFuncParam();
 
         const Key& getKeyConstRef() const;
         const Value& getValueConstRef() const;
         const Edgeset& getBestPlacementEdgesetConstRef() const;
-        bool isSkipPropagationLatency() const;
+        ExtraCommonMsghdr getExtraCommonMsghdr() const;
     private:
         static const std::string kClassName;
 
         const Key& key_const_ref_;
         const Value& value_const_ref_;
         const Edgeset& best_placement_edgeset_const_ref_;
-        const bool skip_propagation_latency_;
+        const ExtraCommonMsghdr extra_common_msghdr_;
     };
 
     // ProcessMetadataUpdateRequirementFuncParam
@@ -286,18 +287,18 @@ namespace covered
     public:
         static const std::string FUNCNAME; // Trigger metadata update (beacon-based cache status synchronization) if necessary
 
-        ProcessMetadataUpdateRequirementFuncParam(const Key& key, const MetadataUpdateRequirement& metadata_update_requirement, const bool& skip_propagation_latency);
+        ProcessMetadataUpdateRequirementFuncParam(const Key& key, const MetadataUpdateRequirement& metadata_update_requirement, const ExtraCommonMsghdr& extra_common_msghdr);
         ~ProcessMetadataUpdateRequirementFuncParam();
 
         const Key& getKeyConstRef() const;
         const MetadataUpdateRequirement& getMetadataUpdateRequirementConstRef() const;
-        bool isSkipPropagationLatency() const;
+        ExtraCommonMsghdr getExtraCommonMsghdr() const;
     private:
         static const std::string kClassName;
 
         const Key& key_const_ref_;
         const MetadataUpdateRequirement& metadata_update_requirement_const_ref_;
-        const bool skip_propagation_latency_;
+        const ExtraCommonMsghdr extra_common_msghdr_;
     };
 
     // CalcLocalCachedRewardFuncParam
@@ -359,7 +360,7 @@ namespace covered
     public:
         static const std::string FUNCNAME; // Helper function after directory lookup
 
-        AfterDirectoryLookupHelperFuncParam(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, FastPathHint* fast_path_hint_ptr, UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency);
+        AfterDirectoryLookupHelperFuncParam(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, FastPathHint* fast_path_hint_ptr, UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr);
         ~AfterDirectoryLookupHelperFuncParam();
 
         const Key& getKeyConstRef() const;
@@ -374,7 +375,7 @@ namespace covered
         const NetworkAddr& getRecvrspSourceAddrConstRef() const;
         BandwidthUsage& getTotalBandwidthUsageRef();
         EventList& getEventListRef();
-        bool isSkipPropagationLatency() const;
+        ExtraCommonMsghdr getExtraCommonMsghdr() const;
 
         bool& isFinishRef();
         const bool& isFinishConstRef() const;
@@ -393,7 +394,7 @@ namespace covered
         const NetworkAddr& recvrsp_source_addr_;
         BandwidthUsage& total_bandwidth_usage_ref_;
         EventList& event_list_ref_;
-        const bool skip_propagation_latency_;
+        const ExtraCommonMsghdr extra_common_msghdr_;
 
         bool is_finish_;
     };
@@ -405,14 +406,14 @@ namespace covered
     public:
         static const std::string FUNCNAME; // Helper function after directory admission
 
-        AfterDirectoryAdmissionHelperFuncParam(const Key& key, const uint32_t& source_edge_idx, const MetadataUpdateRequirement& metadata_update_requirement, const DirectoryInfo& directory_info, const bool& skip_propagation_latency);
+        AfterDirectoryAdmissionHelperFuncParam(const Key& key, const uint32_t& source_edge_idx, const MetadataUpdateRequirement& metadata_update_requirement, const DirectoryInfo& directory_info, const ExtraCommonMsghdr& extra_common_msghdr);
         ~AfterDirectoryAdmissionHelperFuncParam();
 
         const Key& getKeyConstRef() const;
         uint32_t getSourceEdgeIdx() const;
         const MetadataUpdateRequirement& getMetadataUpdateRequirementConstRef() const;
         const DirectoryInfo& getDirectoryInfoConstRef() const;
-        bool isSkipPropagationLatency() const;
+        ExtraCommonMsghdr getExtraCommonMsghdr() const;
     private:
         static const std::string kClassName;
 
@@ -420,7 +421,7 @@ namespace covered
         const uint32_t source_edge_idx_;
         const MetadataUpdateRequirement& metadata_update_requirement_const_ref_;
         const DirectoryInfo& directory_info_const_ref_;
-        const bool skip_propagation_latency_;
+        const ExtraCommonMsghdr extra_common_msghdr_;
     };
 
     // AfterDirectoryEvictionHelperFuncParam
@@ -430,7 +431,7 @@ namespace covered
     public:
         static const std::string FUNCNAME; // Helper function after directory eviction
 
-        AfterDirectoryEvictionHelperFuncParam(const Key& key, const uint32_t& source_edge_idx, const MetadataUpdateRequirement& metadata_update_requirement, const DirectoryInfo& directory_info, const CollectedPopularity& collected_popularity, const bool& is_global_cached, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, const bool& is_background);
+        AfterDirectoryEvictionHelperFuncParam(const Key& key, const uint32_t& source_edge_idx, const MetadataUpdateRequirement& metadata_update_requirement, const DirectoryInfo& directory_info, const CollectedPopularity& collected_popularity, const bool& is_global_cached, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr, const bool& is_background);
         ~AfterDirectoryEvictionHelperFuncParam();
 
         const Key& getKeyConstRef() const;
@@ -445,7 +446,7 @@ namespace covered
         const NetworkAddr& getRecvrspSourceAddrConstRef() const;
         BandwidthUsage& getTotalBandwidthUsageRef();
         EventList& getEventListRef();
-        bool isSkipPropagationLatency() const;
+        ExtraCommonMsghdr getExtraCommonMsghdr() const;
         bool isBackground() const;
 
         bool& isFinishRef();
@@ -465,7 +466,7 @@ namespace covered
         const NetworkAddr& recvrsp_source_addr_;
         BandwidthUsage& total_bandwidth_usage_ref_;
         EventList& event_list_ref_;
-        const bool skip_propagation_latency_;
+        const ExtraCommonMsghdr extra_common_msghdr_;
         const bool is_background_;
 
         bool is_finish_;
@@ -478,7 +479,7 @@ namespace covered
     public:
         static const std::string FUNCNAME; // Helper function after acquiring writelock
 
-        AfterWritelockAcquireHelperFuncParam(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency);
+        AfterWritelockAcquireHelperFuncParam(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr);
         ~AfterWritelockAcquireHelperFuncParam();
 
         const Key& getKeyConstRef() const;
@@ -490,7 +491,7 @@ namespace covered
         const NetworkAddr& getRecvrspSourceAddrConstRef() const;
         BandwidthUsage& getTotalBandwidthUsageRef();
         EventList& getEventListRef();
-        bool isSkipPropagationLatency() const;
+        ExtraCommonMsghdr getExtraCommonMsghdr() const;
 
         bool& isFinishRef();
         const bool& isFinishConstRef() const;
@@ -506,7 +507,7 @@ namespace covered
         const NetworkAddr& recvrsp_source_addr_;
         BandwidthUsage& total_bandwidth_usage_ref_;
         EventList& event_list_ref_;
-        const bool skip_propagation_latency_;
+        const ExtraCommonMsghdr extra_common_msghdr_;
 
         bool is_finish_;
     };
@@ -518,7 +519,7 @@ namespace covered
     public:
         static const std::string FUNCNAME; // Helper function after releasing writelock
 
-        AfterWritelockReleaseHelperFuncParam(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_source_cached, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency);
+        AfterWritelockReleaseHelperFuncParam(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_source_cached, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr);
         ~AfterWritelockReleaseHelperFuncParam();
 
         const Key& getKeyConstRef() const;
@@ -531,7 +532,7 @@ namespace covered
         const NetworkAddr& getRecvrspSourceAddrConstRef() const;
         BandwidthUsage& getTotalBandwidthUsageRef();
         EventList& getEventListRef();
-        bool isSkipPropagationLatency() const;
+        ExtraCommonMsghdr getExtraCommonMsghdr() const;
 
         bool& isFinishRef();
         const bool& isFinishConstRef() const;
@@ -548,7 +549,7 @@ namespace covered
         const NetworkAddr& recvrsp_source_addr_;
         BandwidthUsage& total_bandwidth_usage_ref_;
         EventList& event_list_ref_;
-        const bool skip_propagation_latency_;
+        const ExtraCommonMsghdr extra_common_msghdr_;
 
         bool is_finish_;
     };

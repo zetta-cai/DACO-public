@@ -36,7 +36,7 @@ namespace covered
         return;
     }
 
-    MessageBase* BasicCacheServer::getReqToAdmitBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, const NetworkAddr& source_addr, const bool& skip_propagation_latency, const bool& is_background) const
+    MessageBase* BasicCacheServer::getReqToAdmitBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, const NetworkAddr& source_addr, const ExtraCommonMsghdr& extra_common_msghdr, const bool& is_background) const
     {
         checkPointers_();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = getEdgeWrapperPtr();
@@ -52,7 +52,7 @@ namespace covered
         MessageBase* directory_update_request_ptr = NULL;
         if (cache_name != Util::BESTGUESS_CACHE_NAME) // other baselines
         {
-            directory_update_request_ptr = new DirectoryUpdateRequest(key, is_admit, directory_info, edge_idx, source_addr, skip_propagation_latency);
+            directory_update_request_ptr = new DirectoryUpdateRequest(key, is_admit, directory_info, edge_idx, source_addr, extra_common_msghdr);
         }
         else // BestGuess
         {
@@ -63,11 +63,11 @@ namespace covered
 
             if (is_background) // Background admission issued by basic placement processor
             {
-                directory_update_request_ptr = new BestGuessBgplaceDirectoryUpdateRequest(key, is_admit, directory_info, BestGuessSyncinfo(local_victim_vtime), edge_idx, source_addr, skip_propagation_latency);
+                directory_update_request_ptr = new BestGuessBgplaceDirectoryUpdateRequest(key, is_admit, directory_info, BestGuessSyncinfo(local_victim_vtime), edge_idx, source_addr, extra_common_msghdr);
             }
             else // Foreground admission triggered by local placement (sender is placement)
             {
-                directory_update_request_ptr = new BestGuessDirectoryUpdateRequest(key, is_admit, directory_info, BestGuessSyncinfo(local_victim_vtime), edge_idx, source_addr, skip_propagation_latency);
+                directory_update_request_ptr = new BestGuessDirectoryUpdateRequest(key, is_admit, directory_info, BestGuessSyncinfo(local_victim_vtime), edge_idx, source_addr, extra_common_msghdr);
             }
         }
         assert(directory_update_request_ptr != NULL);
@@ -143,7 +143,7 @@ namespace covered
         return;
     }
 
-    bool BasicCacheServer::evictLocalDirectory_(const Key& key, const Value& value, const DirectoryInfo& directory_info, bool& is_being_written, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, const bool& is_background) const
+    bool BasicCacheServer::evictLocalDirectory_(const Key& key, const Value& value, const DirectoryInfo& directory_info, bool& is_being_written, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr, const bool& is_background) const
     {
         checkPointers_();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = getEdgeWrapperPtr();
@@ -162,7 +162,7 @@ namespace covered
         return is_finish;
     }
 
-    MessageBase* BasicCacheServer::getReqToEvictBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, const NetworkAddr& source_addr, const bool& skip_propagation_latency, const bool& is_background) const
+    MessageBase* BasicCacheServer::getReqToEvictBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, const NetworkAddr& source_addr, const ExtraCommonMsghdr& extra_common_msghdr, const bool& is_background) const
     {
         checkPointers_();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = getEdgeWrapperPtr();
@@ -178,7 +178,7 @@ namespace covered
         const std::string cache_name = tmp_edge_wrapper_ptr->getCacheName();
         if (cache_name != Util::BESTGUESS_CACHE_NAME) // other baselines
         {
-            directory_update_request_ptr = new DirectoryUpdateRequest(key, is_admit, directory_info, edge_idx, source_addr, skip_propagation_latency);
+            directory_update_request_ptr = new DirectoryUpdateRequest(key, is_admit, directory_info, edge_idx, source_addr, extra_common_msghdr);
         }
         else // BestGuess
         {
@@ -189,11 +189,11 @@ namespace covered
 
             if (is_background) // Background eviction issued by basic placement processor
             {
-                directory_update_request_ptr = new BestGuessBgplaceDirectoryUpdateRequest(key, is_admit, directory_info, BestGuessSyncinfo(local_victim_vtime), edge_idx, source_addr, skip_propagation_latency);
+                directory_update_request_ptr = new BestGuessBgplaceDirectoryUpdateRequest(key, is_admit, directory_info, BestGuessSyncinfo(local_victim_vtime), edge_idx, source_addr, extra_common_msghdr);
             }
             else // Foreground eviction triggered by value update
             {
-                directory_update_request_ptr = new BestGuessDirectoryUpdateRequest(key, is_admit, directory_info, BestGuessSyncinfo(local_victim_vtime), edge_idx, source_addr, skip_propagation_latency);
+                directory_update_request_ptr = new BestGuessDirectoryUpdateRequest(key, is_admit, directory_info, BestGuessSyncinfo(local_victim_vtime), edge_idx, source_addr, extra_common_msghdr);
             }
         }
         assert(directory_update_request_ptr != NULL);
@@ -201,7 +201,7 @@ namespace covered
         return directory_update_request_ptr;
     }
     
-    bool BasicCacheServer::processRspToEvictBeaconDirectory_(MessageBase* control_response_ptr, const Value& value, bool& is_being_written, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, const bool& is_background) const
+    bool BasicCacheServer::processRspToEvictBeaconDirectory_(MessageBase* control_response_ptr, const Value& value, bool& is_being_written, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr, const bool& is_background) const
     {
         checkPointers_();
         assert(control_response_ptr != NULL);
@@ -250,7 +250,7 @@ namespace covered
         UNUSED(recvrsp_socket_server_ptr);
         UNUSED(total_bandwidth_usage);
         UNUSED(event_list);
-        UNUSED(skip_propagation_latency);
+        UNUSED(extra_common_msghdr);
 
         return is_finish;
     }

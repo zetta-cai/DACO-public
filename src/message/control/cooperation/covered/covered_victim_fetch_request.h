@@ -19,8 +19,8 @@ namespace covered
     class CoveredVictimFetchRequest : public UintMessage
     {
     public:
-        // CoveredVictimFetchRequest(const uint32_t& object_size, const VictimSyncset& victim_syncset, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& skip_propagation_latency);
-        CoveredVictimFetchRequest(const uint32_t& object_size, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& skip_propagation_latency);
+        // CoveredVictimFetchRequest(const uint32_t& object_size, const VictimSyncset& victim_syncset, const uint32_t& source_index, const NetworkAddr& source_addr, const ExtraCommonMsghdr& extra_common_msghdr);
+        CoveredVictimFetchRequest(const uint32_t& object_size, const uint32_t& source_index, const NetworkAddr& source_addr, const ExtraCommonMsghdr& extra_common_msghdr);
         CoveredVictimFetchRequest(const DynamicArray& msg_payload);
         virtual ~CoveredVictimFetchRequest();
 

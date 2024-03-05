@@ -4,7 +4,7 @@ namespace covered
 {
     const std::string CoveredBgfetchGlobalGetRequest::kClassName("CoveredBgfetchGlobalGetRequest");
 
-    CoveredBgfetchGlobalGetRequest::CoveredBgfetchGlobalGetRequest(const Key& key, const Edgeset& edgeset, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& skip_propagation_latency) : KeyEdgesetMessage(key, edgeset, MessageType::kCoveredBgfetchGlobalGetRequest, source_index, source_addr, BandwidthUsage(), EventList(), skip_propagation_latency)
+    CoveredBgfetchGlobalGetRequest::CoveredBgfetchGlobalGetRequest(const Key& key, const Edgeset& edgeset, const uint32_t& source_index, const NetworkAddr& source_addr, const ExtraCommonMsghdr& extra_common_msghdr) : KeyEdgesetMessage(key, edgeset, MessageType::kCoveredBgfetchGlobalGetRequest, source_index, source_addr, BandwidthUsage(), EventList(), extra_common_msghdr)
     {
     }
 

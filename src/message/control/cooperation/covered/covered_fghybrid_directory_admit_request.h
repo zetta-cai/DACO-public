@@ -22,7 +22,7 @@ namespace covered
     class CoveredFghybridDirectoryAdmitRequest : public KeyValueDirectoryVictimsetEdgesetMessage
     {
     public:
-        CoveredFghybridDirectoryAdmitRequest(const Key& key, const Value& value, const DirectoryInfo& directory_info, const VictimSyncset& victim_syncset, const Edgeset& edgeset, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& skip_propagation_latency);
+        CoveredFghybridDirectoryAdmitRequest(const Key& key, const Value& value, const DirectoryInfo& directory_info, const VictimSyncset& victim_syncset, const Edgeset& edgeset, const uint32_t& source_index, const NetworkAddr& source_addr, const ExtraCommonMsghdr& extra_common_msghdr);
         CoveredFghybridDirectoryAdmitRequest(const DynamicArray& msg_payload);
         virtual ~CoveredFghybridDirectoryAdmitRequest();
     private:

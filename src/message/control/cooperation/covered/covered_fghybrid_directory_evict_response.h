@@ -22,7 +22,7 @@ namespace covered
     class CoveredFghybridDirectoryEvictResponse : public KeyByteVictimsetEdgesetMessage
     {
     public:
-        CoveredFghybridDirectoryEvictResponse(const Key& key, const bool& is_being_written, const VictimSyncset& victim_syncset, const Edgeset& edgeset, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency);
+        CoveredFghybridDirectoryEvictResponse(const Key& key, const bool& is_being_written, const VictimSyncset& victim_syncset, const Edgeset& edgeset, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr);
         CoveredFghybridDirectoryEvictResponse(const DynamicArray& msg_payload);
         virtual ~CoveredFghybridDirectoryEvictResponse();
 

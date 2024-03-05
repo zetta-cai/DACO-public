@@ -20,7 +20,7 @@ namespace covered
     class CoveredFghybridReleaseWritelockResponse : public KeyVictimsetEdgesetMessage
     {
     public:
-        CoveredFghybridReleaseWritelockResponse(const Key& key, const VictimSyncset& victim_syncset, const Edgeset& edgeset, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency);
+        CoveredFghybridReleaseWritelockResponse(const Key& key, const VictimSyncset& victim_syncset, const Edgeset& edgeset, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr);
         CoveredFghybridReleaseWritelockResponse(const DynamicArray& msg_payload);
         virtual ~CoveredFghybridReleaseWritelockResponse();
     private:

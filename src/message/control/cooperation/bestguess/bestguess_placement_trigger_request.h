@@ -17,7 +17,7 @@ namespace covered
     class BestGuessPlacementTriggerRequest : public KeyValuePlaceinfoSyncinfoMessage
     {
     public:
-        BestGuessPlacementTriggerRequest(const Key& key, const Value& value, const BestGuessPlaceinfo& placeinfo, const BestGuessSyncinfo& syncinfo, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& skip_propagation_latency);
+        BestGuessPlacementTriggerRequest(const Key& key, const Value& value, const BestGuessPlaceinfo& placeinfo, const BestGuessSyncinfo& syncinfo, const uint32_t& source_index, const NetworkAddr& source_addr, const ExtraCommonMsghdr& extra_common_msghdr);
         BestGuessPlacementTriggerRequest(const DynamicArray& msg_payload);
         virtual ~BestGuessPlacementTriggerRequest();
     private:

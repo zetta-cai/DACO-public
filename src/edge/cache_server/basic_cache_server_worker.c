@@ -34,7 +34,7 @@ namespace covered
 
     // (1.2) Access cooperative edge cache to fetch data from neighbor edge nodes
 
-    bool BasicCacheServerWorker::lookupLocalDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
+    bool BasicCacheServerWorker::lookupLocalDirectory_(const Key& key, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr) const
     {
         checkPointers_();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -50,7 +50,7 @@ namespace covered
         UNUSED(need_hybrid_fetching);
         UNUSED(total_bandwidth_usage);
         UNUSED(event_list);
-        UNUSED(skip_propagation_latency);
+        UNUSED(extra_common_msghdr);
 
         return is_finish;
     }
@@ -62,7 +62,7 @@ namespace covered
         return need_lookup_beacon_directory;
     }
 
-    MessageBase* BasicCacheServerWorker::getReqToLookupBeaconDirectory_(const Key& key, const bool& skip_propagation_latency) const
+    MessageBase* BasicCacheServerWorker::getReqToLookupBeaconDirectory_(const Key& key, const ExtraCommonMsghdr& extra_common_msghdr) const
     {
         checkPointers_();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -77,7 +77,7 @@ namespace covered
         MessageBase* directory_lookup_request_ptr = NULL;
         if (cache_name != Util::BESTGUESS_CACHE_NAME) // other baselines
         {
-            directory_lookup_request_ptr = new DirectoryLookupRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+            directory_lookup_request_ptr = new DirectoryLookupRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, extra_common_msghdr);
         }
         else // BestGuess
         {
@@ -86,7 +86,7 @@ namespace covered
             tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
             const uint64_t& local_victim_vtime = tmp_param_for_vtimesync.getLocalVictimVtimeRef();
 
-            directory_lookup_request_ptr = new BestGuessDirectoryLookupRequest(key, BestGuessSyncinfo(local_victim_vtime), edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+            directory_lookup_request_ptr = new BestGuessDirectoryLookupRequest(key, BestGuessSyncinfo(local_victim_vtime), edge_idx, edge_cache_server_worker_recvrsp_source_addr_, extra_common_msghdr);
         }
         assert(directory_lookup_request_ptr != NULL);
 
@@ -132,7 +132,7 @@ namespace covered
         return;
     }
 
-    MessageBase* BasicCacheServerWorker::getReqToRedirectGet_(const uint32_t& dst_edge_idx_for_compression, const Key& key, const bool& skip_propagation_latency) const
+    MessageBase* BasicCacheServerWorker::getReqToRedirectGet_(const uint32_t& dst_edge_idx_for_compression, const Key& key, const ExtraCommonMsghdr& extra_common_msghdr) const
     {
         checkPointers_();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -145,7 +145,7 @@ namespace covered
         MessageBase* redirected_get_request_ptr = NULL;
         if (cache_name != Util::BESTGUESS_CACHE_NAME) // other baselines
         {
-            redirected_get_request_ptr = new RedirectedGetRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+            redirected_get_request_ptr = new RedirectedGetRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, extra_common_msghdr);
         }
         else // BestGuess
         {
@@ -154,7 +154,7 @@ namespace covered
             tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
             const uint64_t& local_victim_vtime = tmp_param_for_vtimesync.getLocalVictimVtimeRef();
 
-            redirected_get_request_ptr = new BestGuessRedirectedGetRequest(key, BestGuessSyncinfo(local_victim_vtime), edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+            redirected_get_request_ptr = new BestGuessRedirectedGetRequest(key, BestGuessSyncinfo(local_victim_vtime), edge_idx, edge_cache_server_worker_recvrsp_source_addr_, extra_common_msghdr);
         }
         assert(redirected_get_request_ptr != NULL);
 
@@ -235,7 +235,7 @@ namespace covered
 
     // (1.5) After getting value from local/neighbor/cloud
 
-    bool BasicCacheServerWorker::afterFetchingValue_(const Key& key, const Value& value, const bool& is_tracked_before_fetch_value, const bool& is_cooperative_cached, const Edgeset& best_placement_edgeset, const bool& need_hybrid_fetching, const FastPathHint& fast_path_hint, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
+    bool BasicCacheServerWorker::afterFetchingValue_(const Key& key, const Value& value, const bool& is_tracked_before_fetch_value, const bool& is_cooperative_cached, const Edgeset& best_placement_edgeset, const bool& need_hybrid_fetching, const FastPathHint& fast_path_hint, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr) const
     {
         checkPointers_();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -252,7 +252,7 @@ namespace covered
         // NOTE: for COVERED, beacon node will tell the edge node whether to admit or not, w/o independent decision
         // NOTE: for BestGuess, the closest node will trigger best-guess placement via beacon node, w/o independent decision
         struct timespec independent_admission_start_timestamp = Util::getCurrentTimespec();
-        is_finish = tryToTriggerIndependentAdmission_(key, value, total_bandwidth_usage, event_list, skip_propagation_latency); // Add events of intermediate responses if with event tracking
+        is_finish = tryToTriggerIndependentAdmission_(key, value, total_bandwidth_usage, event_list, extra_common_msghdr); // Add events of intermediate responses if with event tracking
         if (is_finish)
         {
             return is_finish;
@@ -264,7 +264,7 @@ namespace covered
         // Trigger best-guess placement/replacement for BestGuess
         if (tmp_edge_wrapper_ptr->getCacheName() == Util::BESTGUESS_CACHE_NAME && !tmp_edge_wrapper_ptr->getEdgeCachePtr()->isLocalCached(key) && !is_cooperative_cached) // Local uncached and cooperative uncached (i.e., global uncached)
         {
-            TriggerBestGuessPlacementFuncParam tmp_param(key, value, total_bandwidth_usage, event_list, skip_propagation_latency);
+            TriggerBestGuessPlacementFuncParam tmp_param(key, value, total_bandwidth_usage, event_list, extra_common_msghdr);
             constCustomFunc(TriggerBestGuessPlacementFuncParam::FUNCNAME, &tmp_param);
             is_finish = tmp_param.isFinish();
             if (is_finish)
@@ -278,7 +278,7 @@ namespace covered
 
     // (2.1) Acquire write lock and block for MSI protocol
 
-    bool BasicCacheServerWorker::acquireLocalWritelock_(const Key& key, LockResult& lock_result, DirinfoSet& all_dirinfo, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency)
+    bool BasicCacheServerWorker::acquireLocalWritelock_(const Key& key, LockResult& lock_result, DirinfoSet& all_dirinfo, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr)
     {
         checkPointers_();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -292,11 +292,11 @@ namespace covered
 
         UNUSED(total_bandwidth_usage);
         UNUSED(event_list);
-        UNUSED(skip_propagation_latency);
+        UNUSED(extra_common_msghdr);
         return is_finish;
     }
 
-    MessageBase* BasicCacheServerWorker::getReqToAcquireBeaconWritelock_(const Key& key, const bool& skip_propagation_latency) const
+    MessageBase* BasicCacheServerWorker::getReqToAcquireBeaconWritelock_(const Key& key, const ExtraCommonMsghdr& extra_common_msghdr) const
     {
         checkPointers_();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -310,7 +310,7 @@ namespace covered
         const std::string cache_name = tmp_edge_wrapper_ptr->getCacheName();
         if (cache_name != Util::BESTGUESS_CACHE_NAME) // other baselines
         {
-            acquire_writelock_request_ptr = new AcquireWritelockRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+            acquire_writelock_request_ptr = new AcquireWritelockRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, extra_common_msghdr);
         }
         else // BestGuess
         {
@@ -319,7 +319,7 @@ namespace covered
             tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
             const uint64_t& local_victim_vtime = tmp_param_for_vtimesync.getLocalVictimVtimeRef();
 
-            acquire_writelock_request_ptr = new BestGuessAcquireWritelockRequest(key, BestGuessSyncinfo(local_victim_vtime), edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+            acquire_writelock_request_ptr = new BestGuessAcquireWritelockRequest(key, BestGuessSyncinfo(local_victim_vtime), edge_idx, edge_cache_server_worker_recvrsp_source_addr_, extra_common_msghdr);
         }
         assert(acquire_writelock_request_ptr != NULL);
 
@@ -401,22 +401,22 @@ namespace covered
         {
             const FinishBlockRequest* const finish_block_request_ptr = static_cast<const FinishBlockRequest*>(control_request_ptr);
             const Key tmp_key = finish_block_request_ptr->getKey();
-            const bool skip_propagation_latency = finish_block_request_ptr->isSkipPropagationLatency();
+            const ExtraCommonMsghdr extra_common_msghdr = finish_block_request_ptr->getExtraCommonMsghdr();
 
-            finish_block_response_ptr = new FinishBlockResponse(tmp_key, edge_idx, edge_cache_server_worker_recvreq_source_addr_, tmp_bandwidth_usage, EventList(), skip_propagation_latency); // NOTE: still use skip_propagation_latency of currently-blocked request rather than that of previous write request
+            finish_block_response_ptr = new FinishBlockResponse(tmp_key, edge_idx, edge_cache_server_worker_recvreq_source_addr_, tmp_bandwidth_usage, EventList(), extra_common_msghdr); // NOTE: still use extra_common_msghdr of currently-blocked request rather than that of previous write request
         }
         else if (message_type == MessageType::kBestGuessFinishBlockRequest)
         {
             const BestGuessFinishBlockRequest* const bestguess_finish_block_request_ptr = static_cast<const BestGuessFinishBlockRequest*>(control_request_ptr);
             const Key tmp_key = bestguess_finish_block_request_ptr->getKey();
-            const bool skip_propagation_latency = bestguess_finish_block_request_ptr->isSkipPropagationLatency();
+            const ExtraCommonMsghdr extra_common_msghdr = bestguess_finish_block_request_ptr->getExtraCommonMsghdr();
 
             // Get local victim vtime for vtime synchronization
             GetLocalVictimVtimeFuncParam tmp_param_for_vtimesync;
             tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
             const uint64_t& local_victim_vtime = tmp_param_for_vtimesync.getLocalVictimVtimeRef();
 
-            finish_block_response_ptr = new BestGuessFinishBlockResponse(tmp_key, BestGuessSyncinfo(local_victim_vtime), edge_idx, edge_cache_server_worker_recvreq_source_addr_, tmp_bandwidth_usage, EventList(), skip_propagation_latency); // NOTE: still use skip_propagation_latency of currently-blocked request rather than that of previous write request
+            finish_block_response_ptr = new BestGuessFinishBlockResponse(tmp_key, BestGuessSyncinfo(local_victim_vtime), edge_idx, edge_cache_server_worker_recvreq_source_addr_, tmp_bandwidth_usage, EventList(), extra_common_msghdr); // NOTE: still use extra_common_msghdr of currently-blocked request rather than that of previous write request
         }
         else
         {
@@ -458,7 +458,7 @@ namespace covered
 
     // (2.4) Release write lock for MSI protocol
 
-    bool BasicCacheServerWorker::releaseLocalWritelock_(const Key& key, const Value& value, std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency)
+    bool BasicCacheServerWorker::releaseLocalWritelock_(const Key& key, const Value& value, std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr)
     {
         checkPointers_();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -473,12 +473,12 @@ namespace covered
         UNUSED(value);
         UNUSED(total_bandwidth_usage);
         UNUSED(event_list);
-        UNUSED(skip_propagation_latency);
+        UNUSED(extra_common_msghdr);
 
         return is_finish;
     }
 
-    MessageBase* BasicCacheServerWorker::getReqToReleaseBeaconWritelock_(const Key& key, const bool& skip_propagation_latency) const
+    MessageBase* BasicCacheServerWorker::getReqToReleaseBeaconWritelock_(const Key& key, const ExtraCommonMsghdr& extra_common_msghdr) const
     {
         checkPointers_();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -492,7 +492,7 @@ namespace covered
         MessageBase* release_writelock_request_ptr = NULL;
         if (cache_name != Util::BESTGUESS_CACHE_NAME) // other baselines
         {
-            release_writelock_request_ptr = new ReleaseWritelockRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+            release_writelock_request_ptr = new ReleaseWritelockRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, extra_common_msghdr);
         }
         else // BestGuess
         {
@@ -501,14 +501,14 @@ namespace covered
             tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
             const uint64_t& local_victim_vtime = tmp_param_for_vtimesync.getLocalVictimVtimeRef();
 
-            release_writelock_request_ptr = new BestGuessReleaseWritelockRequest(key, BestGuessSyncinfo(local_victim_vtime), edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+            release_writelock_request_ptr = new BestGuessReleaseWritelockRequest(key, BestGuessSyncinfo(local_victim_vtime), edge_idx, edge_cache_server_worker_recvrsp_source_addr_, extra_common_msghdr);
         }
         assert(release_writelock_request_ptr != NULL);
 
         return release_writelock_request_ptr;
     }
 
-    bool BasicCacheServerWorker::processRspToReleaseBeaconWritelock_(MessageBase* control_response_ptr, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
+    bool BasicCacheServerWorker::processRspToReleaseBeaconWritelock_(MessageBase* control_response_ptr, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr) const
     {
         assert(control_response_ptr != NULL);
         const MessageType message_type = control_response_ptr->getMessageType();
@@ -538,14 +538,14 @@ namespace covered
 
         UNUSED(total_bandwidth_usage);
         UNUSED(event_list);
-        UNUSED(skip_propagation_latency);
+        UNUSED(extra_common_msghdr);
 
         return is_finish;
     }
 
     // (2.5) After writing value into cloud and local edge cache if any
 
-    bool BasicCacheServerWorker::afterWritingValue_(const Key& key, const Value& value, const LockResult& lock_result, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
+    bool BasicCacheServerWorker::afterWritingValue_(const Key& key, const Value& value, const LockResult& lock_result, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr) const
     {
         checkPointers_();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -558,7 +558,7 @@ namespace covered
         // NOTE: for COVERED, beacon node will tell the edge node whether to admit or not, w/o independent decision
         // NOTE: for BestGuess, the closest node will trigger best-guess placement via beacon node, w/o independent decision
         struct timespec independent_admission_start_timestamp = Util::getCurrentTimespec();
-        is_finish = tryToTriggerIndependentAdmission_(key, value, total_bandwidth_usage, event_list, skip_propagation_latency);
+        is_finish = tryToTriggerIndependentAdmission_(key, value, total_bandwidth_usage, event_list, extra_common_msghdr);
         if (is_finish) // Edge node is NOT running
         {
             return is_finish;
@@ -570,7 +570,7 @@ namespace covered
         // Trigger best-guess placement/replacement for BestGuess
         if (tmp_edge_wrapper_ptr->getCacheName() == Util::BESTGUESS_CACHE_NAME && lock_result == LockResult::kNoneed) // No need of writelock (i.e., global uncached)
         {
-            TriggerBestGuessPlacementFuncParam tmp_param(key, value, total_bandwidth_usage, event_list, skip_propagation_latency);
+            TriggerBestGuessPlacementFuncParam tmp_param(key, value, total_bandwidth_usage, event_list, extra_common_msghdr);
             constCustomFunc(TriggerBestGuessPlacementFuncParam::FUNCNAME, &tmp_param);
             is_finish = tmp_param.isFinish();
             if (is_finish)
@@ -598,7 +598,7 @@ namespace covered
         if (funcname == TriggerBestGuessPlacementFuncParam::FUNCNAME)
         {
             TriggerBestGuessPlacementFuncParam* tmp_param_ptr = static_cast<TriggerBestGuessPlacementFuncParam*>(func_param_ptr);
-            bool is_finish = triggerBestGuessPlacementInternal_(tmp_param_ptr->getKeyConstRef(), tmp_param_ptr->getValueConstRef(), tmp_param_ptr->getTotalBandwidthUsageRef(), tmp_param_ptr->getEventListRef(), tmp_param_ptr->isSkipPropagationLatency());
+            bool is_finish = triggerBestGuessPlacementInternal_(tmp_param_ptr->getKeyConstRef(), tmp_param_ptr->getValueConstRef(), tmp_param_ptr->getTotalBandwidthUsageRef(), tmp_param_ptr->getEventListRef(), tmp_param_ptr->getExtraCommonMsghdr());
             tmp_param_ptr->setIsFinish(is_finish);
         }
         else
@@ -613,7 +613,7 @@ namespace covered
     }
 
     // Trigger best-guess placement/replacement for getrsp & putrsp
-    bool BasicCacheServerWorker::triggerBestGuessPlacementInternal_(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
+    bool BasicCacheServerWorker::triggerBestGuessPlacementInternal_(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr) const
     {
         checkPointers_();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -629,7 +629,7 @@ namespace covered
 
         // Get trigger flag from local/remote beacon node if this is the first cache miss of the globally uncached object
         bool is_triggered = false;
-        is_finish = getBestGuessTriggerFlag_(key, value, placement_edge_idx, skip_propagation_latency, is_triggered);
+        is_finish = getBestGuessTriggerFlag_(key, value, placement_edge_idx, extra_common_msghdr, is_triggered);
         if (is_finish)
         {
             return is_finish;
@@ -640,7 +640,7 @@ namespace covered
         {
             // Admit local/remote beacon directory
             bool is_being_written = false;
-            bool is_finish = admitDirectory_(key, is_being_written, total_bandwidth_usage, event_list, skip_propagation_latency);
+            bool is_finish = admitDirectory_(key, is_being_written, total_bandwidth_usage, event_list, extra_common_msghdr);
             if (is_finish)
             {
                 return is_finish;
@@ -649,14 +649,14 @@ namespace covered
             // Notify placement processor to admit local edge cache (NOTE: NO need to admit directory) and trigger local cache eviciton in the background
             const bool is_neighbor_cached = false; // (i) MUST be false due to is_triggered = true (i.e., the first placement trigger for the global uncached object); (ii) is_neighbor_cached will NOT be used by BestGuess local edge cachce
             const bool is_valid = !is_being_written;
-            bool is_successful = tmp_edge_wrapper_ptr->getLocalCacheAdmissionBufferPtr()->push(LocalCacheAdmissionItem(key, value, is_neighbor_cached, is_valid, skip_propagation_latency));
+            bool is_successful = tmp_edge_wrapper_ptr->getLocalCacheAdmissionBufferPtr()->push(LocalCacheAdmissionItem(key, value, is_neighbor_cached, is_valid, extra_common_msghdr));
             assert(is_successful);
         }
 
         return is_finish;
     }
 
-    bool BasicCacheServerWorker::getBestGuessTriggerFlag_(const Key& key, const Value& value, const uint32_t& placement_edge_idx, const bool& skip_propagation_latency, bool& is_triggered) const
+    bool BasicCacheServerWorker::getBestGuessTriggerFlag_(const Key& key, const Value& value, const uint32_t& placement_edge_idx, const ExtraCommonMsghdr& extra_common_msghdr, bool& is_triggered) const
     {
         checkPointers_();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -686,7 +686,7 @@ namespace covered
             while (true) // Timeout-and-retry mechanism
             {
                 // Prepare placement trigger request
-                MessageBase* tmp_request_ptr = new BestGuessPlacementTriggerRequest(key, value, BestGuessPlaceinfo(placement_edge_idx), BestGuessSyncinfo(local_victim_vtime), current_edge_idx, edge_cache_server_worker_recvrsp_source_addr_, skip_propagation_latency);
+                MessageBase* tmp_request_ptr = new BestGuessPlacementTriggerRequest(key, value, BestGuessPlaceinfo(placement_edge_idx), BestGuessSyncinfo(local_victim_vtime), current_edge_idx, edge_cache_server_worker_recvrsp_source_addr_, extra_common_msghdr);
                 assert(tmp_request_ptr != NULL);
 
                 // Push the control request into edge-to-edge propagation simulator to the beacon node

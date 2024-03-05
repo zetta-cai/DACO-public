@@ -22,7 +22,7 @@ namespace covered
     class KeyValidityDirectorySyncinfoMessage : public MessageBase
     {
     public:
-        KeyValidityDirectorySyncinfoMessage(const Key& key, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const BestGuessSyncinfo& syncinfo, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency);
+        KeyValidityDirectorySyncinfoMessage(const Key& key, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const BestGuessSyncinfo& syncinfo, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr);
         KeyValidityDirectorySyncinfoMessage(const DynamicArray& msg_payload);
         virtual ~KeyValidityDirectorySyncinfoMessage();
 

@@ -18,7 +18,7 @@ namespace covered
     class BestGuessRedirectedGetRequest : public KeySyncinfoMessage
     {
     public:
-        BestGuessRedirectedGetRequest(const Key& key, const BestGuessSyncinfo& syncinfo, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& skip_propagation_latency);
+        BestGuessRedirectedGetRequest(const Key& key, const BestGuessSyncinfo& syncinfo, const uint32_t& source_index, const NetworkAddr& source_addr, const ExtraCommonMsghdr& extra_common_msghdr);
         BestGuessRedirectedGetRequest(const DynamicArray& msg_payload);
         virtual ~BestGuessRedirectedGetRequest();
     private:

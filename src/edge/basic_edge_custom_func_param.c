@@ -8,7 +8,7 @@ namespace covered
 
     const std::string TriggerBestGuessPlacementFuncParam::FUNCNAME("trigger_best_guess_placement");
 
-    TriggerBestGuessPlacementFuncParam::TriggerBestGuessPlacementFuncParam(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) : EdgeCustomFuncParamBase(), key_const_ref_(key), value_const_ref_(value), bandwidth_usage_ref_(total_bandwidth_usage), event_list_ref_(event_list), skip_propagation_latency_(skip_propagation_latency)
+    TriggerBestGuessPlacementFuncParam::TriggerBestGuessPlacementFuncParam(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr) : EdgeCustomFuncParamBase(), key_const_ref_(key), value_const_ref_(value), bandwidth_usage_ref_(total_bandwidth_usage), event_list_ref_(event_list), extra_common_msghdr_(extra_common_msghdr)
     {
         is_finish_ = false;
     }
@@ -37,9 +37,9 @@ namespace covered
         return event_list_ref_;
     }
 
-    bool TriggerBestGuessPlacementFuncParam::isSkipPropagationLatency() const
+    ExtraCommonMsghdr TriggerBestGuessPlacementFuncParam::getExtraCommonMsghdr() const
     {
-        return skip_propagation_latency_;
+        return extra_common_msghdr_;
     }
 
     bool TriggerBestGuessPlacementFuncParam::isFinish() const

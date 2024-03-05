@@ -18,7 +18,7 @@ namespace covered
     class BestGuessFinishBlockResponse : public KeySyncinfoMessage
     {
     public:
-        BestGuessFinishBlockResponse(const Key& key, const BestGuessSyncinfo& syncinfo, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency);
+        BestGuessFinishBlockResponse(const Key& key, const BestGuessSyncinfo& syncinfo, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr);
         BestGuessFinishBlockResponse(const DynamicArray& msg_payload);
         virtual ~BestGuessFinishBlockResponse();
     private:

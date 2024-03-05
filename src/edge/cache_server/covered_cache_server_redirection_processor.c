@@ -89,7 +89,7 @@ namespace covered
         // Get key (and placement edgeset) from redirected get request
         Key tmp_key;
         Edgeset tmp_placement_edgeset;
-        bool skip_propagation_latency = redirected_request_ptr->isSkipPropagationLatency();
+        ExtraCommonMsghdr extra_common_msghdr = redirected_request_ptr->getExtraCommonMsghdr();
         if (redirected_request_ptr->getMessageType() == MessageType::kCoveredRedirectedGetRequest)
         {
             const CoveredRedirectedGetRequest* const covered_redirected_get_request_ptr = static_cast<const CoveredRedirectedGetRequest*>(redirected_request_ptr);
@@ -117,14 +117,14 @@ namespace covered
         if (!redirected_request_ptr->isBackgroundRequest()) // Send back normal redirected get response
         {
             // NOTE: CoveredRedirectedGetResponse will be processed by edge cache server worker of the sender edge node
-            redirected_get_response_ptr = new CoveredRedirectedGetResponse(tmp_key, value, hitflag, victim_syncset, edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, skip_propagation_latency);
+            redirected_get_response_ptr = new CoveredRedirectedGetResponse(tmp_key, value, hitflag, victim_syncset, edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, extra_common_msghdr);
         }
         else // Send back redirected get response for non-blocking placement deploymeng
         {
             assert(tmp_placement_edgeset.size() <= tmp_edge_wrapper_ptr->getTopkEdgecntForPlacement()); // At most k placement edge nodes each time
 
             // NOTE: CoveredBgfetchRedirectedGetResponse will be processed by edge beacon server of the sender edge node
-            redirected_get_response_ptr = new CoveredBgfetchRedirectedGetResponse(tmp_key, value, hitflag, victim_syncset, tmp_placement_edgeset, edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, skip_propagation_latency);
+            redirected_get_response_ptr = new CoveredBgfetchRedirectedGetResponse(tmp_key, value, hitflag, victim_syncset, tmp_placement_edgeset, edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, extra_common_msghdr);
         }
         assert(redirected_get_response_ptr != NULL);
 

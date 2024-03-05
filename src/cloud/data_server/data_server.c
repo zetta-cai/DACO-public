@@ -132,7 +132,8 @@ namespace covered
         Key tmp_key;
         Value tmp_value;
         Edgeset tmp_placement_edgeset;
-        const bool skip_propagation_latency = global_request_ptr->isSkipPropagationLatency();
+        ExtraCommonMsghdr extra_common_msghdr = global_request_ptr->getExtraCommonMsghdr();
+        const bool skip_propagation_latency = extra_common_msghdr.isSkipPropagationLatency();
         std::string event_name;
         switch (global_request_message_type)
         {
@@ -278,21 +279,21 @@ namespace covered
             case MessageType::kGlobalGetRequest:
             {
                 // Prepare global get response message
-                global_response_ptr = new GlobalGetResponse(tmp_key, tmp_value, cloud_idx, cloud_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+                global_response_ptr = new GlobalGetResponse(tmp_key, tmp_value, cloud_idx, cloud_recvreq_source_addr_, total_bandwidth_usage, event_list, extra_common_msghdr);
                 assert(global_response_ptr != NULL);
                 break;
             }
             case MessageType::kGlobalPutRequest:
             {
                 // Prepare global put response message
-                global_response_ptr = new GlobalPutResponse(tmp_key, cloud_idx, cloud_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+                global_response_ptr = new GlobalPutResponse(tmp_key, cloud_idx, cloud_recvreq_source_addr_, total_bandwidth_usage, event_list, extra_common_msghdr);
                 assert(global_response_ptr != NULL);
                 break;
             }
             case MessageType::kGlobalDelRequest:
             {
                 // Prepare global del response message
-                global_response_ptr = new GlobalDelResponse(tmp_key, cloud_idx, cloud_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+                global_response_ptr = new GlobalDelResponse(tmp_key, cloud_idx, cloud_recvreq_source_addr_, total_bandwidth_usage, event_list, extra_common_msghdr);
                 assert(global_response_ptr != NULL);
                 break;
             }
@@ -302,7 +303,7 @@ namespace covered
                 //assert(tmp_placement_edgeset.size() <= topk_edgecnt_); // At most k placement edge nodes each time
 
                 // Prepare covered placement global get response message
-                global_response_ptr = new CoveredBgfetchGlobalGetResponse(tmp_key, tmp_value, tmp_placement_edgeset, cloud_idx, cloud_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+                global_response_ptr = new CoveredBgfetchGlobalGetResponse(tmp_key, tmp_value, tmp_placement_edgeset, cloud_idx, cloud_recvreq_source_addr_, total_bandwidth_usage, event_list, extra_common_msghdr);
                 assert(global_response_ptr != NULL);
                 break;
             }

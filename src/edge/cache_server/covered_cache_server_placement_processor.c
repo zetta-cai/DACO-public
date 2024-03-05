@@ -53,8 +53,8 @@ namespace covered
         const Key key = covered_placement_notify_request_ptr->getKey();
         const Value value = covered_placement_notify_request_ptr->getValue();
         const bool is_valid = covered_placement_notify_request_ptr->isValid();
-        const bool skip_propagation_latency = covered_placement_notify_request_ptr->isSkipPropagationLatency();
-        is_finish = processPlacementNotifyRequestInternal_(key, value, is_valid, total_bandwidth_usage, event_list, skip_propagation_latency, recvrsp_dst_addr); // NOTE: will update background counter
+        const ExtraCommonMsghdr extra_common_msghdr = covered_placement_notify_request_ptr->getExtraCommonMsghdr();
+        is_finish = processPlacementNotifyRequestInternal_(key, value, is_valid, total_bandwidth_usage, event_list, extra_common_msghdr, recvrsp_dst_addr); // NOTE: will update background counter
 
         return is_finish;
     }

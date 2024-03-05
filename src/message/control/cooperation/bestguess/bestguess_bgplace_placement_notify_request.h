@@ -19,7 +19,7 @@ namespace covered
     class BestGuessBgplacePlacementNotifyRequest : public KeyValueByteSyncinfoMessage
     {
     public:
-        BestGuessBgplacePlacementNotifyRequest(const Key& key, const Value& value, const bool& is_valid, const BestGuessSyncinfo& syncinfo, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& skip_propagation_latency);
+        BestGuessBgplacePlacementNotifyRequest(const Key& key, const Value& value, const bool& is_valid, const BestGuessSyncinfo& syncinfo, const uint32_t& source_index, const NetworkAddr& source_addr, const ExtraCommonMsghdr& extra_common_msghdr);
         BestGuessBgplacePlacementNotifyRequest(const DynamicArray& msg_payload);
         virtual ~BestGuessBgplacePlacementNotifyRequest();
 

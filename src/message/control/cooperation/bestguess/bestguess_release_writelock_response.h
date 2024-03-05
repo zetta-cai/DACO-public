@@ -18,7 +18,7 @@ namespace covered
     class BestGuessReleaseWritelockResponse : public KeySyncinfoMessage
     {
     public:
-        BestGuessReleaseWritelockResponse(const Key& key, const BestGuessSyncinfo& syncinfo, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency);
+        BestGuessReleaseWritelockResponse(const Key& key, const BestGuessSyncinfo& syncinfo, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr);
         BestGuessReleaseWritelockResponse(const DynamicArray& msg_payload);
         virtual ~BestGuessReleaseWritelockResponse();
     private:

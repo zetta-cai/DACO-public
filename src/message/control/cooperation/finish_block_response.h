@@ -18,7 +18,7 @@ namespace covered
     class FinishBlockResponse : public KeyMessage
     {
     public:
-        FinishBlockResponse(const Key& key, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency);
+        FinishBlockResponse(const Key& key, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr);
         FinishBlockResponse(const DynamicArray& msg_payload);
         virtual ~FinishBlockResponse();
     private:

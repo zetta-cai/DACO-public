@@ -57,7 +57,7 @@ namespace covered
 
         void blockForInitialization_();
         void notifyClientsToStartrun_();
-        void notifyClientsToSwitchSlot_();
+        void notifyClientsToSwitchSlot_(const bool& is_monitored);
         void notifyClientsToFinishWarmup_();
         void notifyAllToFinishrun_(); // Finish clients first, and then edge and cloud
         void notifyClientsToFinishrun_(); // Update per-slot/stable total aggregated statistics

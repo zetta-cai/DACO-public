@@ -40,7 +40,7 @@ namespace covered
 
     // For popularity aggregation
 
-    bool CoveredCacheManager::updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, const bool& need_placement_calculation, const bool& sender_is_beacon, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, const EdgeWrapperBase* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, FastPathHint* fast_path_hint_ptr)
+    bool CoveredCacheManager::updatePopularityAggregatorForAggregatedPopularity(const Key& key, const uint32_t& source_edge_idx, const CollectedPopularity& collected_popularity, const bool& is_global_cached, const bool& is_source_cached, const bool& need_placement_calculation, const bool& sender_is_beacon, Edgeset& best_placement_edgeset, bool& need_hybrid_fetching, const EdgeWrapperBase* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr, FastPathHint* fast_path_hint_ptr)
     {
         checkPointers_();
         assert(edge_wrapper_ptr != NULL);
@@ -86,7 +86,7 @@ namespace covered
                 // NOTE: set best_placement_edgeset for preserved edgeset and placement notifications; set best_placement_peredge_synced_victimset for synced victim removal from victim tracker and best_placement_peredge_fetched_victimset for fetched victim removal from victim cache, to avoid duplicate eviction (all for non-blocking placement deployment)
                 std::list<std::pair<uint32_t, std::list<Key>>> best_placement_peredge_synced_victimset;
                 std::list<std::pair<uint32_t, std::list<Key>>> best_placement_peredge_fetched_victimset;
-                is_finish = placementCalculation_(key, tmp_is_global_cached, has_best_placement, best_placement_edgeset, best_placement_peredge_synced_victimset, best_placement_peredge_fetched_victimset, edge_wrapper_ptr, recvrsp_source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, skip_propagation_latency);
+                is_finish = placementCalculation_(key, tmp_is_global_cached, has_best_placement, best_placement_edgeset, best_placement_peredge_synced_victimset, best_placement_peredge_fetched_victimset, edge_wrapper_ptr, recvrsp_source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, extra_common_msghdr);
                 assert(best_placement_edgeset.size() <= topk_edgecnt_); // At most k placement edge nodes each time
                 if (is_finish)
                 {
@@ -118,7 +118,7 @@ namespace covered
                     UNUSED(best_placement_peredge_fetched_victimset);
 
                     // Non-blocking data fetching if with best placement
-                    NonblockDataFetchForPlacementFuncParam tmp_param(key, best_placement_edgeset, skip_propagation_latency, sender_is_beacon, need_hybrid_fetching);
+                    NonblockDataFetchForPlacementFuncParam tmp_param(key, best_placement_edgeset, extra_common_msghdr, sender_is_beacon, need_hybrid_fetching);
                     edge_wrapper_ptr->constCustomFunc(NonblockDataFetchForPlacementFuncParam::FUNCNAME, &tmp_param);
                 }
             }
@@ -262,7 +262,7 @@ namespace covered
         return total_size;
     }
 
-    bool CoveredCacheManager::placementCalculation_(const Key& key, const bool& is_global_cached, bool& has_best_placement, Edgeset& best_placement_edgeset, std::list<std::pair<uint32_t, std::list<Key>>>& best_placement_peredge_synced_victimset, std::list<std::pair<uint32_t, std::list<Key>>>& best_placement_peredge_fetched_victimset, const EdgeWrapperBase* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
+    bool CoveredCacheManager::placementCalculation_(const Key& key, const bool& is_global_cached, bool& has_best_placement, Edgeset& best_placement_edgeset, std::list<std::pair<uint32_t, std::list<Key>>>& best_placement_peredge_synced_victimset, std::list<std::pair<uint32_t, std::list<Key>>>& best_placement_peredge_fetched_victimset, const EdgeWrapperBase* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr) const
     {
         bool is_finish = false;
         has_best_placement = false;
@@ -354,7 +354,7 @@ namespace covered
             // TODO: Maintain a small vicitm cache in each beacon edge node if with frequent lazy victim fetching to avoid degrading directory lookup performance
             std::list<std::pair<uint32_t, std::list<VictimCacheinfo>>> extra_peredge_victim_cacheinfos;
             std::list<std::pair<Key, DirinfoSet>> extra_perkey_victim_dirinfoset;
-            is_finish = parallelFetchVictims_(tmp_object_size, best_placement_victim_fetch_edgeset, edge_wrapper_ptr, recvrsp_source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, skip_propagation_latency, extra_peredge_victim_cacheinfos, extra_perkey_victim_dirinfoset);
+            is_finish = parallelFetchVictims_(tmp_object_size, best_placement_victim_fetch_edgeset, edge_wrapper_ptr, recvrsp_source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, extra_common_msghdr, extra_peredge_victim_cacheinfos, extra_perkey_victim_dirinfoset);
             if (is_finish)
             {
                 return is_finish; // Edge node is NOT running now
@@ -386,7 +386,7 @@ namespace covered
         return is_finish;
     }
 
-    bool CoveredCacheManager::parallelFetchVictims_(const ObjectSize& object_size, const Edgeset& best_placement_victim_fetch_edgeset, const EdgeWrapperBase* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, std::list<std::pair<uint32_t, std::list<VictimCacheinfo>>>& extra_peredge_victim_cacheinfos, std::list<std::pair<Key, DirinfoSet>>& extra_perkey_victim_dirinfoset) const
+    bool CoveredCacheManager::parallelFetchVictims_(const ObjectSize& object_size, const Edgeset& best_placement_victim_fetch_edgeset, const EdgeWrapperBase* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr, std::list<std::pair<uint32_t, std::list<VictimCacheinfo>>>& extra_peredge_victim_cacheinfos, std::list<std::pair<Key, DirinfoSet>>& extra_perkey_victim_dirinfoset) const
     {
         const uint32_t victim_fetch_edgecnt = best_placement_victim_fetch_edgeset.size();
         assert(victim_fetch_edgecnt > 0); // At least one edge node for victim fetching
@@ -455,7 +455,7 @@ namespace covered
                 else // Remote victim fetching
                 {
                     NetworkAddr target_edge_cache_server_recvreq_dst_addr = edge_wrapper_ptr->getTargetDstaddr(DirectoryInfo(tmp_edge_idx)); // Send to cache server of the target edge node for victim fetch processor
-                    sendVictimFetchRequest_(tmp_edge_idx, object_size, edge_wrapper_ptr, recvrsp_source_addr, target_edge_cache_server_recvreq_dst_addr, skip_propagation_latency);
+                    sendVictimFetchRequest_(tmp_edge_idx, object_size, edge_wrapper_ptr, recvrsp_source_addr, target_edge_cache_server_recvreq_dst_addr, extra_common_msghdr);
                 }
             } // End of edgeidx_for_request
 
@@ -539,7 +539,7 @@ namespace covered
         return is_finish;
     }
 
-    void CoveredCacheManager::sendVictimFetchRequest_(const uint32_t& dst_edge_idx_for_compression, const ObjectSize& object_size, const EdgeWrapperBase* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, const NetworkAddr& edge_cache_server_recvreq_dst_addr, const bool& skip_propagation_latency) const
+    void CoveredCacheManager::sendVictimFetchRequest_(const uint32_t& dst_edge_idx_for_compression, const ObjectSize& object_size, const EdgeWrapperBase* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, const NetworkAddr& edge_cache_server_recvreq_dst_addr, const ExtraCommonMsghdr& extra_common_msghdr) const
     {
         assert(edge_wrapper_ptr != NULL);
 
@@ -549,8 +549,8 @@ namespace covered
 
         // Prepare victim fetch request to fetch victims from the target edge node
         const uint32_t current_edge_idx = edge_wrapper_ptr->getNodeIdx();
-        // MessageBase* victim_fetch_request_ptr = new CoveredVictimFetchRequest(object_size, victim_syncset, current_edge_idx, recvrsp_source_addr, skip_propagation_latency);
-        MessageBase* victim_fetch_request_ptr = new CoveredVictimFetchRequest(object_size, current_edge_idx, recvrsp_source_addr, skip_propagation_latency);
+        // MessageBase* victim_fetch_request_ptr = new CoveredVictimFetchRequest(object_size, victim_syncset, current_edge_idx, recvrsp_source_addr, extra_common_msghdr);
+        MessageBase* victim_fetch_request_ptr = new CoveredVictimFetchRequest(object_size, current_edge_idx, recvrsp_source_addr, extra_common_msghdr);
         assert(victim_fetch_request_ptr != NULL);
 
         // Push CoveredVictimFetchRequest into edge-to-edge propagation simulator to send to the target edge node

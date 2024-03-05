@@ -85,17 +85,17 @@ namespace covered
             // Get key from redirected get request
             const RedirectedGetRequest* const redirected_get_request_ptr = static_cast<const RedirectedGetRequest*>(redirected_request_ptr);
             Key tmp_key = redirected_get_request_ptr->getKey();
-            const bool skip_propagation_latency = redirected_get_request_ptr->isSkipPropagationLatency();
+            const ExtraCommonMsghdr extra_common_msghdr = redirected_get_request_ptr->getExtraCommonMsghdr();
 
             // Prepare redirected get response
-            redirected_get_response_ptr = new RedirectedGetResponse(tmp_key, value, hitflag, edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, skip_propagation_latency);
+            redirected_get_response_ptr = new RedirectedGetResponse(tmp_key, value, hitflag, edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, extra_common_msghdr);
         }
         else if (message_type == MessageType::kBestGuessRedirectedGetRequest)
         {
             // Get key from redirected get request
             const BestGuessRedirectedGetRequest* const best_guess_redirected_get_request_ptr = static_cast<const BestGuessRedirectedGetRequest*>(redirected_request_ptr);
             Key tmp_key = best_guess_redirected_get_request_ptr->getKey();
-            const bool skip_propagation_latency = best_guess_redirected_get_request_ptr->isSkipPropagationLatency();
+            const ExtraCommonMsghdr extra_common_msghdr = best_guess_redirected_get_request_ptr->getExtraCommonMsghdr();
 
             // Get local victim vtime for vtime synchronization
             GetLocalVictimVtimeFuncParam tmp_param_for_vtimesync;
@@ -103,7 +103,7 @@ namespace covered
             const uint64_t& local_victim_vtime = tmp_param_for_vtimesync.getLocalVictimVtimeRef();
 
             // Prepare redirected get response
-            redirected_get_response_ptr = new BestGuessRedirectedGetResponse(tmp_key, value, hitflag, BestGuessSyncinfo(local_victim_vtime), edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, skip_propagation_latency);
+            redirected_get_response_ptr = new BestGuessRedirectedGetResponse(tmp_key, value, hitflag, BestGuessSyncinfo(local_victim_vtime), edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, extra_common_msghdr);
         }
         else
         {

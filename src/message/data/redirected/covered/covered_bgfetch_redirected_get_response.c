@@ -6,7 +6,7 @@ namespace covered
 {
     const std::string CoveredBgfetchRedirectedGetResponse::kClassName("CoveredBgfetchRedirectedGetResponse");
 
-    CoveredBgfetchRedirectedGetResponse::CoveredBgfetchRedirectedGetResponse(const Key& key, const Value& value, const Hitflag& hitflag, const VictimSyncset& victim_syncset, const Edgeset& edgeset, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency) : KeyValueHitflagVictimsetEdgesetMessage(key, value, hitflag, victim_syncset, edgeset, MessageType::kCoveredBgfetchRedirectedGetResponse, source_index, source_addr, bandwidth_usage, event_list, skip_propagation_latency)
+    CoveredBgfetchRedirectedGetResponse::CoveredBgfetchRedirectedGetResponse(const Key& key, const Value& value, const Hitflag& hitflag, const VictimSyncset& victim_syncset, const Edgeset& edgeset, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr) : KeyValueHitflagVictimsetEdgesetMessage(key, value, hitflag, victim_syncset, edgeset, MessageType::kCoveredBgfetchRedirectedGetResponse, source_index, source_addr, bandwidth_usage, event_list, extra_common_msghdr)
     {
         // NOTE: hitflag could be Hitflag::kCooperativeInvalid not only for writes but also for large value sizes (in segcache/cachelib/covered)
         assert(hitflag == Hitflag::kCooperativeHit || hitflag == Hitflag::kGlobalMiss || hitflag == Hitflag::kCooperativeInvalid);

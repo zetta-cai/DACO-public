@@ -529,7 +529,7 @@ namespace covered
 
     // (1) For local edge cache admission and remote directory admission
 
-    bool CacheServerBase::admitBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, bool& is_being_written, bool& is_neighbor_cached, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list,const bool& skip_propagation_latency, const bool& is_background) const
+    bool CacheServerBase::admitBeaconDirectory_(const Key& key, const DirectoryInfo& directory_info, bool& is_being_written, bool& is_neighbor_cached, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list,const ExtraCommonMsghdr& extra_common_msghdr, const bool& is_background) const
     {
         checkPointers_();
 
@@ -547,16 +547,16 @@ namespace covered
 
         while (true) // Timeout-and-retry mechanism
         {
-            // // TMPDEBUG24
-            // if (tmp_reqcnt_ >= 1000000)
-            // {
-            //     // std::ostringstream tmposs;
-            //     // tmposs << "admitBeaconDirectory_ for key " << key.getKeyDebugstr() << " at beacon " << beacon_edge_idx;
-            //     // Util::dumpNormalMsg(base_instance_name_, tmposs.str());
-            // }
+            // TMPDEBUG24
+            if (extra_common_msghdr.isMonitored())
+            {
+                std::ostringstream tmposs;
+                tmposs << "admitBeaconDirectory_ for key " << key.getKeyDebugstr() << " at beacon " << beacon_edge_idx;
+                Util::dumpNormalMsg(base_instance_name_, tmposs.str());
+            }
 
             // Prepare directory update request to check directory information in beacon node
-            MessageBase* directory_update_request_ptr = getReqToAdmitBeaconDirectory_(key, directory_info, source_addr, skip_propagation_latency, is_background);
+            MessageBase* directory_update_request_ptr = getReqToAdmitBeaconDirectory_(key, directory_info, source_addr, extra_common_msghdr, is_background);
             assert(directory_update_request_ptr != NULL);
 
             // Push the control request into edge-to-edge propagation simulator to the beacon node
@@ -626,7 +626,7 @@ namespace covered
 
     // (2) For blocking-based cache eviction and local/remote directory eviction
 
-    bool CacheServerBase::evictForCapacity_(const Key& key, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, const bool& is_background) const
+    bool CacheServerBase::evictForCapacity_(const Key& key, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr, const bool& is_background) const
     {
         checkPointers_();
 
@@ -685,7 +685,7 @@ namespace covered
 
         // Perform directory updates for all evicted victims in parallel
         struct timespec update_directory_to_evict_start_timestamp = Util::getCurrentTimespec();
-        is_finish = parallelEvictDirectory_(total_victims, source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, skip_propagation_latency, is_background);
+        is_finish = parallelEvictDirectory_(total_victims, source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, extra_common_msghdr, is_background);
         struct timespec update_directory_to_evict_end_timestamp = Util::getCurrentTimespec();
         uint32_t update_directory_to_evict_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(update_directory_to_evict_end_timestamp, update_directory_to_evict_start_timestamp));
         if (!is_background)
@@ -700,7 +700,7 @@ namespace covered
         return is_finish;
     }
 
-    bool CacheServerBase::parallelEvictDirectory_(const std::unordered_map<Key, Value, KeyHasher>& total_victims, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, const bool& is_background) const
+    bool CacheServerBase::parallelEvictDirectory_(const std::unordered_map<Key, Value, KeyHasher>& total_victims, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr, const bool& is_background) const
     {
         checkPointers_();
         assert(recvrsp_socket_server_ptr != NULL);
@@ -737,7 +737,7 @@ namespace covered
                 bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon(tmp_victim_key);
                 if (current_is_beacon) // Evict local directory info for the victim key
                 {
-                    is_finish = evictLocalDirectory_(tmp_victim_key, tmp_victim_value, directory_info, _unused_is_being_written, source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, skip_propagation_latency, is_background);
+                    is_finish = evictLocalDirectory_(tmp_victim_key, tmp_victim_value, directory_info, _unused_is_being_written, source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, extra_common_msghdr, is_background);
                     if (is_finish)
                     {
                         return is_finish;
@@ -750,7 +750,7 @@ namespace covered
                 }
                 else // Send directory update req with is_admit = false to evict remote directory info for the victim key
                 {
-                    MessageBase* directory_update_request_ptr = getReqToEvictBeaconDirectory_(tmp_victim_key, directory_info, source_addr, skip_propagation_latency, is_background);
+                    MessageBase* directory_update_request_ptr = getReqToEvictBeaconDirectory_(tmp_victim_key, directory_info, source_addr, extra_common_msghdr, is_background);
                     assert(directory_update_request_ptr != NULL);
 
                     // Push the control request into edge-to-edge propagation simulator to the beacon node
@@ -830,7 +830,7 @@ namespace covered
                         std::unordered_map<Key, Value, KeyHasher>::const_iterator total_victims_const_iter = total_victims.find(tmp_received_key);
                         assert(total_victims_const_iter != total_victims.end());
                         const Value tmp_victim_value = total_victims_const_iter->second;
-                        is_finish = processRspToEvictBeaconDirectory_(control_response_ptr, tmp_victim_value, _unused_is_being_written, source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, skip_propagation_latency, is_background);
+                        is_finish = processRspToEvictBeaconDirectory_(control_response_ptr, tmp_victim_value, _unused_is_being_written, source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, extra_common_msghdr, is_background);
                         if (is_finish)
                         {
                             return is_finish; // Edge is NOT running

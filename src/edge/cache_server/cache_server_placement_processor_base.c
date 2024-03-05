@@ -135,7 +135,7 @@ namespace covered
         return;
     }
 
-    bool CacheServerPlacementProcessorBase::processPlacementNotifyRequestInternal_(const Key& key, const Value& value, const bool& is_valid, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency, const NetworkAddr& recvrsp_dst_addr)
+    bool CacheServerPlacementProcessorBase::processPlacementNotifyRequestInternal_(const Key& key, const Value& value, const bool& is_valid, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr, const NetworkAddr& recvrsp_dst_addr)
     {
         checkPointers_();
         CacheServerBase* tmp_cache_server_ptr = cache_server_placement_processor_param_ptr_->getCacheServerPtr();
@@ -155,7 +155,7 @@ namespace covered
         const uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         bool is_being_written = false;
         bool is_neighbor_cached = false;
-        is_finish = tmp_cache_server_ptr->admitBeaconDirectory_(key, DirectoryInfo(current_edge_idx), is_being_written, is_neighbor_cached, edge_cache_server_placement_processor_recvrsp_source_addr_, edge_cache_server_placement_processor_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency, is_background);
+        is_finish = tmp_cache_server_ptr->admitBeaconDirectory_(key, DirectoryInfo(current_edge_idx), is_being_written, is_neighbor_cached, edge_cache_server_placement_processor_recvrsp_source_addr_, edge_cache_server_placement_processor_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, extra_common_msghdr, is_background);
         if (is_finish)
         {
             return is_finish;
@@ -173,7 +173,7 @@ namespace covered
 
         // Perform background cache eviction in a blocking manner for consistent directory information (note that cache eviction happens after non-blocking placement notification)
         // NOTE: we update aggregated uncached popularity yet DISABLE recursive cache placement for metadata preservation during cache eviction
-        is_finish = tmp_cache_server_ptr->evictForCapacity_(key, edge_cache_server_placement_processor_recvrsp_source_addr_, edge_cache_server_placement_processor_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency, is_background); // May update local synced victims
+        is_finish = tmp_cache_server_ptr->evictForCapacity_(key, edge_cache_server_placement_processor_recvrsp_source_addr_, edge_cache_server_placement_processor_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, extra_common_msghdr, is_background); // May update local synced victims
 
         struct timespec placement_notify_end_timestamp = Util::getCurrentTimespec();
         uint32_t placement_notify_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(placement_notify_end_timestamp, placement_notify_start_timestamp));
@@ -208,8 +208,8 @@ namespace covered
 
         // Perform background cache eviction in a blocking manner for consistent directory information (note that cache eviction happens after non-blocking placement notification)
         // NOTE: we update aggregated uncached popularity yet DISABLE recursive cache placement for metadata preservation during cache eviction
-        const bool skip_propagation_latency = local_cache_admission_item.skipPropagationLatency();
-        is_finish = tmp_cache_server_ptr->evictForCapacity_(tmp_key, edge_cache_server_placement_processor_recvrsp_source_addr_, edge_cache_server_placement_processor_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, skip_propagation_latency, is_background); // May update local synced victims
+        const bool extra_common_msghdr = local_cache_admission_item.skipPropagationLatency();
+        is_finish = tmp_cache_server_ptr->evictForCapacity_(tmp_key, edge_cache_server_placement_processor_recvrsp_source_addr_, edge_cache_server_placement_processor_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, extra_common_msghdr, is_background); // May update local synced victims
 
         struct timespec admission_end_timestamp = Util::getCurrentTimespec();
         uint32_t admission_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(admission_end_timestamp, admission_start_timestamp));

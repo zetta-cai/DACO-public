@@ -20,7 +20,7 @@ namespace covered
     class BestGuessBgplaceDirectoryUpdateRequest : public KeyValidityDirectorySyncinfoMessage
     {
     public:
-        BestGuessBgplaceDirectoryUpdateRequest(const Key& key, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const BestGuessSyncinfo& bestguess_syncinfo, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& skip_propagation_latency);
+        BestGuessBgplaceDirectoryUpdateRequest(const Key& key, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const BestGuessSyncinfo& bestguess_syncinfo, const uint32_t& source_index, const NetworkAddr& source_addr, const ExtraCommonMsghdr& extra_common_msghdr);
         BestGuessBgplaceDirectoryUpdateRequest(const DynamicArray& msg_payload);
         virtual ~BestGuessBgplaceDirectoryUpdateRequest();
     private:

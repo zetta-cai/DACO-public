@@ -18,7 +18,7 @@ namespace covered
     class CoveredFinishBlockResponse : public KeyVictimsetMessage
     {
     public:
-        CoveredFinishBlockResponse(const Key& key, const VictimSyncset& victim_syncset, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency);
+        CoveredFinishBlockResponse(const Key& key, const VictimSyncset& victim_syncset, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr);
         CoveredFinishBlockResponse(const DynamicArray& msg_payload);
         virtual ~CoveredFinishBlockResponse();
     private:

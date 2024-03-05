@@ -11,6 +11,7 @@
 
 #include "common/key.h"
 #include "common/value.h"
+#include "message/extra_common_msghdr.h"
 
 namespace covered
 {
@@ -18,14 +19,14 @@ namespace covered
     {
     public:
         LocalCacheAdmissionItem();
-        LocalCacheAdmissionItem(const Key& key, const Value& value, const bool& is_neighbor_cached, const bool& is_valid, const bool& skip_propagation_latency);
+        LocalCacheAdmissionItem(const Key& key, const Value& value, const bool& is_neighbor_cached, const bool& is_valid, const ExtraCommonMsghdr& extra_common_msghdr);
         ~LocalCacheAdmissionItem();
 
         Key getKey() const;
         Value getValue() const;
         bool isNeighborCached() const;
         bool isValid() const;
-        bool skipPropagationLatency() const;
+        ExtraCommonMsghdr getExtraCommonMsghdr() const;
 
         const LocalCacheAdmissionItem& operator=(const LocalCacheAdmissionItem& other);    
     private:
@@ -35,7 +36,7 @@ namespace covered
         Value value_;
         bool is_neighbor_cached_;
         bool is_valid_;
-        bool skip_propagation_latency_;
+        ExtraCommonMsghdr extra_common_msghdr_;
     };
 }
 

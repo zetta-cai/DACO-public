@@ -97,12 +97,12 @@ namespace covered
         MessageBase* directory_lookup_response_ptr = NULL;
         if (message_type == MessageType::kDirectoryLookupRequest)
         {
-            // Get key and skip_propagation_latency from control request if any
+            // Get key and extra_common_msghdr from control request if any
             const DirectoryLookupRequest* const directory_lookup_request_ptr = static_cast<const DirectoryLookupRequest*>(control_request_ptr);
             Key tmp_key = directory_lookup_request_ptr->getKey();
-            const bool skip_propagation_latency = directory_lookup_request_ptr->isSkipPropagationLatency();
+            const ExtraCommonMsghdr extra_common_msghdr = directory_lookup_request_ptr->getExtraCommonMsghdr();
 
-            directory_lookup_response_ptr = new DirectoryLookupResponse(tmp_key, is_being_written, is_valid_directory_exist, directory_info, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            directory_lookup_response_ptr = new DirectoryLookupResponse(tmp_key, is_being_written, is_valid_directory_exist, directory_info, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, extra_common_msghdr);
         }
         else if (message_type == MessageType::kBestGuessDirectoryLookupRequest)
         {
@@ -111,12 +111,12 @@ namespace covered
             tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
             const uint64_t& local_victim_vtime = tmp_param_for_vtimesync.getLocalVictimVtimeRef();
 
-            // Get key and skip_propagation_latency from control request if any
+            // Get key and extra_common_msghdr from control request if any
             const BestGuessDirectoryLookupRequest* const bestguess_directory_lookup_request_ptr = static_cast<const BestGuessDirectoryLookupRequest*>(control_request_ptr);
             Key tmp_key = bestguess_directory_lookup_request_ptr->getKey();
-            const bool skip_propagation_latency = bestguess_directory_lookup_request_ptr->isSkipPropagationLatency();
+            const ExtraCommonMsghdr extra_common_msghdr = bestguess_directory_lookup_request_ptr->getExtraCommonMsghdr();
 
-            directory_lookup_response_ptr = new BestGuessDirectoryLookupResponse(tmp_key, is_being_written, is_valid_directory_exist, directory_info, BestGuessSyncinfo(local_victim_vtime), edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            directory_lookup_response_ptr = new BestGuessDirectoryLookupResponse(tmp_key, is_being_written, is_valid_directory_exist, directory_info, BestGuessSyncinfo(local_victim_vtime), edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, extra_common_msghdr);
         }
         else
         {
@@ -216,7 +216,7 @@ namespace covered
         const uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
 
         Key tmp_key;
-        bool skip_propagation_latency = false;
+        ExtraCommonMsghdr extra_common_msghdr;
 
         const MessageType message_type = control_request_ptr->getMessageType();
         MessageBase* directory_update_response_ptr = NULL;
@@ -224,15 +224,15 @@ namespace covered
         {
             const DirectoryUpdateRequest* const directory_update_request_ptr = static_cast<const DirectoryUpdateRequest*>(control_request_ptr);
             tmp_key = directory_update_request_ptr->getKey();
-            skip_propagation_latency = directory_update_request_ptr->isSkipPropagationLatency();
+            extra_common_msghdr = directory_update_request_ptr->getExtraCommonMsghdr();
 
-            directory_update_response_ptr = new DirectoryUpdateResponse(tmp_key, is_being_written, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            directory_update_response_ptr = new DirectoryUpdateResponse(tmp_key, is_being_written, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, extra_common_msghdr);
         }
         else if (message_type == MessageType::kBestGuessDirectoryUpdateRequest || message_type == MessageType::kBestGuessBgplaceDirectoryUpdateRequest)
         {
             const BestGuessDirectoryUpdateRequest* const bestguess_directory_update_request_ptr = static_cast<const BestGuessDirectoryUpdateRequest*>(control_request_ptr);
             tmp_key = bestguess_directory_update_request_ptr->getKey();
-            skip_propagation_latency = bestguess_directory_update_request_ptr->isSkipPropagationLatency();
+            extra_common_msghdr = bestguess_directory_update_request_ptr->getExtraCommonMsghdr();
 
             // Get local victim vtime for vtime synchronization
             GetLocalVictimVtimeFuncParam tmp_param_for_vtimesync;
@@ -241,11 +241,11 @@ namespace covered
 
             if (message_type == MessageType::kBestGuessDirectoryUpdateRequest) // Foreground directory admission/eviction by local placement notification or value update
             {
-                directory_update_response_ptr = new BestGuessDirectoryUpdateResponse(tmp_key, is_being_written, BestGuessSyncinfo(local_victim_vtime), edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+                directory_update_response_ptr = new BestGuessDirectoryUpdateResponse(tmp_key, is_being_written, BestGuessSyncinfo(local_victim_vtime), edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, extra_common_msghdr);
             }
             else // Background directory admission/eviction by remote placement notification
             {
-                directory_update_response_ptr = new BestGuessBgplaceDirectoryUpdateResponse(tmp_key, is_being_written, BestGuessSyncinfo(local_victim_vtime), edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+                directory_update_response_ptr = new BestGuessBgplaceDirectoryUpdateResponse(tmp_key, is_being_written, BestGuessSyncinfo(local_victim_vtime), edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, extra_common_msghdr);
             }
         }
         else
@@ -325,22 +325,22 @@ namespace covered
         {
             const AcquireWritelockRequest* const acquire_writelock_request_ptr = static_cast<const AcquireWritelockRequest*>(control_request_ptr);
             Key tmp_key = acquire_writelock_request_ptr->getKey();
-            bool skip_propagation_latency = acquire_writelock_request_ptr->isSkipPropagationLatency();
+            ExtraCommonMsghdr extra_common_msghdr = acquire_writelock_request_ptr->getExtraCommonMsghdr();
 
-            acquire_writelock_response_ptr = new AcquireWritelockResponse(tmp_key, lock_result, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            acquire_writelock_response_ptr = new AcquireWritelockResponse(tmp_key, lock_result, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, extra_common_msghdr);
         }
         else if (message_type == MessageType::kBestGuessAcquireWritelockRequest)
         {
             const BestGuessAcquireWritelockRequest* const bestguess_acquire_writelock_request_ptr = static_cast<const BestGuessAcquireWritelockRequest*>(control_request_ptr);
             Key tmp_key = bestguess_acquire_writelock_request_ptr->getKey();
-            bool skip_propagation_latency = bestguess_acquire_writelock_request_ptr->isSkipPropagationLatency();
+            ExtraCommonMsghdr extra_common_msghdr = bestguess_acquire_writelock_request_ptr->getExtraCommonMsghdr();
 
             // Get local victim vtime for vtime synchronization
             GetLocalVictimVtimeFuncParam tmp_param_for_vtimesync;
             tmp_edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
             const uint64_t& local_victim_vtime = tmp_param_for_vtimesync.getLocalVictimVtimeRef();
 
-            acquire_writelock_response_ptr = new BestGuessAcquireWritelockResponse(tmp_key, lock_result, BestGuessSyncinfo(local_victim_vtime), edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            acquire_writelock_response_ptr = new BestGuessAcquireWritelockResponse(tmp_key, lock_result, BestGuessSyncinfo(local_victim_vtime), edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, extra_common_msghdr);
         }
         else
         {
@@ -416,16 +416,16 @@ namespace covered
         {
             const ReleaseWritelockRequest* const release_writelock_request_ptr = static_cast<const ReleaseWritelockRequest*>(control_request_ptr);
             Key tmp_key = release_writelock_request_ptr->getKey();
-            bool skip_propagation_latency = release_writelock_request_ptr->isSkipPropagationLatency();
+            ExtraCommonMsghdr extra_common_msghdr = release_writelock_request_ptr->getExtraCommonMsghdr();
 
             uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
-            release_writelock_response_ptr = new ReleaseWritelockResponse(tmp_key, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            release_writelock_response_ptr = new ReleaseWritelockResponse(tmp_key, edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, extra_common_msghdr);
         }
         else if (message_type == MessageType::kBestGuessReleaseWritelockRequest)
         {
             const BestGuessReleaseWritelockRequest* const bestguess_release_writelock_request_ptr = static_cast<const BestGuessReleaseWritelockRequest*>(control_request_ptr);
             Key tmp_key = bestguess_release_writelock_request_ptr->getKey();
-            bool skip_propagation_latency = bestguess_release_writelock_request_ptr->isSkipPropagationLatency();
+            ExtraCommonMsghdr extra_common_msghdr = bestguess_release_writelock_request_ptr->getExtraCommonMsghdr();
 
             // Get local victim vtime for vtime synchronization
             GetLocalVictimVtimeFuncParam tmp_param_for_vtimesync;
@@ -433,7 +433,7 @@ namespace covered
             const uint64_t& local_victim_vtime = tmp_param_for_vtimesync.getLocalVictimVtimeRef();
 
             uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
-            release_writelock_response_ptr = new BestGuessReleaseWritelockResponse(tmp_key, BestGuessSyncinfo(local_victim_vtime), edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+            release_writelock_response_ptr = new BestGuessReleaseWritelockResponse(tmp_key, BestGuessSyncinfo(local_victim_vtime), edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, extra_common_msghdr);
         }
         else
         {
@@ -519,7 +519,7 @@ namespace covered
         const BestGuessPlaceinfo placeinfo = best_guess_placement_trigger_request_ptr->getPlaceinfo();
         const uint32_t placement_edge_idx = placeinfo.getPlacementEdgeIdx();
         const BestGuessSyncinfo syncinfo = best_guess_placement_trigger_request_ptr->getSyncinfo();
-        const bool skip_propagation_latency = best_guess_placement_trigger_request_ptr->isSkipPropagationLatency();
+        const ExtraCommonMsghdr extra_common_msghdr = best_guess_placement_trigger_request_ptr->getExtraCommonMsghdr();
 
         // Vtime synchronization
         UpdateNeighborVictimVtimeParam tmp_param_for_neighborvtime(source_edge_idx, syncinfo.getVtime());
@@ -550,12 +550,12 @@ namespace covered
                 // Admit local beacon directory
                 bool is_being_written = false;
                 bool unused_is_neighbor_cached = false; // ONLY used by COVERED for local cached reward calculation
-                tmp_edge_wrapper_ptr->admitLocalDirectory_(key, DirectoryInfo(placement_edge_idx), is_being_written, unused_is_neighbor_cached, skip_propagation_latency);
+                tmp_edge_wrapper_ptr->admitLocalDirectory_(key, DirectoryInfo(placement_edge_idx), is_being_written, unused_is_neighbor_cached, extra_common_msghdr);
                 assert(!unused_is_neighbor_cached); // (i) MUST be false due to ONLY preserving dirinfo for the first placement trigger of global miss; (ii) is_neighbor_cached will NOT be used by BestGuess local edge cachce
 
                 // Notify placement processor to admit local edge cache (NOTE: NO need to admit directory) and trigger local cache eviciton in the background
                 const bool is_valid = !is_being_written;
-                bool is_successful = tmp_edge_wrapper_ptr->getLocalCacheAdmissionBufferPtr()->push(LocalCacheAdmissionItem(key, value, unused_is_neighbor_cached, is_valid, skip_propagation_latency));
+                bool is_successful = tmp_edge_wrapper_ptr->getLocalCacheAdmissionBufferPtr()->push(LocalCacheAdmissionItem(key, value, unused_is_neighbor_cached, is_valid, extra_common_msghdr));
                 assert(is_successful);
             }
             else // Remote placement notification
@@ -563,7 +563,7 @@ namespace covered
                 // Prepare BestGuess placement notify request
                 const bool is_being_written = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->isBeingWritten(key);
                 const bool is_valid = !is_being_written;
-                BestGuessBgplacePlacementNotifyRequest* bestguess_placement_notify_request_ptr = new BestGuessBgplacePlacementNotifyRequest(key, value, is_valid, BestGuessSyncinfo(local_victim_vtime), current_beacon_edge_idx, edge_beacon_server_recvreq_source_addr_, skip_propagation_latency);
+                BestGuessBgplacePlacementNotifyRequest* bestguess_placement_notify_request_ptr = new BestGuessBgplacePlacementNotifyRequest(key, value, is_valid, BestGuessSyncinfo(local_victim_vtime), current_beacon_edge_idx, edge_beacon_server_recvreq_source_addr_, extra_common_msghdr);
                 assert(bestguess_placement_notify_request_ptr != NULL);
 
                 // Issue remote placement notification to placement node with key and value
@@ -578,7 +578,7 @@ namespace covered
         embedBackgroundCounterIfNotEmpty_(total_bandwidth_usage, event_list); // Embed background events/bandwidth if any into control response message
 
         // Generate response
-        BestGuessPlacementTriggerResponse* best_guess_placement_trigger_response_ptr = new BestGuessPlacementTriggerResponse(key, is_triggered, BestGuessSyncinfo(local_victim_vtime), current_beacon_edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, skip_propagation_latency);
+        BestGuessPlacementTriggerResponse* best_guess_placement_trigger_response_ptr = new BestGuessPlacementTriggerResponse(key, is_triggered, BestGuessSyncinfo(local_victim_vtime), current_beacon_edge_idx, edge_beacon_server_recvreq_source_addr_, total_bandwidth_usage, event_list, extra_common_msghdr);
         assert(best_guess_placement_trigger_response_ptr != NULL);
 
         // Push the response into edge-to-edge propagation simulator to cache server worker

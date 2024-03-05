@@ -20,7 +20,7 @@ namespace covered
     class KeyCollectpopVictimsetMessage : public MessageBase
     {
     public:
-        KeyCollectpopVictimsetMessage(const Key& key, const CollectedPopularity& collected_popularity, const VictimSyncset& victim_syncset, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency);
+        KeyCollectpopVictimsetMessage(const Key& key, const CollectedPopularity& collected_popularity, const VictimSyncset& victim_syncset, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr);
         KeyCollectpopVictimsetMessage(const DynamicArray& msg_payload);
         virtual ~KeyCollectpopVictimsetMessage();
 

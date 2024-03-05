@@ -17,7 +17,7 @@ namespace covered
     class SwitchSlotRequest : public UintMessage
     {
     public:
-        SwitchSlotRequest(const uint32_t& target_slot_idx, const uint32_t& source_index, const NetworkAddr& source_addr);
+        SwitchSlotRequest(const uint32_t& target_slot_idx, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& is_monitored);
         SwitchSlotRequest(const DynamicArray& msg_payload);
         virtual ~SwitchSlotRequest();
 

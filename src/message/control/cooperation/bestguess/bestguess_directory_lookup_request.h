@@ -18,7 +18,7 @@ namespace covered
     class BestGuessDirectoryLookupRequest : public KeySyncinfoMessage
     {
     public:
-        BestGuessDirectoryLookupRequest(const Key& key, const BestGuessSyncinfo& syncinfo, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& skip_propagation_latency);
+        BestGuessDirectoryLookupRequest(const Key& key, const BestGuessSyncinfo& syncinfo, const uint32_t& source_index, const NetworkAddr& source_addr, const ExtraCommonMsghdr& extra_common_msghdr);
         BestGuessDirectoryLookupRequest(const DynamicArray& msg_payload);
         virtual ~BestGuessDirectoryLookupRequest();
     private:

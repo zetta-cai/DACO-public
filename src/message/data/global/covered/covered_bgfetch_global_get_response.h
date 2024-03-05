@@ -21,7 +21,7 @@ namespace covered
     class CoveredBgfetchGlobalGetResponse : public KeyValueEdgesetMessage
     {
     public:
-        CoveredBgfetchGlobalGetResponse(const Key& key, const Value& value, const Edgeset& edgeset, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency);
+        CoveredBgfetchGlobalGetResponse(const Key& key, const Value& value, const Edgeset& edgeset, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr);
         CoveredBgfetchGlobalGetResponse(const DynamicArray& msg_payload);
         virtual ~CoveredBgfetchGlobalGetResponse();
     private:

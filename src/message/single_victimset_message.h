@@ -18,7 +18,7 @@ namespace covered
     class SingleVictimsetMessage : public MessageBase
     {
     public:
-        SingleVictimsetMessage(const VictimSyncset& victim_fetchset, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency);
+        SingleVictimsetMessage(const VictimSyncset& victim_fetchset, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr);
         SingleVictimsetMessage(const DynamicArray& msg_payload);
         virtual ~SingleVictimsetMessage();
 

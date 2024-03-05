@@ -54,7 +54,7 @@ namespace covered
 
     // (3) Invalidate and unblock for MSI protocol
 
-    MessageBase* BasicEdgeWrapper::getInvalidationRequest_(const Key& key, const NetworkAddr& recvrsp_source_addr, const uint32_t& dst_edge_idx_for_compression, const bool& skip_propagation_latency) const
+    MessageBase* BasicEdgeWrapper::getInvalidationRequest_(const Key& key, const NetworkAddr& recvrsp_source_addr, const uint32_t& dst_edge_idx_for_compression, const ExtraCommonMsghdr& extra_common_msghdr) const
     {
         checkPointers_();
 
@@ -65,7 +65,7 @@ namespace covered
         MessageBase* invalidation_request_ptr = NULL;
         if (cache_name != Util::BESTGUESS_CACHE_NAME) // other baselines
         {
-            invalidation_request_ptr = new InvalidationRequest(key, edge_idx, recvrsp_source_addr, skip_propagation_latency);
+            invalidation_request_ptr = new InvalidationRequest(key, edge_idx, recvrsp_source_addr, extra_common_msghdr);
         }
         else // BestGuess
         {
@@ -74,7 +74,7 @@ namespace covered
             getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
             const uint64_t& local_victim_vtime = tmp_param_for_vtimesync.getLocalVictimVtimeRef();
 
-            invalidation_request_ptr = new BestGuessInvalidationRequest(key, BestGuessSyncinfo(local_victim_vtime), edge_idx, recvrsp_source_addr, skip_propagation_latency);
+            invalidation_request_ptr = new BestGuessInvalidationRequest(key, BestGuessSyncinfo(local_victim_vtime), edge_idx, recvrsp_source_addr, extra_common_msghdr);
         }
         assert(invalidation_request_ptr != NULL);
 
@@ -110,7 +110,7 @@ namespace covered
         return;
     }
 
-    MessageBase* BasicEdgeWrapper::getFinishBlockRequest_(const Key& key, const NetworkAddr& recvrsp_source_addr, const uint32_t& dst_edge_idx_for_compression, const bool& skip_propagation_latency) const
+    MessageBase* BasicEdgeWrapper::getFinishBlockRequest_(const Key& key, const NetworkAddr& recvrsp_source_addr, const uint32_t& dst_edge_idx_for_compression, const ExtraCommonMsghdr& extra_common_msghdr) const
     {
         checkPointers_();
 
@@ -120,7 +120,7 @@ namespace covered
         MessageBase* finish_block_request_ptr = NULL;
         if (getCacheName() != Util::BESTGUESS_CACHE_NAME) // other baselines
         {
-            finish_block_request_ptr = new FinishBlockRequest(key, edge_idx, recvrsp_source_addr, skip_propagation_latency);
+            finish_block_request_ptr = new FinishBlockRequest(key, edge_idx, recvrsp_source_addr, extra_common_msghdr);
         }
         else // BestGuess
         {
@@ -129,7 +129,7 @@ namespace covered
             getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
             const uint64_t& local_victim_vtime = tmp_param_for_vtimesync.getLocalVictimVtimeRef();
 
-            finish_block_request_ptr = new BestGuessFinishBlockRequest(key, BestGuessSyncinfo(local_victim_vtime), edge_idx, recvrsp_source_addr, skip_propagation_latency);
+            finish_block_request_ptr = new BestGuessFinishBlockRequest(key, BestGuessSyncinfo(local_victim_vtime), edge_idx, recvrsp_source_addr, extra_common_msghdr);
         }
         assert(finish_block_request_ptr != NULL);
 
@@ -195,12 +195,14 @@ namespace covered
 
     // (6.2) For local directory admission
 
-    void BasicEdgeWrapper::admitLocalDirectory_(const Key& key, const DirectoryInfo& directory_info, bool& is_being_written, bool& is_neighbor_cached, const bool& skip_propagation_latency) const
+    void BasicEdgeWrapper::admitLocalDirectory_(const Key& key, const DirectoryInfo& directory_info, bool& is_being_written, bool& is_neighbor_cached, const ExtraCommonMsghdr& extra_common_msghdr) const
     {
         // Cache server admits local directory for foreground independent admission
         // Beacon server admits local directory for background non-blocking placement notification at local/remote beacon edge node
 
         checkPointers_();
+
+        UNUSED(extra_common_msghdr);
 
         uint32_t current_edge_idx = getNodeIdx();
         if (getCacheName() != Util::BESTGUESS_CACHE_NAME) // Admit local directory for other baselines
@@ -208,6 +210,7 @@ namespace covered
             const bool is_admit = true; // Admit content directory
             MetadataUpdateRequirement metadata_update_requirement;
             cooperation_wrapper_ptr_->updateDirectoryTable(key, current_edge_idx, is_admit, directory_info, is_being_written, is_neighbor_cached, metadata_update_requirement);
+            UNUSED(metadata_update_requirement);
         }
         else // Validate dirinfo preserved when triggering best-guess placement for BestGuess
         {

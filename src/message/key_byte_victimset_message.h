@@ -21,7 +21,7 @@ namespace covered
     class KeyByteVictimsetMessage : public MessageBase
     {
     public:
-        KeyByteVictimsetMessage(const Key& key, const uint8_t& byte, const VictimSyncset& victim_syncset, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency);
+        KeyByteVictimsetMessage(const Key& key, const uint8_t& byte, const VictimSyncset& victim_syncset, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr);
         KeyByteVictimsetMessage(const DynamicArray& msg_payload);
         virtual ~KeyByteVictimsetMessage();
 

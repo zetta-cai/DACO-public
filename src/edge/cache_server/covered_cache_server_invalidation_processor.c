@@ -68,20 +68,20 @@ namespace covered
         assert(control_request_ptr->getMessageType() == MessageType::kCoveredInvalidationRequest);
 
         Key tmp_key;
-        bool skip_propagation_latency = false;
+        ExtraCommonMsghdr extra_common_msghdr;
         MessageBase* invalidation_response_ptr = NULL;
         
         const CoveredInvalidationRequest* const covered_invalidation_request_ptr = static_cast<const CoveredInvalidationRequest*>(control_request_ptr);
         tmp_key = covered_invalidation_request_ptr->getKey();
-        skip_propagation_latency = covered_invalidation_request_ptr->isSkipPropagationLatency();
+        extra_common_msghdr = covered_invalidation_request_ptr->getExtraCommonMsghdr();
 
         // // Prepare victim syncset for piggybacking-based victim synchronization
         // const uint32_t dst_edge_idx_for_compression = covered_invalidation_request_ptr->getSourceIndex();
         // VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_edge_idx_for_compression, cache_margin_bytes);
 
         // Prepare invalidation response
-        // invalidation_response_ptr = new CoveredInvalidationResponse(tmp_key, victim_syncset, edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, skip_propagation_latency);
-        invalidation_response_ptr = new CoveredInvalidationResponse(tmp_key, edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, skip_propagation_latency);
+        // invalidation_response_ptr = new CoveredInvalidationResponse(tmp_key, victim_syncset, edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, extra_common_msghdr);
+        invalidation_response_ptr = new CoveredInvalidationResponse(tmp_key, edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, extra_common_msghdr);
         assert(invalidation_response_ptr != NULL);
 
         return invalidation_response_ptr;

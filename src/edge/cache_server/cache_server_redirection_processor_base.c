@@ -131,12 +131,6 @@ namespace covered
         assert(redirected_request_ptr != NULL);
         assert(recvrsp_dst_addr.isValidAddr());
 
-        // Get key and value from redirected request if any
-        /*assert(redirected_request_ptr->getMessageType() == MessageType::kRedirectedGetRequest);
-        const RedirectedGetRequest* const redirected_get_request_ptr = static_cast<const RedirectedGetRequest*>(redirected_request_ptr);
-        Key tmp_key = redirected_get_request_ptr->getKey();
-        const bool skip_propagation_latency = redirected_get_request_ptr->isSkipPropagationLatency();*/
-
         checkPointers_();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_redirection_processor_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 

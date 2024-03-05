@@ -360,7 +360,7 @@ namespace covered
 
     // (3) Invalidate and unblock for MSI protocol
 
-    bool EdgeWrapperBase::parallelInvalidateCacheCopies(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const DirinfoSet& all_dirinfo, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
+    bool EdgeWrapperBase::parallelInvalidateCacheCopies(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const DirinfoSet& all_dirinfo, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr) const
     {
         assert(recvrsp_socket_server_ptr != NULL);
         assert(recvrsp_source_addr.isValidAddr());
@@ -432,7 +432,7 @@ namespace covered
                 }
                 else // Issue request to invalidate remote cache
                 {
-                    MessageBase* invalidation_request_ptr = getInvalidationRequest_(key, recvrsp_source_addr, tmp_dst_edge_idx, skip_propagation_latency);
+                    MessageBase* invalidation_request_ptr = getInvalidationRequest_(key, recvrsp_source_addr, tmp_dst_edge_idx, extra_common_msghdr);
                     assert(invalidation_request_ptr != NULL);
 
                     // Push invalidation request into edge-to-edge propagation simulator to send to neighbor edge node
@@ -530,7 +530,7 @@ namespace covered
         return is_finish;
     }
 
-    bool EdgeWrapperBase::parallelNotifyEdgesToFinishBlock(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const
+    bool EdgeWrapperBase::parallelNotifyEdgesToFinishBlock(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr) const
     {
         assert(recvrsp_socket_server_ptr != NULL);
         assert(recvrsp_source_addr.isValidAddr());
@@ -575,7 +575,7 @@ namespace covered
                 assert(tmp_dst_edge_idx != node_idx_);
    
                 // Issue finish block request to dst edge node
-                MessageBase* finish_block_request_ptr = getFinishBlockRequest_(key, recvrsp_source_addr, tmp_dst_edge_idx, skip_propagation_latency);
+                MessageBase* finish_block_request_ptr = getFinishBlockRequest_(key, recvrsp_source_addr, tmp_dst_edge_idx, extra_common_msghdr);
                 assert(finish_block_request_ptr != NULL);
 
                 // Push FinishBlockRequest into edge-to-edge propagation simulator to send to blocked edge node

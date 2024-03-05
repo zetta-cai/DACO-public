@@ -20,7 +20,7 @@ namespace covered
     class CoveredBgfetchRedirectedGetRequest : public KeyVictimsetEdgesetMessage
     {
     public:
-        CoveredBgfetchRedirectedGetRequest(const Key& key, const VictimSyncset& victim_syncset, const Edgeset& edgeset, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& skip_propagation_latency);
+        CoveredBgfetchRedirectedGetRequest(const Key& key, const VictimSyncset& victim_syncset, const Edgeset& edgeset, const uint32_t& source_index, const NetworkAddr& source_addr, const ExtraCommonMsghdr& extra_common_msghdr);
         CoveredBgfetchRedirectedGetRequest(const DynamicArray& msg_payload);
         virtual ~CoveredBgfetchRedirectedGetRequest();
     private:

@@ -4,7 +4,7 @@ namespace covered
 {
     const std::string KeyTwoByteVictimsetMessage::kClassName("KeyTwoByteVictimsetMessage");
 
-    KeyTwoByteVictimsetMessage::KeyTwoByteVictimsetMessage(const Key& key, const uint8_t& first_byte, const uint8_t& second_byte, const VictimSyncset& victim_syncset, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency) : MessageBase(message_type, source_index, source_addr, bandwidth_usage, event_list, skip_propagation_latency)
+    KeyTwoByteVictimsetMessage::KeyTwoByteVictimsetMessage(const Key& key, const uint8_t& first_byte, const uint8_t& second_byte, const VictimSyncset& victim_syncset, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr) : MessageBase(message_type, source_index, source_addr, bandwidth_usage, event_list, extra_common_msghdr)
     {
         key_ = key;
         first_byte_ = first_byte;

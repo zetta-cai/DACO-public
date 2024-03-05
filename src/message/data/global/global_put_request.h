@@ -19,7 +19,7 @@ namespace covered
     class GlobalPutRequest : public KeyValueMessage
     {
     public:
-        GlobalPutRequest(const Key& key, const Value& value, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& skip_propagation_latency);
+        GlobalPutRequest(const Key& key, const Value& value, const uint32_t& source_index, const NetworkAddr& source_addr, const ExtraCommonMsghdr& extra_common_msghdr);
         GlobalPutRequest(const DynamicArray& msg_payload);
         virtual ~GlobalPutRequest();
     private:

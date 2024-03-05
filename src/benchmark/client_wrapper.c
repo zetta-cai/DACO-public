@@ -68,7 +68,7 @@ namespace covered
         return NULL;
     }
 
-    ClientWrapper::ClientWrapper(const uint64_t& capacity_bytes, const uint32_t& client_idx, const uint32_t& clientcnt, const bool& is_warmup_speedup, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge_us, const uint32_t& warmup_reqcnt_scale, const std::string& workload_name) : NodeWrapperBase(NodeWrapperBase::CLIENT_NODE_ROLE, client_idx, clientcnt, false), is_warmup_speedup_(is_warmup_speedup), capacity_bytes_(capacity_bytes), edgecnt_(edgecnt), keycnt_(keycnt), perclient_workercnt_(perclient_workercnt), warmup_reqcnt_scale_(warmup_reqcnt_scale), is_warmup_phase_(true)
+    ClientWrapper::ClientWrapper(const uint64_t& capacity_bytes, const uint32_t& client_idx, const uint32_t& clientcnt, const bool& is_warmup_speedup, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge_us, const uint32_t& warmup_reqcnt_scale, const std::string& workload_name) : NodeWrapperBase(NodeWrapperBase::CLIENT_NODE_ROLE, client_idx, clientcnt, false), is_warmup_speedup_(is_warmup_speedup), capacity_bytes_(capacity_bytes), edgecnt_(edgecnt), keycnt_(keycnt), perclient_workercnt_(perclient_workercnt), warmup_reqcnt_scale_(warmup_reqcnt_scale), is_warmup_phase_(true), is_monitored_(false)
     {
         // Differentiate different clients
         std::ostringstream oss;
@@ -163,6 +163,11 @@ namespace covered
     bool ClientWrapper::isWarmupPhase() const
     {
         return is_warmup_phase_.load(Util::LOAD_CONCURRENCY_ORDER);
+    }
+
+    bool ClientWrapper::isMonitored() const
+    {
+        return is_monitored_.load(Util::LOAD_CONCURRENCY_ORDER);
     }
 
     WorkloadWrapperBase* ClientWrapper::getWorkloadWrapperPtr() const
@@ -265,7 +270,7 @@ namespace covered
         MessageType control_request_msg_type = control_request_ptr->getMessageType();
         if (control_request_msg_type == MessageType::kSwitchSlotRequest)
         {
-            processSwitchSlotRequest_(control_request_ptr); // Increase cur_slot_idx_ in ClientStatisticsTracker and return cur-slot client aggregated statistics
+            processSwitchSlotRequest_(control_request_ptr); // Increase cur_slot_idx_ in ClientStatisticsTracker and return cur-slot client aggregated statistics (update is_monitored_)
         }
         else if (control_request_msg_type == MessageType::kFinishWarmupRequest)
         {
@@ -321,6 +326,9 @@ namespace covered
 
         // Switch cur-slot client raw statistics and aggregate
         ClientAggregatedStatistics curslot_client_aggregated_statistics = client_statistics_tracker_ptr_->switchCurslotForClientRawStatistics(target_slot_idx);
+
+        // Update is monitored flag
+        is_monitored_.store(switch_slot_request_ptr->getExtraCommonMsghdr().isMonitored(), Util::STORE_CONCURRENCY_ORDER);
 
         // Send back SwitchSlotResponse to evaluator
         SwitchSlotResponse switch_slot_response(target_slot_idx, curslot_client_aggregated_statistics, node_idx_, node_recvmsg_source_addr_, EventList());

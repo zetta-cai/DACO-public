@@ -87,16 +87,16 @@ namespace covered
         {
             const InvalidationRequest* const invalidation_request_ptr = static_cast<const InvalidationRequest*>(control_request_ptr);
             const Key tmp_key = invalidation_request_ptr->getKey();
-            const bool skip_propagation_latency = invalidation_request_ptr->isSkipPropagationLatency();
+            const ExtraCommonMsghdr extra_common_msghdr = invalidation_request_ptr->getExtraCommonMsghdr();
 
             // Prepare invalidation response
-            invalidation_response_ptr = new InvalidationResponse(tmp_key, edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, skip_propagation_latency);
+            invalidation_response_ptr = new InvalidationResponse(tmp_key, edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, extra_common_msghdr);
         }
         else if (message_type == MessageType::kBestGuessInvalidationRequest)
         {
             const BestGuessInvalidationRequest* const best_guess_invalidation_request_ptr = static_cast<const BestGuessInvalidationRequest*>(control_request_ptr);
             const Key tmp_key = best_guess_invalidation_request_ptr->getKey();
-            const bool skip_propagation_latency = best_guess_invalidation_request_ptr->isSkipPropagationLatency();
+            const ExtraCommonMsghdr extra_common_msghdr = best_guess_invalidation_request_ptr->getExtraCommonMsghdr();
 
             // Get local victim vtime for vtime synchronization
             GetLocalVictimVtimeFuncParam tmp_param_for_vtimesync;
@@ -104,7 +104,7 @@ namespace covered
             const uint64_t& local_victim_vtime = tmp_param_for_vtimesync.getLocalVictimVtimeRef();
 
             // Prepare invalidation response
-            invalidation_response_ptr = new BestGuessInvalidationResponse(tmp_key, BestGuessSyncinfo(local_victim_vtime), edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, skip_propagation_latency);
+            invalidation_response_ptr = new BestGuessInvalidationResponse(tmp_key, BestGuessSyncinfo(local_victim_vtime), edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, extra_common_msghdr);
         }
         else
         {

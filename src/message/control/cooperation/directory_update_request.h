@@ -20,7 +20,7 @@ namespace covered
     class DirectoryUpdateRequest : public KeyValidityDirectoryMessage
     {
     public:
-        DirectoryUpdateRequest(const Key& key, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& skip_propagation_latency);
+        DirectoryUpdateRequest(const Key& key, const bool& is_valid_directory_exist, const DirectoryInfo& directory_info, const uint32_t& source_index, const NetworkAddr& source_addr, const ExtraCommonMsghdr& extra_common_msghdr);
         DirectoryUpdateRequest(const DynamicArray& msg_payload);
         virtual ~DirectoryUpdateRequest();
     private:

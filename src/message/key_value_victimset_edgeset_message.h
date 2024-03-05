@@ -21,7 +21,7 @@ namespace covered
     class KeyValueVictimsetEdgesetMessage : public MessageBase
     {
     public:
-        KeyValueVictimsetEdgesetMessage(const Key& key, const Value& value, const VictimSyncset& victim_syncset, const Edgeset& edgeset, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency);
+        KeyValueVictimsetEdgesetMessage(const Key& key, const Value& value, const VictimSyncset& victim_syncset, const Edgeset& edgeset, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr);
         KeyValueVictimsetEdgesetMessage(const DynamicArray& msg_payload);
         virtual ~KeyValueVictimsetEdgesetMessage();
 

@@ -100,18 +100,18 @@ namespace covered
 
         // Return if edge node is finished (invoked by cache server worker or beacon server)
         // Invalidate all cache copies for the key simultaneously (note that invalidating closest edge node is okay, as it is waiting for AcquireWritelockResponse instead of processing cache access requests)
-        bool parallelInvalidateCacheCopies(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const DirinfoSet& all_dirinfo, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // For each edge node idx in directory entry
+        bool parallelInvalidateCacheCopies(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const DirinfoSet& all_dirinfo, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr) const; // For each edge node idx in directory entry
 
         // NOTE: NO need to add events of issue_invalidation_req, as they happen in parallel and have been counted in the event of invalidate_cache_copies
-        virtual MessageBase* getInvalidationRequest_(const Key& key, const NetworkAddr& recvrsp_source_addr, const uint32_t& dst_edge_idx_for_compression, const bool& skip_propagation_latency) const = 0;
+        virtual MessageBase* getInvalidationRequest_(const Key& key, const NetworkAddr& recvrsp_source_addr, const uint32_t& dst_edge_idx_for_compression, const ExtraCommonMsghdr& extra_common_msghdr) const = 0;
         virtual void processInvalidationResponse_(MessageBase* invalidation_response_ptr) const = 0;
         
         // Return if edge node is finished (invoked by cache server worker or beacon server)
         // Notify all blocked edges for the key simultaneously
-        bool parallelNotifyEdgesToFinishBlock(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const bool& skip_propagation_latency) const; // For each edge node network addr in block list
+        bool parallelNotifyEdgesToFinishBlock(UdpMsgSocketServer* recvrsp_socket_server_ptr, const NetworkAddr& recvrsp_source_addr, const Key& key, const std::unordered_set<NetworkAddr, NetworkAddrHasher>& blocked_edges, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr) const; // For each edge node network addr in block list
 
         // NOTE: NO need to add events of issue_finish_block_req, as they happen in parallel and have been counted in the event of finish_block
-        virtual MessageBase* getFinishBlockRequest_(const Key& key, const NetworkAddr& recvrsp_source_addr, const uint32_t& dst_edge_idx_for_compression, const bool& skip_propagation_latency) const = 0;
+        virtual MessageBase* getFinishBlockRequest_(const Key& key, const NetworkAddr& recvrsp_source_addr, const uint32_t& dst_edge_idx_for_compression, const ExtraCommonMsghdr& extra_common_msghdr) const = 0;
         virtual void processFinishBlockResponse_(MessageBase* finish_block_response_ptr) const = 0;
 
         // (6) Common utility functions (invoked by edge cache server worker/placement-processor or edge beacon server of closest/beacon edge node)
@@ -120,7 +120,7 @@ namespace covered
         virtual bool getLocalEdgeCache_(const Key& key, const bool& is_redirected, Value& value, bool& is_tracked_before_fetch_value) const = 0; // Return is local cached and valid
 
         // (6.2) For local directory admission
-        virtual void admitLocalDirectory_(const Key& key, const DirectoryInfo& directory_info, bool& is_being_written, bool& is_neighbor_cached, const bool& skip_propagation_latency) const = 0; // Admit directory info in current edge node (is_neighbor_cached indicates if key is cached by any other edge node except the current edge node after admiting local dirinfo; invoked by cache server worker or beacon server for local placement notification if sender is or not beacon)
+        virtual void admitLocalDirectory_(const Key& key, const DirectoryInfo& directory_info, bool& is_being_written, bool& is_neighbor_cached, const ExtraCommonMsghdr& extra_common_msghdr) const = 0; // Admit directory info in current edge node (is_neighbor_cached indicates if key is cached by any other edge node except the current edge node after admiting local dirinfo; invoked by cache server worker or beacon server for local placement notification if sender is or not beacon)
 
         // (6.3) For cache size usage
         uint64_t getCacheMarginBytes() const;

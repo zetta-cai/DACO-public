@@ -505,7 +505,7 @@ namespace covered
         return lockresult_str;
     }
 
-    MessageBase* MessageBase::getRequestFromWorkloadItem(WorkloadItem workload_item, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& is_warmup_phase, const bool& is_warmup_speedup)
+    MessageBase* MessageBase::getRequestFromWorkloadItem(WorkloadItem workload_item, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& is_warmup_phase, const bool& is_warmup_speedup, const bool& is_monitored)
     {
         assert(source_addr.isValidAddr());
         
@@ -516,6 +516,8 @@ namespace covered
         {
             skip_propagation_latency = true;
         }
+        
+        ExtraCommonMsghdr extra_common_msghdr(skip_propagation_latency, is_monitored);
 
         // NOTE: message_ptr is freed outside MessageBase
         MessageBase* message_ptr = NULL;
@@ -523,17 +525,17 @@ namespace covered
         {
             case WorkloadItemType::kWorkloadItemGet:
             {
-                message_ptr = new LocalGetRequest(workload_item.getKey(), source_index, source_addr, skip_propagation_latency);
+                message_ptr = new LocalGetRequest(workload_item.getKey(), source_index, source_addr, extra_common_msghdr);
                 break;
             }
             case WorkloadItemType::kWorkloadItemPut:
             {
-                message_ptr = new LocalPutRequest(workload_item.getKey(), workload_item.getValue(), source_index, source_addr, skip_propagation_latency);
+                message_ptr = new LocalPutRequest(workload_item.getKey(), workload_item.getValue(), source_index, source_addr, extra_common_msghdr);
                 break;
             }
             case WorkloadItemType::kWorkloadItemDel:
             {
-                message_ptr = new LocalDelRequest(workload_item.getKey(), source_index, source_addr, skip_propagation_latency);
+                message_ptr = new LocalDelRequest(workload_item.getKey(), source_index, source_addr, extra_common_msghdr);
                 break;
             }
             default:
@@ -1488,7 +1490,7 @@ namespace covered
         return sizeof(uint32_t);
     }
 
-    MessageBase::MessageBase(const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency)
+    MessageBase::MessageBase(const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr)
     {
         message_type_ = message_type;
 
@@ -1496,7 +1498,7 @@ namespace covered
         source_addr_ = source_addr;
         bandwidth_usage_ = bandwidth_usage;
         event_list_ = event_list;
-        skip_propagation_latency_ = skip_propagation_latency;
+        extra_common_msghdr_ = extra_common_msghdr;
 
         is_valid_ = true;
         is_response_ = isDataResponse() || isControlResponse(); // NOTE: isDataResponse() and isControlResponse() require is_valid_ = true
@@ -1549,10 +1551,10 @@ namespace covered
         return event_list_;
     }
 
-    bool MessageBase::isSkipPropagationLatency() const
+    ExtraCommonMsghdr MessageBase::getExtraCommonMsghdr() const
     {
         checkIsValid_();
-        return skip_propagation_latency_;
+        return extra_common_msghdr_;
     }
 
     uint32_t MessageBase::getMsgPayloadSize() const
@@ -1578,13 +1580,13 @@ namespace covered
         uint32_t common_msghdr_size = 0;
         if (is_response_) // NOTE: ONLY response message has bandwidth usage and event list
         {
-            // Message type size + source index + source addr + bandwidth usage + event list (0 if without event tracking) + skip_propagation_latency flag
-            common_msghdr_size = sizeof(uint32_t) + sizeof(uint32_t) + source_addr_.getAddrPayloadSize() + bandwidth_usage_.getBandwidthUsagePayloadSize() + event_list_.getEventListPayloadSize() + sizeof(bool);
+            // Message type size + source index + source addr + bandwidth usage + event list (0 if without event tracking) + extra common msghdr
+            common_msghdr_size = sizeof(uint32_t) + sizeof(uint32_t) + source_addr_.getAddrPayloadSize() + bandwidth_usage_.getBandwidthUsagePayloadSize() + event_list_.getEventListPayloadSize() + extra_common_msghdr_.getExtraCommonMsghdrPayloadSize();
         }
         else // NOTE: request message does NOT have bandwidth usage and event list
         {
-            // Message type size + source index + source addr + skip_propagation_latency flag
-            common_msghdr_size = sizeof(uint32_t) + sizeof(uint32_t) + source_addr_.getAddrPayloadSize() + sizeof(bool);
+            // Message type size + source index + source addr + extra common msghdr
+            common_msghdr_size = sizeof(uint32_t) + sizeof(uint32_t) + source_addr_.getAddrPayloadSize() + extra_common_msghdr_.getExtraCommonMsghdrPayloadSize();
         }
 
         return common_msghdr_size;
@@ -1616,8 +1618,8 @@ namespace covered
             uint32_t eventlist_payload_size = event_list_.serialize(msg_payload, size);
             size += eventlist_payload_size;
         }
-        msg_payload.deserialize(size, (const char *)&skip_propagation_latency_, sizeof(bool));
-        size += sizeof(bool);
+        uint32_t extra_common_msghdr_size = extra_common_msghdr_.serialize(msg_payload, size);
+        size += extra_common_msghdr_size;
         uint32_t internal_size = serializeInternal_(msg_payload, size);
         size += internal_size;
         return size - 0;
@@ -1645,8 +1647,8 @@ namespace covered
             uint32_t eventlist_payload_size = event_list_.deserialize(msg_payload, size);
             size += eventlist_payload_size;
         }
-        msg_payload.serialize(size, (char *)&skip_propagation_latency_, sizeof(bool));
-        size += sizeof(bool);
+        uint32_t extra_common_msghdr_size = extra_common_msghdr_.deserialize(msg_payload, size);
+        size += extra_common_msghdr_size;
         uint32_t internal_size = this->deserializeInternal_(msg_payload, size);
         size += internal_size;
 

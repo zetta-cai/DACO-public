@@ -78,7 +78,7 @@ namespace covered
         std::string context_name = "PropagationSimulatorParam::push()";
         rwlock_for_propagation_item_buffer_.acquire_lock(context_name);
 
-        const bool skip_propagation_latency = message_ptr->isSkipPropagationLatency();
+        const bool skip_propagation_latency = message_ptr->getExtraCommonMsghdr().isSkipPropagationLatency();
         uint32_t sleep_us = 0;
         if (skip_propagation_latency)
         {

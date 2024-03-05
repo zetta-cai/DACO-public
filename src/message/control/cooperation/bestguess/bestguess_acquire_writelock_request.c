@@ -4,7 +4,7 @@ namespace covered
 {
     const std::string BestGuessAcquireWritelockRequest::kClassName("BestGuessAcquireWritelockRequest");
 
-    BestGuessAcquireWritelockRequest::BestGuessAcquireWritelockRequest(const Key& key, const BestGuessSyncinfo& syncinfo, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& skip_propagation_latency) : KeySyncinfoMessage(key, syncinfo, MessageType::kBestGuessAcquireWritelockRequest, source_index, source_addr, BandwidthUsage(), EventList(), skip_propagation_latency)
+    BestGuessAcquireWritelockRequest::BestGuessAcquireWritelockRequest(const Key& key, const BestGuessSyncinfo& syncinfo, const uint32_t& source_index, const NetworkAddr& source_addr, const ExtraCommonMsghdr& extra_common_msghdr) : KeySyncinfoMessage(key, syncinfo, MessageType::kBestGuessAcquireWritelockRequest, source_index, source_addr, BandwidthUsage(), EventList(), extra_common_msghdr)
     {
     }
 

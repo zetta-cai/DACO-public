@@ -15,6 +15,7 @@
 #include "common/dynamic_array.h"
 #include "event/event_list.h"
 #include "workload/workload_item.h"
+#include "message/extra_common_msghdr.h"
 #include "network/network_addr.h"
 
 namespace covered
@@ -143,12 +144,12 @@ namespace covered
         static std::string hitflagToString(const Hitflag& hitflag);
         static std::string lockResultToString(const LockResult& lock_result);
 
-        static MessageBase* getRequestFromWorkloadItem(WorkloadItem workload_item, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& is_warmup_phase, const bool& is_warmup_speedup); // By workers in clients
+        static MessageBase* getRequestFromWorkloadItem(WorkloadItem workload_item, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& is_warmup_phase, const bool& is_warmup_speedup, const bool& is_monitored); // By workers in clients
         static MessageBase* getRequestFromMsgPayload(const DynamicArray& msg_payload); // Data/control requests
         static MessageBase* getResponseFromMsgPayload(const DynamicArray& msg_payload); // Data/control responses
         static Key getKeyFromMessage(MessageBase* message_ptr); // Get key from message (e.g., local requests)
 
-        MessageBase(const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency);
+        MessageBase(const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr);
         //MessageBase(const DynamicArray& msg_payload);
         MessageBase();
         virtual ~MessageBase();
@@ -158,7 +159,7 @@ namespace covered
         NetworkAddr getSourceAddr() const;
         const BandwidthUsage& getBandwidthUsageRef() const;
         const EventList& getEventListRef() const;
-        bool isSkipPropagationLatency() const;
+        ExtraCommonMsghdr getExtraCommonMsghdr() const;
 
         uint32_t getMsgPayloadSize() const; // Real transmitted bytes for serialize/deserialize of network packets
         uint32_t getMsgBandwidthSize() const; // Ideal transmitted bytes for bandwidth usage calculation
@@ -208,7 +209,7 @@ namespace covered
         // Track intermediate events and events of intermediate responses to break down latencies for debugging
         // NOTE: requests MUST have empty event list; NOT consume bandwidth if without event tracking
         EventList event_list_;
-        bool skip_propagation_latency_; // NOT simulate propagation latency for warmup speedup (also skip disk I/O latency in cloud)
+        ExtraCommonMsghdr extra_common_msghdr_;
 
         bool is_valid_; // NOT serialized/deserialized in msg payload
         bool is_response_; // NOT serialized/deserialized in msg payload

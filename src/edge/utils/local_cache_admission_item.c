@@ -4,20 +4,19 @@ namespace covered
 {
     const std::string LocalCacheAdmissionItem::kClassName("LocalCacheAdmissionItem");
 
-    LocalCacheAdmissionItem::LocalCacheAdmissionItem() : key_(), value_()
+    LocalCacheAdmissionItem::LocalCacheAdmissionItem() : key_(), value_(), extra_common_msghdr_()
     {
         is_neighbor_cached_ = false;
         is_valid_ = false;
-        skip_propagation_latency_ = false;
     }
 
-    LocalCacheAdmissionItem::LocalCacheAdmissionItem(const Key& key, const Value& value, const bool& is_neighbor_cached, const bool& is_valid, const bool& skip_propagation_latency)
+    LocalCacheAdmissionItem::LocalCacheAdmissionItem(const Key& key, const Value& value, const bool& is_neighbor_cached, const bool& is_valid, const ExtraCommonMsghdr& extra_common_msghdr)
     {
         key_ = key;
         value_ = value;
         is_neighbor_cached_ = is_neighbor_cached;
         is_valid_ = is_valid;
-        skip_propagation_latency_ = skip_propagation_latency;
+        extra_common_msghdr_ = extra_common_msghdr;
     }
 
     LocalCacheAdmissionItem::~LocalCacheAdmissionItem() {}
@@ -42,9 +41,9 @@ namespace covered
         return is_valid_;
     }
 
-    bool LocalCacheAdmissionItem::skipPropagationLatency() const
+    ExtraCommonMsghdr LocalCacheAdmissionItem::getExtraCommonMsghdr() const
     {
-        return skip_propagation_latency_;
+        return extra_common_msghdr_;
     }
 
     const LocalCacheAdmissionItem& LocalCacheAdmissionItem::operator=(const LocalCacheAdmissionItem& other)
@@ -53,7 +52,7 @@ namespace covered
         value_ = other.value_;
         is_neighbor_cached_ = other.is_neighbor_cached_;
         is_valid_ = other.is_valid_;
-        skip_propagation_latency_ = other.skip_propagation_latency_;
+        extra_common_msghdr_ = other.extra_common_msghdr_;
 
         return *this;
     }

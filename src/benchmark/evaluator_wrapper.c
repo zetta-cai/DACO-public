@@ -171,9 +171,16 @@ namespace covered
         int stable_condition = -1; // 0: achieve warmup reqcnt; 1: achieve warmup max duration
         struct timespec start_timestamp = Util::getCurrentTimespec(); // For max duration of warmup phase and duration of stresstest phase
         struct timespec prev_timestamp = start_timestamp; // For switch slot
+        bool is_monitored = false; // Whether to monitor messages for debugging
         while (true)
         {
             usleep(Util::SLEEP_INTERVAL_US);
+
+            // TMPDEBUG24
+            if (total_statistics_tracker_ptr_->getTotalReqcnt() >= 4000000)
+            {
+                is_monitored = true;
+            }
 
             struct timespec cur_timestamp = Util::getCurrentTimespec();
             bool with_new_slot_statistics = false;
@@ -198,7 +205,7 @@ namespace covered
             if (delta_us_for_switch_slot >= static_cast<double>(SEC2US(client_raw_statistics_slot_interval_sec)))
             {
                 // Notify clients to switch cur-slot client raw statistics
-                notifyClientsToSwitchSlot_(); // Increase target_slot_idx_ by one, update per-slot total aggregated statistics, and update total_reqcnt in TotalStatisticsTracker
+                notifyClientsToSwitchSlot_(is_monitored); // Increase target_slot_idx_ by one, update per-slot total aggregated statistics, and update total_reqcnt in TotalStatisticsTracker
 
                 with_new_slot_statistics = true;
 
@@ -404,7 +411,7 @@ namespace covered
         return;
     }
 
-    void EvaluatorWrapper::notifyClientsToSwitchSlot_()
+    void EvaluatorWrapper::notifyClientsToSwitchSlot_(const bool& is_monitored)
     {
         checkPointers_();
 
@@ -425,7 +432,7 @@ namespace covered
         while (acked_cnt < switchslot_acked_flags.size())
         {
             // Issue SwitchSlotRequests to unacked clients simultaneously
-            SwitchSlotRequest tmp_switch_slot_request(target_slot_idx_, 0, evaluator_recvmsg_source_addr_);
+            SwitchSlotRequest tmp_switch_slot_request(target_slot_idx_, 0, evaluator_recvmsg_source_addr_, is_monitored);
             issueMsgToUnackedNodes_((MessageBase*)&tmp_switch_slot_request, switchslot_acked_flags);
 
             // Receive SwitchSlotResponses for unacked clients    

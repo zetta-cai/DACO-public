@@ -19,7 +19,7 @@ namespace covered
     class UintMessage : public MessageBase
     {
     public:
-        UintMessage(const uint32_t& unsigned_integer, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency);
+        UintMessage(const uint32_t& unsigned_integer, const MessageType& message_type, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr);
         UintMessage(const DynamicArray& msg_payload);
         virtual ~UintMessage();
     private:

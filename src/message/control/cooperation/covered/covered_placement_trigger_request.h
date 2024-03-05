@@ -18,7 +18,7 @@ namespace covered
     class CoveredPlacementTriggerRequest : public KeyCollectpopVictimsetMessage
     {
     public:
-        CoveredPlacementTriggerRequest(const Key& key, const CollectedPopularity& collected_popularity, const VictimSyncset& victim_syncset, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& skip_propagation_latency);
+        CoveredPlacementTriggerRequest(const Key& key, const CollectedPopularity& collected_popularity, const VictimSyncset& victim_syncset, const uint32_t& source_index, const NetworkAddr& source_addr, const ExtraCommonMsghdr& extra_common_msghdr);
         CoveredPlacementTriggerRequest(const DynamicArray& msg_payload);
         virtual ~CoveredPlacementTriggerRequest();
     private:

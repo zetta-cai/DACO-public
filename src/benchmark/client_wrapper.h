@@ -60,6 +60,7 @@ namespace covered
         uint32_t getPerclientWorkercnt() const;
         uint32_t getWarmupReqcntScale() const;
         bool isWarmupPhase() const;
+        bool isMonitored() const;
         WorkloadWrapperBase* getWorkloadWrapperPtr() const;
         ClientStatisticsTracker* getClientStatisticsTrackerPtr() const;
         PropagationSimulatorParam* getClientToedgePropagationSimulatorParamPtr() const;
@@ -95,6 +96,7 @@ namespace covered
 
         // Non-const shared variables for warmup and stresstest phases
         std::atomic<bool> is_warmup_phase_;
+        std::atomic<bool> is_monitored_;
 
         // Non-const shared variables
         WorkloadWrapperBase* workload_generator_ptr_; // thread safe

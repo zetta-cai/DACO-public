@@ -18,7 +18,7 @@ namespace covered
     class BestGuessInvalidationResponse : public KeySyncinfoMessage
     {
     public:
-        BestGuessInvalidationResponse(const Key& key, const BestGuessSyncinfo& syncinfo, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const bool& skip_propagation_latency);
+        BestGuessInvalidationResponse(const Key& key, const BestGuessSyncinfo& syncinfo, const uint32_t& source_index, const NetworkAddr& source_addr, const BandwidthUsage& bandwidth_usage, const EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr);
         BestGuessInvalidationResponse(const DynamicArray& msg_payload);
         virtual ~BestGuessInvalidationResponse();
     private:

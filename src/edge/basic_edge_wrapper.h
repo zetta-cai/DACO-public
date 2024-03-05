@@ -36,11 +36,11 @@ namespace covered
         // (3) Invalidate and unblock for MSI protocol
 
         // NOTE: NO need to add events of issue_invalidation_req, as they happen in parallel and have been counted in the event of invalidate_cache_copies
-        virtual MessageBase* getInvalidationRequest_(const Key& key, const NetworkAddr& recvrsp_source_addr, const uint32_t& dst_edge_idx_for_compression, const bool& skip_propagation_latency) const override;
+        virtual MessageBase* getInvalidationRequest_(const Key& key, const NetworkAddr& recvrsp_source_addr, const uint32_t& dst_edge_idx_for_compression, const ExtraCommonMsghdr& extra_common_msghdr) const override;
         virtual void processInvalidationResponse_(MessageBase* invalidation_response_ptr) const override;
         
         // NOTE: NO need to add events of issue_finish_block_req, as they happen in parallel and have been counted in the event of finish_block
-        virtual MessageBase* getFinishBlockRequest_(const Key& key, const NetworkAddr& recvrsp_source_addr, const uint32_t& dst_edge_idx_for_compression, const bool& skip_propagation_latency) const override;
+        virtual MessageBase* getFinishBlockRequest_(const Key& key, const NetworkAddr& recvrsp_source_addr, const uint32_t& dst_edge_idx_for_compression, const ExtraCommonMsghdr& extra_common_msghdr) const override;
         virtual void processFinishBlockResponse_(MessageBase* finish_block_response_ptr) const override;
 
         // (6) Common utility functions (invoked by edge cache server worker/placement-processor or edge beacon server of closest/beacon edge node)
@@ -49,7 +49,7 @@ namespace covered
         virtual bool getLocalEdgeCache_(const Key& key, const bool& is_redirected, Value& value, bool& is_tracked_before_fetch_value) const override; // Return is local cached and valid
 
         // (6.2) For local directory admission
-        virtual void admitLocalDirectory_(const Key& key, const DirectoryInfo& directory_info, bool& is_being_written, bool& is_neighbor_cached, const bool& skip_propagation_latency) const override; // Admit directory info in current edge node (is_neighbor_cached indicates if key is cached by any other edge node except the current edge node after admiting local dirinfo; invoked by cache server worker or beacon server for local placement notification if sender is or not beacon)
+        virtual void admitLocalDirectory_(const Key& key, const DirectoryInfo& directory_info, bool& is_being_written, bool& is_neighbor_cached, const ExtraCommonMsghdr& extra_common_msghdr) const override; // Admit directory info in current edge node (is_neighbor_cached indicates if key is cached by any other edge node except the current edge node after admiting local dirinfo; invoked by cache server worker or beacon server for local placement notification if sender is or not beacon)
 
         // (7) Method-specific functions
         virtual void constCustomFunc(const std::string& funcname, EdgeCustomFuncParamBase* func_param_ptr) const override;

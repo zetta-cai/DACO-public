@@ -111,6 +111,7 @@ namespace covered
         {
             // Get current phase (warmup or stresstest)
             bool is_warmup_phase = tmp_client_wrapper_ptr->isWarmupPhase();
+            bool is_monitored = tmp_client_wrapper_ptr->isMonitored();
             bool is_stresstest_phase = !is_warmup_phase;
 
             // Consider per-client-worker warmup reqcnt limitation to avoid inconsistent warmup progress (under second-level evaluator monitoring) among different caches due to different warmup speed
@@ -134,7 +135,7 @@ namespace covered
             bool is_finish = false;
 
             // Issue the workload item to the closest edge node
-            is_finish = issueItemToEdge_(workload_item, local_response_msg_payload, rtt_us, is_warmup_phase, is_warmup_speedup);
+            is_finish = issueItemToEdge_(workload_item, local_response_msg_payload, rtt_us, is_warmup_phase, is_warmup_speedup, is_monitored);
             if (is_finish) // Check is_finish
             {
                 continue; // Go to check if client is still running
@@ -152,7 +153,7 @@ namespace covered
         return;
     }
 
-    bool ClientWorkerWrapper::issueItemToEdge_(const WorkloadItem& workload_item, DynamicArray& local_response_msg_payload, uint32_t& rtt_us, const bool& is_warmup_phase, const bool& is_warmup_speedup)
+    bool ClientWorkerWrapper::issueItemToEdge_(const WorkloadItem& workload_item, DynamicArray& local_response_msg_payload, uint32_t& rtt_us, const bool& is_warmup_phase, const bool& is_warmup_speedup, const bool& is_monitored)
     {
         checkPointers_();
         ClientWrapper* tmp_client_wrapper_ptr = client_worker_param_ptr_->getClientWrapperPtr();
@@ -163,7 +164,7 @@ namespace covered
         while (true) // Timeout-and-retry mechanism
         {
             // Convert workload item into local request message
-            MessageBase* local_request_ptr = MessageBase::getRequestFromWorkloadItem(workload_item, tmp_client_wrapper_ptr->getNodeIdx(), client_worker_recvrsp_source_addr_, is_warmup_phase, is_warmup_speedup);
+            MessageBase* local_request_ptr = MessageBase::getRequestFromWorkloadItem(workload_item, tmp_client_wrapper_ptr->getNodeIdx(), client_worker_recvrsp_source_addr_, is_warmup_phase, is_warmup_speedup, is_monitored);
             assert(local_request_ptr != NULL);
 
             #ifdef DEBUG_CLIENT_WORKER_WRAPPER
