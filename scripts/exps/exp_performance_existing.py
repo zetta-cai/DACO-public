@@ -23,8 +23,7 @@ exp_default_settings = {
     "cache_name": "covered",
     "workload_name": "facebook"
 }
-#cache_names = ["covered", "shark", "bestguess", "arc", "cachelib", "fifo", "frozenhot", "glcache", "lrb", "gdsf", "lfu", "lhd", "lru", "s3fifo", "segcache", "sieve", "wtinylfu"]
-cache_names = ["glcache"] # TMPDEBUG24
+cache_names = ["covered", "shark", "bestguess", "arc", "cachelib", "fifo", "frozenhot", "glcache", "lrb", "gdsf", "lfu", "lhd", "lru", "s3fifo", "segcache", "sieve", "wtinylfu"]
 
 # Run the experiments with multiple rounds
 for tmp_round_index in round_indexes:

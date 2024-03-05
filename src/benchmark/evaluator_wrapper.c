@@ -176,12 +176,6 @@ namespace covered
         {
             usleep(Util::SLEEP_INTERVAL_US);
 
-            // TMPDEBUG24
-            if (total_statistics_tracker_ptr_->getTotalReqcnt() >= 3900000)
-            {
-                is_monitored = true;
-            }
-
             struct timespec cur_timestamp = Util::getCurrentTimespec();
             bool with_new_slot_statistics = false;
 

@@ -19,6 +19,17 @@
 extern "C" {
 #endif
 
+// Siyuan: for debugging memory issue
+// #include <sys/resource.h>
+// void print_memory_usage(const char* hintstr, cache_t *cache)
+// {
+//   struct rusage rusage;
+//   getrusage( RUSAGE_SELF, &rusage );
+//   printf("%s memory usage: %ldKB; occupied_size: %lld\n", hintstr, rusage.ru_maxrss, cache->occupied_size);
+//   fflush(stdout);
+//   return;
+// }
+
 /* output file for comparing online and offline calculated segment utility */
 FILE *ofile_cmp_y = NULL;
 
@@ -426,6 +437,12 @@ cache_ck_res_e GLCache_update(cache_t *cache, request_t *req)
 }
 
 cache_obj_t *GLCache_insert(cache_t *cache, request_t *req) {
+  // Siyuan: for debugging memory issue
+  // char hintstr0[256];
+  // memset(hintstr0, '\0', 256);
+  // sprintf(hintstr0, "[before insert %f KiB]", req->obj_size / 1024.0);
+  // print_memory_usage(hintstr0, cache);
+
   GLCache_params_t *params = (GLCache_params_t *)cache->eviction_params;
   bucket_t *bucket = &params->buckets[0];
   segment_t *seg = bucket->last_seg;
@@ -458,11 +475,23 @@ cache_obj_t *GLCache_insert(cache_t *cache, request_t *req) {
                                   params->segment_size);
   DEBUG_ASSERT(cache->n_obj <= params->n_in_use_segs * params->segment_size);
 
+  // Siyuan: for debugging memory issue
+  // char hintstr1[256];
+  // memset(hintstr1, '\0', 256);
+  // sprintf(hintstr1, "[after insert %f KiB]", req->obj_size / 1024.0);
+  // print_memory_usage(hintstr1, cache);
+
   return cache_obj;
 }
 
 void GLCache_evict(cache_t *cache, const request_t *req,
                    cache_obj_t *evicted_obj) {
+  // Siyuan: for debugging memory issue
+  // char hintstr0[256];
+  // memset(hintstr0, '\0', 256);
+  // sprintf(hintstr0, "[before evict]");
+  // print_memory_usage(hintstr0, cache);
+
   GLCache_params_t *params = (GLCache_params_t *)cache->eviction_params;
   learner_t *l = &params->learner;
 
@@ -492,6 +521,19 @@ void GLCache_evict(cache_t *cache, const request_t *req,
   params->n_evictions += 1;
 
   GLCache_merge_segs(cache, bucket, params->obj_sel.segs_to_evict, evicted_obj);
+
+  // Siyuan: for debugging memory issue
+  // cache_obj_t *tmp_obj = evicted_obj;
+  // uint32_t victimcnt = 0;
+  // while (tmp_obj != NULL)
+  // {
+  //   victimcnt++;
+  //   tmp_obj = tmp_obj->evict_next;
+  // }
+  // char hintstr1[256];
+  // memset(hintstr1, '\0', 256);
+  // sprintf(hintstr1, "[after evict %d]", victimcnt);
+  // print_memory_usage(hintstr1, cache);
 }
 
 void GLCache_remove_obj(cache_t *cache, cache_obj_t *obj_to_remove) {

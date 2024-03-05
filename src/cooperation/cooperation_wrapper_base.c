@@ -231,31 +231,14 @@ namespace covered
         return is_global_cached;
     }
 
-    // TMPDEBUG24
-    bool CooperationWrapperBase::updateDirectoryTable(const Key& key, const uint32_t& source_edge_idx, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, bool& is_neighbor_cached, MetadataUpdateRequirement& metadata_update_requirement, const bool& is_monitored)
+    bool CooperationWrapperBase::updateDirectoryTable(const Key& key, const uint32_t& source_edge_idx, const bool& is_admit, const DirectoryInfo& directory_info, bool& is_being_written, bool& is_neighbor_cached, MetadataUpdateRequirement& metadata_update_requirement)
     {
         checkPointers_();
         assert(source_edge_idx == directory_info.getTargetEdgeIdx()); // Receive a directory udpate request from the source edge node to admit/evict itself
 
-        // TMPDEBUG24
-        if (is_monitored)
-        {
-            std::ostringstream oss;
-            oss << "before acquire writelock for key " << key.getKeyDebugstr();
-            Util::dumpNormalMsg(base_instance_name_, oss.str());
-        }
-
         // Acquire a write lock
         std::string context_name = "CooperationWrapperBase::updateDirectoryTable()";
-        cooperation_wrapper_perkey_rwlock_ptr_->acquire_lock(key, context_name, is_monitored); // TMPDEBUG24
-
-        // TMPDEBUG24
-        if (is_monitored)
-        {
-            std::ostringstream oss;
-            oss << "after acquire writelock for key " << key.getKeyDebugstr();
-            Util::dumpNormalMsg(base_instance_name_, oss.str());
-        }
+        cooperation_wrapper_perkey_rwlock_ptr_->acquire_lock(key, context_name);
 
         MYASSERT(dht_wrapper_ptr_->getBeaconEdgeIdx(key) == edge_idx_); // Current edge node MUST be beacon for the given key
 
@@ -289,14 +272,6 @@ namespace covered
 
         // Release a write lock
         cooperation_wrapper_perkey_rwlock_ptr_->unlock(key, context_name);
-
-        // TMPDEBUG24
-        if (is_monitored)
-        {
-            std::ostringstream oss;
-            oss << "after release writelock for key " << key.getKeyDebugstr();
-            Util::dumpNormalMsg(base_instance_name_, oss.str());
-        }
 
         return is_global_cached;
     }

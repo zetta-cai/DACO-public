@@ -547,14 +547,6 @@ namespace covered
 
         while (true) // Timeout-and-retry mechanism
         {
-            // TMPDEBUG24
-            if (extra_common_msghdr.isMonitored())
-            {
-                std::ostringstream tmposs;
-                tmposs << "admitBeaconDirectory_ for key " << key.getKeyDebugstr() << " at beacon " << beacon_edge_idx;
-                Util::dumpNormalMsg(base_instance_name_, tmposs.str());
-            }
-
             // Prepare directory update request to check directory information in beacon node
             MessageBase* directory_update_request_ptr = getReqToAdmitBeaconDirectory_(key, directory_info, source_addr, extra_common_msghdr, is_background);
             assert(directory_update_request_ptr != NULL);

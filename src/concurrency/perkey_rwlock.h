@@ -9,7 +9,7 @@
 #ifndef PERKEY_RWLOCK_H
 #define PERKEY_RWLOCK_H
 
-#define DEBUG_PERKEY_RWLOCK // TMPDEBUG24
+//#define DEBUG_PERKEY_RWLOCK
 
 #include <atomic>
 #include <string>
@@ -33,7 +33,7 @@ namespace covered
         // The same interfaces as libboost
         void acquire_lock_shared(const Key& key, const std::string& context_name);
         void unlock_shared(const Key& key, const std::string& context_name);
-        void acquire_lock(const Key& key, const std::string& context_name, const bool& is_monitored = false); // TMPDEBUG24
+        void acquire_lock(const Key& key, const std::string& context_name);
         void unlock(const Key& key, const std::string& context_name);
 
         bool isReadLocked(const Key& key) const;

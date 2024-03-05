@@ -22,17 +22,17 @@
 # (3) Choose one util component to run
 
 # For dataset loader
-#dataset_loader_instance = DatasetLoader(**exp_simple_test_settings)
+#dataset_loader_instance = DatasetLoader(**simple_example_settings)
 #dataset_loader_instance.run()
 
 # For prototype
-#prototype_instance = Prototype(**exp_simple_test_settings)
+#prototype_instance = Prototype(**simple_example_settings)
 #prototype_instance.run()
 
 # For simulator
-#simulator_instance = Simulator(**exp_simple_test_settings)
+#simulator_instance = Simulator(**simple_example_settings)
 #simulator_instance.run()
 
 # For total statistics loader
-#total_statistics_loader_instance = TotalStatisticsLoader(**exp_simple_test_settings)
+#total_statistics_loader_instance = TotalStatisticsLoader(**simple_example_settings)
 #total_statistics_loader_instance.run()

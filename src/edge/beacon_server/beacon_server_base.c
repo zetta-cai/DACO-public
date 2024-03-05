@@ -295,14 +295,6 @@ namespace covered
         BandwidthUsage total_bandwidth_usage;
         EventList event_list;
 
-        // TMPDEBUG24
-        if (control_request_ptr->getExtraCommonMsghdr().isMonitored())
-        {
-            std::ostringstream tmposs;
-            tmposs << "processDirectoryUpdateRequest_ for key " << MessageBase::getKeyFromMessage(control_request_ptr).getKeyDebugstr() << " from edge " << control_request_ptr->getSourceIndex();
-            Util::dumpNormalMsg(base_instance_name_, tmposs.str());
-        }
-
         // Update total bandwidth usage for received directory update request
         uint32_t cross_edge_directory_update_req_bandwidth_bytes = control_request_ptr->getMsgBandwidthSize();
         total_bandwidth_usage.update(BandwidthUsage(0, cross_edge_directory_update_req_bandwidth_bytes, 0, 0, 1, 0));
@@ -320,23 +312,7 @@ namespace covered
             return is_finish; // Edge node is NOT running now
         }
 
-        // TMPDEBUG24
-        if (control_request_ptr->getExtraCommonMsghdr().isMonitored())
-        {
-            std::ostringstream tmposs;
-            tmposs << "after processReqToUpdateLocalDirectory_ for key " << MessageBase::getKeyFromMessage(control_request_ptr).getKeyDebugstr() << " from edge " << control_request_ptr->getSourceIndex();
-            Util::dumpNormalMsg(base_instance_name_, tmposs.str());
-        }
-
         embedBackgroundCounterIfNotEmpty_(total_bandwidth_usage, event_list); // Embed background events/bandwidth if any into control response message
-
-        // TMPDEBUG24
-        if (control_request_ptr->getExtraCommonMsghdr().isMonitored())
-        {
-            std::ostringstream tmposs;
-            tmposs << "embedBackgroundCounterIfNotEmpty_ for key " << MessageBase::getKeyFromMessage(control_request_ptr).getKeyDebugstr() << " from edge " << control_request_ptr->getSourceIndex();
-            Util::dumpNormalMsg(base_instance_name_, tmposs.str());
-        }
 
         // Add intermediate event if with event tracking
         struct timespec update_local_directory_end_timestamp = Util::getCurrentTimespec();
@@ -353,14 +329,6 @@ namespace covered
         // Prepare a directory update response
         MessageBase* directory_update_response_ptr = getRspToUpdateLocalDirectory_(control_request_ptr, is_being_written, is_neighbor_cached, best_placement_edgeset, need_hybrid_fetching, total_bandwidth_usage, event_list);
         assert(directory_update_response_ptr != NULL);
-
-        // TMPDEBUG24
-        if (control_request_ptr->getExtraCommonMsghdr().isMonitored())
-        {
-            std::ostringstream tmposs;
-            tmposs << "getRspToUpdateLocalDirectory_ for key " << MessageBase::getKeyFromMessage(control_request_ptr).getKeyDebugstr() << " from edge " << control_request_ptr->getSourceIndex();
-            Util::dumpNormalMsg(base_instance_name_, tmposs.str());
-        }
 
         // Push the directory update response into edge-to-edge propagation simulator to cache server worker
         bool is_successful = edge_beacon_server_param_ptr_->getEdgeWrapperPtr()->getEdgeToedgePropagationSimulatorParamPtr()->push(directory_update_response_ptr, edge_cache_server_worker_recvrsp_dst_addr);

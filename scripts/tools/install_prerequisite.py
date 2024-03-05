@@ -207,6 +207,8 @@ if is_upgrade_cmake:
 
 # (6) Change system settings
 
+## (6.1) Set UDP buffer size
+
 LogUtil.prompt(Common.scriptname, "check net.core.rmem_max...")
 target_rmem_max = 16777216
 need_set_rmem_max = False
@@ -229,3 +231,23 @@ if need_set_rmem_max:
     set_rmem_max_subprocess = SubprocessUtil.runCmd(set_rmem_max_cmd)
     if set_rmem_max_subprocess.returncode != 0:
         LogUtil.die(Common.scriptname, "failed to set net.core.rmem_max (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(set_rmem_max_subprocess)))
+
+## (6.2) Set swap memory size
+
+is_swapfile_exist = False
+check_swapfile_cmd = "sudo ls /swapfile"
+check_swapfile_subprocess = SubprocessUtil.runCmd(check_swapfile_cmd)
+if check_swapfile_subprocess.returncode != 0:
+    is_swapfile_exist = False
+else:
+    is_swapfile_exist = True
+
+LogUtil.prompt(Common.scriptname, "Set swap size as 50G for memory-consuming baselines...")
+set_swap_size_cmd = ""
+if is_swapfile_exist:
+    set_swap_size_cmd = "sudo swapoff -a && sudo fallocate -l 50G /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile"
+else:
+    set_swap_size_cmd = "sudo swapoff -a && sudo swapon /swapfile"
+set_swap_size_subprocess = SubprocessUtil.runCmd(set_swap_size_cmd)
+if set_swap_size_subprocess.returncode != 0:
+    LogUtil.die(Common.scriptname, "failed to set swap size as 50G (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(set_swap_size_subprocess)))

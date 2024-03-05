@@ -159,9 +159,8 @@ namespace covered
         return;
     }
 
-    void PerkeyRwlock::acquire_lock(const Key& key, const std::string& context_name, const bool& is_monitored) // TMPDEBUG24
+    void PerkeyRwlock::acquire_lock(const Key& key, const std::string& context_name)
     {
-        uint32_t dumpcnt = 0; // TMPDEBUG24
         while (true) // Frequent polling
         {
             if (try_lock_(key, context_name))
@@ -174,20 +173,6 @@ namespace covered
                 #endif
 
                 break;
-            }
-
-            // TMPDEBUG24
-            if (is_monitored && dumpcnt < 3)
-            {
-                uint32_t rwlock_index = getRwlockIndex(key);
-                perlock_mutex_for_debug_[rwlock_index].lock();
-                std::string current_writer = perlock_current_writer_[rwlock_index];
-                perlock_mutex_for_debug_[rwlock_index].unlock();
-                std::ostringstream oss;
-                oss << "acquire_lock() failed for key " << key.getKeyDebugstr() << " by " << context_name << " due to a concurrent writer " << current_writer;
-                Util::dumpNormalMsg(kClassName, oss.str());
-
-                dumpcnt += 1;
             }
         }
         return;

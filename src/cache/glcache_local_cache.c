@@ -194,6 +194,8 @@ namespace covered
         }
         else // No victim found
         {
+            assert(evicted_obj->evict_next == NULL);
+            
             objptrs.push_back(evicted_obj);
         }
 
