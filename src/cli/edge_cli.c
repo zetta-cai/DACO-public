@@ -17,7 +17,7 @@ namespace covered
 
     const std::string EdgeCLI::kClassName("EdgeCLI");
 
-    EdgeCLI::EdgeCLI() : EdgescaleCLI(), PropagationCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false), is_to_cli_string_(false)
+    EdgeCLI::EdgeCLI() : WorkloadCLI(), EdgescaleCLI(), PropagationCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false), is_to_cli_string_(false)
     {
         cache_name_ = "";
         hash_name_ = "";
@@ -32,7 +32,7 @@ namespace covered
         covered_topk_edgecnt_ = 0;
     }
 
-    EdgeCLI::EdgeCLI(int argc, char **argv) : EdgescaleCLI(), PropagationCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false), is_to_cli_string_(false)
+    EdgeCLI::EdgeCLI(int argc, char **argv) : WorkloadCLI(), EdgescaleCLI(), PropagationCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false), is_to_cli_string_(false)
     {
         parseAndProcessCliParameters(argc, argv);
     }
@@ -97,6 +97,7 @@ namespace covered
             assert(is_dump_cli_parameters_);
             assert(is_create_required_directories_);
 
+            oss << WorkloadCLI::toCliString();
             oss << EdgescaleCLI::toCliString();
             oss << PropagationCLI::toCliString();
             if (cache_name_ != DEFAULT_CACHE_NAME)
@@ -148,6 +149,7 @@ namespace covered
 
     void EdgeCLI::clearIsToCliString()
     {
+        WorkloadCLI::clearIsToCliString();
         EdgescaleCLI::clearIsToCliString();
         PropagationCLI::clearIsToCliString();
         
@@ -159,6 +161,7 @@ namespace covered
     {
         if (!is_add_cli_parameters_)
         {
+            WorkloadCLI::addCliParameters_();
             EdgescaleCLI::addCliParameters_();
             PropagationCLI::addCliParameters_();
 
@@ -190,6 +193,7 @@ namespace covered
     {
         if (!is_set_param_and_config_)
         {
+            WorkloadCLI::setParamAndConfig_(main_class_name);
             EdgescaleCLI::setParamAndConfig_(main_class_name);
             PropagationCLI::setParamAndConfig_(main_class_name);
 
@@ -246,6 +250,7 @@ namespace covered
     {
         if (!is_dump_cli_parameters_)
         {
+            WorkloadCLI::verifyAndDumpCliParameters_(main_class_name);
             EdgescaleCLI::verifyAndDumpCliParameters_(main_class_name);
             PropagationCLI::verifyAndDumpCliParameters_(main_class_name);
 

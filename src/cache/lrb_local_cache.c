@@ -9,14 +9,14 @@ namespace covered
 {
     const std::string LrbLocalCache::kClassName("LrbLocalCache");
 
-    LrbLocalCache::LrbLocalCache(const EdgeWrapperBase* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes) : LocalCacheBase(edge_wrapper_ptr, edge_idx, capacity_bytes)
+    LrbLocalCache::LrbLocalCache(const EdgeWrapperBase* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint32_t& dataset_keycnt) : LocalCacheBase(edge_wrapper_ptr, edge_idx, capacity_bytes)
     {
         // Differentiate local edge cache in different edge nodes
         std::ostringstream oss;
         oss << kClassName << " edge" << edge_idx;
         instance_name_ = oss.str();
 
-        lrb_cache_ptr_ = new LRBCache();
+        lrb_cache_ptr_ = new LRBCache(dataset_keycnt);
         assert(lrb_cache_ptr_ != NULL);
 
         // NOTE: refer to lib/lrb/src/simulation.cpp to configure LRB cache after initializing the instance

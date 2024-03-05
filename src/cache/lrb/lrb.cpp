@@ -578,7 +578,7 @@ void LRBEvictionTrainingData::clear() {
 // LRBCache
 
 // Siyuan: constructor
-LRBCache::LRBCache() : Cache(), n_edc_feature(10), max_n_extra_feature(4)
+LRBCache::LRBCache(const uint32_t& dataset_keycnt) : Cache(), n_edc_feature(10), max_n_extra_feature(4)
 {
     current_seq = -1;
     max_n_past_timestamps = 32;
@@ -589,7 +589,8 @@ LRBCache::LRBCache() : Cache(), n_edc_feature(10), max_n_extra_feature(4)
     max_hash_edc_idx = 0;
     memory_window = 67108864;
     n_extra_fields = 0;
-    batch_size = 131072;
+    //batch_size = 131072;
+    batch_size = dataset_keycnt; // Siyuan: set batch size as dataset_keycnt to avoid too frequent training for warmup speedup (will retrain 10 times in total during warmup due to using 10X dataset size as warmup requests)
     n_feature = 0;
 #ifdef EVICTION_LOGGING
     future_timestamps.clear();

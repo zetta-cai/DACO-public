@@ -141,7 +141,7 @@ if is_link_cpp:
 
 if is_upgrade_cmake:
     cmake_software_name = "cmake"
-    cmake_target_version = "3.25.2" # NOTE: we just need cmake >= 3.12 (e.g., cmake 3.25.2 for Ubuntu 18.04 and cmake 3.28.2 for Ubuntu 20.04)
+    cmake_target_version = "3.20.5" # NOTE: we just need cmake >= 3.12 (e.g., cmake 3.20.5 for Ubuntu 18.04 and cmake 3.28.2 for Ubuntu 20.04)
     cmake_checkversion_cmd = "cmake --version"
     need_upgrade_cmake, cmake_old_version = SubprocessUtil.checkVersion(Common.scriptname, cmake_software_name, cmake_target_version, cmake_checkversion_cmd)
 
@@ -232,22 +232,24 @@ if need_set_rmem_max:
     if set_rmem_max_subprocess.returncode != 0:
         LogUtil.die(Common.scriptname, "failed to set net.core.rmem_max (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(set_rmem_max_subprocess)))
 
-## (6.2) Set swap memory size
+## (6.2) Set swap memory size (to avoid triggering memory usage bugs of some baselines, e.g., GL-Cache, which may incur memory leakage in their own source code)
+
+# Related commands include: cat /proc/swaps, df -h, and lsblk to check swap files; fdisk /dev/sda, pvcreate /dev/sda3, vgs, lvscan, lvextend -L +1T /dev/vgname/lvname, and resize2fs /dev/mapper/vgname-lvname to allocate sufficient space for /swapfile.
 
 is_swapfile_exist = False
 check_swapfile_cmd = "sudo ls /swapfile"
-check_swapfile_subprocess = SubprocessUtil.runCmd(check_swapfile_cmd)
+check_swapfile_subprocess = SubprocessUtil.runCmd(check_swapfile_cmd, is_capture_output=False)
 if check_swapfile_subprocess.returncode != 0:
     is_swapfile_exist = False
 else:
     is_swapfile_exist = True
 
-LogUtil.prompt(Common.scriptname, "Set swap size as 50G for memory-consuming baselines...")
+LogUtil.prompt(Common.scriptname, "Set swap size as 50G for memory-consuming baselines (e.g., GL-Cache)...")
 set_swap_size_cmd = ""
-if is_swapfile_exist:
+if not is_swapfile_exist:
     set_swap_size_cmd = "sudo swapoff -a && sudo fallocate -l 50G /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile"
 else:
     set_swap_size_cmd = "sudo swapoff -a && sudo swapon /swapfile"
-set_swap_size_subprocess = SubprocessUtil.runCmd(set_swap_size_cmd)
+set_swap_size_subprocess = SubprocessUtil.runCmd(set_swap_size_cmd, is_capture_output=False)
 if set_swap_size_subprocess.returncode != 0:
     LogUtil.die(Common.scriptname, "failed to set swap size as 50G (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(set_swap_size_subprocess)))

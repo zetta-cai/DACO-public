@@ -67,11 +67,11 @@ namespace covered
         const std::string cache_name = edge_cli_ptr->getCacheName();
         if (cache_name == Util::COVERED_CACHE_NAME)
         {
-            edge_wrapper_ptr = new CoveredEdgeWrapper(cache_name, edge_cli_ptr->getCapacityBytes(), edge_idx, edge_cli_ptr->getEdgecnt(), edge_cli_ptr->getHashName(), edge_cli_ptr->getCoveredLocalUncachedMaxMemUsageBytes(), edge_cli_ptr->getPercacheserverWorkercnt(), edge_cli_ptr->getCoveredPeredgeSyncedVictimcnt(), edge_cli_ptr->getCoveredPeredgeMonitoredVictimsetcnt(), edge_cli_ptr->getCoveredPopularityAggregationMaxMemUsageBytes(), edge_cli_ptr->getCoveredPopularityCollectionChangeRatio(), edge_cli_ptr->getPropagationLatencyClientedgeUs(), edge_cli_ptr->getPropagationLatencyCrossedgeUs(), edge_cli_ptr->getPropagationLatencyEdgecloudUs(), edge_cli_ptr->getCoveredTopkEdgecnt());
+            edge_wrapper_ptr = new CoveredEdgeWrapper(cache_name, edge_cli_ptr->getCapacityBytes(), edge_idx, edge_cli_ptr->getEdgecnt(), edge_cli_ptr->getHashName(), edge_cli_ptr->getKeycnt(), edge_cli_ptr->getCoveredLocalUncachedMaxMemUsageBytes(), edge_cli_ptr->getPercacheserverWorkercnt(), edge_cli_ptr->getCoveredPeredgeSyncedVictimcnt(), edge_cli_ptr->getCoveredPeredgeMonitoredVictimsetcnt(), edge_cli_ptr->getCoveredPopularityAggregationMaxMemUsageBytes(), edge_cli_ptr->getCoveredPopularityCollectionChangeRatio(), edge_cli_ptr->getPropagationLatencyClientedgeUs(), edge_cli_ptr->getPropagationLatencyCrossedgeUs(), edge_cli_ptr->getPropagationLatencyEdgecloudUs(), edge_cli_ptr->getCoveredTopkEdgecnt());
         }
         else
         {
-            edge_wrapper_ptr = new BasicEdgeWrapper(cache_name, edge_cli_ptr->getCapacityBytes(), edge_idx, edge_cli_ptr->getEdgecnt(), edge_cli_ptr->getHashName(), edge_cli_ptr->getCoveredLocalUncachedMaxMemUsageBytes(), edge_cli_ptr->getPercacheserverWorkercnt(), edge_cli_ptr->getCoveredPeredgeSyncedVictimcnt(), edge_cli_ptr->getCoveredPeredgeMonitoredVictimsetcnt(), edge_cli_ptr->getCoveredPopularityAggregationMaxMemUsageBytes(), edge_cli_ptr->getCoveredPopularityCollectionChangeRatio(), edge_cli_ptr->getPropagationLatencyClientedgeUs(), edge_cli_ptr->getPropagationLatencyCrossedgeUs(), edge_cli_ptr->getPropagationLatencyEdgecloudUs(), edge_cli_ptr->getCoveredTopkEdgecnt());
+            edge_wrapper_ptr = new BasicEdgeWrapper(cache_name, edge_cli_ptr->getCapacityBytes(), edge_idx, edge_cli_ptr->getEdgecnt(), edge_cli_ptr->getHashName(), edge_cli_ptr->getKeycnt(), edge_cli_ptr->getCoveredLocalUncachedMaxMemUsageBytes(), edge_cli_ptr->getPercacheserverWorkercnt(), edge_cli_ptr->getCoveredPeredgeSyncedVictimcnt(), edge_cli_ptr->getCoveredPeredgeMonitoredVictimsetcnt(), edge_cli_ptr->getCoveredPopularityAggregationMaxMemUsageBytes(), edge_cli_ptr->getCoveredPopularityCollectionChangeRatio(), edge_cli_ptr->getPropagationLatencyClientedgeUs(), edge_cli_ptr->getPropagationLatencyCrossedgeUs(), edge_cli_ptr->getPropagationLatencyEdgecloudUs(), edge_cli_ptr->getCoveredTopkEdgecnt());
         }
         assert(edge_wrapper_ptr != NULL);
         edge_wrapper_ptr->start();
@@ -83,7 +83,7 @@ namespace covered
         return NULL;
     }
 
-    EdgeWrapperBase::EdgeWrapperBase(const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& edge_idx, const uint32_t& edgecnt, const std::string& hash_name, const uint64_t& local_uncached_capacity_bytes, const uint32_t& percacheserver_workercnt, const uint32_t& peredge_synced_victimcnt, const uint32_t& peredge_monitored_victimsetcnt, const uint64_t& popularity_aggregation_capacity_bytes, const double& popularity_collection_change_ratio, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us, const uint32_t& topk_edgecnt) : NodeWrapperBase(NodeWrapperBase::EDGE_NODE_ROLE, edge_idx, edgecnt, true), cache_name_(cache_name), capacity_bytes_(capacity_bytes), percacheserver_workercnt_(percacheserver_workercnt), propagation_latency_crossedge_us_(propagation_latency_crossedge_us), propagation_latency_edgecloud_us_(propagation_latency_edgecloud_us), edge_background_counter_for_beacon_server_()
+    EdgeWrapperBase::EdgeWrapperBase(const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& edge_idx, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& keycnt, const uint64_t& local_uncached_capacity_bytes, const uint32_t& percacheserver_workercnt, const uint32_t& peredge_synced_victimcnt, const uint32_t& peredge_monitored_victimsetcnt, const uint64_t& popularity_aggregation_capacity_bytes, const double& popularity_collection_change_ratio, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us, const uint32_t& topk_edgecnt) : NodeWrapperBase(NodeWrapperBase::EDGE_NODE_ROLE, edge_idx, edgecnt, true), cache_name_(cache_name), capacity_bytes_(capacity_bytes), percacheserver_workercnt_(percacheserver_workercnt), propagation_latency_crossedge_us_(propagation_latency_crossedge_us), propagation_latency_edgecloud_us_(propagation_latency_edgecloud_us), edge_background_counter_for_beacon_server_()
     {
         // Differentiate different edge nodes
         std::ostringstream oss;
@@ -91,7 +91,7 @@ namespace covered
         base_instance_name_ = oss.str();
         
         // Allocate local edge cache to store hot objects
-        edge_cache_ptr_ = new CacheWrapper(this, cache_name, edge_idx, capacity_bytes, local_uncached_capacity_bytes, peredge_synced_victimcnt);
+        edge_cache_ptr_ = new CacheWrapper(this, cache_name, edge_idx, capacity_bytes, keycnt, local_uncached_capacity_bytes, peredge_synced_victimcnt);
         assert(edge_cache_ptr_ != NULL);
 
         // Allocate cooperation wrapper for cooperative edge caching

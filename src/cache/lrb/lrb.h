@@ -346,7 +346,7 @@ public:
     std::vector<int64_t> far_bytes;
 #endif
 
-    LRBCache();
+    LRBCache(const uint32_t& dataset_keycnt);
     ~LRBCache();
 
     void init_with_params(const std::map<std::string, std::string> &params);

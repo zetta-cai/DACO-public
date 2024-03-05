@@ -16,7 +16,7 @@
 
 namespace covered
 {
-    class EdgeCLI : virtual public EdgescaleCLI, virtual public PropagationCLI
+    class EdgeCLI : virtual public WorkloadCLI, virtual public EdgescaleCLI, virtual public PropagationCLI
     {
     public:
         EdgeCLI();

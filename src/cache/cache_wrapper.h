@@ -39,7 +39,7 @@ namespace covered
     class CacheWrapper
     {
     public:
-        CacheWrapper(const EdgeWrapperBase* edge_wrapper_ptr, const std::string& cache_name, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint64_t& local_uncached_capacity_bytes, const uint32_t& peredge_synced_victimcnt);
+        CacheWrapper(const EdgeWrapperBase* edge_wrapper_ptr, const std::string& cache_name, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint32_t& dataset_keycnt, const uint64_t& local_uncached_capacity_bytes, const uint32_t& peredge_synced_victimcnt);
         virtual ~CacheWrapper();
 
         // (1) Check is cached and access validity

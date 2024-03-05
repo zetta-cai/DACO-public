@@ -13,7 +13,7 @@ namespace covered
 {
     const std::string GLCacheLocalCache::kClassName("GLCacheLocalCache");
 
-    GLCacheLocalCache::GLCacheLocalCache(const EdgeWrapperBase* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes) : LocalCacheBase(edge_wrapper_ptr, edge_idx, capacity_bytes)
+    GLCacheLocalCache::GLCacheLocalCache(const EdgeWrapperBase* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint32_t& dataset_keycnt) : LocalCacheBase(edge_wrapper_ptr, edge_idx, capacity_bytes)
     {
         // Differentiate local edge cache in different edge nodes
         std::ostringstream oss;
@@ -28,8 +28,21 @@ namespace covered
             .consider_obj_metadata = true,
         };
 
+        // NOTE: use a larger segsize (objcnt in a segment) to avoid too many segments, which will incur too large memory usage due to memory management bugs of GL-Cache itself
+        uint32_t segsize = 100; // Default setting of GL-Cache (see src/cache/glcache/micro-implementation/libCacheSim/cache/eviction/GLCache/GLCache.c)
+        if (dataset_keycnt > 100 * 100)
+        {
+            uint32_t segsize = dataset_keycnt / 100;
+        }
+
+        // Prepare GL-Cache parameter string
+        oss.clear();
+        oss.str("");
+        oss << "segsize=" << segsize;
+        const std::string glcache_paramstr = oss.str();
+
         // Allocate and initialized glcache data and metadata
-        glcache_ptr_ = GLCache_init(cc_params, NULL);
+        glcache_ptr_ = GLCache_init(cc_params, glcache_paramstr.c_str());
         assert(glcache_ptr_ != NULL);
     }
     
