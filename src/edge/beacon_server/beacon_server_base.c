@@ -310,6 +310,14 @@ namespace covered
         BandwidthUsage total_bandwidth_usage;
         EventList event_list;
 
+        // // TMPDEBUG24
+        // if (tmp_reqcnt_ >= 1000000)
+        // {
+        //     // std::ostringstream tmposs;
+        //     // tmposs << "processDirectoryUpdateRequest_ for key " << MessageBase::getKeyFromMessage(control_request_ptr).getKeyDebugstr() << " from edge " << control_request_ptr->getSourceIndex();
+        //     // Util::dumpNormalMsg(base_instance_name_, tmposs.str());
+        // }
+
         // Update total bandwidth usage for received directory update request
         uint32_t cross_edge_directory_update_req_bandwidth_bytes = control_request_ptr->getMsgBandwidthSize();
         total_bandwidth_usage.update(BandwidthUsage(0, cross_edge_directory_update_req_bandwidth_bytes, 0, 0, 1, 0));

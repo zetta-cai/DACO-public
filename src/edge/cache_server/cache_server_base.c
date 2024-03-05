@@ -280,9 +280,9 @@ namespace covered
         }
 
         // Wait cache server workers to finish initialization
-        std::ostringstream tmposs;
-        tmposs << "wait " << percacheserver_workercnt << " cache server workers to finish initialization...";
-        Util::dumpNormalMsg(base_instance_name_, tmposs.str());
+        std::ostringstream oss_for_initialization;
+        oss_for_initialization << "wait " << percacheserver_workercnt << " cache server workers to finish initialization...";
+        Util::dumpNormalMsg(base_instance_name_, oss_for_initialization.str());
         for (uint32_t local_cache_server_worker_idx = 0; local_cache_server_worker_idx < percacheserver_workercnt; local_cache_server_worker_idx++)
         {
             while (!cache_server_worker_params_[local_cache_server_worker_idx].isFinishInitialization())
@@ -547,6 +547,14 @@ namespace covered
 
         while (true) // Timeout-and-retry mechanism
         {
+            // // TMPDEBUG24
+            // if (tmp_reqcnt_ >= 1000000)
+            // {
+            //     // std::ostringstream tmposs;
+            //     // tmposs << "admitBeaconDirectory_ for key " << key.getKeyDebugstr() << " at beacon " << beacon_edge_idx;
+            //     // Util::dumpNormalMsg(base_instance_name_, tmposs.str());
+            // }
+
             // Prepare directory update request to check directory information in beacon node
             MessageBase* directory_update_request_ptr = getReqToAdmitBeaconDirectory_(key, directory_info, source_addr, skip_propagation_latency, is_background);
             assert(directory_update_request_ptr != NULL);

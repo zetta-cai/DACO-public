@@ -525,10 +525,10 @@ namespace covered
 
         bool is_exist = false;
         bool is_valid = validity_map_ptr_->isValidFlagForKey(key, is_exist);
-        if (!is_exist) // key is locally cached yet not found in validity_map_, which may due to processing order issue
+        if (!is_exist) // key is locally cached yet not found in validity_map_, which may due to processing atomicity issue especially for coarse-grained caches (NOT acquire per-key write lock during eviction and hence key may be already evicted before accessing validity map)
         {
             std::ostringstream oss;
-            oss << "key " << key.getKeyDebugstr() << " is locally cached yet not found in validity_map_!";
+            oss << "key " << key.getKeyDebugstr() << " is locally cached yet not found in validity_map_, which could be caused by non-atomic cache operations!";
             Util::dumpWarnMsg(instance_name_, oss.str());
             assert(is_valid == false);
         }
