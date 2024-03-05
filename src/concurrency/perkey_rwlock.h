@@ -9,10 +9,13 @@
 #ifndef PERKEY_RWLOCK_H
 #define PERKEY_RWLOCK_H
 
-//#define DEBUG_PERKEY_RWLOCK
+#define DEBUG_PERKEY_RWLOCK // TMPDEBUG24
 
 #include <atomic>
 #include <string>
+#ifdef DEBUG_PERKEY_RWLOCK
+#include <unordered_map>
+#endif
 
 #include <boost/thread/shared_mutex.hpp>
 
@@ -30,7 +33,7 @@ namespace covered
         // The same interfaces as libboost
         void acquire_lock_shared(const Key& key, const std::string& context_name);
         void unlock_shared(const Key& key, const std::string& context_name);
-        void acquire_lock(const Key& key, const std::string& context_name);
+        void acquire_lock(const Key& key, const std::string& context_name, const bool& is_monitored = false); // TMPDEBUG24
         void unlock(const Key& key, const std::string& context_name);
 
         bool isReadLocked(const Key& key) const;
@@ -53,6 +56,12 @@ namespace covered
         std::atomic<uint32_t>* read_lock_cnts_;
         std::atomic<bool>* write_lock_flags_;
         HashWrapperBase* hash_wrapper_ptr_;
+
+        #ifdef DEBUG_PERKEY_RWLOCK
+        boost::mutex* perlock_mutex_for_debug_;
+        std::vector<std::unordered_map<std::string, uint32_t>> perlock_current_readers_;
+        std::vector<std::string> perlock_current_writer_;
+        #endif
     };
 }
 

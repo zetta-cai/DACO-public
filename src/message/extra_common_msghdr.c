@@ -69,4 +69,11 @@ namespace covered
         size += sizeof(bool);
         return size - position;
     }
+
+    const ExtraCommonMsghdr& ExtraCommonMsghdr::operator=(const ExtraCommonMsghdr& other)
+    {
+        skip_propagation_latency_ = other.skip_propagation_latency_;
+        is_monitored_ = other.is_monitored_;
+        return *this;
+    }
 }

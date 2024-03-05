@@ -177,7 +177,7 @@ namespace covered
             usleep(Util::SLEEP_INTERVAL_US);
 
             // TMPDEBUG24
-            if (total_statistics_tracker_ptr_->getTotalReqcnt() >= 4000000)
+            if (total_statistics_tracker_ptr_->getTotalReqcnt() >= 3900000)
             {
                 is_monitored = true;
             }

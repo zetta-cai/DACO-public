@@ -208,7 +208,7 @@ namespace covered
 
         // Perform background cache eviction in a blocking manner for consistent directory information (note that cache eviction happens after non-blocking placement notification)
         // NOTE: we update aggregated uncached popularity yet DISABLE recursive cache placement for metadata preservation during cache eviction
-        const bool extra_common_msghdr = local_cache_admission_item.skipPropagationLatency();
+        const ExtraCommonMsghdr extra_common_msghdr = local_cache_admission_item.getExtraCommonMsghdr();
         is_finish = tmp_cache_server_ptr->evictForCapacity_(tmp_key, edge_cache_server_placement_processor_recvrsp_source_addr_, edge_cache_server_placement_processor_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, extra_common_msghdr, is_background); // May update local synced victims
 
         struct timespec admission_end_timestamp = Util::getCurrentTimespec();

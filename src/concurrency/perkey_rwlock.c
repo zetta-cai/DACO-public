@@ -25,6 +25,14 @@ namespace covered
         rwlock_hashtable_ = new boost::shared_mutex[rwlock_cnt];
         assert(rwlock_hashtable_ != NULL);
 
+        #ifdef DEBUG_PERKEY_RWLOCK
+        // Allocate space for debugging variables
+        perlock_mutex_for_debug_ = new boost::mutex[rwlock_cnt];
+        assert(perlock_mutex_for_debug_ != NULL);
+        perlock_current_readers_.resize(rwlock_cnt);
+        perlock_current_writer_.resize(rwlock_cnt);
+        #endif
+
         // Allocate space for read lock counts
         read_lock_cnts_ = new std::atomic<uint32_t>[rwlock_cnt];
         assert(read_lock_cnts_ != NULL);
@@ -52,6 +60,12 @@ namespace covered
         delete[] rwlock_hashtable_;
         rwlock_hashtable_ = NULL;
 
+        #ifdef DEBUG_PERKEY_RWLOCK
+        assert(perlock_mutex_for_debug_ != NULL);
+        delete[] perlock_mutex_for_debug_;
+        perlock_mutex_for_debug_ = NULL;
+        #endif
+
         assert(read_lock_cnts_ != NULL);
         delete[] read_lock_cnts_;
         read_lock_cnts_ = NULL;
@@ -71,6 +85,20 @@ namespace covered
         {
             if (try_lock_shared_(key, context_name))
             {
+                #ifdef DEBUG_PERKEY_RWLOCK
+                uint32_t rwlock_index = getRwlockIndex(key);
+                perlock_mutex_for_debug_[rwlock_index].lock();
+                if (perlock_current_readers_[rwlock_index].find(context_name) == perlock_current_readers_[rwlock_index].end())
+                {
+                    perlock_current_readers_[rwlock_index].insert(std::pair(context_name, 1));
+                }
+                else
+                {
+                    perlock_current_readers_[rwlock_index][context_name] += 1;
+                }
+                perlock_mutex_for_debug_[rwlock_index].unlock();
+                #endif
+
                 break;
             }
         }
@@ -90,9 +118,9 @@ namespace covered
             read_lock_cnts_[rwlock_index].fetch_add(1, Util::RMW_CONCURRENCY_ORDER);
 
             #ifdef DEBUG_PERKEY_RWLOCK
-            std::ostringstream oss;
-            oss << "acquire a read lock for key " << key.getKeyDebugstr() << " with rwlock_index " << rwlock_index << " in " << context_name;
-            Util::dumpDebugMsg(instance_name_, oss.str());
+            // std::ostringstream oss;
+            // oss << "acquire a read lock for key " << key.getKeyDebugstr() << " with rwlock_index " << rwlock_index << " in " << context_name;
+            // Util::dumpDebugMsg(instance_name_, oss.str());
             #endif
         }
 
@@ -105,25 +133,61 @@ namespace covered
         assert(read_lock_cnts_ != NULL);
 
         uint32_t rwlock_index = getRwlockIndex(key);
-        read_lock_cnts_[rwlock_index].fetch_sub(1, Util::RMW_CONCURRENCY_ORDER);
-        rwlock_hashtable_[rwlock_index].unlock_shared();
 
         #ifdef DEBUG_PERKEY_RWLOCK
-        std::ostringstream oss;
-        oss << "release a read lock for key " << key.getKeyDebugstr() << " with rwlock_index " << rwlock_index << " in " << context_name;
-        Util::dumpDebugMsg(instance_name_, oss.str());
+        perlock_mutex_for_debug_[rwlock_index].lock();
+        std::unordered_map<std::string, uint32_t>::const_iterator tmp_iter = perlock_current_readers_[rwlock_index].find(context_name);
+        assert(tmp_iter != perlock_current_readers_[rwlock_index].end());
+        if (tmp_iter->second > 1)
+        {
+            perlock_current_readers_[rwlock_index][context_name] -= 1;
+        }
+        else
+        {
+            perlock_current_readers_[rwlock_index].erase(tmp_iter);
+        }
+        perlock_mutex_for_debug_[rwlock_index].unlock();
+
+        // std::ostringstream oss;
+        // oss << "release a read lock for key " << key.getKeyDebugstr() << " with rwlock_index " << rwlock_index << " in " << context_name;
+        // Util::dumpDebugMsg(instance_name_, oss.str());
         #endif
+
+        read_lock_cnts_[rwlock_index].fetch_sub(1, Util::RMW_CONCURRENCY_ORDER);
+        rwlock_hashtable_[rwlock_index].unlock_shared();
 
         return;
     }
 
-    void PerkeyRwlock::acquire_lock(const Key& key, const std::string& context_name)
+    void PerkeyRwlock::acquire_lock(const Key& key, const std::string& context_name, const bool& is_monitored) // TMPDEBUG24
     {
+        uint32_t dumpcnt = 0; // TMPDEBUG24
         while (true) // Frequent polling
         {
             if (try_lock_(key, context_name))
             {
+                #ifdef DEBUG_PERKEY_RWLOCK
+                uint32_t rwlock_index = getRwlockIndex(key);
+                perlock_mutex_for_debug_[rwlock_index].lock();
+                perlock_current_writer_[rwlock_index] = context_name;
+                perlock_mutex_for_debug_[rwlock_index].unlock();
+                #endif
+
                 break;
+            }
+
+            // TMPDEBUG24
+            if (is_monitored && dumpcnt < 3)
+            {
+                uint32_t rwlock_index = getRwlockIndex(key);
+                perlock_mutex_for_debug_[rwlock_index].lock();
+                std::string current_writer = perlock_current_writer_[rwlock_index];
+                perlock_mutex_for_debug_[rwlock_index].unlock();
+                std::ostringstream oss;
+                oss << "acquire_lock() failed for key " << key.getKeyDebugstr() << " by " << context_name << " due to a concurrent writer " << current_writer;
+                Util::dumpNormalMsg(kClassName, oss.str());
+
+                dumpcnt += 1;
             }
         }
         return;
@@ -146,9 +210,9 @@ namespace covered
             write_lock_flags_[rwlock_index].store(true, Util::STORE_CONCURRENCY_ORDER);
 
             #ifdef DEBUG_PERKEY_RWLOCK
-            std::ostringstream oss;
-            oss << "acquire a write lock for key " << key.getKeyDebugstr() << " with rwlock_index " << rwlock_index << " in " << context_name;
-            Util::dumpDebugMsg(instance_name_, oss.str());
+            // std::ostringstream oss;
+            // oss << "acquire a write lock for key " << key.getKeyDebugstr() << " with rwlock_index " << rwlock_index << " in " << context_name;
+            // Util::dumpDebugMsg(instance_name_, oss.str());
             #endif
         }
 
@@ -161,15 +225,20 @@ namespace covered
         assert(write_lock_flags_ != NULL);
 
         uint32_t rwlock_index = getRwlockIndex(key);
+
+        #ifdef DEBUG_PERKEY_RWLOCK
+        perlock_mutex_for_debug_[rwlock_index].lock();
+        perlock_current_writer_[rwlock_index] = "";
+        perlock_mutex_for_debug_[rwlock_index].unlock();
+
+        // std::ostringstream oss;
+        // oss << "release a write lock for key " << key.getKeyDebugstr() << " with rwlock_index " << rwlock_index << " in " << context_name;
+        // Util::dumpDebugMsg(instance_name_, oss.str());
+        #endif
+
         write_lock_flags_[rwlock_index].store(false, Util::STORE_CONCURRENCY_ORDER);
         rwlock_hashtable_[rwlock_index].unlock();
         
-        #ifdef DEBUG_PERKEY_RWLOCK
-        std::ostringstream oss;
-        oss << "release a write lock for key " << key.getKeyDebugstr() << " with rwlock_index " << rwlock_index << " in " << context_name;
-        Util::dumpDebugMsg(instance_name_, oss.str());
-        #endif
-
         return;
     }
 
