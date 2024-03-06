@@ -236,20 +236,40 @@ if need_set_rmem_max:
 
 # Related commands include: cat /proc/swaps, df -h, and lsblk to check swap files; fdisk /dev/sda, pvcreate /dev/sda3, vgs, lvscan, lvextend -L +1T /dev/vgname/lvname, and resize2fs /dev/mapper/vgname-lvname to allocate sufficient space for /swapfile.
 
+swapfile_path = "/swapfile"
+swapfile_size_gb = 1 # 1 GiB
+
+# Check file existence
 is_swapfile_exist = False
-check_swapfile_cmd = "sudo ls /swapfile"
+check_swapfile_cmd = "sudo ls {}".format(swapfile_path)
 check_swapfile_subprocess = SubprocessUtil.runCmd(check_swapfile_cmd, is_capture_output=False)
 if check_swapfile_subprocess.returncode != 0:
     is_swapfile_exist = False
+    LogUtil.dump(Common.scriptname, "Swap file {} does not exist...".format(swapfile_path))
 else:
     is_swapfile_exist = True
 
-LogUtil.prompt(Common.scriptname, "Set swap size as 50G for memory-consuming baselines (e.g., GL-Cache)...")
+# Check file size
+is_swapfile_large_enough = False
+if is_swapfile_exist:
+    check_swapfile_size_cmd = "sudo du {} | awk '{print $1}'".format(swapfile_path)
+    check_swapfile_size_subprocess = SubprocessUtil.runCmd(check_swapfile_size_cmd)
+    if check_swapfile_size_subprocess.returncode != 0:
+        LogUtil.die(Common.scriptname, "failed to check swap file size (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(check_swapfile_size_subprocess)))
+    else:
+        tmp_swapfile_size_gb = int(SubprocessUtil.getSubprocessOutputstr(check_swapfile_size_subprocess)) / 1024 / 1024
+        if tmp_swapfile_size_gb >= swapfile_size_gb:
+            is_swapfile_large_enough = True
+        else:
+            LogUtil.dump(Common.scriptname, "Swap file {} exists yet not large enough ({} GiB < {} GiB)...".format(swapfile_path, tmp_swapfile_size_gb, swapfile_size_gb))
+
+# Create swap file if necessary
+LogUtil.prompt(Common.scriptname, "Set swap size {} as {}G for memory-consuming baselines (e.g., GL-Cache)...".format(swapfile_path, swapfile_size_gb))
 set_swap_size_cmd = ""
-if not is_swapfile_exist:
-    set_swap_size_cmd = "sudo swapoff -a && sudo fallocate -l 50G /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile"
+if not is_swapfile_exist or not is_swapfile_large_enough:
+    set_swap_size_cmd = "sudo swapoff -a && sudo fallocate -l {0}G {1} && sudo mkswap {1} && sudo swapon {1}".format(swapfile_size_gb, swapfile_path)
 else:
-    set_swap_size_cmd = "sudo swapoff -a && sudo swapon /swapfile"
+    set_swap_size_cmd = "sudo swapoff -a && sudo swapon {}".format(swapfile_path)
 set_swap_size_subprocess = SubprocessUtil.runCmd(set_swap_size_cmd, is_capture_output=False)
 if set_swap_size_subprocess.returncode != 0:
-    LogUtil.die(Common.scriptname, "failed to set swap size as 50G (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(set_swap_size_subprocess)))
+    LogUtil.die(Common.scriptname, "failed to set swap size as {}G (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(swapfile_size_gb, set_swap_size_subprocess)))

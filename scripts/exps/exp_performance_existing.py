@@ -23,7 +23,8 @@ exp_default_settings = {
     "cache_name": "covered",
     "workload_name": "facebook"
 }
-cache_names = ["covered", "shark", "bestguess", "arc", "cachelib", "fifo", "frozenhot", "glcache", "lrb", "gdsf", "lfu", "lhd", "lru", "s3fifo", "segcache", "sieve", "wtinylfu"]
+# NOTE: run segcache, lrb, and glcache at last due to slow warmup issue of segcache and lrb, and memory usage issue of glcache (may be caused by bugs on segment-level memory management and model retraining) -> TODO: if no results of the above baselines, please provide more DRAM memory (or swap memory), and run them again with sufficient time (may be in units of hours or days) for warmup and cache stable performance
+cache_names = ["covered", "shark", "bestguess", "arc", "cachelib", "fifo", "frozenhot", "gdsf", "lfu", "lhd", "lru", "s3fifo", "sieve", "wtinylfu", "segcache", "lrb", "glcache"]
 
 # Run the experiments with multiple rounds
 for tmp_round_index in round_indexes:

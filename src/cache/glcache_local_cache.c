@@ -85,7 +85,15 @@ namespace covered
 
         request_t req = buildRequest_(key);
         cache_ck_res_e result = glcache_ptr_->get(glcache_ptr_, &req);
-        value = Value(req.value.length());
+
+        // NOTE: store value size instead of value content to avoid memory usage bug of glcache, yet not affect cache stable performance, as occupied_size in glcache is updated by req.obj_size instead of the valuestr length
+        assert(req.value.length() == sizeof(uint32_t));
+        uint32_t value_size = 0;
+        memcpy((char*)&value_size, req.value.data(), sizeof(uint32_t));
+        value = Value(value_size);
+
+        //value = Value(req.value.length());
+
         bool is_local_cached = (result == cache_ck_hit);
 
         return is_local_cached;
@@ -206,7 +214,13 @@ namespace covered
                 objptrs.push_back(tmp_objptr);
                 if (victims.find(tmp_objptr->key) == victims.end()) // NOT found
                 {
-                    victims.insert(std::pair(Key(tmp_objptr->key), Value(tmp_objptr->value.length())));
+                    // NOTE: store value size instead of value content to avoid memory usage bug of glcache, yet not affect cache stable performance, as occupied_size in glcache is updated by req.obj_size instead of the valuestr length
+                    assert(tmp_objptr->value.length() == sizeof(uint32_t));
+                    uint32_t value_size = 0;
+                    memcpy((char*)&value_size, tmp_objptr->value.data(), sizeof(uint32_t));
+                    victims.insert(std::pair(Key(tmp_objptr->key), Value(value_size)));
+
+                    //victims.insert(std::pair(Key(tmp_objptr->key), Value(tmp_objptr->value.length()));
                 }
 
                 tmp_objptr = tmp_objptr->evict_next;
@@ -319,7 +333,13 @@ namespace covered
 
         req.is_keybased_req = true;
         req.key = key.getKeystr();
-        req.value = value.generateValuestrForStorage();
+
+        // NOTE: store value size instead of value content to avoid memory usage bug of glcache, yet not affect cache stable performance, as occupied_size in glcache is updated by req.obj_size instead of the valuestr length
+        uint32_t value_size = value.getValuesize();
+        const std::string value_size_str((const char*)&value_size, sizeof(uint32_t));
+        req.value = value_size_str;
+
+        //req.value = value.generateValuestrForStorage();
 
         return req;
     }

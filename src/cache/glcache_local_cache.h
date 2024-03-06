@@ -4,6 +4,8 @@
  * NOTE: all configuration and function calls refer to GLCache files, including lib/glcache/micro-implementation/libCacheSim/bin/cachesim/\* and lib/glcache/micro-implementation/libCacheSim/cache/eviction/GLCache/\*, yet reimplement in C++ (see src/cache/glcache/micro-implementation/\*) and fix libcachesim limitations (only metadata operations + fixed-length uint64_t key + impractical assumption of in-request next access time).
  * 
  * NOTE: we use dataset keycnt / 100 as segment size (in units of object count) to avoid too many segments, and use 30 minutes as retraining period to avoid too frequent retraining for warmup speedup (NOT fix GL-Cache memory usage bug) -> both NOT affect cache stable performance.
+ * 
+ * NOTE: we store value size instead of value content in GL-Cache (the same as original GL-Cache code) to avoid memory usage bug, yet still use real value size to calculate cache usage for capacity limitation -> NOT affect cache stable performance.
  *
  * Hack to support key-value caching, required interfaces, and cache size in units of bytes for capacity constraint.
  * 
