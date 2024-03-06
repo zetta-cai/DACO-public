@@ -6,6 +6,7 @@
  * NOTE: we use dataset keycnt / 100 as segment size (in units of object count) to avoid too many segments, and use 30 minutes as retraining period to avoid too frequent retraining for warmup speedup (NOT fix GL-Cache memory usage bug) -> both NOT affect cache stable performance.
  * 
  * NOTE: we store value size instead of value content in GL-Cache (the same as original GL-Cache code) to avoid memory usage bug, yet still use real value size to calculate cache usage for capacity limitation -> NOT affect cache stable performance.
+ * --> Original GL-Cache code does NOT really store value content, and authors may NOT notice the memory leakage issue???
  *
  * Hack to support key-value caching, required interfaces, and cache size in units of bytes for capacity constraint.
  * 

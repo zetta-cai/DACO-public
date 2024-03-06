@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# exp_performance_existing: performance evaluation for existing methods.
+# exp_performance_extended: performance evaluation for extended methods.
 
 from .utils.prototype import *
 
@@ -24,11 +24,11 @@ exp_default_settings = {
     "workload_name": "facebook"
 }
 # NOTE: run segcache, lrb, and glcache at last due to slow warmup issue of segcache and lrb, and memory usage issue of glcache (may be caused by bugs on segment-level memory management and model retraining) -> TODO: if no results of the above baselines, please provide more DRAM memory (or swap memory), and run them again with sufficient time (may be in units of hours or days) for warmup and cache stable performance
-cache_names = ["covered", "shark", "bestguess", "arc", "cachelib", "fifo", "frozenhot", "gdsf", "lfu", "lhd", "lru", "s3fifo", "sieve", "wtinylfu", "segcache", "lrb", "glcache"]
+cache_names = ["arc+", "cachelib+", "fifo+", "frozenhot+", "gdsf+", "lfu+", "lhd+", "s3fifo+", "sieve+", "wtinylfu+", "segcache+", "lrb+", "glcache+"]
 
 # Run the experiments with multiple rounds
 for tmp_round_index in round_indexes:
-    tmp_log_dirpath = "{}/exp_performance_existing/round{}".format(Common.output_log_dirpath, tmp_round_index)
+    tmp_log_dirpath = "{}/exp_performance_extended/round{}".format(Common.output_log_dirpath, tmp_round_index)
     log_dirpaths.append(tmp_log_dirpath)
 
     # Create log dirpath if necessary

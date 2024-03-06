@@ -252,7 +252,7 @@ else:
 # Check file size
 is_swapfile_large_enough = False
 if is_swapfile_exist:
-    check_swapfile_size_cmd = "sudo du {} | awk '{print $1}'".format(swapfile_path)
+    check_swapfile_size_cmd = "sudo du {} | awk '{{print $1}}'".format(swapfile_path)
     check_swapfile_size_subprocess = SubprocessUtil.runCmd(check_swapfile_size_cmd)
     if check_swapfile_size_subprocess.returncode != 0:
         LogUtil.die(Common.scriptname, "failed to check swap file size (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(check_swapfile_size_subprocess)))
