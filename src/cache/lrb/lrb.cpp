@@ -590,7 +590,7 @@ LRBCache::LRBCache(const uint32_t& dataset_keycnt) : Cache(), n_edc_feature(10),
     memory_window = 67108864;
     n_extra_fields = 0;
     //batch_size = 131072;
-    batch_size = dataset_keycnt; // Siyuan: set batch size as dataset_keycnt to avoid too frequent training for warmup speedup (will retrain 10 times in total during warmup due to using 10X dataset size as warmup requests)
+    batch_size = 10 * dataset_keycnt; // Siyuan: set batch size as 10*dataset_keycnt (the same as warmup reqcnt) to avoid too frequent training for warmup speedup
     n_feature = 0;
 #ifdef EVICTION_LOGGING
     future_timestamps.clear();

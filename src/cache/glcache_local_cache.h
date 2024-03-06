@@ -2,6 +2,8 @@
  * GLCacheLocalCache: local edge cache with GLCache policy (https://github.com/Thesys-lab/fast23-glcache).
  *
  * NOTE: all configuration and function calls refer to GLCache files, including lib/glcache/micro-implementation/libCacheSim/bin/cachesim/\* and lib/glcache/micro-implementation/libCacheSim/cache/eviction/GLCache/\*, yet reimplement in C++ (see src/cache/glcache/micro-implementation/\*) and fix libcachesim limitations (only metadata operations + fixed-length uint64_t key + impractical assumption of in-request next access time).
+ * 
+ * NOTE: we use dataset keycnt / 100 as segment size (in units of object count) to avoid too many segments, and use 30 minutes as retraining period to avoid too frequent retraining for warmup speedup (NOT fix GL-Cache memory usage bug) -> both NOT affect cache stable performance.
  *
  * Hack to support key-value caching, required interfaces, and cache size in units of bytes for capacity constraint.
  * 
@@ -62,7 +64,7 @@ namespace covered
         virtual bool checkObjsizeInternal_(const ObjectSize& objsize) const override;
 
         // Build request for GLCache
-        static request_t buildRequest_(const Key& key, const Value& value = Value());
+        request_t buildRequest_(const Key& key, const Value& value = Value()) const;
 
         // Member variables
 
@@ -71,6 +73,10 @@ namespace covered
 
         // Non-const shared variables
         cache_t* glcache_ptr_; // Data and metadata for local edge cache
+
+        // For retraining
+        mutable bool is_first_request_;
+        mutable int64_t start_rtime_;
     };
 }
 

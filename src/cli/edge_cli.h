@@ -13,6 +13,7 @@
 
 #include "cli/edgescale_cli.h"
 #include "cli/propagation_cli.h"
+#include "cli/workload_cli.h"
 
 namespace covered
 {

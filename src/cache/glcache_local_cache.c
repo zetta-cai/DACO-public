@@ -35,15 +35,22 @@ namespace covered
             uint32_t segsize = dataset_keycnt / 100;
         }
 
+        // NOTE: use a larger retrain period to avoid too frequent retrain, which will incur too large memory usage due to memory management bugs of GL-Cache itself
+        uint32_t retrain_period_us = 30 * 60 * 1000 * 1000; // Retrain every 30 minutes
+
         // Prepare GL-Cache parameter string
         oss.clear();
         oss.str("");
-        oss << "segsize=" << segsize;
+        oss << "segment-size=" << segsize << ", retrain-intvl=" << retrain_period_us;
         const std::string glcache_paramstr = oss.str();
 
         // Allocate and initialized glcache data and metadata
         glcache_ptr_ = GLCache_init(cc_params, glcache_paramstr.c_str());
         assert(glcache_ptr_ != NULL);
+
+        // For retraining
+        is_first_request_ = true;
+        start_rtime_ = 0;
     }
     
     GLCacheLocalCache::~GLCacheLocalCache()
@@ -264,12 +271,26 @@ namespace covered
         return is_valid_objsize;
     }
 
-    request_t GLCacheLocalCache::buildRequest_(const Key& key, const Value& value)
+    request_t GLCacheLocalCache::buildRequest_(const Key& key, const Value& value) const
     {
         // Refer to src/cache/glcache/micro-implementation/libCacheSim/include/libCacheSim/request.h for default settings of some fields
 
         request_t req;
-        req.real_time = Util::getCurrentTimeUs();
+
+        // Set real time relative to start_rtime_
+        if (is_first_request_) // The first request
+        {
+            start_rtime_ = Util::getCurrentTimeUs();
+            req.real_time = 0;
+
+            is_first_request_ = false;
+        }
+        else // Subsequent requests
+        {
+            req.real_time = Util::getCurrentTimeUs() - start_rtime_;
+            assert(req.real_time >= 0);
+        }
+
         req.hv = 0; // src/cache/glcache/micro-implementation/libCacheSim/cache/eviction/GLCache/GLCache.c will hash key to get a hash value
         req.obj_id = 0; // NOT used by glcache due to key-based lookup
         req.obj_size = key.getKeyLength() + value.getValuesize();

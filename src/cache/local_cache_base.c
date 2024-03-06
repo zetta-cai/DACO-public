@@ -51,7 +51,7 @@ namespace covered
         }
         else if (cache_name == Util::GLCACHE_CACHE_NAME || cache_name == Util::EXTENDED_GLCACHE_CACHE_NAME)
         {
-            local_cache_ptr = new GLCacheLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
+            local_cache_ptr = new GLCacheLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes, dataset_keycnt);
         }
         else if (cache_name == Util::LRUK_CACHE_NAME || cache_name == Util::GDSIZE_CACHE_NAME || cache_name == Util::GDSF_CACHE_NAME || cache_name == Util::LFUDA_CACHE_NAME || cache_name == Util::EXTENDED_LRUK_CACHE_NAME || cache_name == Util::EXTENDED_GDSIZE_CACHE_NAME || cache_name == Util::EXTENDED_GDSF_CACHE_NAME || cache_name == Util::EXTENDED_LFUDA_CACHE_NAME) // Greedy dual
         {

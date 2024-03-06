@@ -1,5 +1,7 @@
 /*
  * LrbLocalCache: local edge cache with LRB policy (refer to https://github.com/sunnyszy/lrb).
+ *
+ * NOTE: we use 10 * dataset keycnt (the same as warmup reqcnt) as batch size (see src/cache/lrb/lrb.cpp) to avoid too frequent retraining for warmup speedup -> NOT affect cache stable performance.
  * 
  * By Siyuan Sheng (2024.01.13).
  */
