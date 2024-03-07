@@ -707,6 +707,9 @@ namespace covered
             if (remaining_victims.size() <= max_victimcnt) // Process all remaining victims by one time of partial parallel eviction
             {
                 is_finish = partialParallelEvictDirectory_(remaining_victims, source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, extra_common_msghdr, is_background);
+
+                // Clear remaining victims
+                remaining_victims.clear();
             }
             else // More than max_victimcnt remaining victims
             {
