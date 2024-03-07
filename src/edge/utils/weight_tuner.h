@@ -42,15 +42,15 @@ namespace covered
     class WeightTuner
     {
     public:
-        static const float ENOUGH_BEACON_ACCESS_CNT_FOR_PROB_TUNING; // Threshold of total beacon access cnt to trigger remote beacon probability tuning
+        static const float BEACON_ACCESS_CNT_FOR_PROB_WINDOW_SIZE; // Window size of beacon access cnt for remote beacon probability tuning
         static const double EWMA_ALPHA; // Alpha parameter for exponential weighted moving average of cross-edge/edge-cloud propagation latency
 
         WeightTuner(const uint32_t& edge_idx, const uint32_t& edgecnt, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us);
         ~WeightTuner();
 
         WeightInfo getWeightInfo() const;
-        void incrLocalBeaconAccessCnt(); // NOTE: will invoke updateWeightInfo_ after increment local beacon access cnt
-        void incrRemoteBeaconAccessCnt(); // NOTE: will invoke updateWeightInfo_ after increment remote beacon access cnt
+        void incrLocalBeaconAccessCnt(); // NOTE: will invoke updateEwmaRemoteBeaconProb_ and updateWeightInfo_ after increment local beacon access cnt
+        void incrRemoteBeaconAccessCnt(); // NOTE: will invoke updateEwmaRemoteBeaconProb_ and updateWeightInfo_ after increment remote beacon access cnt
         void updateEwmaCrossedgeLatency(const uint32_t& cur_propagation_latency_crossedge_us); // NOTE: will invoke updateWeightInfo_ after update cross-edge latency
         void updateEwmaEdgecloudLatency(const uint32_t& cur_propagation_latency_edgecloud_us); // NOTE: will invoke updateWeightInfo_ after update edge-cloud latency
         //void tuneWeightInfo();
@@ -59,6 +59,7 @@ namespace covered
     private:
         static const std::string kClassName;
 
+        void updateEwmaRemoteBeaconProb_();
         void updateWeightInfo_();
 
         // Const variables
@@ -71,7 +72,7 @@ namespace covered
         float local_beacon_access_cnt_; // Sender is beacon
         float remote_beacon_access_cnt_; // Sender is NOT beacon
         // NOTE: 0 means NOT consider remote content discovery overhead and 1 means always consider remote content discovery overhead; while (1.0 - 1.0/edgecnt) heuristically treat the probability of sender-is-beacon as 1.0/edgecnt under consistent-hashing-based DHT
-        float remote_beacon_prob_; // Initialized by (1.0 - 1.0/edgecnt) from CLI
+        float ewma_remote_beacon_prob_; // Initialized by (1.0 - 1.0/edgecnt) from CLI
 
         // Non-const latency and weight variables (EWMA: Exponentially Weighted Moving Average)
         const uint32_t ewma_propagation_latency_clientedge_us_; // NOTE: client-edge latency does NOT affect weight_info_, as no matter local hit, cooperative hit, or cloud access have such latency

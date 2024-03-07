@@ -95,7 +95,7 @@ namespace covered
 
             // Dynamic configurations for client
             argument_desc_.add_options()
-                ("capacity_mb", boost::program_options::value<uint64_t>()->default_value(DEFAULT_CAPACITY_MB), "total cache capacity (including data and metadata) in units of MiB")
+                ("capacity_mb", boost::program_options::value<uint64_t>()->default_value(DEFAULT_CAPACITY_MB), "per-edge cache capacity (including data and metadata) in units of MiB")
                 // ("edgecnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_EDGECNT), "the number of edge nodes")
             ;
 

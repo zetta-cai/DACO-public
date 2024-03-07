@@ -48,7 +48,7 @@ namespace covered
 
     // WeightTuner
 
-    const float WeightTuner::ENOUGH_BEACON_ACCESS_CNT_FOR_PROB_TUNING = 1000.0;
+    const float WeightTuner::BEACON_ACCESS_CNT_FOR_PROB_WINDOW_SIZE = 100.0; // Tune prob every 100 beacon accesses for content discovery
     const double WeightTuner::EWMA_ALPHA = 0.1;
     const std::string WeightTuner::kClassName = "WeightTuner";
 
@@ -60,7 +60,7 @@ namespace covered
 
         local_beacon_access_cnt_ = 0.0;
         remote_beacon_access_cnt_ = 0.0;
-        remote_beacon_prob_ = (1.0 - 1.0 / static_cast<float>(edgecnt));
+        ewma_remote_beacon_prob_ = (1.0 - 1.0 / static_cast<float>(edgecnt));
 
         ewma_propagation_latency_crossedge_us_ = propagation_latency_crossedge_us;
         ewma_propagation_latency_edgecloud_us_ = propagation_latency_edgecloud_us;
@@ -70,7 +70,7 @@ namespace covered
         // Dump initial weight info
         oss.clear();
         oss.str("");
-        oss << "initial local hit weight: " << weight_info_.getLocalHitWeight() << ", cooperative hit weight: " << weight_info_.getCooperativeHitWeight() << ", remote beacon prob: " << remote_beacon_prob_;
+        oss << "initial local hit weight: " << weight_info_.getLocalHitWeight() << ", cooperative hit weight: " << weight_info_.getCooperativeHitWeight() << ", remote beacon prob: " << ewma_remote_beacon_prob_;
         Util::dumpDebugMsg(instance_name_, oss.str());
     }
 
@@ -97,11 +97,10 @@ namespace covered
 
         local_beacon_access_cnt_ += 1.0;
 
-        // Update remote beacon probability if with enough beacon accesses
-        if (local_beacon_access_cnt_ + remote_beacon_access_cnt_ >= ENOUGH_BEACON_ACCESS_CNT_FOR_PROB_TUNING)
+        // Update remote beacon probability for every tuning window
+        if (local_beacon_access_cnt_ + remote_beacon_access_cnt_ >= BEACON_ACCESS_CNT_FOR_PROB_WINDOW_SIZE) // At the end of a tuning window
         {
-            remote_beacon_prob_ = remote_beacon_access_cnt_ / (local_beacon_access_cnt_ + remote_beacon_access_cnt_);
-            assert(remote_beacon_prob_ >= 0 && remote_beacon_prob_ <= 1.0);
+            updateEwmaRemoteBeaconProb_();
         }
 
         updateWeightInfo_(); // Update weight_info_ for latency-aware weight tuning
@@ -121,11 +120,10 @@ namespace covered
 
         remote_beacon_access_cnt_ += 1.0;
 
-        // Update remote beacon probability if with enough beacon accesses
-        if (local_beacon_access_cnt_ + remote_beacon_access_cnt_ >= ENOUGH_BEACON_ACCESS_CNT_FOR_PROB_TUNING)
+        // Update remote beacon probability for every tuning window
+        if (local_beacon_access_cnt_ + remote_beacon_access_cnt_ >= BEACON_ACCESS_CNT_FOR_PROB_WINDOW_SIZE) // At the end of a tuning window
         {
-            remote_beacon_prob_ = remote_beacon_access_cnt_ / (local_beacon_access_cnt_ + remote_beacon_access_cnt_);
-            assert(remote_beacon_prob_ >= 0 && remote_beacon_prob_ <= 1.0);
+            updateEwmaRemoteBeaconProb_();
         }
 
         updateWeightInfo_(); // Update weight_info_ for latency-aware weight tuning
@@ -195,14 +193,32 @@ namespace covered
         return sizeof(float) + sizeof(uint32_t) * 2 + weight_info_.getSizeForCapacity();
     }
 
+    void WeightTuner::updateEwmaRemoteBeaconProb_()
+    {
+        assert(local_beacon_access_cnt_ + remote_beacon_access_cnt_ >= BEACON_ACCESS_CNT_FOR_PROB_WINDOW_SIZE); // At the end of a tuning window
+
+        // Calculate remote beacon prob of current window
+        float tmp_remote_beacon_prob = remote_beacon_access_cnt_ / (local_beacon_access_cnt_ + remote_beacon_access_cnt_);
+        assert(tmp_remote_beacon_prob >= 0 && tmp_remote_beacon_prob <= 1.0);
+
+        // Update EWMA of remote beacon prob
+        ewma_remote_beacon_prob_ = (1 - EWMA_ALPHA) * ewma_remote_beacon_prob_ + EWMA_ALPHA * tmp_remote_beacon_prob;
+
+        // Clean for next window
+        local_beacon_access_cnt_ = 0.0;
+        remote_beacon_access_cnt_ = 0.0;
+
+        return;
+    }
+
     void WeightTuner::updateWeightInfo_()
     {
         // NOTE: NO need to acquire a write lock, which is NO need in constructor, or has been done in tuneWeightInfo()
 
         // Calculate latency of different accesses
         const Weight local_hit_latency = ewma_propagation_latency_clientedge_us_;
-        const Weight cooperative_hit_latency = ewma_propagation_latency_clientedge_us_ + (remote_beacon_prob_ + 1) * ewma_propagation_latency_crossedge_us_;
-        const Weight global_miss_latency = ewma_propagation_latency_clientedge_us_ + remote_beacon_prob_ * ewma_propagation_latency_crossedge_us_ + ewma_propagation_latency_edgecloud_us_;
+        const Weight cooperative_hit_latency = ewma_propagation_latency_clientedge_us_ + (ewma_remote_beacon_prob_ + 1) * ewma_propagation_latency_crossedge_us_;
+        const Weight global_miss_latency = ewma_propagation_latency_clientedge_us_ + ewma_remote_beacon_prob_ * ewma_propagation_latency_crossedge_us_ + ewma_propagation_latency_edgecloud_us_;
 
         // Update weight info
         const Weight local_hit_weight = global_miss_latency - local_hit_latency; // w1
