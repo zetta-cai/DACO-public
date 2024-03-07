@@ -698,24 +698,81 @@ namespace covered
         assert(recvrsp_socket_server_ptr != NULL);
 
         bool is_finish = false;
+
+        // NOTE: each time of partial parallel eviction cannot exceend max victimcnt
+        const uint32_t max_victimcnt = Config::getParallelEvictionMaxVictimcnt();
+        std::unordered_map<Key, Value, KeyHasher> remaining_victims = total_victims;
+        while (remaining_victims.size() > 0) // Still with remaining victims
+        {
+            if (remaining_victims.size() <= max_victimcnt) // Process all remaining victims by one time of partial parallel eviction
+            {
+                is_finish = partialParallelEvictDirectory_(remaining_victims, source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, extra_common_msghdr, is_background);
+            }
+            else // More than max_victimcnt remaining victims
+            {
+                // Select max_victimcnt victims from remaining victims
+                std::unordered_map<Key, Value, KeyHasher> partial_victims;
+                for (std::unordered_map<Key, Value, KeyHasher>::const_iterator remaining_victims_const_iter = remaining_victims.begin(); remaining_victims_const_iter != remaining_victims.end(); remaining_victims_const_iter++)
+                {
+                    if (partial_victims.size() < max_victimcnt)
+                    {
+                        partial_victims.insert(*remaining_victims_const_iter);
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+                assert(partial_victims.size() == max_victimcnt);
+
+                // Process partial victims by one time of partial parallel eviction
+                is_finish = partialParallelEvictDirectory_(partial_victims, source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, extra_common_msghdr, is_background);
+
+                // Remove processed victims from remaining victims
+                for (std::unordered_map<Key, Value, KeyHasher>::const_iterator partial_victims_const_iter = partial_victims.begin(); partial_victims_const_iter != partial_victims.end(); partial_victims_const_iter++)
+                {
+                    assert(remaining_victims.find(partial_victims_const_iter->first) != remaining_victims.end());
+                    remaining_victims.erase(partial_victims_const_iter->first);
+                }
+            }
+
+            if (is_finish) // Edge node is NOT running
+            {
+                break;
+            }
+        } // End of while (remaining_victims.size() > 0)
+
+        return is_finish;
+    }
+
+    bool CacheServerBase::partialParallelEvictDirectory_(const std::unordered_map<Key, Value, KeyHasher>& partial_victims, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr, const bool& is_background) const
+    {
+        checkPointers_();
+        assert(recvrsp_socket_server_ptr != NULL);
+
+        // NOTE: each time of partial parallel eviction cannot exceend max victimcnt
+        const uint32_t max_victimcnt = Config::getParallelEvictionMaxVictimcnt();
+        assert(partial_victims.size() <= max_victimcnt);
+
+        bool is_finish = false;
         EdgeWrapperBase* tmp_edge_wrapper_ptr = edge_component_ptr_->getEdgeWrapperPtr();
 
         // Track whether all keys have received directory update responses
         uint32_t acked_cnt = 0;
         std::unordered_map<Key, std::pair<bool, uint32_t>, KeyHasher> acked_flags; // bool refers to whether ACK has been received, while uint32_t refers to beacon edge index for debugging if with timeout
-        for (std::unordered_map<Key, Value, KeyHasher>::const_iterator victim_iter = total_victims.begin(); victim_iter != total_victims.end(); victim_iter++)
+        for (std::unordered_map<Key, Value, KeyHasher>::const_iterator victim_iter = partial_victims.begin(); victim_iter != partial_victims.end(); victim_iter++)
         {
             const uint32_t tmp_victim_beacon_edge_idx = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(victim_iter->first);
             acked_flags.insert(std::pair(victim_iter->first, std::pair(false, tmp_victim_beacon_edge_idx)));
         }
 
         // Issue multiple directory update requests with is_admit = false simultaneously
-        const uint32_t total_victim_cnt = total_victims.size();
+        const uint32_t partial_victim_cnt = partial_victims.size();
         const DirectoryInfo directory_info(tmp_edge_wrapper_ptr->getNodeIdx());
         bool _unused_is_being_written = false; // NOTE: is_being_written does NOT affect cache eviction
-        while (acked_cnt != total_victim_cnt)
+        while (acked_cnt != partial_victim_cnt)
         {
-            // Send (total_victim_cnt - acked_cnt) directory update requests to the beacon nodes that have not acknowledged
+            // Send (partial_victim_cnt - acked_cnt) directory update requests to the beacon nodes that have not acknowledged
             for (std::unordered_map<Key, std::pair<bool, uint32_t>, KeyHasher>::const_iterator iter_for_request = acked_flags.begin(); iter_for_request != acked_flags.end(); iter_for_request++)
             {
                 if (iter_for_request->second.first) // Skip the key that has received directory update response
@@ -725,7 +782,7 @@ namespace covered
 
                 const Key& tmp_victim_key = iter_for_request->first; // key that has NOT received any directory update response
                 const uint32_t& tmp_victim_beacon_edge_idx = iter_for_request->second.second;
-                const Value& tmp_victim_value = total_victims.find(tmp_victim_key)->second; // Used for non-blocking placement notification if need hybrid data fetching for COVERED
+                const Value& tmp_victim_value = partial_victims.find(tmp_victim_key)->second; // Used for non-blocking placement notification if need hybrid data fetching for COVERED
                 bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon(tmp_victim_key);
                 if (current_is_beacon) // Evict local directory info for the victim key
                 {
@@ -759,9 +816,9 @@ namespace covered
                 #endif
             } // End of iter_for_request
 
-            // Receive (total_victim_cnt - acked_cnt) directory update repsonses from the beacon edge nodes
+            // Receive (partial_victim_cnt - acked_cnt) directory update repsonses from the beacon edge nodes
             // NOTE: acked_cnt has already been increased for local diretory eviction
-            const uint32_t expected_rspcnt = total_victim_cnt - acked_cnt;
+            const uint32_t expected_rspcnt = partial_victim_cnt - acked_cnt;
             for (uint32_t keyidx_for_response = 0; keyidx_for_response < expected_rspcnt; keyidx_for_response++)
             {
                 DynamicArray control_response_msg_payload;
@@ -819,9 +876,9 @@ namespace covered
                     } 
                     else // Process received correct directory eviction response if key matches
                     {
-                        std::unordered_map<Key, Value, KeyHasher>::const_iterator total_victims_const_iter = total_victims.find(tmp_received_key);
-                        assert(total_victims_const_iter != total_victims.end());
-                        const Value tmp_victim_value = total_victims_const_iter->second;
+                        std::unordered_map<Key, Value, KeyHasher>::const_iterator partial_victims_const_iter = partial_victims.find(tmp_received_key);
+                        assert(partial_victims_const_iter != partial_victims.end());
+                        const Value tmp_victim_value = partial_victims_const_iter->second;
                         is_finish = processRspToEvictBeaconDirectory_(control_response_ptr, tmp_victim_value, _unused_is_being_written, source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, extra_common_msghdr, is_background);
                         if (is_finish)
                         {
@@ -839,7 +896,7 @@ namespace covered
             {
                 break;
             }
-        } // End of (acked_cnt != total_victim_cnt)
+        } // End of (acked_cnt != partial_victim_cnt)
 
         return is_finish;
     }

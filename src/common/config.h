@@ -90,6 +90,7 @@ namespace covered
         static const std::string LATENCY_HISTOGRAM_SIZE_KEYSTR;
         //static const std::string MIN_CAPACITY_MB_KEYSTR;
         static const std::string OUTPUT_DIRPATH_KEYSTR;
+        static const std::string PARALLEL_EVICTION_MAX_VICTIMCNT_KEYSTR;
         static const std::string PROPAGATION_ITEM_BUFFER_SIZE_CLIENT_TOEDGE_KEYSTR;
         static const std::string PROPAGATION_ITEM_BUFFER_SIZE_EDGE_TOCLIENT_KEYSTR;
         static const std::string PROPAGATION_ITEM_BUFFER_SIZE_EDGE_TOEDGE_KEYSTR;
@@ -151,6 +152,7 @@ namespace covered
         static uint32_t getLatencyHistogramSize();
         //static uint64_t getMinCapacityMB();
         static std::string getOutputDirpath();
+        static uint32_t getParallelEvictionMaxVictimcnt();
         static uint32_t getPropagationItemBufferSizeClientToedge();
         static uint32_t getPropagationItemBufferSizeEdgeToclient();
         static uint32_t getPropagationItemBufferSizeEdgeToedge();
@@ -196,6 +198,9 @@ namespace covered
         // For port verification
         static void tryToFindStartport_(const std::string& keystr, uint16_t* startport_ptr);
 
+        // For integrity verification
+        static void verifyIntegrity_();
+
         static bool is_valid_;
         static boost::json::object json_object_;
 
@@ -219,7 +224,7 @@ namespace covered
         static uint32_t dataset_loader_sleep_for_compaction_sec_; // Sleep time for dataset loader to wait for compaction in units of seconds
         static uint16_t edge_beacon_server_recvreq_startport_; // Start UDP port for edge beacon server to receive cooperation control requests
         static uint16_t edge_beacon_server_recvrsp_startport_; // Start UDP port for edge beacon server to receive cooperation control responses
-        static uint32_t edge_cache_server_data_request_buffer_size_; // Buffer size for edge cache server to store local/redirected data requests
+        static uint32_t edge_cache_server_data_request_buffer_size_; // Buffer size for edge cache server to store local/redirected data requests (for cache server workers and processors; placement processor has a message ring buffer and local admission ring buffer)
         static uint16_t edge_cache_server_recvreq_startport_; // Start UDP port for edge cache server to receive local/redirected requests
         static uint16_t edge_cache_server_placement_processor_recvrsp_startport_; // Start UDP port for edge cache server placement processor to receive cooperation control responses
         static uint16_t edge_cache_server_worker_recvreq_startport_; // Start UDP port for edge cache server worker to receive cooperation control requests
@@ -242,6 +247,7 @@ namespace covered
         static uint32_t latency_histogram_size_; // Size of latency histogram
         //static uint64_t min_capacity_mb_; // Size of minimum capacity in units of MiB (avoid too small cache capacity which cannot work due to large-value objects and necessary memory usage of CacheLib engine)
         static std::string output_dirpath_; // Dirpath for output files
+        static uint32_t parallel_eviction_max_victimcnt_; // Max # of victims for parallel eviction (MUST < the ring buffer sizes for edge-to-edge propagation simulator, cache server, edge-to-cloud & cloud-to-edge propagation simulator) -> evicting too many victims each time may incur ring buffer overflow and UDP buffer overflow (even worse if we transmit value content in messages)
         static uint32_t propagation_item_buffer_size_client_toedge_; // Buffer size for client-to-edge propagated messages
         static uint32_t propagation_item_buffer_size_edge_toclient_; // Buffer size for edge-to-client propagated messages
         static uint32_t propagation_item_buffer_size_edge_toedge_; // Buffer size for edge-to-edge propagated messages

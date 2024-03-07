@@ -107,6 +107,7 @@ namespace covered
     const std::string Config::LATENCY_HISTOGRAM_SIZE_KEYSTR("latency_histogram_size");
     //const std::string Config::MIN_CAPACITY_MB_KEYSTR("min_capacity_mb"); // <"min_capacity_mb": 10,> in config.json
     const std::string Config::OUTPUT_DIRPATH_KEYSTR("output_dirpath");
+    const std::string Config::PARALLEL_EVICTION_MAX_VICTIMCNT_KEYSTR("parallel_eviction_max_victimcnt");
     const std::string Config::PROPAGATION_ITEM_BUFFER_SIZE_CLIENT_TOEDGE_KEYSTR("propagation_item_buffer_size_client_toedge");
     const std::string Config::PROPAGATION_ITEM_BUFFER_SIZE_EDGE_TOCLIENT_KEYSTR("propagation_item_buffer_size_edge_toclient");
     const std::string Config::PROPAGATION_ITEM_BUFFER_SIZE_EDGE_TOEDGE_KEYSTR("propagation_item_buffer_size_edge_toedge");
@@ -147,7 +148,7 @@ namespace covered
     uint32_t Config::dataset_loader_sleep_for_compaction_sec_ = 30;
     uint16_t Config::edge_beacon_server_recvreq_startport_ = 4500; // [4096, 65536]
     uint16_t Config::edge_beacon_server_recvrsp_startport_ = 4600; // [4096, 65536]
-    uint32_t Config::edge_cache_server_data_request_buffer_size_ = 1000;
+    uint32_t Config::edge_cache_server_data_request_buffer_size_ = 10000;
     uint16_t Config::edge_cache_server_recvreq_startport_ = 4700; // [4096, 65536]
     uint16_t Config::edge_cache_server_placement_processor_recvrsp_startport_ = 4800; // [4096, 65536]
     uint16_t Config::edge_cache_server_worker_recvreq_startport_ = 4900; // [4096, 65536]
@@ -169,11 +170,12 @@ namespace covered
     uint32_t Config::latency_histogram_size_ = 1000000; // Track latency up to 1000 ms
     //uint64_t Config::min_capacity_mb_ = 10;
     std::string Config::output_dirpath_("output");
-    uint32_t Config::propagation_item_buffer_size_client_toedge_ = 1000;
-    uint32_t Config::propagation_item_buffer_size_edge_toclient_ = 1000;
-    uint32_t Config::propagation_item_buffer_size_edge_toedge_ = 1000;
-    uint32_t Config::propagation_item_buffer_size_edge_tocloud_ = 1000;
-    uint32_t Config::propagation_item_buffer_size_cloud_toedge_ = 1000;
+    uint32_t Config::parallel_eviction_max_victimcnt_ = 1000; // NOTE: MUST < the ring buffer sizes for edge-to-edge propagation simulator, cache server, edge-to-cloud & cloud-to-edge propagation simulator
+    uint32_t Config::propagation_item_buffer_size_client_toedge_ = 10000;
+    uint32_t Config::propagation_item_buffer_size_edge_toclient_ = 10000;
+    uint32_t Config::propagation_item_buffer_size_edge_toedge_ = 10000;
+    uint32_t Config::propagation_item_buffer_size_edge_tocloud_ = 10000;
+    uint32_t Config::propagation_item_buffer_size_cloud_toedge_ = 10000;
     std::string Config::trace_dirpath_("data");
     std::vector<std::string> Config::wikiimage_trace_filepaths_(0);
     std::vector<std::string> Config::wikitext_trace_filepaths_(0);
@@ -372,6 +374,12 @@ namespace covered
                 {
                     output_dirpath_ = std::string(kv_ptr->value().get_string().c_str());
                 }
+                kv_ptr = find_(PARALLEL_EVICTION_MAX_VICTIMCNT_KEYSTR);
+                if (kv_ptr != NULL)
+                {
+                    int64_t tmp_victimcnt = kv_ptr->value().get_int64();
+                    parallel_eviction_max_victimcnt_ = Util::toUint32(tmp_victimcnt);
+                }
                 kv_ptr = find_(PROPAGATION_ITEM_BUFFER_SIZE_CLIENT_TOEDGE_KEYSTR);
                 if (kv_ptr != NULL)
                 {
@@ -464,6 +472,9 @@ namespace covered
                     assert(physical_machines_.size() == kv_ptr->value().get_array().size());
                 }
                 checkPhysicalMachinesAndSetCuridx_(); // Set current_machine_idx_
+
+                // Integrity verification
+                verifyIntegrity_();
 
                 is_valid_ = true; // valid Config
             }
@@ -814,6 +825,12 @@ namespace covered
         return output_dirpath_;
     }
 
+    uint32_t Config::getParallelEvictionMaxVictimcnt()
+    {
+        checkIsValid_();
+        return parallel_eviction_max_victimcnt_;
+    }
+
     uint32_t Config::getPropagationItemBufferSizeClientToedge()
     {
         checkIsValid_();
@@ -1112,6 +1129,7 @@ namespace covered
         oss << "Latency histogram size: " << latency_histogram_size_ << std::endl;
         //oss << "Min capacity MiB: " << min_capacity_mb_ << std::endl;
         oss << "Output dirpath: " << output_dirpath_ << std::endl;
+        oss << "Parallel eviction max victimcnt: " << parallel_eviction_max_victimcnt_ << std::endl;
         oss << "Propagation item buffer size from client to edge: " << propagation_item_buffer_size_client_toedge_ << std::endl;
         oss << "Propagation item buffer size from edge to client: " << propagation_item_buffer_size_edge_toclient_ << std::endl;
         oss << "Propagation item buffer size from edge to edge: " << propagation_item_buffer_size_edge_toedge_ << std::endl;
@@ -1550,6 +1568,19 @@ namespace covered
             startport_keystr_map_const_iter = startport_keystr_map_.insert(std::pair(*startport_ptr, keystr)).first;
             assert(startport_keystr_map_const_iter != startport_keystr_map_.end());
         }
+
+        return;
+    }
+
+    // For integrity verification
+
+    void Config::verifyIntegrity_()
+    {
+        // (1) parallel_eviction_max_victimcnt_ MUST < the ring buffer sizes for edge-to-edge propagation simulator, cache server, edge-to-cloud & cloud-to-edge propagation simulator
+        assert(parallel_eviction_max_victimcnt_ < propagation_item_buffer_size_edge_toedge_);
+        assert(parallel_eviction_max_victimcnt_ < edge_cache_server_data_request_buffer_size_);
+        assert(parallel_eviction_max_victimcnt_ < propagation_item_buffer_size_edge_tocloud_);
+        assert(parallel_eviction_max_victimcnt_ < propagation_item_buffer_size_cloud_toedge_);
 
         return;
     }
