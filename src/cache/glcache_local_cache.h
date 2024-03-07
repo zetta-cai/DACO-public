@@ -3,10 +3,7 @@
  *
  * NOTE: all configuration and function calls refer to GLCache files, including lib/glcache/micro-implementation/libCacheSim/bin/cachesim/\* and lib/glcache/micro-implementation/libCacheSim/cache/eviction/GLCache/\*, yet reimplement in C++ (see src/cache/glcache/micro-implementation/\*) and fix libcachesim limitations (only metadata operations + fixed-length uint64_t key + impractical assumption of in-request next access time).
  * 
- * NOTE: we use dataset keycnt / 100 as segment size (in units of object count) to avoid too many segments, and use 30 minutes as retraining period to avoid too frequent retraining for warmup speedup (NOT fix GL-Cache memory usage bug) -> both NOT affect cache stable performance.
- * 
- * NOTE: we store value size instead of value content in GL-Cache (the same as original GL-Cache code) to avoid memory usage bug, yet still use real value size to calculate cache usage for capacity limitation -> NOT affect cache stable performance.
- * --> Original GL-Cache code does NOT really store value content, and authors may NOT notice the memory leakage issue???
+ * NOTE: we use 30 minutes as retraining period to avoid too frequent retraining for warmup speedup -> both NOT affect cache stable performance.
  *
  * Hack to support key-value caching, required interfaces, and cache size in units of bytes for capacity constraint.
  * 
@@ -17,6 +14,10 @@
 
 #ifndef GLCACHE_LOCAL_CACHE_H
 #define GLCACHE_LOCAL_CACHE_H
+
+// NOTE: we store value size instead of value content in GL-Cache (the same as original GL-Cache code) to avoid memory usage bug of GL-Cache itself (leak segsize * 4B value size instead of segsize * value content), yet still use real value size to calculate cache usage for capacity limitation -> NOT affect cache stable performance.
+// --> Original GL-Cache code does NOT really store value content, and authors may NOT notice the memory leakage issue???
+#define ENABLE_ONLY_VALSIZE_FOR_GLCACHE
 
 #include <string>
 
@@ -30,7 +31,7 @@ namespace covered
     class GLCacheLocalCache : public LocalCacheBase
     {
     public:
-        GLCacheLocalCache(const EdgeWrapperBase* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint32_t& dataset_keycnt);
+        GLCacheLocalCache(const EdgeWrapperBase* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes);
         virtual ~GLCacheLocalCache();
 
         virtual const bool hasFineGrainedManagement() const;

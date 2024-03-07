@@ -9,6 +9,9 @@
 #ifndef SEGCACHE_LOCAL_CACHE_H
 #define SEGCACHE_LOCAL_CACHE_H
 
+// (OBSOLETE as segcache uses absolute bytecnt instead of relative objcnt for segment size and merge-based eviction -> always leak 1MiB segsize (cannot be changed; hardcoded in segcache with 20-bit offsets) no matter storing value size or content) NOTE: we store value size instead of value content in SegCache to avoid memory usage bug of SegCache itself, yet still use real value size to calculate cache usage for capacity limitation -> NOT affect cache stable performance.
+//#define ENABLE_ONLY_VALSIZE_FOR_SEGCACHE
+
 #include <string>
 
 #include "cache/local_cache_base.h"
@@ -74,6 +77,14 @@ namespace covered
         unsigned segcache_metrics_cnt_; // # of metrics in segcache_metrics_
         seg_metrics_st* segcache_metrics_ptr_; // Metrics for SegCache
         struct SegCache* segcache_cache_ptr_; // Data and metadata for local edge cache
+
+        #ifdef ENABLE_ONLY_VALSIZE_FOR_SEGCACHE
+        // NOTE: store value size instead of value content to avoid memory usage bug of segcache, yet not affect cache stable performance, as we use extra_size_bytes_ to complete the remaining bytes which should stored in segcache
+        uint32_t extra_size_bytes_; // The remaining bytes which should stored in segcache if we store value content instead of value size
+        // NOTE: cannot change 1MiB segment size, as segcache hardcodes to use 20 bits for segment offset
+        //const uint32_t logical_seg_size_; // Used for object size checking
+        //const uint32_t physical_seg_size_; // Scales in logical seg size into physical one for impl trick of only storing value size instead of value content (otherwise using 1MiB to store value size could cache too many objects, which does not have enough segments to merge when cache is full, and may evict too many objects after evicting a segment)
+        #endif
     };
 }
 

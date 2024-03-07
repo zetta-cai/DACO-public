@@ -237,7 +237,7 @@ if need_set_rmem_max:
 # Related commands include: cat /proc/swaps, df -h, and lsblk to check swap files; fdisk /dev/sda, pvcreate /dev/sda3, vgs, lvscan, lvextend -L +1T /dev/vgname/lvname, and resize2fs /dev/mapper/vgname-lvname to allocate sufficient space for /swapfile.
 
 swapfile_path = "/swapfile"
-swapfile_size_gb = 1 # 1 GiB
+swapfile_size_gb = 60 # 60 GiB
 
 # Check file existence
 is_swapfile_exist = False
@@ -264,7 +264,7 @@ if is_swapfile_exist:
             LogUtil.dump(Common.scriptname, "Swap file {} exists yet not large enough ({} GiB < {} GiB)...".format(swapfile_path, tmp_swapfile_size_gb, swapfile_size_gb))
 
 # Create swap file if necessary
-LogUtil.prompt(Common.scriptname, "Set swap size {} as {}G for memory-consuming baselines (e.g., GL-Cache)...".format(swapfile_path, swapfile_size_gb))
+LogUtil.prompt(Common.scriptname, "Set swap size {} as {}G for baselines with memory issues (e.g., GL-Cache and SegCache)...".format(swapfile_path, swapfile_size_gb))
 set_swap_size_cmd = ""
 if not is_swapfile_exist or not is_swapfile_large_enough:
     set_swap_size_cmd = "sudo swapoff -a && sudo fallocate -l {0}G {1} && sudo mkswap {1} && sudo swapon {1}".format(swapfile_size_gb, swapfile_path)

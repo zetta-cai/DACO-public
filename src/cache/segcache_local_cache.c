@@ -20,7 +20,11 @@ namespace covered
 {
     const std::string SegcacheLocalCache::kClassName("SegcacheLocalCache");
 
+    #ifdef ENABLE_ONLY_VALSIZE_FOR_SEGCACHE
+    SegcacheLocalCache::SegcacheLocalCache(const EdgeWrapperBase* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes) : LocalCacheBase(edge_wrapper_ptr, edge_idx, capacity_bytes), logical_seg_size_(MB2B(1)), physical_seg_size_(MB2B(1))
+    #else
     SegcacheLocalCache::SegcacheLocalCache(const EdgeWrapperBase* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes) : LocalCacheBase(edge_wrapper_ptr, edge_idx, capacity_bytes)
+    #endif
     {
         // Differentiate local edge cache in different edge nodes
         std::ostringstream oss;
@@ -34,6 +38,7 @@ namespace covered
         assert(segcache_options_ptr_ != NULL);
         CPP_SEG_OPTION(CPP_OPTION_INIT, segcache_options_ptr_); // Initialize default values in options
         option_load_default((struct option*)segcache_options_ptr_, segcache_options_cnt_); // Copy default values to values in options
+
         // NOTE: we limit cache capacity outside SegcacheLocalCache (in EdgeWrapper); here we set segcache local cache size as overall cache capacity to avoid cache capacity constraint inside SegcacheLocalCache (too small cache capacity cannot support segment-based memory allocation in SegCache (see src/cache/segcache/benchmarks/storage_seg/storage_seg.c))
         uint64_t over_provisioned_capacity_bytes = capacity_bytes + COMMON_ENGINE_INTERNAL_UNUSED_CAPACITY_BYTES; // Just avoid internal eviction yet NOT affect cooperative edge caching
         if (over_provisioned_capacity_bytes >= SEGCACHE_ENGINE_MIN_CAPACITY_BYTES)
@@ -44,6 +49,12 @@ namespace covered
         {
             segcache_options_ptr_->heap_mem.val.vuint = SEGCACHE_ENGINE_MIN_CAPACITY_BYTES;
         }
+
+        #ifdef ENABLE_ONLY_VALSIZE_FOR_SEGCACHE
+        // NOTE: cannot change 1MiB segment size, as segcache hardcodes to use 20 bits for segment offset
+        // // NOTE: use 512B as physical segment size such that one segment can store ~50 objects (tens of bytes keys and 4B values) for impl trick of only storing value size instead of value content
+        // segcache_options_ptr_->seg_size.val.vuint = physical_seg_size_;
+        #endif
 
         // Prepare metrics for SegCache
         segcache_metrics_cnt_ = METRIC_CARDINALITY(seg_metrics_st);
@@ -67,6 +78,11 @@ namespace covered
 
         // NOTE: uncomment the following code and set HAVE_LOGGING = ON in CmakeLists.txt to enable debug log in segcache (ONLY support a single instance now!!!)
         //debug_setup(NULL);
+
+        #ifdef ENABLE_ONLY_VALSIZE_FOR_SEGCACHE
+        // Intialize extra bytes for impl trick of not storing value content
+        extra_size_bytes_ = 0;
+        #endif
     }
 
     SegcacheLocalCache::~SegcacheLocalCache()
@@ -129,8 +145,16 @@ namespace covered
         bool is_local_cached = (item_ptr != NULL);
         if (is_local_cached)
         {
+            #ifdef ENABLE_ONLY_VALSIZE_FOR_SEGCACHE
+            // NOTE: store value size instead of value content to avoid memory usage bug of segcache, yet not affect cache stable performance, as we use extra_size_bytes_ to complete the remaining bytes which should stored in segcache
+            assert(item_nval(item_ptr) == sizeof(uint32_t));
+            uint32_t tmp_value_size = 0;
+            memcpy((char*)&tmp_value_size, item_val(item_ptr), sizeof(uint32_t));
+            value = Value(tmp_value_size);
+            #else
             //std::string value_str(item_val(item_ptr), item_nval(item_ptr));
             value = Value(item_nval(item_ptr));
+            #endif
             
             item_release(item_ptr, segcache_cache_ptr_); // Decrease read refcnt of segment
         }
@@ -267,8 +291,29 @@ namespace covered
         {
             for (uint32_t i = 0; i < victim_cnt; i++)
             {
-                Key tmp_key(std::string(key_bstrs[i].data, key_bstrs[i].len));
+                #ifdef ENABLE_ONLY_VALSIZE_FOR_SEGCACHE
+                // NOTE: store value size instead of value content to avoid memory usage bug of segcache, yet not affect cache stable performance, as we use extra_size_bytes_ to complete the remaining bytes which should stored in segcache
+                assert(value_bstrs[i].len == sizeof(uint32_t));
+                uint32_t tmp_value_size = 0;
+                memcpy((char*)&tmp_value_size, value_bstrs[i].data, sizeof(uint32_t));
+                Value tmp_value(tmp_value_size);
+                if (tmp_value_size > sizeof(uint32_t)) // Update remaining bytes if necessary
+                {
+                    uint32_t tmp_complete_value_size = tmp_value_size - sizeof(uint32_t);
+                    if (extra_size_bytes_ >= tmp_complete_value_size)
+                    {
+                        extra_size_bytes_ -= tmp_complete_value_size;
+                    }
+                    else
+                    {
+                        extra_size_bytes_ = 0;
+                    }
+                }
+                #else
                 Value tmp_value(value_bstrs[i].len);
+                #endif
+
+                Key tmp_key(std::string(key_bstrs[i].data, key_bstrs[i].len));
                 victims.insert(std::pair<Key, Value>(tmp_key, tmp_value));
 
                 // Release data of key bstring
@@ -317,6 +362,11 @@ namespace covered
     {
         uint64_t internal_size = get_segcache_size_bytes(segcache_cache_ptr_);
 
+        #ifdef ENABLE_ONLY_VALSIZE_FOR_SEGCACHE
+        // Consider remaining bytes to complete for the impl trick of only storing value size instead of value content
+        internal_size += extra_size_bytes_;
+        #endif
+
         return internal_size;
     }
 
@@ -349,12 +399,21 @@ namespace covered
         std::string keystr = key.getKeystr();
         struct bstring key_bstr;
         key_bstr.len = static_cast<uint32_t>(keystr.length());
-        key_bstr.data = keystr.data();
+        key_bstr.data = keystr.data(); // Shallow copy, while segcache will perform deep copy
 
+        #ifdef ENABLE_ONLY_VALSIZE_FOR_SEGCACHE
+        // NOTE: store value size instead of value content to avoid memory usage bug of segcache, yet not affect cache stable performance, as we use extra_size_bytes_ to complete the remaining bytes which should stored in segcache
+        uint32_t tmp_value_size = value.getValuesize();
+        std::string tmp_value_size_str((const char*)&tmp_value_size, sizeof(uint32_t));
+        struct bstring value_bstr;
+        value_bstr.len = sizeof(uint32_t);
+        value_bstr.data = tmp_value_size_str.data(); // Shallow copy, while segcache will perform deep copy
+        #else
         std::string valuestr = value.generateValuestrForStorage();
         struct bstring value_bstr;
         value_bstr.len = static_cast<uint32_t>(valuestr.length());
-        value_bstr.data = valuestr.data();
+        value_bstr.data = valuestr.data(); // Shallow copy, while segcache will perform deep copy
+        #endif
 
         // Check whether key has already been cached
         struct item* prev_item_ptr = item_get(&key_bstr, NULL, segcache_cache_ptr_); // Lookup hashtable to get item in segment; will increase read refcnt of segment
@@ -388,6 +447,15 @@ namespace covered
             assert(status == ITEM_OK);
             item_insert(cur_item_ptr, segcache_cache_ptr_); // Update hashtable for newly-appended item
 
+            #ifdef ENABLE_ONLY_VALSIZE_FOR_SEGCACHE
+            // NOTE: NO need to consider original value size, as segcache uses log-structured memory and just appends new value to the end of a segment no matter insert/update; the original value will be removed (and thus the correpsonding remaining bytes will be released) during eviction later
+            if (tmp_value_size > sizeof(uint32_t)) // Update remaining bytes if necessary
+            {
+                uint32_t tmp_complete_value_size = tmp_value_size - sizeof(uint32_t);
+                extra_size_bytes_ += tmp_complete_value_size;
+            }
+            #endif
+
             is_successful = true;
         }
 
@@ -396,7 +464,15 @@ namespace covered
 
     bool SegcacheLocalCache::checkObjsizeInternal_(const ObjectSize& objsize) const
     {
+        #ifdef ENABLE_ONLY_VALSIZE_FOR_SEGCACHE
+        // NOTE: cannot change 1MiB segment size, as segcache hardcodes to use 20 bits for segment offset
         bool is_valid_objsize = objsize <= segcache_cache_ptr_->heap_ptr->seg_size;
+        // // NOTE: use 1 MiB logical value size (the same as default setting of segcache) for object size checking -> will only store 4B value size into 512B logical segments to avoid memory usage bugs of segcache itself
+        // bool is_valid_objsize = objsize <= logical_seg_size_;
+        #else
+        bool is_valid_objsize = objsize <= segcache_cache_ptr_->heap_ptr->seg_size;
+        #endif
+
         return is_valid_objsize;
     }
 

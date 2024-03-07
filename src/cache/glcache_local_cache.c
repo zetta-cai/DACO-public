@@ -13,7 +13,7 @@ namespace covered
 {
     const std::string GLCacheLocalCache::kClassName("GLCacheLocalCache");
 
-    GLCacheLocalCache::GLCacheLocalCache(const EdgeWrapperBase* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint32_t& dataset_keycnt) : LocalCacheBase(edge_wrapper_ptr, edge_idx, capacity_bytes)
+    GLCacheLocalCache::GLCacheLocalCache(const EdgeWrapperBase* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes) : LocalCacheBase(edge_wrapper_ptr, edge_idx, capacity_bytes)
     {
         // Differentiate local edge cache in different edge nodes
         std::ostringstream oss;
@@ -28,12 +28,7 @@ namespace covered
             .consider_obj_metadata = true,
         };
 
-        // NOTE: use a larger segsize (objcnt in a segment) to avoid too many segments, which will incur too large memory usage due to memory management bugs of GL-Cache itself
         uint32_t segsize = 100; // Default setting of GL-Cache (see src/cache/glcache/micro-implementation/libCacheSim/cache/eviction/GLCache/GLCache.c)
-        if (dataset_keycnt > 100 * 100)
-        {
-            uint32_t segsize = dataset_keycnt / 100;
-        }
 
         // NOTE: use a larger retrain period to avoid too frequent retrain, which will incur too large memory usage due to memory management bugs of GL-Cache itself
         uint32_t retrain_period_us = 30 * 60 * 1000 * 1000; // Retrain every 30 minutes
@@ -86,13 +81,15 @@ namespace covered
         request_t req = buildRequest_(key);
         cache_ck_res_e result = glcache_ptr_->get(glcache_ptr_, &req);
 
+        #ifdef ENABLE_ONLY_VALSIZE_FOR_GLCACHE
         // NOTE: store value size instead of value content to avoid memory usage bug of glcache, yet not affect cache stable performance, as occupied_size in glcache is updated by req.obj_size instead of the valuestr length
         assert(req.value.length() == sizeof(uint32_t));
         uint32_t value_size = 0;
         memcpy((char*)&value_size, req.value.data(), sizeof(uint32_t));
         value = Value(value_size);
-
-        //value = Value(req.value.length());
+        #else
+        value = Value(req.value.length());
+        #endif
 
         bool is_local_cached = (result == cache_ck_hit);
 
@@ -214,13 +211,15 @@ namespace covered
                 objptrs.push_back(tmp_objptr);
                 if (victims.find(tmp_objptr->key) == victims.end()) // NOT found
                 {
+                    #ifdef ENABLE_ONLY_VALSIZE_FOR_GLCACHE
                     // NOTE: store value size instead of value content to avoid memory usage bug of glcache, yet not affect cache stable performance, as occupied_size in glcache is updated by req.obj_size instead of the valuestr length
                     assert(tmp_objptr->value.length() == sizeof(uint32_t));
                     uint32_t value_size = 0;
                     memcpy((char*)&value_size, tmp_objptr->value.data(), sizeof(uint32_t));
                     victims.insert(std::pair(Key(tmp_objptr->key), Value(value_size)));
-
-                    //victims.insert(std::pair(Key(tmp_objptr->key), Value(tmp_objptr->value.length()));
+                    #else
+                    victims.insert(std::pair(Key(tmp_objptr->key), Value(tmp_objptr->value.length()));
+                    #endif
                 }
 
                 tmp_objptr = tmp_objptr->evict_next;
@@ -334,12 +333,14 @@ namespace covered
         req.is_keybased_req = true;
         req.key = key.getKeystr();
 
+        #ifdef ENABLE_ONLY_VALSIZE_FOR_GLCACHE
         // NOTE: store value size instead of value content to avoid memory usage bug of glcache, yet not affect cache stable performance, as occupied_size in glcache is updated by req.obj_size instead of the valuestr length
         uint32_t value_size = value.getValuesize();
         const std::string value_size_str((const char*)&value_size, sizeof(uint32_t));
         req.value = value_size_str;
-
-        //req.value = value.generateValuestrForStorage();
+        #else
+        req.value = value.generateValuestrForStorage();
+        #endif
 
         return req;
     }
