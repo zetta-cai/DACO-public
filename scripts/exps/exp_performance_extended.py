@@ -23,7 +23,7 @@ exp_default_settings = {
     "cache_name": "covered",
     "workload_name": "facebook"
 }
-# NOTE: run segcache, lrb, and glcache at last due to slow warmup issue of segcache and lrb, and memory usage issue of glcache (may be caused by bugs on segment-level memory management and model retraining) -> TODO: if no results of the above baselines, please provide more DRAM memory (or swap memory), and run them again with sufficient time (may be in units of hours or days) for warmup and cache stable performance
+# NOTE: run segcache, lrb, and glcache at last due to slow warmup issue of lrb (may be caused by model retraining), and memory usage issue of segcache and glcache (may be caused by bugs on segment-level memory management) -> TODO: if no results of the above baselines due to program crashes, please provide more DRAM memory (or swap memory), and run them again with sufficient time (may be in units of hours or days) for warmup and cache stable performance
 cache_names = ["arc+", "cachelib+", "fifo+", "frozenhot+", "gdsf+", "lfu+", "lhd+", "s3fifo+", "sieve+", "wtinylfu+", "lrb+", "segcache+", "glcache+"]
 
 # Run the experiments with multiple rounds
