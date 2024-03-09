@@ -24,7 +24,7 @@ exp_default_settings = {
     "workload_name": "facebook"
 }
 # NOTE: run segcache, lrb, and glcache at last due to slow warmup issue of lrb (may be caused by model retraining), and memory usage issue of segcache and glcache (may be caused by bugs on segment-level memory management) -> TODO: if no results of the above baselines due to program crashes, please provide more DRAM memory (or swap memory), and run them again with sufficient time (may be in units of hours or days) for warmup and cache stable performance
-cache_names = ["covered", "shark", "bestguess", "arc+", "cachelib+", "fifo+", "frozenhot+", "gdsf+", "lfu+", "lhd+", "s3fifo+", "sieve+", "wtinylfu+", "lrb+", "segcache+", "glcache+"]
+cache_names = ["covered", "shark", "bestguess", "arc+", "cachelib+", "fifo+", "frozenhot+", "gdsf+", "lfu+", "lhd+", "s3fifo+", "sieve+", "wtinylfu+", "lrb+", "glcache+", "segcache+"]
 workload_peredge_capacity_map = {"facebook": 3479, "wikitext": 1778, "wikiimage": 3899} # per-edge capacity = dataset capacity * 50% / 4 edges
 
 # Run the experiments with multiple rounds

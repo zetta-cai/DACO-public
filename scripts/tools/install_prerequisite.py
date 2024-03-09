@@ -232,12 +232,12 @@ if need_set_rmem_max:
     if set_rmem_max_subprocess.returncode != 0:
         LogUtil.die(Common.scriptname, "failed to set net.core.rmem_max (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(set_rmem_max_subprocess)))
 
-## (6.2) Set swap memory size (to avoid triggering memory usage bugs of some baselines, e.g., GL-Cache, which may incur memory leakage in their own source code)
+## (6.2) Set swap memory size (to avoid triggering memory usage bugs of some baselines, e.g., SegCache and GL-Cache, which may incur memory leakage in their own source code)
 
 # Related commands include: cat /proc/swaps, df -h, and lsblk to check swap files; fdisk /dev/sda, pvcreate /dev/sda3, vgs, lvscan, lvextend -L +1T /dev/vgname/lvname, and resize2fs /dev/mapper/vgname-lvname to allocate sufficient space for /swapfile.
 
 swapfile_path = "/swapfile"
-swapfile_size_gb = 60 # 60 GiB
+swapfile_size_gb = 200 # 200 GiB
 
 # Check file existence
 is_swapfile_exist = False
@@ -273,3 +273,20 @@ else:
 set_swap_size_subprocess = SubprocessUtil.runCmd(set_swap_size_cmd, is_capture_output=False)
 if set_swap_size_subprocess.returncode != 0:
     LogUtil.die(Common.scriptname, "failed to set swap size as {}G (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(swapfile_size_gb, set_swap_size_subprocess)))
+
+# NOTE: if you don't have sufficient space for /swapfile, you can also allocate a new logical volume for swap.
+# Suppose that you need to reduce existing logical volume first to allocate a new one for swap -> here is my example:
+# (1) Reduce existing logical volume
+# sudo lsof /home/projects/sysheng/covered-private # Check if any file in the mount point of existing logical volume is open -> kill corresponding processes if any
+# sudo umount -v /home/projects/sysheng/covered-private # Unmount the existing logical volume
+# sudo e2fsck -ff /home/mapper/ubuntu--vg-ubuntu--lg # Verify FS in the existing logibal volume
+# sudo resize2fs /dev/mapper/ubuntu--vg-ubuntu--lg 2200G # Shrink FS from 2.7T to 2.2T in the existing logical volume
+# sudo lvreduce -L 2200G /dev/mapper/ubuntu--vg-ubuntu--lg # Shrink the existing logical volume from 2.7T to 2.2T
+# sudo resize2fs /dev/mapper/ubuntu--vg-ubuntu--lg # Resize FS to use all space of the existing logical volume
+# sudo e2fsck -ff /home/mapper/ubuntu--vg-ubuntu--lg # Verify FS in the existing logibal volume again
+# (2) Create new logical volume for swap
+# sudo swapoff -a # Turn off swap
+# sudo lvs/lvscan/lvdisplay/vgs/vgscan/vgdisplay # Check existing logical volumes and volume groups
+# sudo lvcreate -L 200G -n swap-lv ubuntu-vg # Create a new logical volume for swap
+# sudo mkswap /dev/mapper/ubuntu--vg-swap--lv # Make swap space in the new logical volume (use mkfs.xfs instead of mkswap to install FS if you create a new volume for normal usage)
+# sudo swapon /dev/mapper/ubuntu--vg-swap--lv # Turn on swap
