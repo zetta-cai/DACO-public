@@ -145,6 +145,7 @@ namespace covered
 
         // Update cross-edge latency by EWMA
         ewma_propagation_latency_crossedge_us_ = (1 - EWMA_ALPHA) * ewma_propagation_latency_crossedge_us_ + EWMA_ALPHA * cur_propagation_latency_crossedge_us;
+        assert(ewma_propagation_latency_crossedge_us_ >= 0);
 
         updateWeightInfo_(); // Update weight_info_ for latency-aware weight tuning
 
@@ -165,6 +166,7 @@ namespace covered
 
         // Update edge-cloud latency by EWMA
         ewma_propagation_latency_edgecloud_us_ = (1 - EWMA_ALPHA) * ewma_propagation_latency_edgecloud_us_ + EWMA_ALPHA * cur_propagation_latency_edgecloud_us;
+        assert(ewma_propagation_latency_edgecloud_us_ >= 0);
 
         updateWeightInfo_(); // Update weight_info_ for latency-aware weight tuning
 
@@ -203,6 +205,7 @@ namespace covered
 
         // Update EWMA of remote beacon prob
         ewma_remote_beacon_prob_ = (1 - EWMA_ALPHA) * ewma_remote_beacon_prob_ + EWMA_ALPHA * tmp_remote_beacon_prob;
+        assert(ewma_remote_beacon_prob_ >= 0 && ewma_remote_beacon_prob_ <= 1.0);
 
         // Clean for next window
         local_beacon_access_cnt_ = 0.0;
@@ -221,9 +224,24 @@ namespace covered
         const Weight global_miss_latency = ewma_propagation_latency_clientedge_us_ + ewma_remote_beacon_prob_ * ewma_propagation_latency_crossedge_us_ + ewma_propagation_latency_edgecloud_us_;
 
         // Update weight info
-        const Weight local_hit_weight = global_miss_latency - local_hit_latency; // w1
-        const Weight cooperative_hit_weight = global_miss_latency - cooperative_hit_latency; // w2
-        assert(local_hit_weight > cooperative_hit_weight && cooperative_hit_weight >= 0); // Weight verification
+        const Weight local_hit_weight = global_miss_latency - local_hit_latency; // w1 = ewma_remote_beacon_prob_ * ewma_propagation_latency_crossedge_us_ + ewma_propagation_latency_edgecloud_us_
+        const Weight cooperative_hit_weight = global_miss_latency - cooperative_hit_latency; // w2 = ewma_propagation_latency_edgecloud_us_ - ewma_propagation_latency_crossedge_us_
+
+        // Weight verification
+        // assert(local_hit_weight >= 0);
+        // assert(cooperative_hit_weight >= 0);
+        // assert(local_hit_weight >= cooperative_hit_weight);
+        if (local_hit_weight < 0 || cooperative_hit_weight < 0 || local_hit_weight < cooperative_hit_weight)
+        {
+            std::ostringstream oss;
+            oss << "failed to verify weight info!" << std::endl;
+            oss << "local hit weight: " << local_hit_weight << ", cooperative hit weight: " << cooperative_hit_weight << std::endl;
+            oss << "local hit latency: " << local_hit_latency << ", cooperative hit latency: " << cooperative_hit_latency << ", global miss latency: " << global_miss_latency << std::endl;
+            oss << "remote beacon prob: " << ewma_remote_beacon_prob_ << ", client-edge propagation latency: " << ewma_propagation_latency_clientedge_us_ << ", cross-edge propagation latency: " << ewma_propagation_latency_crossedge_us_ << ", edge-cloud propagation latency: " << ewma_propagation_latency_edgecloud_us_;
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+        
         weight_info_ = WeightInfo(local_hit_weight, cooperative_hit_weight);
 
         return;
