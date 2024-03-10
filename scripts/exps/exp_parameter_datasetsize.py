@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# exp_performance_memory: parameter analysis on different memory capcity in each cache node.
+# exp_performance_datasetsize: parameter analysis on different dataset sizes (# of unique objects).
 
 from .utils.prototype import *
 
@@ -25,12 +25,12 @@ exp_default_settings = {
 }
 # NOTE: run lrb, glcache, and segcache at last due to slow warmup issue of lrb (may be caused by model retraining), and memory usage issue of segcache and glcache (may be caused by bugs on segment-level memory management) -> TODO: if no results of the above baselines due to program crashes, please provide more DRAM memory (or swap memory), and run them again with sufficient time (may be in units of hours or days) for warmup and cache stable performance
 cache_names = ["covered", "shark", "bestguess", "arc+", "cachelib+", "fifo+", "frozenhot+", "gdsf+", "lfu+", "lhd+", "s3fifo+", "sieve+", "wtinylfu+", "lrb+", "glcache+", "segcache+"]
-# NOTE: NO need to run 1G, which is the same as previous experiments (performance against existing methods and extended methods)
-peredge_capacity_list = [2048, 4096, 8192] # 2G, 4G, and 8G
+# NOTE: NO need to run 1M, which is the same as previous experiment (performance against different workloads)
+keycnt_peredge_capacity_map = {"2000000": 6887, "4000000": 13675} # 2M and 4M dataset size; per-edge capacity = dataset capacity * 50% / 4 edges
 
 # Run the experiments with multiple rounds
 for tmp_round_index in round_indexes:
-    tmp_log_dirpath = "{}/exp_parameter_memory/round{}".format(Common.output_log_dirpath, tmp_round_index)
+    tmp_log_dirpath = "{}/exp_parameter_datasetsize/round{}".format(Common.output_log_dirpath, tmp_round_index)
     log_dirpaths.append(tmp_log_dirpath)
 
     # Create log dirpath if necessary
@@ -41,32 +41,27 @@ for tmp_round_index in round_indexes:
     # Run prototype for each cache name
     for tmp_cache_name in cache_names:
 
-        # Run prototype for each per-edge memory capacity
-        for tmp_capacity_mb in peredge_capacity_list:
-            tmp_log_filepath = "{}/tmp_evaluator_for_{}_{}.out".format(tmp_log_dirpath, tmp_cache_name, tmp_capacity_mb)
+        # Run prototype for each dataset size
+        for tmp_keycnt, tmp_peredge_capacity in keycnt_peredge_capacity_map.items():
+            tmp_keycnt = int(tmp_keycnt) # Conert string to integer
+            tmp_log_filepath = "{}/tmp_evaluator_for_{}_{}.out".format(tmp_log_dirpath, tmp_cache_name, tmp_keycnt)
             SubprocessUtil.tryToCreateDirectory(Common.scriptname, os.path.dirname(tmp_log_filepath))
 
             # Check log filepath
             if os.path.exists(tmp_log_filepath):
-                LogUtil.prompt(Common.scriptname, "Log filepath {} already exists, skip {} w/ per-edge memory capacity {} MiB for the current round {}...".format(tmp_log_filepath, tmp_cache_name, tmp_capacity_mb, tmp_round_index))
+                LogUtil.prompt(Common.scriptname, "Log filepath {} already exists, skip {} w/ {} dataset size for the current round {}...".format(tmp_log_filepath, tmp_cache_name, tmp_keycnt, tmp_round_index))
                 continue
 
             # NOTE: Log filepath MUST NOT exist here
 
             # Prepare settings for the current cache name
             tmp_exp_settings = exp_default_settings
-            tmp_exp_settings["capacity_mb"] = tmp_capacity_mb
+            tmp_exp_settings["keycnt"] = tmp_keycnt
+            tmp_exp_settings["capacity_mb"] = tmp_peredge_capacity # 50% dataset capacity / 4 edges
             tmp_exp_settings["cache_name"] = tmp_cache_name
 
-            # Special case: for segcache+ under 8 GiB per-edge memory, use 4M instead of 10M requests to warmup to avoid being killed by OS kernel due to using up all memory in cache node, which is acceptable due to the following reasons:
-            # (i) The memory issue is caused by the implementation bug (maybe memory leakage) of SegCache itself instead of cooperative caching;
-            # (ii) SegCache is actually already warmed up with 4M requests, as from 4M requests until SegCache fails due to memory issue, the cache hit ratio holds stable -> NOT affect our evaluation conclusions;
-            # (iii) You can try SegCache+ with 10M warmup requests if you have sufficient memory or fix the memory issue of SegCache.
-            if tmp_cache_name == "segcache+" and tmp_capacity_mb == 8192:
-                tmp_exp_settings["warmup_reqcnt_scale"] = 4
-
             # Launch prototype
-            LogUtil.prompt(Common.scriptname, "Run prototype of {} w/ per-edge memory capacity {} for the current round {}...".format(tmp_cache_name, tmp_capacity_mb, tmp_round_index))
+            LogUtil.prompt(Common.scriptname, "Run prototype of {} w/ {} dataset size for the current round {}...".format(tmp_cache_name, tmp_keycnt, tmp_round_index))
             prototype_instance = Prototype(evaluator_logfile = tmp_log_filepath, **tmp_exp_settings)
             prototype_instance.run()
 

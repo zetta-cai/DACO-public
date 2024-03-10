@@ -54,7 +54,7 @@ for tmp_round_index in round_indexes:
 
             # Prepare settings for the current cache name
             tmp_exp_settings = exp_default_settings
-            tmp_exp_settings["capacity_mb"] = tmp_peredge_capacity
+            tmp_exp_settings["capacity_mb"] = tmp_peredge_capacity # 50% dataset capacity / 4 edges
             tmp_exp_settings["cache_name"] = tmp_cache_name
             tmp_exp_settings["workload_name"] = tmp_workload
 
