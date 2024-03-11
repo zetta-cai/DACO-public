@@ -54,7 +54,7 @@ namespace covered
         else
         {
             std::ostringstream oss;
-            oss << "Invalid message type " << message_type << " for BasicCacheServerRedirectionProcessor::processReqForRedirectedGet_()";
+            oss << "Invalid message type " << MessageBase::messageTypeToString(message_type) << " for BasicCacheServerRedirectionProcessor::processReqForRedirectedGet_()";
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }
@@ -108,7 +108,7 @@ namespace covered
         else
         {
             std::ostringstream oss;
-            oss << "Invalid message type " << message_type << " for BasicCacheServerRedirectionProcessor::getRspForRedirectedGet_()";
+            oss << "Invalid message type " << MessageBase::messageTypeToString(message_type) << " for BasicCacheServerRedirectionProcessor::getRspForRedirectedGet_()";
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }

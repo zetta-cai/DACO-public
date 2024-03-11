@@ -205,7 +205,7 @@ namespace covered
         else
         {
             std::ostringstream oss;
-            oss << "Invalid message type " << message_type << " for processReqToUpdateLocalDirectory_()";
+            oss << "Invalid message type " << MessageBase::messageTypeToString(message_type) << " for processReqToUpdateLocalDirectory_()";
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }
@@ -340,7 +340,7 @@ namespace covered
         else
         {
             std::ostringstream oss;
-            oss << "Invalid message type " << message_type << " for getRspToUpdateLocalDirectory_()";
+            oss << "Invalid message type " << MessageBase::messageTypeToString(message_type) << " for getRspToUpdateLocalDirectory_()";
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }

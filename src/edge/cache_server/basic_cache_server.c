@@ -114,7 +114,7 @@ namespace covered
         else
         {
             std::ostringstream oss;
-            oss << "Invalid message type " << static_cast<uint32_t>(message_type) << " in processRspToAdmitBeaconDirectory_()";
+            oss << "Invalid message type " << MessageBase::messageTypeToString(message_type) << " in processRspToAdmitBeaconDirectory_()";
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }

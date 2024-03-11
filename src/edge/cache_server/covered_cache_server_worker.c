@@ -307,7 +307,13 @@ namespace covered
         checkPointers_();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
-        assert(global_response_ptr->getMessageType() == MessageType::kGlobalGetResponse);
+        if (global_response_ptr->getMessageType() != MessageType::kGlobalGetResponse)
+        {
+            std::ostringstream oss;
+            oss << "Invalid message type: " << MessageBase::messageTypeToString(global_response_ptr->getMessageType()) << " for processRspToAccessCloud_()";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
 
         // Update EWMA of edge-cloud latency for latency-aware weight tuning (NOTE: processRspToAccessCloud_() is ONLY invoked by CacheServerWorkerBase::fetchDataFromCloud_() in CacheServerWorkerBase::fetchDataFromCloud_())
         tmp_edge_wrapper_ptr->getWeightTunerRef().updateEwmaEdgecloudLatency(cloud_access_edge_cloud_latency);

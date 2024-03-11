@@ -94,7 +94,13 @@ namespace covered
         // NOTE: ONLY foreground directory eviction could trigger hybrid data fetching, while foreground/background directory admission will NEVER perform placement calculation and hence NO hybrid data fetching
         if (!is_background)
         {
-            assert(control_response_ptr->getMessageType() == MessageType::kCoveredDirectoryUpdateResponse);
+            if (control_response_ptr->getMessageType() != MessageType::kCoveredDirectoryUpdateResponse)
+            {
+                std::ostringstream oss;
+                oss << "Invalid message type " << MessageBase::messageTypeToString(control_response_ptr->getMessageType()) << " in foreground processRspToAdmitBeaconDirectory_()";
+                Util::dumpErrorMsg(instance_name_, oss.str());
+                exit(1);
+            }
 
             // Get is_being_written and victim syncset from control response message
             const CoveredDirectoryUpdateResponse* const covered_directory_update_response_ptr = static_cast<const CoveredDirectoryUpdateResponse*>(control_response_ptr);
@@ -104,7 +110,13 @@ namespace covered
         }
         else
         {
-            assert(control_response_ptr->getMessageType() == MessageType::kCoveredBgplaceDirectoryUpdateResponse);
+            if (control_response_ptr->getMessageType() != MessageType::kCoveredBgplaceDirectoryUpdateResponse)
+            {
+                std::ostringstream oss;
+                oss << "Invalid message type " << MessageBase::messageTypeToString(control_response_ptr->getMessageType()) << " in background processRspToAdmitBeaconDirectory_()";
+                Util::dumpErrorMsg(instance_name_, oss.str());
+                exit(1);
+            }
 
             // Get is_being_written and victim syncset from control response message
             const CoveredBgplaceDirectoryUpdateResponse* const covered_placement_directory_update_response_ptr = static_cast<const CoveredBgplaceDirectoryUpdateResponse*>(control_response_ptr);

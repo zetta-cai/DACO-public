@@ -201,7 +201,13 @@ namespace covered
 
     void BasicCacheServerWorker::processRspToAccessCloud_(MessageBase* global_response_ptr, Value& value, const uint32_t& cloud_access_edge_cloud_latency) const
     {
-        assert(global_response_ptr->getMessageType() == MessageType::kGlobalGetResponse);
+        if (global_response_ptr->getMessageType() != MessageType::kGlobalGetResponse)
+        {
+            std::ostringstream oss;
+            oss << "Invalid message type: " << MessageBase::messageTypeToString(global_response_ptr->getMessageType()) << " for BasicCacheServerWorker::processRspToAccessCloud_()";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
 
         const GlobalGetResponse* const global_get_response_ptr = static_cast<const GlobalGetResponse*>(global_response_ptr);
         value = global_get_response_ptr->getValue();
