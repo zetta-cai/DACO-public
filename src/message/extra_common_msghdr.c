@@ -10,6 +10,7 @@ namespace covered
     {
         skip_propagation_latency_ = false;
         is_monitored_ = false;
+        msg_seqnum_ = 0;
     }
 
     ExtraCommonMsghdr::ExtraCommonMsghdr(const ExtraCommonMsghdr &other)
@@ -17,10 +18,11 @@ namespace covered
         *this = other;
     }
 
-    ExtraCommonMsghdr::ExtraCommonMsghdr(const bool& skip_propagation_latency, const bool& is_monitored)
+    ExtraCommonMsghdr::ExtraCommonMsghdr(const bool& skip_propagation_latency, const bool& is_monitored, const uint64_t& msg_seqnum)
     {
         skip_propagation_latency_ = skip_propagation_latency;
         is_monitored_ = is_monitored;
+        msg_seqnum_ = msg_seqnum;
     }
 
     ExtraCommonMsghdr::~ExtraCommonMsghdr()
@@ -30,7 +32,7 @@ namespace covered
     std::string ExtraCommonMsghdr::toString() const
     {
         std::ostringstream oss;
-        oss << "skip propagation latency = " << Util::toString(skip_propagation_latency_) << "; is monitored = " << Util::toString(is_monitored_);
+        oss << "skip propagation latency = " << Util::toString(skip_propagation_latency_) << "; is monitored = " << Util::toString(is_monitored_) << "; msg seqnum = " << msg_seqnum_;
         return oss.str();
     }
 
@@ -44,10 +46,15 @@ namespace covered
         return is_monitored_;
     }
 
+    uint64_t ExtraCommonMsghdr::getMsgSeqnum() const
+    {
+        return msg_seqnum_;
+    }
+
     uint32_t ExtraCommonMsghdr::getExtraCommonMsghdrPayloadSize() const
     {
-        // skip propagation latency flag + is monitored flag
-        return sizeof(bool) + sizeof(bool);
+        // skip propagation latency flag + is monitored flag + msg seqnum
+        return sizeof(bool) + sizeof(bool) + sizeof(uint64_t);
     }
 
     uint32_t ExtraCommonMsghdr::serialize(DynamicArray& msg_payload, const uint32_t& position) const
@@ -57,6 +64,8 @@ namespace covered
         size += sizeof(bool);
         msg_payload.deserialize(size, (const char*)&is_monitored_, sizeof(bool));
         size += sizeof(bool);
+        msg_payload.deserialize(size, (const char*)&msg_seqnum_, sizeof(uint64_t));
+        size += sizeof(uint64_t);
         return size - position;
     }
 
@@ -67,6 +76,8 @@ namespace covered
         size += sizeof(bool);
         msg_payload.serialize(size, (char *)&is_monitored_, sizeof(bool));
         size += sizeof(bool);
+        msg_payload.serialize(size, (char *)&msg_seqnum_, sizeof(uint64_t));
+        size += sizeof(uint64_t);
         return size - position;
     }
 
@@ -74,6 +85,7 @@ namespace covered
     {
         skip_propagation_latency_ = other.skip_propagation_latency_;
         is_monitored_ = other.is_monitored_;
+        msg_seqnum_ = other.msg_seqnum_;
         return *this;
     }
 }

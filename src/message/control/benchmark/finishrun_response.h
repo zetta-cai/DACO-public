@@ -17,7 +17,7 @@ namespace covered
     class FinishrunResponse : public UintTwoAggstatMessage
     {
     public:
-        FinishrunResponse(const uint32_t& last_slot_idx, const AggregatedStatisticsBase& last_slot_aggregated_statistics, const AggregatedStatisticsBase& stable_aggregated_statistics, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list);
+        FinishrunResponse(const uint32_t& last_slot_idx, const AggregatedStatisticsBase& last_slot_aggregated_statistics, const AggregatedStatisticsBase& stable_aggregated_statistics, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list, const uint64_t& msg_seqnum);
         FinishrunResponse(const DynamicArray& msg_payload);
         virtual ~FinishrunResponse();
 

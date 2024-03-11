@@ -144,7 +144,7 @@ namespace covered
         static std::string hitflagToString(const Hitflag& hitflag);
         static std::string lockResultToString(const LockResult& lock_result);
 
-        static MessageBase* getRequestFromWorkloadItem(WorkloadItem workload_item, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& is_warmup_phase, const bool& is_warmup_speedup, const bool& is_monitored); // By workers in clients
+        static MessageBase* getRequestFromWorkloadItem(WorkloadItem workload_item, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& is_warmup_phase, const bool& is_warmup_speedup, const bool& is_monitored, const uint64_t& cur_msg_seqnum); // By workers in clients
         static MessageBase* getRequestFromMsgPayload(const DynamicArray& msg_payload); // Data/control requests
         static MessageBase* getResponseFromMsgPayload(const DynamicArray& msg_payload); // Data/control responses
         static Key getKeyFromMessage(MessageBase* message_ptr); // Get key from message (e.g., local requests)

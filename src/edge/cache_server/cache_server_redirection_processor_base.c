@@ -134,6 +134,11 @@ namespace covered
         checkPointers_();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_redirection_processor_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
+        // // TMPDEBUG24
+        // std::ostringstream tmposs;
+        // tmposs << "receive " << MessageBase::messageTypeToString(redirected_request_ptr->getMessageType()) << " for key " << MessageBase::getKeyFromMessage(redirected_request_ptr).getKeyDebugstr() << " from source " << redirected_request_ptr->getSourceIndex();
+        // Util::dumpNormalMsg(base_instance_name_, tmposs.str());
+
         bool is_finish = false;
         BandwidthUsage total_bandwidth_usage;
         EventList event_list;
@@ -182,6 +187,12 @@ namespace covered
         // Prepare RedirectedGetResponse for the closest edge node
         MessageBase* redirected_get_response_ptr = getRspForRedirectedGet_(redirected_request_ptr, tmp_value, hitflag, total_bandwidth_usage, event_list);
         assert(redirected_get_response_ptr != NULL);
+
+        // // TMPDEBUG24
+        // tmposs.clear();
+        // tmposs.str("");
+        // tmposs << "issue " << MessageBase::messageTypeToString(redirected_get_response_ptr->getMessageType()) << " for key " << MessageBase::getKeyFromMessage(redirected_get_response_ptr).getKeyDebugstr() << " back to edge " << redirected_request_ptr->getSourceIndex();
+        // Util::dumpNormalMsg(base_instance_name_, tmposs.str());
 
         // Push the redirected response message into edge-to-client propagation simulator to cache server worker in the closest edge node
         tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(redirected_get_response_ptr, recvrsp_dst_addr);

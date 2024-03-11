@@ -243,8 +243,11 @@ namespace covered
         return;
     }
 
-    void ClientWrapper::processFinishrunRequest_()
+    void ClientWrapper::processFinishrunRequest_(MessageBase* finishrun_request_ptr)
     {
+        assert(finishrun_request_ptr != NULL);
+        assert(finishrun_request_ptr->getMessageType() == MessageType::kFinishrunRequest);
+
         checkPointers_();
 
         // Mark the current node as NOT running to finish benchmark
@@ -256,7 +259,7 @@ namespace covered
         uint32_t last_slot_idx = client_statistics_tracker_ptr_->aggregateForFinishrun(lastslot_client_aggregated_statistics, stable_client_aggregated_statistics);
 
         // Send back FinishrunResponse to evaluator
-        FinishrunResponse finishrun_response(last_slot_idx, lastslot_client_aggregated_statistics, stable_client_aggregated_statistics, node_idx_, node_recvmsg_source_addr_, EventList());
+        FinishrunResponse finishrun_response(last_slot_idx, lastslot_client_aggregated_statistics, stable_client_aggregated_statistics, node_idx_, node_recvmsg_source_addr_, EventList(), finishrun_request_ptr->getExtraCommonMsghdr().getMsgSeqnum());
         node_sendmsg_socket_client_ptr_->send((MessageBase*)&finishrun_response, evaluator_recvmsg_dst_addr_);
 
         return;
@@ -274,7 +277,7 @@ namespace covered
         }
         else if (control_request_msg_type == MessageType::kFinishWarmupRequest)
         {
-            processFinishWarmupRequest_(); // Mark is_warmup_phase_ as false
+            processFinishWarmupRequest_(control_request_ptr); // Mark is_warmup_phase_ as false
         }
         else
         {
@@ -331,19 +334,19 @@ namespace covered
         is_monitored_.store(switch_slot_request_ptr->getExtraCommonMsghdr().isMonitored(), Util::STORE_CONCURRENCY_ORDER);
 
         // Send back SwitchSlotResponse to evaluator
-        SwitchSlotResponse switch_slot_response(target_slot_idx, curslot_client_aggregated_statistics, node_idx_, node_recvmsg_source_addr_, EventList());
+        SwitchSlotResponse switch_slot_response(target_slot_idx, curslot_client_aggregated_statistics, node_idx_, node_recvmsg_source_addr_, EventList(), switch_slot_request_ptr->getExtraCommonMsghdr().getMsgSeqnum());
         node_sendmsg_socket_client_ptr_->send((MessageBase*)&switch_slot_response, evaluator_recvmsg_dst_addr_);
 
         return;
     }
 
-    void ClientWrapper::processFinishWarmupRequest_()
+    void ClientWrapper::processFinishWarmupRequest_(MessageBase* control_request_ptr)
     {
         // Finish warmup phase to start stresstest phase
         finishWarmupPhase_();
 
         // Send back FinishWarmupResponse to evaluator
-        FinishWarmupResponse finish_warmup_response(node_idx_, node_recvmsg_source_addr_, EventList());
+        FinishWarmupResponse finish_warmup_response(node_idx_, node_recvmsg_source_addr_, EventList(), control_request_ptr->getExtraCommonMsghdr().getMsgSeqnum());
         node_sendmsg_socket_client_ptr_->send((MessageBase*)&finish_warmup_response, evaluator_recvmsg_dst_addr_);
 
         return;

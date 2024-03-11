@@ -70,12 +70,12 @@ namespace covered
         // (2) Process benchmark control messages
 
         virtual void initialize_() override;
-        virtual void processFinishrunRequest_() override;
+        virtual void processFinishrunRequest_(MessageBase* finishrun_request_ptr) override;
         virtual void processOtherBenchmarkControlRequest_(MessageBase* control_request_ptr) override;
         virtual void cleanup_() override;
 
         void processSwitchSlotRequest_(MessageBase* control_request_ptr);
-        void processFinishWarmupRequest_();
+        void processFinishWarmupRequest_(MessageBase* control_request_ptr);
 
         // (3) Other utility functions
 

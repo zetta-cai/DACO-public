@@ -545,18 +545,25 @@ namespace covered
         const uint32_t beacon_edge_idx = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
         NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = tmp_edge_wrapper_ptr->getBeaconDstaddr_(beacon_edge_idx);
 
+        const uint64_t cur_msg_seqnum = tmp_edge_wrapper_ptr->getAndIncrNodeMsgSeqnum();
+        const ExtraCommonMsghdr tmp_extra_common_msghdr(extra_common_msghdr.isSkipPropagationLatency(), extra_common_msghdr.isMonitored(), cur_msg_seqnum); // NOTE: use edge-assigned seqnum instead of client-assigned seqnum
+
+        bool is_stale_response = false; // Only recv again instead of send if with a stale response
         while (true) // Timeout-and-retry mechanism
         {
-            // Prepare directory update request to check directory information in beacon node
-            MessageBase* directory_update_request_ptr = getReqToAdmitBeaconDirectory_(key, directory_info, source_addr, extra_common_msghdr, is_background);
-            assert(directory_update_request_ptr != NULL);
+            if (!is_stale_response)
+            {
+                // Prepare directory update request to check directory information in beacon node
+                MessageBase* directory_update_request_ptr = getReqToAdmitBeaconDirectory_(key, directory_info, source_addr, tmp_extra_common_msghdr, is_background);
+                assert(directory_update_request_ptr != NULL);
 
-            // Push the control request into edge-to-edge propagation simulator to the beacon node
-            bool is_successful = tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(directory_update_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
-            assert(is_successful);
+                // Push the control request into edge-to-edge propagation simulator to the beacon node
+                bool is_successful = tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(directory_update_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
+                assert(is_successful);
 
-            // NOTE: directory_update_request_ptr will be released by edge-to-edge propagation simulator
-            directory_update_request_ptr = NULL;
+                // NOTE: directory_update_request_ptr will be released by edge-to-edge propagation simulator
+                directory_update_request_ptr = NULL;
+            }
 
             // Receive the control repsonse from the beacon node
             DynamicArray control_response_msg_payload;
@@ -573,6 +580,7 @@ namespace covered
                     std::ostringstream oss;
                     oss << "edge timeout to wait for DirectoryUpdateResponse for key " << key.getKeyDebugstr() << " from beacon " << beacon_edge_idx;
                     Util::dumpWarnMsg(base_instance_name_, oss.str());
+                    is_stale_response = false; // Reset to re-send request
                     continue; // Resend the control request message
                 }
             } // End of (is_timeout == true)
@@ -581,6 +589,20 @@ namespace covered
                 // Receive the control response message successfully
                 MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
                 assert(control_response_ptr != NULL);
+
+                // Check if the received message is a stale response
+                if (control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() != cur_msg_seqnum)
+                {
+                    is_stale_response = true; // ONLY recv again instead of send if with a stale response
+
+                    std::ostringstream oss_for_stable_response;
+                    oss_for_stable_response << "stale response " << MessageBase::messageTypeToString(control_response_ptr->getMessageType()) << " with seqnum " << control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() << " != " << cur_msg_seqnum;
+                    Util::dumpWarnMsg(base_instance_name_, oss_for_stable_response.str());
+
+                    delete control_response_ptr;
+                    control_response_ptr = NULL;
+                    continue; // Jump to while loop
+                }
 
                 // Update is_neighbor_cached based on remote directory admission response
                 processRspToAdmitBeaconDirectory_(control_response_ptr, is_being_written, is_neighbor_cached, is_background); // NOTE: is_being_written is updated here

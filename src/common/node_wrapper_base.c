@@ -14,7 +14,7 @@ namespace covered
 
     const std::string NodeWrapperBase::kClassName("NodeWrapperBase");
 
-    NodeWrapperBase::NodeWrapperBase(const std::string& node_role, const uint32_t& node_idx, const uint32_t& node_cnt, const bool& is_running) : node_role_(node_role), node_idx_(node_idx), node_cnt_(node_cnt), node_running_(is_running)
+    NodeWrapperBase::NodeWrapperBase(const std::string& node_role, const uint32_t& node_idx, const uint32_t& node_cnt, const bool& is_running) : node_role_(node_role), node_idx_(node_idx), node_cnt_(node_cnt), node_running_(is_running), node_msg_seqnum_(0)
     {
         std::ostringstream oss;
         oss << node_role << node_idx;
@@ -117,28 +117,55 @@ namespace covered
         return node_role_idx_str_;
     }
 
+    uint64_t NodeWrapperBase::getAndIncrNodeMsgSeqnum() const
+    {
+        uint64_t original_node_msg_seqnum = node_msg_seqnum_.fetch_add(1, Util::RMW_CONCURRENCY_ORDER);
+        return original_node_msg_seqnum;
+    }
+
     void NodeWrapperBase::finishInitialization_() const
     {
         // Prepare InitializationRequest
-        InitializationRequest initialization_request(node_idx_, node_recvmsg_source_addr_);
+        const uint64_t cur_msg_seqnum = getAndIncrNodeMsgSeqnum();
+        InitializationRequest initialization_request(node_idx_, node_recvmsg_source_addr_, cur_msg_seqnum);
 
         // Timeout-and-retry mechanism
+        bool is_stale_response = false; // Only recv again instead of send if with a stale response
         while (true)
         {
-            // Issue InitializationRequest to evaluator
-            node_sendmsg_socket_client_ptr_->send((MessageBase*)&initialization_request, evaluator_recvmsg_dst_addr_);
+            if (!is_stale_response)
+            {
+                // Issue InitializationRequest to evaluator
+                node_sendmsg_socket_client_ptr_->send((MessageBase*)&initialization_request, evaluator_recvmsg_dst_addr_);
+            }
         
             DynamicArray control_response_msg_payload;
             bool is_timeout = node_recvmsg_socket_server_ptr_->recv(control_response_msg_payload);
             if (is_timeout)
             {
                 Util::dumpWarnMsg(base_instance_name_, "timeout to wait for InitializationResponse from evaluator");
+                is_stale_response = false; // Reset to re-send request
                 continue; // Wait until receiving InitializationResponse from evaluator
             }
             else
             {
                 MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
                 assert(control_response_ptr != NULL);
+
+                // Check if the received message is a stale response
+                if (control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() != cur_msg_seqnum)
+                {
+                    is_stale_response = true; // ONLY recv again instead of send if with a stale response
+
+                    std::ostringstream oss_for_stable_response;
+                    oss_for_stable_response << "stale response " << MessageBase::messageTypeToString(control_response_ptr->getMessageType()) << " with seqnum " << control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() << " != " << cur_msg_seqnum;
+                    Util::dumpWarnMsg(base_instance_name_, oss_for_stable_response.str());
+
+                    delete control_response_ptr;
+                    control_response_ptr = NULL;
+                    continue; // Jump to while loop
+                }
+
                 assert(control_response_ptr->getMessageType() == MessageType::kInitializationResponse);
 
                 delete control_response_ptr;
@@ -171,7 +198,7 @@ namespace covered
                 assert(control_request_ptr->getMessageType() == MessageType::kStartrunRequest);
 
                 // Send back StartrunResponse to evaluator
-                StartrunResponse startrun_response(node_idx_, node_recvmsg_source_addr_, EventList());
+                StartrunResponse startrun_response(node_idx_, node_recvmsg_source_addr_, EventList(), control_request_ptr->getExtraCommonMsghdr().getMsgSeqnum());
                 node_sendmsg_socket_client_ptr_->send((MessageBase*)&startrun_response, evaluator_recvmsg_dst_addr_);
 
                 delete control_request_ptr;
@@ -206,7 +233,7 @@ namespace covered
                 MessageType control_request_msg_type = control_request_ptr->getMessageType();
                 if (control_request_msg_type == MessageType::kFinishrunRequest)
                 {
-                    processFinishrunRequest_(); // Mark node_running_ as false
+                    processFinishrunRequest_(control_request_ptr); // Mark node_running_ as false
                 }
                 else
                 {

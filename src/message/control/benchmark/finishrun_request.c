@@ -4,7 +4,7 @@ namespace covered
 {
     const std::string FinishrunRequest::kClassName("FinishrunRequest");
 
-    FinishrunRequest::FinishrunRequest(const uint32_t& source_index, const NetworkAddr& source_addr) : SimpleMessage(MessageType::kFinishrunRequest, source_index, source_addr, BandwidthUsage(), EventList(), ExtraCommonMsghdr())
+    FinishrunRequest::FinishrunRequest(const uint32_t& source_index, const NetworkAddr& source_addr, const uint64_t& msg_seqnum) : SimpleMessage(MessageType::kFinishrunRequest, source_index, source_addr, BandwidthUsage(), EventList(), ExtraCommonMsghdr(true, false, msg_seqnum)) // NOTE: ONLY msg seqnum in extra common msghdr will be used
     {
     }
 

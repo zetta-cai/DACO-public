@@ -772,7 +772,7 @@ namespace covered
         return;
     }
 
-    void EdgeWrapperBase::processFinishrunRequest_()
+    void EdgeWrapperBase::processFinishrunRequest_(MessageBase* finishrun_request_ptr)
     {
         checkPointers_();
 
@@ -780,7 +780,7 @@ namespace covered
         resetNodeRunning_();
 
         // Send back SimpleFinishrunResponse to evaluator
-        SimpleFinishrunResponse simple_finishrun_response(node_idx_, node_recvmsg_source_addr_, EventList());
+        SimpleFinishrunResponse simple_finishrun_response(node_idx_, node_recvmsg_source_addr_, EventList(), finishrun_request_ptr->getExtraCommonMsghdr().getMsgSeqnum());
         node_sendmsg_socket_client_ptr_->send((MessageBase*)&simple_finishrun_response, evaluator_recvmsg_dst_addr_);
 
         return;

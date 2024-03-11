@@ -90,12 +90,12 @@ namespace covered
         Key tmp_key;
         Edgeset tmp_placement_edgeset;
         ExtraCommonMsghdr extra_common_msghdr = redirected_request_ptr->getExtraCommonMsghdr();
-        if (redirected_request_ptr->getMessageType() == MessageType::kCoveredRedirectedGetRequest)
+        if (redirected_request_ptr->getMessageType() == MessageType::kCoveredRedirectedGetRequest) // Edge-assigned seqnum to fix duplicate reponses for timeout-and-retry
         {
             const CoveredRedirectedGetRequest* const covered_redirected_get_request_ptr = static_cast<const CoveredRedirectedGetRequest*>(redirected_request_ptr);
             tmp_key = covered_redirected_get_request_ptr->getKey();
         }
-        else if (redirected_request_ptr->getMessageType() == MessageType::kCoveredBgfetchRedirectedGetRequest)
+        else if (redirected_request_ptr->getMessageType() == MessageType::kCoveredBgfetchRedirectedGetRequest) // Client-/edge-assigned seqnum (NOT used due to NO timeout-and-retry)
         {
             const CoveredBgfetchRedirectedGetRequest* const covered_placement_redirected_get_request_ptr = static_cast<const CoveredBgfetchRedirectedGetRequest*>(redirected_request_ptr);
             tmp_key = covered_placement_redirected_get_request_ptr->getKey();

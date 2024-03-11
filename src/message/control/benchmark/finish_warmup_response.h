@@ -17,7 +17,7 @@ namespace covered
     class FinishWarmupResponse : public SimpleMessage
     {
     public:
-        FinishWarmupResponse(const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list);
+        FinishWarmupResponse(const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list, const uint64_t& msg_seqnum);
         FinishWarmupResponse(const DynamicArray& msg_payload);
         virtual ~FinishWarmupResponse();
     private:

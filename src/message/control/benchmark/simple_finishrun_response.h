@@ -17,7 +17,7 @@ namespace covered
     class SimpleFinishrunResponse : public SimpleMessage
     {
     public:
-        SimpleFinishrunResponse(const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list);
+        SimpleFinishrunResponse(const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list, const uint32_t& msg_seqnum);
         SimpleFinishrunResponse(const DynamicArray& msg_payload);
         virtual ~SimpleFinishrunResponse();
     private:

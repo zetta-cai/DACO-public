@@ -134,8 +134,10 @@ namespace covered
             uint32_t rtt_us = 0;
             bool is_finish = false;
 
+            const uint64_t cur_msg_seqnum = tmp_client_wrapper_ptr->getAndIncrNodeMsgSeqnum();
+
             // Issue the workload item to the closest edge node
-            is_finish = issueItemToEdge_(workload_item, local_response_msg_payload, rtt_us, is_warmup_phase, is_warmup_speedup, is_monitored);
+            is_finish = issueItemToEdge_(workload_item, local_response_msg_payload, rtt_us, is_warmup_phase, is_warmup_speedup, is_monitored, cur_msg_seqnum);
             if (is_finish) // Check is_finish
             {
                 continue; // Go to check if client is still running
@@ -153,7 +155,7 @@ namespace covered
         return;
     }
 
-    bool ClientWorkerWrapper::issueItemToEdge_(const WorkloadItem& workload_item, DynamicArray& local_response_msg_payload, uint32_t& rtt_us, const bool& is_warmup_phase, const bool& is_warmup_speedup, const bool& is_monitored)
+    bool ClientWorkerWrapper::issueItemToEdge_(const WorkloadItem& workload_item, DynamicArray& local_response_msg_payload, uint32_t& rtt_us, const bool& is_warmup_phase, const bool& is_warmup_speedup, const bool& is_monitored, const uint64_t& cur_msg_seqnum)
     {
         checkPointers_();
         ClientWrapper* tmp_client_wrapper_ptr = client_worker_param_ptr_->getClientWrapperPtr();
@@ -161,22 +163,26 @@ namespace covered
         bool is_finish = false; // Mark if local client is finished
 
         struct timespec sendreq_timestamp = Util::getCurrentTimespec();
+        bool is_stale_response = false; // Only recv again instead of send if with a stale response
         while (true) // Timeout-and-retry mechanism
         {
-            // Convert workload item into local request message
-            MessageBase* local_request_ptr = MessageBase::getRequestFromWorkloadItem(workload_item, tmp_client_wrapper_ptr->getNodeIdx(), client_worker_recvrsp_source_addr_, is_warmup_phase, is_warmup_speedup, is_monitored);
-            assert(local_request_ptr != NULL);
+            if (!is_stale_response)
+            {
+                // Convert workload item into local request message
+                MessageBase* local_request_ptr = MessageBase::getRequestFromWorkloadItem(workload_item, tmp_client_wrapper_ptr->getNodeIdx(), client_worker_recvrsp_source_addr_, is_warmup_phase, is_warmup_speedup, is_monitored, cur_msg_seqnum);
+                assert(local_request_ptr != NULL);
 
-            #ifdef DEBUG_CLIENT_WORKER_WRAPPER
-            Util::dumpVariablesForDebug(instance_name_, 7, "issue a local request;", "type:", MessageBase::messageTypeToString(local_request_ptr->getMessageType()).c_str(), "keystr:", workload_item.getKey().getKeystr().c_str(), "valuesize:", std::to_string(workload_item.getValue().getValuesize()).c_str());
-            #endif
+                #ifdef DEBUG_CLIENT_WORKER_WRAPPER
+                Util::dumpVariablesForDebug(instance_name_, 7, "issue a local request;", "type:", MessageBase::messageTypeToString(local_request_ptr->getMessageType()).c_str(), "keystr:", workload_item.getKey().getKeystr().c_str(), "valuesize:", std::to_string(workload_item.getValue().getValuesize()).c_str());
+                #endif
 
-            // Push local request into client-to-edge propagation simulator to send to closest edge node
-            bool is_successful = tmp_client_wrapper_ptr->getClientToedgePropagationSimulatorParamPtr()->push(local_request_ptr, closest_edge_cache_server_recvreq_dst_addr_);
-            assert(is_successful);
-            
-            // NOTE: local_request_ptr will be released by client-to-edge propagation simulator
-            local_request_ptr = NULL;
+                // Push local request into client-to-edge propagation simulator to send to closest edge node
+                bool is_successful = tmp_client_wrapper_ptr->getClientToedgePropagationSimulatorParamPtr()->push(local_request_ptr, closest_edge_cache_server_recvreq_dst_addr_);
+                assert(is_successful);
+                
+                // NOTE: local_request_ptr will be released by client-to-edge propagation simulator
+                local_request_ptr = NULL;
+            }
 
             // Receive the message payload of local response from the closest edge node
             bool is_timeout = client_worker_recvrsp_socket_server_ptr_->recv(local_response_msg_payload);
@@ -192,11 +198,31 @@ namespace covered
                     std::ostringstream oss;
                     oss << "client timeout to wait for local response for key " << workload_item.getKey().getKeyDebugstr() << " from edge " << closest_edge_idx_;
                     Util::dumpWarnMsg(instance_name_, oss.str());
+                    is_stale_response = false; // Reset to re-send request
                     continue; // Resend the local request message
                 }
             }
             else
             {
+                MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(local_response_msg_payload);
+                assert(control_response_ptr != NULL);
+
+                // Check if the received message is a stale response
+                if (control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() != cur_msg_seqnum)
+                {
+                    is_stale_response = true; // ONLY recv again instead of send if with a stale response
+
+                    std::ostringstream oss_for_stable_response;
+                    oss_for_stable_response << "stale response " << MessageBase::messageTypeToString(control_response_ptr->getMessageType()) << " with seqnum " << control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() << " != " << cur_msg_seqnum;
+                    Util::dumpWarnMsg(instance_name_, oss_for_stable_response.str());
+
+                    delete control_response_ptr;
+                    control_response_ptr = NULL;
+                    continue; // Jump to while loop
+                }
+
+                delete control_response_ptr;
+                control_response_ptr = NULL;
                 break; // Receive the local response message successfully
             }
         }

@@ -18,13 +18,14 @@ namespace covered
     public:
         ExtraCommonMsghdr();
         ExtraCommonMsghdr(const ExtraCommonMsghdr &other);
-        ExtraCommonMsghdr(const bool& skip_propagation_latency, const bool& is_monitored);
+        ExtraCommonMsghdr(const bool& skip_propagation_latency, const bool& is_monitored, const uint64_t& msg_seqnum);
         ~ExtraCommonMsghdr();
 
         std::string toString() const;
 
         bool isSkipPropagationLatency() const;
         bool isMonitored() const;
+        uint64_t getMsgSeqnum() const;
 
         uint32_t getExtraCommonMsghdrPayloadSize() const;
         uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position) const;
@@ -36,6 +37,7 @@ namespace covered
 
         bool skip_propagation_latency_; // NOT simulate propagation latency for warmup speedup (also skip disk I/O latency in cloud)
         bool is_monitored_; // Whether the message is monitored (i.e., need to dump information for debugging)
+        uint64_t msg_seqnum_; // The sequence number of the message to fix duplicate response issue (assigned by clients/edges/cloud/evaluator)
     };
 }
 

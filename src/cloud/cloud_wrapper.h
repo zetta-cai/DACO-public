@@ -54,7 +54,7 @@ namespace covered
         static const std::string kClassName;
 
         virtual void initialize_() override;
-        virtual void processFinishrunRequest_() override;
+        virtual void processFinishrunRequest_(MessageBase* finishrun_request_ptr) override;
         virtual void processOtherBenchmarkControlRequest_(MessageBase* control_request_ptr) override;
         virtual void cleanup_() override;
 

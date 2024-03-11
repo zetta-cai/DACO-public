@@ -17,7 +17,7 @@ namespace covered
     class SwitchSlotResponse : public UintAggstatMessage
     {
     public:
-        SwitchSlotResponse(const uint32_t& target_slot_idx, const AggregatedStatisticsBase& aggregated_statistics, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list);
+        SwitchSlotResponse(const uint32_t& target_slot_idx, const AggregatedStatisticsBase& aggregated_statistics, const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list, const uint64_t& msg_seqnum);
         SwitchSlotResponse(const DynamicArray& msg_payload);
         virtual ~SwitchSlotResponse();
 

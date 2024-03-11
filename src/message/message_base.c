@@ -505,7 +505,7 @@ namespace covered
         return lockresult_str;
     }
 
-    MessageBase* MessageBase::getRequestFromWorkloadItem(WorkloadItem workload_item, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& is_warmup_phase, const bool& is_warmup_speedup, const bool& is_monitored)
+    MessageBase* MessageBase::getRequestFromWorkloadItem(WorkloadItem workload_item, const uint32_t& source_index, const NetworkAddr& source_addr, const bool& is_warmup_phase, const bool& is_warmup_speedup, const bool& is_monitored, const uint64_t& cur_msg_seqnum)
     {
         assert(source_addr.isValidAddr());
         
@@ -517,7 +517,7 @@ namespace covered
             skip_propagation_latency = true;
         }
         
-        ExtraCommonMsghdr extra_common_msghdr(skip_propagation_latency, is_monitored);
+        ExtraCommonMsghdr extra_common_msghdr(skip_propagation_latency, is_monitored, cur_msg_seqnum); // NOTE: the msg seqnum is assiend by client
 
         // NOTE: message_ptr is freed outside MessageBase
         MessageBase* message_ptr = NULL;

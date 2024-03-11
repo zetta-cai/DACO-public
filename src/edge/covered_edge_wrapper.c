@@ -402,7 +402,7 @@ namespace covered
                     // (i) Although current is beacon for cache server, the role is still beacon node, which should be responsible for non-blocking placement deployment. And we don't want to resort cache server worker, which may degrade KV request processing
                     // (ii) Although we may wait for responses, beacon server is blocking for recvreq port and we don't want to introduce another blocking for recvrsp port
                     const VictimSyncset victim_syncset = covered_cache_manager_ptr_->accessVictimTrackerForLocalVictimSyncset(directory_info.getTargetEdgeIdx(), getCacheMarginBytes());
-                    CoveredBgfetchRedirectedGetRequest* covered_placement_redirected_get_request_ptr = new CoveredBgfetchRedirectedGetRequest(key, victim_syncset, best_placement_edgeset, current_edge_idx, edge_beacon_server_recvreq_source_addr_for_placement_, extra_common_msghdr);
+                    CoveredBgfetchRedirectedGetRequest* covered_placement_redirected_get_request_ptr = new CoveredBgfetchRedirectedGetRequest(key, victim_syncset, best_placement_edgeset, current_edge_idx, edge_beacon_server_recvreq_source_addr_for_placement_, extra_common_msghdr); // NOTE: NO need to assign a new msg seqnum by edge for COVERED background redirected get request, as we do NOT wait for the correpsonding response by a timeout-and-retry mechanism (i.e., duplicate responses do NOT affect)
                     assert(covered_placement_redirected_get_request_ptr != NULL);
                     NetworkAddr target_edge_cache_server_recvreq_dst_addr = getTargetDstaddr(directory_info); // Send to cache server of the target edge node for cache server worker
                     bool is_successful = edge_toedge_propagation_simulator_param_ptr_->push(covered_placement_redirected_get_request_ptr, target_edge_cache_server_recvreq_dst_addr);
@@ -434,7 +434,7 @@ namespace covered
         // NOTE: we use edge_beacon_server_recvreq_source_addr_ as the source address even if the invoker (i.e., beacon server) is waiting for global responses
         // (i) Although wait for global responses, beacon server is blocking for recvreq port and we don't want to introduce another blocking for recvrsp port
         uint32_t current_edge_idx = getNodeIdx();
-        CoveredBgfetchGlobalGetRequest* covered_placement_global_get_request_ptr = new CoveredBgfetchGlobalGetRequest(key, best_placement_edgeset, current_edge_idx, edge_beacon_server_recvreq_source_addr_for_placement_, extra_common_msghdr);
+        CoveredBgfetchGlobalGetRequest* covered_placement_global_get_request_ptr = new CoveredBgfetchGlobalGetRequest(key, best_placement_edgeset, current_edge_idx, edge_beacon_server_recvreq_source_addr_for_placement_, extra_common_msghdr); // NOTE: NO need to assign a new msg seqnum by edge for COVERED background global get request, as we do NOT wait for the correpsonding response by a timeout-and-retry mechanism (i.e., duplicate responses do NOT affect)
         assert(covered_placement_global_get_request_ptr != NULL);
         // Push the global request into edge-to-cloud propagation simulator to cloud
         bool is_successful = edge_tocloud_propagation_simulator_param_ptr_->push(covered_placement_global_get_request_ptr, corresponding_cloud_recvreq_dst_addr_for_placement_);

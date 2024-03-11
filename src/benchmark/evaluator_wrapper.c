@@ -338,7 +338,7 @@ namespace covered
                 if (is_first_req_to_be_acked)
                 {
                     // Send back InitializationResponse to client/edge/cloud
-                    InitializationResponse initialization_response(0, evaluator_recvmsg_source_addr_, EventList());
+                    InitializationResponse initialization_response(0, evaluator_recvmsg_source_addr_, EventList(), control_request_ptr->getExtraCommonMsghdr().getMsgSeqnum());
                     evaluator_sendmsg_socket_client_ptr_->send((MessageBase*)&initialization_response, control_request_ptr->getSourceAddr());
 
                     acked_cnt++;
@@ -363,13 +363,19 @@ namespace covered
 
         Util::dumpNormalMsg(kClassName, "Notify all clients to start running...");
 
+        const uint64_t cur_msg_seqnum = evaluator_msg_seqnum_.fetch_add(1, Util::RMW_CONCURRENCY_ORDER); // NOTE: ONLY need one msg seqnum for multiple startrun requests due to issuing to different nodes
+
         // Timeout-and-retry mechanism
         uint32_t acked_cnt = 0;
+        bool is_stale_response = false; // Only recv again instead of send if with a stale response
         while (acked_cnt < startrun_acked_flags.size())
         {
-            // Issue StartrunRequests to unacked clients simultaneously
-            StartrunRequest tmp_startrun_request(0, evaluator_recvmsg_source_addr_);
-            issueMsgToUnackedNodes_((MessageBase*)&tmp_startrun_request, startrun_acked_flags);
+            if (!is_stale_response)
+            {
+                // Issue StartrunRequests to unacked clients simultaneously
+                StartrunRequest tmp_startrun_request(0, evaluator_recvmsg_source_addr_, cur_msg_seqnum);
+                issueMsgToUnackedNodes_((MessageBase*)&tmp_startrun_request, startrun_acked_flags);
+            }
 
             // Receive StartrunResponses for unacked clients
             const uint32_t expected_rspcnt = startrun_acked_flags.size() - acked_cnt;
@@ -380,12 +386,28 @@ namespace covered
                 if (is_timeout)
                 {
                     Util::dumpWarnMsg(kClassName, "timeout to wait for StartrunResponse from " + Util::getAckedStatusStr(startrun_acked_flags) + "!");
+                    is_stale_response = false; // Reset to re-send request
                     break; // Wait until all clients are running
                 }
                 else
                 {
                     MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
                     assert(control_response_ptr != NULL);
+
+                    // Check if the received message is a stale response
+                    if (control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() != cur_msg_seqnum)
+                    {
+                        is_stale_response = true; // ONLY recv again instead of send if with a stale response
+
+                        std::ostringstream oss_for_stable_response;
+                        oss_for_stable_response << "stale response " << MessageBase::messageTypeToString(control_response_ptr->getMessageType()) << " with seqnum " << control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() << " != " << cur_msg_seqnum;
+                        Util::dumpWarnMsg(kClassName, oss_for_stable_response.str());
+
+                        delete control_response_ptr;
+                        control_response_ptr = NULL;
+                        break; // Jump to while loop
+                    }
+
                     assert(control_response_ptr->getMessageType() == MessageType::kStartrunResponse);
 
                     bool is_first_rsp_for_ack = processMsgForAck_(control_response_ptr, startrun_acked_flags);
@@ -421,13 +443,19 @@ namespace covered
         oss << "Notify all clients to switch slot into target slot " << target_slot_idx_ << "...";
         Util::dumpNormalMsg(kClassName, oss.str());
 
+        const uint64_t cur_msg_seqnum = evaluator_msg_seqnum_.fetch_add(1, Util::RMW_CONCURRENCY_ORDER); // NOTE: ONLY need one msg seqnum for multiple switchslot requests due to issuing to different clients
+
         // Timeout-and-retry mechanism
         uint32_t acked_cnt = 0;
+        bool is_stale_response = false; // Only recv again instead of send if with a stale response
         while (acked_cnt < switchslot_acked_flags.size())
         {
-            // Issue SwitchSlotRequests to unacked clients simultaneously
-            SwitchSlotRequest tmp_switch_slot_request(target_slot_idx_, 0, evaluator_recvmsg_source_addr_, is_monitored);
-            issueMsgToUnackedNodes_((MessageBase*)&tmp_switch_slot_request, switchslot_acked_flags);
+            if (!is_stale_response)
+            {
+                // Issue SwitchSlotRequests to unacked clients simultaneously
+                SwitchSlotRequest tmp_switch_slot_request(target_slot_idx_, 0, evaluator_recvmsg_source_addr_, is_monitored, cur_msg_seqnum);
+                issueMsgToUnackedNodes_((MessageBase*)&tmp_switch_slot_request, switchslot_acked_flags);
+            }
 
             // Receive SwitchSlotResponses for unacked clients    
             const uint32_t expected_rspcnt = switchslot_acked_flags.size() - acked_cnt;
@@ -438,12 +466,28 @@ namespace covered
                 if (is_timeout)
                 {
                     Util::dumpWarnMsg(kClassName, "timeout to wait for SwitchSlotResponse from " + Util::getAckedStatusStr(switchslot_acked_flags) + "!");
+                    is_stale_response = false; // Reset to re-send request
                     break; // Wait until all clients have switched slot
                 }
                 else
                 {
                     MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
                     assert(control_response_ptr != NULL);
+
+                    // Check if the received message is a stale response
+                    if (control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() != cur_msg_seqnum)
+                    {
+                        is_stale_response = true; // ONLY recv again instead of send if with a stale response
+
+                        std::ostringstream oss_for_stable_response;
+                        oss_for_stable_response << "stale response " << MessageBase::messageTypeToString(control_response_ptr->getMessageType()) << " with seqnum " << control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() << " != " << cur_msg_seqnum;
+                        Util::dumpWarnMsg(kClassName, oss_for_stable_response.str());
+
+                        delete control_response_ptr;
+                        control_response_ptr = NULL;
+                        break; // Jump to while loop
+                    }
+
                     assert(control_response_ptr->getMessageType() == MessageType::kSwitchSlotResponse);
 
                     bool is_first_rsp_for_ack = processMsgForAck_(control_response_ptr, switchslot_acked_flags);
@@ -508,13 +552,19 @@ namespace covered
 
         Util::dumpNormalMsg(kClassName, "Notify all clients to finish warmup and start stresstest...");
 
+        const uint64_t cur_msg_seqnum = evaluator_msg_seqnum_.fetch_add(1, Util::RMW_CONCURRENCY_ORDER); // NOTE: ONLY need one msg seqnum for multiple finishwarmup requests due to issuing to different clients
+
         // Timeout-and-retry mechanism
         uint32_t acked_cnt = 0;
+        bool is_stale_response = false; // Only recv again instead of send if with a stale response
         while (acked_cnt < finish_warmup_acked_flags.size())
         {
-            // Issue FinishWarmupRequests to unacked clients simultaneously
-            FinishWarmupRequest tmp_finish_warmup_request(0, evaluator_recvmsg_source_addr_);
-            issueMsgToUnackedNodes_((MessageBase*)&tmp_finish_warmup_request, finish_warmup_acked_flags);
+            if (!is_stale_response)
+            {
+                // Issue FinishWarmupRequests to unacked clients simultaneously
+                FinishWarmupRequest tmp_finish_warmup_request(0, evaluator_recvmsg_source_addr_, cur_msg_seqnum);
+                issueMsgToUnackedNodes_((MessageBase*)&tmp_finish_warmup_request, finish_warmup_acked_flags);
+            }
 
             // Receive FinishWarmupResponses for unacked clients
             const uint32_t expected_rspcnt = finish_warmup_acked_flags.size() - acked_cnt;
@@ -525,12 +575,28 @@ namespace covered
                 if (is_timeout)
                 {
                     Util::dumpWarnMsg(kClassName, "timeout to wait for FinishWarmupResponse from " + Util::getAckedStatusStr(finish_warmup_acked_flags) + "!");
+                    is_stale_response = false; // Reset to re-send request
                     break; // Wait until all clients have finished warmup phase
                 }
                 else
                 {
                     MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
                     assert(control_response_ptr != NULL);
+
+                    // Check if the received message is a stale response
+                    if (control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() != cur_msg_seqnum)
+                    {
+                        is_stale_response = true; // ONLY recv again instead of send if with a stale response
+
+                        std::ostringstream oss_for_stable_response;
+                        oss_for_stable_response << "stale response " << MessageBase::messageTypeToString(control_response_ptr->getMessageType()) << " with seqnum " << control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() << " != " << cur_msg_seqnum;
+                        Util::dumpWarnMsg(kClassName, oss_for_stable_response.str());
+
+                        delete control_response_ptr;
+                        control_response_ptr = NULL;
+                        break; // Jump to while loop
+                    }
+
                     assert(control_response_ptr->getMessageType() == MessageType::kFinishWarmupResponse);
 
                     bool is_first_rsp_for_ack = processMsgForAck_(control_response_ptr, finish_warmup_acked_flags);
@@ -576,13 +642,19 @@ namespace covered
 
         Util::dumpNormalMsg(kClassName, "Notify all clients to finish run...");
 
+        const uint64_t cur_msg_seqnum = evaluator_msg_seqnum_.fetch_add(1, Util::RMW_CONCURRENCY_ORDER); // NOTE: ONLY need one msg seqnum for multiple finishrun requests due to issuing to different clients
+
         // Timeout-and-retry mechanism
         uint32_t acked_cnt = 0;
+        bool is_stale_response = false; // Only recv again instead of send if with a stale response
         while (acked_cnt < finishrun_acked_flags.size())
         {
-            // Issue FinishrunRequests to unacked clients simultaneously
-            FinishrunRequest tmp_finishrun_request(0, evaluator_recvmsg_source_addr_);
-            issueMsgToUnackedNodes_((MessageBase*)&tmp_finishrun_request, finishrun_acked_flags);
+            if (!is_stale_response)
+            {
+                // Issue FinishrunRequests to unacked clients simultaneously
+                FinishrunRequest tmp_finishrun_request(0, evaluator_recvmsg_source_addr_, cur_msg_seqnum);
+                issueMsgToUnackedNodes_((MessageBase*)&tmp_finishrun_request, finishrun_acked_flags);
+            }
 
             // Receive FinishrunResponses for unacked clients
             const uint32_t expected_rspcnt = finishrun_acked_flags.size() - acked_cnt;
@@ -593,12 +665,28 @@ namespace covered
                 if (is_timeout)
                 {
                     Util::dumpWarnMsg(kClassName, "timeout to wait for FinishrunResponse from " + Util::getAckedStatusStr(finishrun_acked_flags) + "!");
+                    is_stale_response = false; // Reset to re-send request
                     break; // Wait until all clients have finished running
                 }
                 else
                 {
                     MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
                     assert(control_response_ptr != NULL);
+
+                    // Check if the received message is a stale response
+                    if (control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() != cur_msg_seqnum)
+                    {
+                        is_stale_response = true; // ONLY recv again instead of send if with a stale response
+
+                        std::ostringstream oss_for_stable_response;
+                        oss_for_stable_response << "stale response " << MessageBase::messageTypeToString(control_response_ptr->getMessageType()) << " with seqnum " << control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() << " != " << cur_msg_seqnum;
+                        Util::dumpWarnMsg(kClassName, oss_for_stable_response.str());
+
+                        delete control_response_ptr;
+                        control_response_ptr = NULL;
+                        break; // Jump to while loop
+                    }
+
                     assert(control_response_ptr->getMessageType() == MessageType::kFinishrunResponse);
 
                     bool is_first_rsp_for_ack = processMsgForAck_(control_response_ptr, finishrun_acked_flags);
@@ -659,13 +747,19 @@ namespace covered
 
         Util::dumpNormalMsg(kClassName, "Notify all edge/cloud nodes to finish run...");
 
+        const uint64_t cur_msg_seqnum = evaluator_msg_seqnum_.fetch_add(1, Util::RMW_CONCURRENCY_ORDER); // NOTE: ONLY need one msg seqnum for multiple finishrun requests due to issuing to different edge/cloud nodes
+
         // Timeout-and-retry mechanism
         uint32_t acked_cnt = 0;
+        bool is_stale_response = false; // Only recv again instead of send if with a stale response
         while (acked_cnt < finishrun_acked_flags.size())
         {
-            // Issue FinishrunRequests to unacked edge/cloud nodes simultaneously
-            FinishrunRequest tmp_finishrun_request(0, evaluator_recvmsg_source_addr_);
-            issueMsgToUnackedNodes_((MessageBase*)&tmp_finishrun_request, finishrun_acked_flags);
+            if (!is_stale_response)
+            {
+                // Issue FinishrunRequests to unacked edge/cloud nodes simultaneously
+                FinishrunRequest tmp_finishrun_request(0, evaluator_recvmsg_source_addr_, cur_msg_seqnum);
+                issueMsgToUnackedNodes_((MessageBase*)&tmp_finishrun_request, finishrun_acked_flags);
+            }
 
             // Receive SimpleFinishrunResponses for unacked edge/cloud nodes
             const uint32_t expected_rspcnt = finishrun_acked_flags.size() - acked_cnt;
@@ -676,12 +770,28 @@ namespace covered
                 if (is_timeout)
                 {
                     Util::dumpWarnMsg(kClassName, "timeout to wait for SimpleFinishrunResponse from " + Util::getAckedStatusStr(finishrun_acked_flags) + "!");
+                    is_stale_response = false; // Reset to re-send request
                     break; // Wait until all edge/cloud nodes have finished running
                 }
                 else
                 {
                     MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
                     assert(control_response_ptr != NULL);
+
+                    // Check if the received message is a stale response
+                    if (control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() != cur_msg_seqnum)
+                    {
+                        is_stale_response = true; // ONLY recv again instead of send if with a stale response
+
+                        std::ostringstream oss_for_stable_response;
+                        oss_for_stable_response << "stale response " << MessageBase::messageTypeToString(control_response_ptr->getMessageType()) << " with seqnum " << control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() << " != " << cur_msg_seqnum;
+                        Util::dumpWarnMsg(kClassName, oss_for_stable_response.str());
+
+                        delete control_response_ptr;
+                        control_response_ptr = NULL;
+                        break; // Jump to while loop
+                    }
+
                     assert(control_response_ptr->getMessageType() == MessageType::kSimpleFinishrunResponse);
 
                     bool is_first_rsp_for_ack = processMsgForAck_(control_response_ptr, finishrun_acked_flags);

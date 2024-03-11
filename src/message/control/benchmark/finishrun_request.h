@@ -17,7 +17,7 @@ namespace covered
     class FinishrunRequest : public SimpleMessage
     {
     public:
-        FinishrunRequest(const uint32_t& source_index, const NetworkAddr& source_addr);
+        FinishrunRequest(const uint32_t& source_index, const NetworkAddr& source_addr, const uint64_t& msg_seqnum);
         FinishrunRequest(const DynamicArray& msg_payload);
         virtual ~FinishrunRequest();
     private:

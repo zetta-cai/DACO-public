@@ -31,6 +31,7 @@ namespace covered
         uint32_t getNodeIdx() const;
         uint32_t getNodeCnt() const;
         std::string getNodeRoleIdxStr() const;
+        uint64_t getAndIncrNodeMsgSeqnum() const;
 
         bool isNodeRunning() const;
     private:
@@ -40,7 +41,7 @@ namespace covered
         void finishInitialization_() const;
         void blockForStartrun_();
         void blockForFinishrun_();
-        virtual void processFinishrunRequest_() = 0;
+        virtual void processFinishrunRequest_(MessageBase* finishrun_request_ptr) = 0;
         virtual void processOtherBenchmarkControlRequest_(MessageBase* control_request_ptr) = 0;
         virtual void cleanup_() = 0;
 
@@ -69,6 +70,9 @@ namespace covered
         NetworkAddr evaluator_recvmsg_dst_addr_;
         UdpMsgSocketServer* node_recvmsg_socket_server_ptr_;
         UdpMsgSocketClient* node_sendmsg_socket_client_ptr_;
+
+        // To fix duplicate response issues on all data/control messages
+        mutable volatile std::atomic<uint64_t> node_msg_seqnum_;
     };
 }
 

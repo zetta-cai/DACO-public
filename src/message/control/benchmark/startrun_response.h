@@ -17,7 +17,7 @@ namespace covered
     class StartrunResponse : public SimpleMessage
     {
     public:
-        StartrunResponse(const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list);
+        StartrunResponse(const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list, const uint64_t& msg_seqnum);
         StartrunResponse(const DynamicArray& msg_payload);
         virtual ~StartrunResponse();
     private:

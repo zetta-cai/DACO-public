@@ -17,7 +17,7 @@ namespace covered
     class InitializationResponse : public SimpleMessage
     {
     public:
-        InitializationResponse(const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list);
+        InitializationResponse(const uint32_t& source_index, const NetworkAddr& source_addr, const EventList& event_list, const uint32_t& msg_seqnum);
         InitializationResponse(const DynamicArray& msg_payload);
         virtual ~InitializationResponse();
     private:

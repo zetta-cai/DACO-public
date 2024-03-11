@@ -97,6 +97,9 @@ namespace covered
         // (2) Track total aggregated statistics
 
         TotalStatisticsTracker* total_statistics_tracker_ptr_;
+
+        // To fix duplicate response issue
+        std::atomic<uint64_t> evaluator_msg_seqnum_;
     };
 }
 

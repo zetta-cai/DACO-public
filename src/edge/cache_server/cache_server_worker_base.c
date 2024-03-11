@@ -323,7 +323,7 @@ namespace covered
         uint64_t capacity_bytes = tmp_edge_wrapper_ptr->getCapacityBytes();
         uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         NetworkAddr edge_cache_server_recvreq_source_addr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeCacheServerRecvreqPrivateSourceAddr(); // NOTE: the closest edge communicates client via private IP address
-        MessageBase* local_get_response_ptr = new LocalGetResponse(tmp_key, tmp_value, hitflag, used_bytes, capacity_bytes, edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, extra_common_msghdr);
+        MessageBase* local_get_response_ptr = new LocalGetResponse(tmp_key, tmp_value, hitflag, used_bytes, capacity_bytes, edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, extra_common_msghdr); // NOTE: extra_common_msghdr has msg seqnum assigned by client worker
         assert(local_get_response_ptr != NULL);
 
         // Push local response message into edge-to-client propagation simulator to a client
@@ -505,24 +505,36 @@ namespace covered
         const uint32_t tmp_beacon_edge_idx = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
         NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = tmp_edge_wrapper_ptr->getBeaconDstaddr_(tmp_beacon_edge_idx);
 
+        const uint64_t cur_msg_seqnum = tmp_edge_wrapper_ptr->getAndIncrNodeMsgSeqnum();
+        const ExtraCommonMsghdr tmp_extra_common_msghdr(extra_common_msghdr.isSkipPropagationLatency(), extra_common_msghdr.isMonitored(), cur_msg_seqnum); // NOTE: use edge-assigned seqnum instead of client-assigned seqnum
+
+        bool is_stale_response = false; // Only recv again instead of send if with a stale response
         while (true) // Timeout-and-retry mechanism
         {
-            MessageBase* directory_lookup_request_ptr = getReqToLookupBeaconDirectory_(key, extra_common_msghdr);
-            assert(directory_lookup_request_ptr != NULL);
-
-            #ifdef DEBUG_CACHE_SERVER_WORKER
-            Util::dumpVariablesForDebug(base_instance_name_, 4, "beacon edge index:", std::to_string(tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key)).c_str(), "keystr:", key.getKeystr().c_str());
-            #endif
-
             // Prepare for latency-aware weight tuning
             const struct timespec tmp_content_discovery_start_timestamp = Util::getCurrentTimespec(); // NOT count timeout
 
-            // Push the control request into edge-to-edge propagation simulator to send to beacon node
-            bool is_successful = tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(directory_lookup_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
-            assert(is_successful);
+            if (!is_stale_response)
+            {
+                MessageBase* directory_lookup_request_ptr = getReqToLookupBeaconDirectory_(key, tmp_extra_common_msghdr);
+                assert(directory_lookup_request_ptr != NULL);
 
-            // NOTE: directory_lookup_request_ptr will be released by edge-to-edge propagation simulator
-            directory_lookup_request_ptr = NULL;
+                #ifdef DEBUG_CACHE_SERVER_WORKER
+                Util::dumpVariablesForDebug(base_instance_name_, 4, "beacon edge index:", std::to_string(tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key)).c_str(), "keystr:", key.getKeystr().c_str());
+                #endif
+
+                // // TMPDEBUG24
+                // std::ostringstream tmposs;
+                // tmposs << "issue " << MessageBase::messageTypeToString(directory_lookup_request_ptr->getMessageType()) << " for key " << key.getKeyDebugstr() << " to beacon " << tmp_beacon_edge_idx;
+                // Util::dumpNormalMsg(base_instance_name_, tmposs.str());
+
+                // Push the control request into edge-to-edge propagation simulator to send to beacon node
+                bool is_successful = tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(directory_lookup_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
+                assert(is_successful);
+
+                // NOTE: directory_lookup_request_ptr will be released by edge-to-edge propagation simulator
+                directory_lookup_request_ptr = NULL;
+            }
 
             // Receive the control repsonse from the beacon node
             DynamicArray control_response_msg_payload;
@@ -539,11 +551,30 @@ namespace covered
                     std::ostringstream oss;
                     oss << "edge timeout to wait for DirectoryLookupResponse for key " << key.getKeyDebugstr() << " from beacon " << tmp_beacon_edge_idx;
                     Util::dumpWarnMsg(base_instance_name_, oss.str());
+                    is_stale_response = false; // Reset to re-send request
                     continue; // Resend the control request message
                 }
             } // End of (is_timeout == true)
             else
             {
+                // Receive the control response message successfully
+                MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
+                assert(control_response_ptr != NULL);
+
+                // Check if the received message is a stale response
+                if (control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() != cur_msg_seqnum)
+                {
+                    is_stale_response = true; // ONLY recv again instead of send if with a stale response
+
+                    std::ostringstream oss_for_stable_response;
+                    oss_for_stable_response << "stale response " << MessageBase::messageTypeToString(control_response_ptr->getMessageType()) << " with seqnum " << control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() << " != " << cur_msg_seqnum;
+                    Util::dumpWarnMsg(base_instance_name_, oss_for_stable_response.str());
+
+                    delete control_response_ptr;
+                    control_response_ptr = NULL;
+                    continue; // Jump to while loop
+                }
+
                 // Update cross-edge latency for latency-aware weight tuning if NOT timeout
                 const struct timespec tmp_content_discovery_end_timestamp = Util::getCurrentTimespec();
                 const double tmp_content_discovery_cross_edge_rtt_us = Util::getDeltaTimeUs(tmp_content_discovery_end_timestamp, tmp_content_discovery_start_timestamp);
@@ -553,10 +584,6 @@ namespace covered
                     // NOTE: cross-edge propagation latency from CLI is a single trip latency, which should be counted twice for RTT
                     tmp_content_discovery_cross_edge_latency_us += 2 * tmp_edge_wrapper_ptr->getPropagationLatencyCrossedgeUs();
                 }
-
-                // Receive the control response message successfully
-                MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
-                assert(control_response_ptr != NULL);
 
                 processRspToLookupBeaconDirectory_(control_response_ptr, is_being_written, is_valid_directory_exist, directory_info, best_placement_edgeset, need_hybrid_fetching, fast_path_hint, tmp_content_discovery_cross_edge_latency_us);
 
@@ -596,21 +623,33 @@ namespace covered
         // Prepare destination address of target edge cache server
         NetworkAddr target_edge_cache_server_recvreq_dst_addr = tmp_edge_wrapper_ptr->getTargetDstaddr(directory_info); // Send to cache server of the target edge node for cache server worker
 
+        const uint64_t cur_msg_seqnum = tmp_edge_wrapper_ptr->getAndIncrNodeMsgSeqnum();
+        const ExtraCommonMsghdr tmp_extra_common_msghdr(extra_common_msghdr.isSkipPropagationLatency(), extra_common_msghdr.isMonitored(), cur_msg_seqnum); // NOTE: use edge-assigned seqnum instead of client-assigned seqnum
+
+        bool is_stale_response = false; // Only recv again instead of send if with a stale response
         while (true) // Timeout-and-retry mechanism
         {
-            // Prepare redirected get request to get data from target edge node if any
-            MessageBase* redirected_get_request_ptr = getReqToRedirectGet_(directory_info.getTargetEdgeIdx(), key, extra_common_msghdr);
-            assert(redirected_get_request_ptr != NULL);
-
             // Prepare for latency-aware weight tuning
             const struct timespec tmp_request_redirection_start_timestamp = Util::getCurrentTimespec(); // NOT count timeout
 
-            // Push the redirected data request into edge-to-edge propagation simulator to target node
-            bool is_successful = tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(redirected_get_request_ptr, target_edge_cache_server_recvreq_dst_addr);
-            assert(is_successful);
+            if (!is_stale_response)
+            {
+                // Prepare redirected get request to get data from target edge node if any
+                MessageBase* redirected_get_request_ptr = getReqToRedirectGet_(directory_info.getTargetEdgeIdx(), key, tmp_extra_common_msghdr);
+                assert(redirected_get_request_ptr != NULL);
 
-            // NOTE: redirected_get_request_ptr will be released by edge-to-edge propagation simulator
-            redirected_get_request_ptr = NULL;
+                // // TMPDEBUG24
+                // std::ostringstream tmposs;
+                // tmposs << "issue " << MessageBase::messageTypeToString(redirected_get_request_ptr->getMessageType()) << " for key " << key.getKeyDebugstr() << " to target " << directory_info.getTargetEdgeIdx();
+                // Util::dumpNormalMsg(base_instance_name_, tmposs.str());
+
+                // Push the redirected data request into edge-to-edge propagation simulator to target node
+                bool is_successful = tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(redirected_get_request_ptr, target_edge_cache_server_recvreq_dst_addr);
+                assert(is_successful);
+
+                // NOTE: redirected_get_request_ptr will be released by edge-to-edge propagation simulator
+                redirected_get_request_ptr = NULL;
+            }
 
             // Receive the redirected data repsonse from the target node
             DynamicArray redirected_response_msg_payload;
@@ -627,11 +666,30 @@ namespace covered
                     std::ostringstream oss;
                     oss << "edge timeout to wait for RedirectedGetResponse for key " << key.getKeyDebugstr() << " from target " << directory_info.getTargetEdgeIdx();
                     Util::dumpWarnMsg(base_instance_name_, oss.str());
+                    is_stale_response = false; // Reset to re-send request
                     continue; // Resend the redirected request message
                 }
             } // End of (is_timeout == true)
             else
             {
+                // Receive the redirected response message successfully
+                MessageBase* redirected_response_ptr = MessageBase::getResponseFromMsgPayload(redirected_response_msg_payload);
+                assert(redirected_response_ptr != NULL);
+
+                // Check if the received message is a stale response
+                if (redirected_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() != cur_msg_seqnum)
+                {
+                    is_stale_response = true; // ONLY recv again instead of send if with a stale response
+
+                    std::ostringstream oss_for_stable_response;
+                    oss_for_stable_response << "stale response " << MessageBase::messageTypeToString(redirected_response_ptr->getMessageType()) << " with seqnum " << redirected_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() << " != " << cur_msg_seqnum;
+                    Util::dumpWarnMsg(base_instance_name_, oss_for_stable_response.str());
+
+                    delete redirected_response_ptr;
+                    redirected_response_ptr = NULL;
+                    continue; // Jump to while loop
+                }
+
                 // Update cross-edge latency for latency-aware weight tuning if NOT timeout
                 const struct timespec tmp_request_direction_end_timestamp = Util::getCurrentTimespec();
                 const double tmp_request_redirection_cross_edge_rtt_us = Util::getDeltaTimeUs(tmp_request_direction_end_timestamp, tmp_request_redirection_start_timestamp);
@@ -641,10 +699,6 @@ namespace covered
                     // NOTE: cross-edge propagation latency from CLI is a single trip latency, which should be counted twice for RTT
                     tmp_request_redirection_cross_edge_latency_us += 2 * tmp_edge_wrapper_ptr->getPropagationLatencyCrossedgeUs();
                 }
-
-                // Receive the redirected response message successfully
-                MessageBase* redirected_response_ptr = MessageBase::getResponseFromMsgPayload(redirected_response_msg_payload);
-                assert(redirected_response_ptr != NULL);
 
                 // Get value and hitflag from redirected response message
                 Hitflag hitflag = Hitflag::kGlobalMiss;
@@ -713,26 +767,34 @@ namespace covered
         bool is_finish = false; // Mark if edge node is finished
         struct timespec issue_global_get_req_start_timestamp = Util::getCurrentTimespec(); // Count timeout
 
-        while (true) // Timeout-and-retry
+        const uint64_t cur_msg_seqnum = tmp_edge_wrapper_ptr->getAndIncrNodeMsgSeqnum();
+        const ExtraCommonMsghdr tmp_extra_common_msghdr(extra_common_msghdr.isSkipPropagationLatency(), extra_common_msghdr.isMonitored(), cur_msg_seqnum); // NOTE: use edge-assigned seqnum instead of client-assigned seqnum
+
+        // Timeout-and-retry
+        bool is_stale_response = false; // Only recv again instead of send if with a stale response
+        while (true)
         {
-            // Prepare global get request to cloud
-            uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
-            MessageBase* global_get_request_ptr = new GlobalGetRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, extra_common_msghdr);
-            assert(global_get_request_ptr != NULL);
-
-            #ifdef DEBUG_CACHE_SERVER_WORKER
-            Util::dumpVariablesForDebug(base_instance_name_, 5, "issue a global request;", "type:", MessageBase::messageTypeToString(global_get_request_ptr->getMessageType()).c_str(), "keystr:", key.getKeystr().c_str());
-            #endif
-
             // Prepare for latency-aware weight tuning
             const struct timespec tmp_cloud_access_start_timestamp = Util::getCurrentTimespec(); // NOT count timeout
 
-            // Push the global request into edge-to-cloud propagation simulator to cloud
-            bool is_successful = tmp_edge_wrapper_ptr->getEdgeTocloudPropagationSimulatorParamPtr()->push(global_get_request_ptr, corresponding_cloud_recvreq_dst_addr_);
-            assert(is_successful);
+            if (!is_stale_response)
+            {
+                // Prepare global get request to cloud
+                uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
+                MessageBase* global_get_request_ptr = new GlobalGetRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, tmp_extra_common_msghdr);
+                assert(global_get_request_ptr != NULL);
 
-            // NOTE: global_get_request_ptr will be released by edge-to-cloud propagation simulator
-            global_get_request_ptr = NULL;
+                #ifdef DEBUG_CACHE_SERVER_WORKER
+                Util::dumpVariablesForDebug(base_instance_name_, 5, "issue a global request;", "type:", MessageBase::messageTypeToString(global_get_request_ptr->getMessageType()).c_str(), "keystr:", key.getKeystr().c_str());
+                #endif
+
+                // Push the global request into edge-to-cloud propagation simulator to cloud
+                bool is_successful = tmp_edge_wrapper_ptr->getEdgeTocloudPropagationSimulatorParamPtr()->push(global_get_request_ptr, corresponding_cloud_recvreq_dst_addr_);
+                assert(is_successful);
+
+                // NOTE: global_get_request_ptr will be released by edge-to-cloud propagation simulator
+                global_get_request_ptr = NULL;
+            }
 
             // Receive the global response message from cloud
             DynamicArray global_response_msg_payload;
@@ -749,11 +811,30 @@ namespace covered
                     std::ostringstream oss;
                     oss << "edge timeout to wait for GlobalGetResponse for key " << key.getKeyDebugstr() << " from cloud";
                     Util::dumpWarnMsg(base_instance_name_, oss.str());
+                    is_stale_response = false; // Reset to re-send request
                     continue; // Resend the global request message
                 }
             }
             else
             {
+                // Receive the global response message successfully
+                MessageBase* global_response_ptr = MessageBase::getResponseFromMsgPayload(global_response_msg_payload);
+                assert(global_response_ptr != NULL);
+
+                // Check if the received message is a stale response
+                if (global_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() != cur_msg_seqnum)
+                {
+                    is_stale_response = true; // ONLY recv again instead of send if with a stale response
+
+                    std::ostringstream oss_for_stable_response;
+                    oss_for_stable_response << "stale response " << MessageBase::messageTypeToString(global_response_ptr->getMessageType()) << " with seqnum " << global_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() << " != " << cur_msg_seqnum;
+                    Util::dumpWarnMsg(base_instance_name_, oss_for_stable_response.str());
+
+                    delete global_response_ptr;
+                    global_response_ptr = NULL;
+                    continue; // Jump to while loop
+                }
+
                 // Update edge-cloud latency for latency-aware weight tuning if NOT timeout
                 const struct timespec tmp_cloud_access_end_timestamp = Util::getCurrentTimespec();
                 const double tmp_cloud_access_edge_cloud_rtt_us = Util::getDeltaTimeUs(tmp_cloud_access_end_timestamp, tmp_cloud_access_start_timestamp);
@@ -763,10 +844,6 @@ namespace covered
                     // NOTE: edge-cloud propagation latency from CLI is a single trip latency, which should be counted twice for RTT
                     tmp_cloud_access_edge_cloud_latency_us += 2 * tmp_edge_wrapper_ptr->getPropagationLatencyEdgecloudUs();
                 }
-
-                // Receive the global response message successfully
-                MessageBase* global_response_ptr = MessageBase::getResponseFromMsgPayload(global_response_msg_payload);
-                assert(global_response_ptr != NULL);
 
                 // Get value from global response message
                 processRspToAccessCloud_(global_response_ptr, value, tmp_cloud_access_edge_cloud_latency_us);
@@ -937,12 +1014,12 @@ namespace covered
         if (local_request_ptr->getMessageType() == MessageType::kLocalPutRequest)
         {
             // Prepare LocalPutResponse for client
-            local_response_ptr = new LocalPutResponse(tmp_key, hitflag, used_bytes, capacity_bytes, edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, extra_common_msghdr);
+            local_response_ptr = new LocalPutResponse(tmp_key, hitflag, used_bytes, capacity_bytes, edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, extra_common_msghdr); // NOTE: extra_common_msghdr has msg seqnum assigned by client worker
         }
         else if (local_request_ptr->getMessageType() == MessageType::kLocalDelRequest)
         {
             // Prepare LocalDelResponse for client
-            local_response_ptr = new LocalDelResponse(tmp_key, hitflag, used_bytes, capacity_bytes, edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, extra_common_msghdr);
+            local_response_ptr = new LocalDelResponse(tmp_key, hitflag, used_bytes, capacity_bytes, edge_idx, edge_cache_server_recvreq_source_addr, total_bandwidth_usage, event_list, extra_common_msghdr); // NOTE: extra_common_msghdr has msg seqnum assigned by client worker
         }
 
         if (!is_finish) // // Edge node is STILL running
@@ -1245,34 +1322,41 @@ namespace covered
         bool is_finish = false; // Mark if edge node is finished
         struct timespec issue_global_write_req_start_timestamp = Util::getCurrentTimespec();
 
+        const uint64_t cur_msg_seqnum = extra_common_msghdr.getMsgSeqnum();
+        const ExtraCommonMsghdr tmp_extra_common_msghdr(extra_common_msghdr.isSkipPropagationLatency(), extra_common_msghdr.isMonitored(), cur_msg_seqnum); // NOTE: use edge-assigned seqnum instead of client-assigned seqnum
+
+        bool is_stale_response = false; // Only recv again instead of send if with a stale response
         while (true) // Timeout-and-retry
         {
-            // Prepare global write request message
-            MessageBase* global_request_ptr = NULL;
-            uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
-            if (message_type == MessageType::kLocalPutRequest)
+            if (!is_stale_response)
             {
-                global_request_ptr = new GlobalPutRequest(key, value, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, extra_common_msghdr);
-            }
-            else if (message_type == MessageType::kLocalDelRequest)
-            {
-                global_request_ptr = new GlobalDelRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, extra_common_msghdr);
-            }
-            else
-            {
-                std::ostringstream oss;
-                oss << "invalid message type " << MessageBase::messageTypeToString(message_type) << " for writeDataToCloud_()!";
-                Util::dumpErrorMsg(base_instance_name_, oss.str());
-                exit(1);
-            }
-            assert(global_request_ptr != NULL);
+                // Prepare global write request message
+                MessageBase* global_request_ptr = NULL;
+                uint32_t edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
+                if (message_type == MessageType::kLocalPutRequest)
+                {
+                    global_request_ptr = new GlobalPutRequest(key, value, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, tmp_extra_common_msghdr);
+                }
+                else if (message_type == MessageType::kLocalDelRequest)
+                {
+                    global_request_ptr = new GlobalDelRequest(key, edge_idx, edge_cache_server_worker_recvrsp_source_addr_, tmp_extra_common_msghdr);
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << "invalid message type " << MessageBase::messageTypeToString(message_type) << " for writeDataToCloud_()!";
+                    Util::dumpErrorMsg(base_instance_name_, oss.str());
+                    exit(1);
+                }
+                assert(global_request_ptr != NULL);
 
-            // Push the global request into edge-to-cloud propagation simulator to cloud
-            bool is_successful = tmp_edge_wrapper_ptr->getEdgeTocloudPropagationSimulatorParamPtr()->push(global_request_ptr, corresponding_cloud_recvreq_dst_addr_);
-            assert(is_successful);
+                // Push the global request into edge-to-cloud propagation simulator to cloud
+                bool is_successful = tmp_edge_wrapper_ptr->getEdgeTocloudPropagationSimulatorParamPtr()->push(global_request_ptr, corresponding_cloud_recvreq_dst_addr_);
+                assert(is_successful);
 
-            // NOTE: global_request_ptr will be released by edge-to-cloud propagation simulator
-            global_request_ptr = NULL;
+                // NOTE: global_request_ptr will be released by edge-to-cloud propagation simulator
+                global_request_ptr = NULL;
+            }
 
             // Receive the global response message from cloud
             DynamicArray global_response_msg_payload;
@@ -1289,6 +1373,7 @@ namespace covered
                     std::ostringstream oss;
                     oss << "edge timeout to wait for GlobalPutResponse/GlobalDelResponse for key " << key.getKeyDebugstr() << " from cloud";
                     Util::dumpWarnMsg(base_instance_name_, oss.str());
+                    is_stale_response = false; // Reset to re-send request
                     continue; // Resend the global request message
                 }
             }
@@ -1297,6 +1382,21 @@ namespace covered
                 // Receive the global response message successfully
                 MessageBase* global_response_ptr = MessageBase::getResponseFromMsgPayload(global_response_msg_payload);
                 assert(global_response_ptr != NULL);
+
+                // Check if the received message is a stale response
+                if (global_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() != cur_msg_seqnum)
+                {
+                    is_stale_response = true; // ONLY recv again instead of send if with a stale response
+
+                    std::ostringstream oss_for_stable_response;
+                    oss_for_stable_response << "stale response " << MessageBase::messageTypeToString(global_response_ptr->getMessageType()) << " with seqnum " << global_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() << " != " << cur_msg_seqnum;
+                    Util::dumpWarnMsg(base_instance_name_, oss_for_stable_response.str());
+
+                    delete global_response_ptr;
+                    global_response_ptr = NULL;
+                    continue; // Jump to while loop
+                }
+
                 assert(global_response_ptr->getMessageType() == MessageType::kGlobalPutResponse || global_response_ptr->getMessageType() == MessageType::kGlobalDelResponse);
 
                 // Update total bandwidth usage for received global put/del response

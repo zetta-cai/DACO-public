@@ -17,7 +17,7 @@ namespace covered
     class StartrunRequest : public SimpleMessage
     {
     public:
-        StartrunRequest(const uint32_t& source_index, const NetworkAddr& source_addr);
+        StartrunRequest(const uint32_t& source_index, const NetworkAddr& source_addr, const uint64_t& msg_seqnum);
         StartrunRequest(const DynamicArray& msg_payload);
         virtual ~StartrunRequest();
     private:
