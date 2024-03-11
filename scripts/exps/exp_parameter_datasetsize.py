@@ -60,6 +60,15 @@ for tmp_round_index in round_indexes:
             tmp_exp_settings["capacity_mb"] = tmp_peredge_capacity # 50% dataset capacity / 4 edges
             tmp_exp_settings["cache_name"] = tmp_cache_name
 
+            # Special case 1: for LRB+ under 4M dataset, we can use 8M warmup requests instead of 40M ones to avoid too slow warmup due to model retraining and large memory cost, which is acceptable due to the following reasons:
+            # (i) LRB+ has already been warmed up at 8M requests instead of until 40M requests, which has no difference for cache stable performance of LRB+ -> NOT affect evaluation results;
+            # (ii) LRB+ is not the best baseline -> slight variation of cache stable performance does not affect our evaluation conclusions.
+            # Special case 2: for LRB+ under 2M dataset, use 10M warmup requests instead of 20M to save evaluation time cost (acceptable due to the same reasons as above)
+            if tmp_cache_name == "lrb+" and tmp_keycnt == 4000000:
+                tmp_exp_settings["warmup_reqcnt_scale"] = 2 # 8M warmup reqcnt
+            else if tmp_cache_name == "lrb+" and tmp_keycnt == 2000000:
+                tmp_exp_settings["warmup_reqcnt_scale"] = 5 # 10M warmup reqcnt
+
             # Launch prototype
             LogUtil.prompt(Common.scriptname, "Run prototype of {} w/ {} dataset size for the current round {}...".format(tmp_cache_name, tmp_keycnt, tmp_round_index))
             prototype_instance = Prototype(evaluator_logfile = tmp_log_filepath, **tmp_exp_settings)
