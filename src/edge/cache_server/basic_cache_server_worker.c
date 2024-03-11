@@ -689,18 +689,25 @@ namespace covered
             // Prepare destination address of beacon server
             NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = tmp_edge_wrapper_ptr->getBeaconDstaddr_(dst_beacon_edge_idx_to_trigger_placement);
 
+            const uint64_t cur_msg_seqnum = tmp_edge_wrapper_ptr->getAndIncrNodeMsgSeqnum();
+            const ExtraCommonMsghdr tmp_extra_common_msghdr(extra_common_msghdr.isSkipPropagationLatency(), extra_common_msghdr.isMonitored(), cur_msg_seqnum); // NOTE: use edge-assigned seqnum instead of client-assigned seqnum
+
+            bool is_stale_response = false; // Only recv again instead of send if with a stale response
             while (true) // Timeout-and-retry mechanism
             {
-                // Prepare placement trigger request
-                MessageBase* tmp_request_ptr = new BestGuessPlacementTriggerRequest(key, value, BestGuessPlaceinfo(placement_edge_idx), BestGuessSyncinfo(local_victim_vtime), current_edge_idx, edge_cache_server_worker_recvrsp_source_addr_, extra_common_msghdr);
-                assert(tmp_request_ptr != NULL);
+                if (!is_stale_response)
+                {
+                    // Prepare placement trigger request
+                    MessageBase* tmp_request_ptr = new BestGuessPlacementTriggerRequest(key, value, BestGuessPlaceinfo(placement_edge_idx), BestGuessSyncinfo(local_victim_vtime), current_edge_idx, edge_cache_server_worker_recvrsp_source_addr_, tmp_extra_common_msghdr);
+                    assert(tmp_request_ptr != NULL);
 
-                // Push the control request into edge-to-edge propagation simulator to the beacon node
-                bool is_successful = tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(tmp_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
-                assert(is_successful);
+                    // Push the control request into edge-to-edge propagation simulator to the beacon node
+                    bool is_successful = tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(tmp_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
+                    assert(is_successful);
 
-                // NOTE: control_request_ptr will be released by edge-to-edge propagation simulator
-                tmp_request_ptr = NULL;
+                    // NOTE: control_request_ptr will be released by edge-to-edge propagation simulator
+                    tmp_request_ptr = NULL;
+                }
 
                 // Wait for the corresponding control response from the beacon edge node
                 DynamicArray control_response_msg_payload;
@@ -717,6 +724,7 @@ namespace covered
                         std::ostringstream oss;
                         oss << "edge timeout to wait for BestGuessPlacementTriggerResponse for key " << key.getKeyDebugstr() << "from beacon " << dst_beacon_edge_idx_to_trigger_placement;
                         Util::dumpWarnMsg(instance_name_, oss.str());
+                        is_stale_response = false; // Reset to re-send request
                         continue; // Resend the control request message
                     }
                 } // End of (is_timeout == true)
@@ -725,6 +733,20 @@ namespace covered
                     // Receive the control response message successfully
                     MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
                     assert(control_response_ptr != NULL);
+
+                    // Check if the received message is a stale response
+                    if (control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() != cur_msg_seqnum)
+                    {
+                        is_stale_response = true; // ONLY recv again instead of send if with a stale response
+
+                        std::ostringstream oss_for_stable_response;
+                        oss_for_stable_response << "stale response " << MessageBase::messageTypeToString(control_response_ptr->getMessageType()) << " with seqnum " << control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() << " != " << cur_msg_seqnum;
+                        Util::dumpWarnMsg(instance_name_, oss_for_stable_response.str());
+
+                        delete control_response_ptr;
+                        control_response_ptr = NULL;
+                        continue; // Jump to while loop
+                    }
 
                     // Get trigger flag
                     assert(control_response_ptr->getMessageType() == MessageType::kBestGuessPlacementTriggerResponse);

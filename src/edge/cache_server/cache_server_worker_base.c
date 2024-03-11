@@ -1133,18 +1133,25 @@ namespace covered
         uint32_t beacon_edge_idx = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
         NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = tmp_edge_wrapper_ptr->getBeaconDstaddr_(beacon_edge_idx);
 
+        const uint64_t cur_msg_seqnum = tmp_edge_wrapper_ptr->getAndIncrNodeMsgSeqnum();
+        const ExtraCommonMsghdr tmp_extra_common_msghdr(extra_common_msghdr.isSkipPropagationLatency(), extra_common_msghdr.isMonitored(), cur_msg_seqnum); // NOTE: use edge-assigned seqnum instead of client-assigned seqnum
+
+        bool is_stale_response = false; // Only recv again instead of send if with a stale response
         while (true) // Timeout-and-retry mechanism
         {
-            // Prepare acquire writelock request to acquire permission for a write
-            MessageBase* acquire_writelock_request_ptr = getReqToAcquireBeaconWritelock_(key, extra_common_msghdr);
-            assert(acquire_writelock_request_ptr != NULL);
+            if (!is_stale_response)
+            {
+                // Prepare acquire writelock request to acquire permission for a write
+                MessageBase* acquire_writelock_request_ptr = getReqToAcquireBeaconWritelock_(key, tmp_extra_common_msghdr);
+                assert(acquire_writelock_request_ptr != NULL);
 
-            // Push the control request into edge-to-edge propagation simulator to the beacon node
-            bool is_successful = tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(acquire_writelock_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
-            assert(is_successful);
+                // Push the control request into edge-to-edge propagation simulator to the beacon node
+                bool is_successful = tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(acquire_writelock_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
+                assert(is_successful);
 
-            // NOTE: acquire_writelock_request_ptr will be released by edge-to-edge propagation simulator
-            acquire_writelock_request_ptr = NULL;
+                // NOTE: acquire_writelock_request_ptr will be released by edge-to-edge propagation simulator
+                acquire_writelock_request_ptr = NULL;
+            }
 
             // Receive the control repsonse from the beacon node
             DynamicArray control_response_msg_payload;
@@ -1161,6 +1168,7 @@ namespace covered
                     std::ostringstream oss;
                     oss << "edge timeout to wait for AcquireWritelockResponse for key " << key.getKeyDebugstr() << " from beacon " << beacon_edge_idx;
                     Util::dumpWarnMsg(base_instance_name_, oss.str());
+                    is_stale_response = false; // Reset to re-send request
                     continue; // Resend the control request message
                 }
             } // End of (is_timeout == true)
@@ -1169,6 +1177,20 @@ namespace covered
                 // Receive the control response message successfully
                 MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
                 assert(control_response_ptr != NULL);
+
+                // Check if the received message is a stale response
+                if (control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() != cur_msg_seqnum)
+                {
+                    is_stale_response = true; // ONLY recv again instead of send if with a stale response
+
+                    std::ostringstream oss_for_stable_response;
+                    oss_for_stable_response << "stale response " << MessageBase::messageTypeToString(control_response_ptr->getMessageType()) << " with seqnum " << control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() << " != " << cur_msg_seqnum;
+                    Util::dumpWarnMsg(base_instance_name_, oss_for_stable_response.str());
+
+                    delete control_response_ptr;
+                    control_response_ptr = NULL;
+                    continue; // Jump to while loop
+                }
 
                 // Get lock result from control response
                 processRspToAcquireBeaconWritelock_(control_response_ptr, lock_result);
@@ -1322,7 +1344,7 @@ namespace covered
         bool is_finish = false; // Mark if edge node is finished
         struct timespec issue_global_write_req_start_timestamp = Util::getCurrentTimespec();
 
-        const uint64_t cur_msg_seqnum = extra_common_msghdr.getMsgSeqnum();
+        const uint64_t cur_msg_seqnum = tmp_edge_wrapper_ptr->getAndIncrNodeMsgSeqnum();
         const ExtraCommonMsghdr tmp_extra_common_msghdr(extra_common_msghdr.isSkipPropagationLatency(), extra_common_msghdr.isMonitored(), cur_msg_seqnum); // NOTE: use edge-assigned seqnum instead of client-assigned seqnum
 
         bool is_stale_response = false; // Only recv again instead of send if with a stale response
@@ -1491,18 +1513,25 @@ namespace covered
         const uint32_t tmp_beacon_edge_idx = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
         NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = tmp_edge_wrapper_ptr->getBeaconDstaddr_(tmp_beacon_edge_idx);
 
+        const uint64_t cur_msg_seqnum = tmp_edge_wrapper_ptr->getAndIncrNodeMsgSeqnum();
+        const ExtraCommonMsghdr tmp_extra_common_msghdr(extra_common_msghdr.isSkipPropagationLatency(), extra_common_msghdr.isMonitored(), cur_msg_seqnum); // NOTE: use edge-assigned seqnum instead of client-assigned seqnum
+
+        bool is_stale_response = false; // Only recv again instead of send if with a stale response
         while (true) // Timeout-and-retry mechanism
         {
-            // Prepare release writelock request to finish write
-            MessageBase* release_writelock_request_ptr = getReqToReleaseBeaconWritelock_(key, extra_common_msghdr);
-            assert(release_writelock_request_ptr != NULL);
+            if (!is_stale_response)
+            {
+                // Prepare release writelock request to finish write
+                MessageBase* release_writelock_request_ptr = getReqToReleaseBeaconWritelock_(key, tmp_extra_common_msghdr);
+                assert(release_writelock_request_ptr != NULL);
 
-            // Push the control request into edge-to-edge propagation simulator to the beacon node
-            bool is_successful = tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(release_writelock_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
-            assert(is_successful);
+                // Push the control request into edge-to-edge propagation simulator to the beacon node
+                bool is_successful = tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(release_writelock_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
+                assert(is_successful);
 
-            // NOTE: release_writelock_request_ptr will be released by edge-to-edge propagation simulator
-            release_writelock_request_ptr = NULL;
+                // NOTE: release_writelock_request_ptr will be released by edge-to-edge propagation simulator
+                release_writelock_request_ptr = NULL;
+            }
 
             // Receive the control repsonse from the beacon node
             DynamicArray control_response_msg_payload;
@@ -1519,6 +1548,7 @@ namespace covered
                     std::ostringstream oss;
                     oss << "edge timeout to wait for ReleaseWritelockResponse for key " << key.getKeyDebugstr() << " from beacon " << tmp_beacon_edge_idx;
                     Util::dumpWarnMsg(base_instance_name_, oss.str());
+                    is_stale_response = false; // Reset to re-send request
                     continue; // Resend the control request message
                 }
             } // End of (is_timeout == true)
@@ -1528,8 +1558,22 @@ namespace covered
                 MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
                 assert(control_response_ptr != NULL);
 
+                // Check if the received message is a stale response
+                if (control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() != cur_msg_seqnum)
+                {
+                    is_stale_response = true; // ONLY recv again instead of send if with a stale response
+
+                    std::ostringstream oss_for_stable_response;
+                    oss_for_stable_response << "stale response " << MessageBase::messageTypeToString(control_response_ptr->getMessageType()) << " with seqnum " << control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() << " != " << cur_msg_seqnum;
+                    Util::dumpWarnMsg(base_instance_name_, oss_for_stable_response.str());
+
+                    delete control_response_ptr;
+                    control_response_ptr = NULL;
+                    continue; // Jump to while loop
+                }
+
                 // Process release writelock response
-                bool is_finish = processRspToReleaseBeaconWritelock_(control_response_ptr, value, total_bandwidth_usage, event_list, extra_common_msghdr);
+                bool is_finish = processRspToReleaseBeaconWritelock_(control_response_ptr, value, total_bandwidth_usage, event_list, tmp_extra_common_msghdr);
                 if (is_finish)
                 {
                     return is_finish; // Edge is NOT running

@@ -403,47 +403,54 @@ namespace covered
             acked_flags.insert(std::pair<uint32_t, bool>(iter_for_ackflag->first, false));
         }
 
+        const uint64_t cur_msg_seqnum = getAndIncrNodeMsgSeqnum();
+        const ExtraCommonMsghdr tmp_extra_common_msghdr(extra_common_msghdr.isSkipPropagationLatency(), extra_common_msghdr.isMonitored(), cur_msg_seqnum); // NOTE: use edge-assigned seqnum instead of client-assigned seqnum
+
         // Issue all invalidation requests simultaneously
+        bool is_stale_response = false; // Only recv again instead of send if with a stale response
         while (acked_edgecnt != invalidate_edgecnt) // Timeout-and-retry mechanism
         {
-            // Send (invalidate_edgecnt - acked_edgecnt) control requests to the involved edge nodes that have not acknowledged invalidation requests
-            for (std::unordered_map<uint32_t, bool>::const_iterator iter_for_request = acked_flags.begin(); iter_for_request != acked_flags.end(); iter_for_request++)
+            if (!is_stale_response)
             {
-                if (iter_for_request->second) // Skip the edge node that has acknowledged the invalidation request
+                // Send (invalidate_edgecnt - acked_edgecnt) control requests to the involved edge nodes that have not acknowledged invalidation requests
+                for (std::unordered_map<uint32_t, bool>::const_iterator iter_for_request = acked_flags.begin(); iter_for_request != acked_flags.end(); iter_for_request++)
                 {
-                    continue;
-                }
-
-                // NOTE: we only issue invalidation requests to neighbors
-                const uint32_t& tmp_dst_edge_idx = iter_for_request->first;
-                if (tmp_dst_edge_idx == node_idx_) // Invalidat local cache
-                {
-                    // Invalidate cached object in local edge cache
-                    bool is_local_cached = edge_cache_ptr_->isLocalCached(key);
-                    if (is_local_cached)
+                    if (iter_for_request->second) // Skip the edge node that has acknowledged the invalidation request
                     {
-                        edge_cache_ptr_->invalidateKeyForLocalCachedObject(key);
+                        continue;
                     }
 
-                    // Update ack information
-                    assert(acked_flags[tmp_dst_edge_idx] == false);
-                    acked_flags[tmp_dst_edge_idx] = true;
-                    acked_edgecnt += 1;
-                }
-                else // Issue request to invalidate remote cache
-                {
-                    MessageBase* invalidation_request_ptr = getInvalidationRequest_(key, recvrsp_source_addr, tmp_dst_edge_idx, extra_common_msghdr);
-                    assert(invalidation_request_ptr != NULL);
+                    // NOTE: we only issue invalidation requests to neighbors
+                    const uint32_t& tmp_dst_edge_idx = iter_for_request->first;
+                    if (tmp_dst_edge_idx == node_idx_) // Invalidat local cache
+                    {
+                        // Invalidate cached object in local edge cache
+                        bool is_local_cached = edge_cache_ptr_->isLocalCached(key);
+                        if (is_local_cached)
+                        {
+                            edge_cache_ptr_->invalidateKeyForLocalCachedObject(key);
+                        }
 
-                    // Push invalidation request into edge-to-edge propagation simulator to send to neighbor edge node
-                    const NetworkAddr& tmp_edge_cache_server_recvreq_dst_addr = percachecopy_dstaddr[tmp_dst_edge_idx]; // cache server address of a blocked closest edge node
-                    bool is_successful = edge_toedge_propagation_simulator_param_ptr_->push(invalidation_request_ptr, tmp_edge_cache_server_recvreq_dst_addr);
-                    assert(is_successful);
+                        // Update ack information
+                        assert(acked_flags[tmp_dst_edge_idx] == false);
+                        acked_flags[tmp_dst_edge_idx] = true;
+                        acked_edgecnt += 1;
+                    }
+                    else // Issue request to invalidate remote cache
+                    {
+                        MessageBase* invalidation_request_ptr = getInvalidationRequest_(key, recvrsp_source_addr, tmp_dst_edge_idx, tmp_extra_common_msghdr);
+                        assert(invalidation_request_ptr != NULL);
 
-                    // NOTE: invalidation_request_ptr will be released by edge-to-edge propagation simulator
-                    invalidation_request_ptr = NULL;
-                }
-            } // End of edgeidx_for_request
+                        // Push invalidation request into edge-to-edge propagation simulator to send to neighbor edge node
+                        const NetworkAddr& tmp_edge_cache_server_recvreq_dst_addr = percachecopy_dstaddr[tmp_dst_edge_idx]; // cache server address of a blocked closest edge node
+                        bool is_successful = edge_toedge_propagation_simulator_param_ptr_->push(invalidation_request_ptr, tmp_edge_cache_server_recvreq_dst_addr);
+                        assert(is_successful);
+
+                        // NOTE: invalidation_request_ptr will be released by edge-to-edge propagation simulator
+                        invalidation_request_ptr = NULL;
+                    }
+                } // End of edgeidx_for_request
+            }
 
             // Receive (invalidate_edgecnt - acked_edgecnt) control repsonses from involved edge nodes
             const uint32_t expected_rspcnt = invalidate_edgecnt - acked_edgecnt;
@@ -463,6 +470,7 @@ namespace covered
                         std::ostringstream oss;
                         oss << "edge timeout to wait for InvalidationResponse for key " << key.getKeyDebugstr() << " from " << Util::getAckedStatusStr(acked_flags, "edge");
                         Util::dumpWarnMsg(base_instance_name_, oss.str());
+                        is_stale_response = false; // Reset to re-send request
                         break; // Break to resend the remaining control requests not acked yet
                     }
                 } // End of (is_timeout == true)
@@ -471,6 +479,21 @@ namespace covered
                     // Receive the control response message successfully
                     MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
                     assert(control_response_ptr != NULL);
+
+                    // Check if the received message is a stale response
+                    if (control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() != cur_msg_seqnum)
+                    {
+                        is_stale_response = true; // ONLY recv again instead of send if with a stale response
+
+                        std::ostringstream oss_for_stable_response;
+                        oss_for_stable_response << "stale response " << MessageBase::messageTypeToString(control_response_ptr->getMessageType()) << " with seqnum " << control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() << " != " << cur_msg_seqnum;
+                        Util::dumpWarnMsg(base_instance_name_, oss_for_stable_response.str());
+
+                        delete control_response_ptr;
+                        control_response_ptr = NULL;
+                        break; // Jump to while loop
+                    }
+
                     uint32_t tmp_edgeidx = control_response_ptr->getSourceIndex();
                     NetworkAddr tmp_edge_cache_server_recvreq_source_addr = control_response_ptr->getSourceAddr();
 
@@ -557,34 +580,41 @@ namespace covered
             acked_flags.insert(std::pair<NetworkAddr, std::pair<bool, uint32_t>>(*iter_for_ackflag, std::pair(false, tmp_dst_edge_idx)));
         }
 
+        const uint64_t cur_msg_seqnum = getAndIncrNodeMsgSeqnum();
+        const ExtraCommonMsghdr tmp_extra_common_msghdr(extra_common_msghdr.isSkipPropagationLatency(), extra_common_msghdr.isMonitored(), cur_msg_seqnum); // NOTE: use edge-assigned seqnum instead of client-assigned seqnum
+
         // Issue all finish block requests simultaneously
+        bool is_stale_response = false; // Only recv again instead of send if with a stale response
         while (acked_edgecnt != blocked_edgecnt) // Timeout-and-retry mechanism
         {
-            // Send (blocked_edgecnt - acked_edgecnt) control requests to the closest edge nodes that have not acknowledged notifications
-            for (std::unordered_map<NetworkAddr, std::pair<bool, uint32_t>, NetworkAddrHasher>::const_iterator iter_for_request = acked_flags.begin(); iter_for_request != acked_flags.end(); iter_for_request++)
+            if (!is_stale_response)
             {
-                if (iter_for_request->second.first) // Skip the closest edge node that has acknowledged the notification
+                // Send (blocked_edgecnt - acked_edgecnt) control requests to the closest edge nodes that have not acknowledged notifications
+                for (std::unordered_map<NetworkAddr, std::pair<bool, uint32_t>, NetworkAddrHasher>::const_iterator iter_for_request = acked_flags.begin(); iter_for_request != acked_flags.end(); iter_for_request++)
                 {
-                    continue;
-                }
+                    if (iter_for_request->second.first) // Skip the closest edge node that has acknowledged the notification
+                    {
+                        continue;
+                    }
 
-                const NetworkAddr& tmp_edge_cache_server_worker_recvreq_dst_addr = iter_for_request->first; // cache server address of a blocked closest edge node
+                    const NetworkAddr& tmp_edge_cache_server_worker_recvreq_dst_addr = iter_for_request->first; // cache server address of a blocked closest edge node
 
-                // NOTE: dst edge idx to finish blocking MUST NOT be the current local/remote beacon edge node, as requests on a being-written object MUST poll instead of block if sender is beacon
-                const uint32_t tmp_dst_edge_idx = iter_for_request->second.second;
-                assert(tmp_dst_edge_idx != node_idx_);
-   
-                // Issue finish block request to dst edge node
-                MessageBase* finish_block_request_ptr = getFinishBlockRequest_(key, recvrsp_source_addr, tmp_dst_edge_idx, extra_common_msghdr);
-                assert(finish_block_request_ptr != NULL);
+                    // NOTE: dst edge idx to finish blocking MUST NOT be the current local/remote beacon edge node, as requests on a being-written object MUST poll instead of block if sender is beacon
+                    const uint32_t tmp_dst_edge_idx = iter_for_request->second.second;
+                    assert(tmp_dst_edge_idx != node_idx_);
+    
+                    // Issue finish block request to dst edge node
+                    MessageBase* finish_block_request_ptr = getFinishBlockRequest_(key, recvrsp_source_addr, tmp_dst_edge_idx, tmp_extra_common_msghdr);
+                    assert(finish_block_request_ptr != NULL);
 
-                // Push FinishBlockRequest into edge-to-edge propagation simulator to send to blocked edge node
-                bool is_successful = edge_toedge_propagation_simulator_param_ptr_->push(finish_block_request_ptr, tmp_edge_cache_server_worker_recvreq_dst_addr);
-                assert(is_successful);
+                    // Push FinishBlockRequest into edge-to-edge propagation simulator to send to blocked edge node
+                    bool is_successful = edge_toedge_propagation_simulator_param_ptr_->push(finish_block_request_ptr, tmp_edge_cache_server_worker_recvreq_dst_addr);
+                    assert(is_successful);
 
-                // NOTE: finish_block_request_ptr will be released by edge-to-edge propagation simulator
-                finish_block_request_ptr = NULL;
-            } // End of edgeidx_for_request
+                    // NOTE: finish_block_request_ptr will be released by edge-to-edge propagation simulator
+                    finish_block_request_ptr = NULL;
+                } // End of edgeidx_for_request
+            }
 
             // Receive (blocked_edgecnt - acked_edgecnt) control repsonses from the closest edge nodes
             const uint32_t expected_rspcnt = blocked_edgecnt - acked_edgecnt;
@@ -602,6 +632,7 @@ namespace covered
                     else
                     {
                         Util::dumpWarnMsg(base_instance_name_, "edge timeout to wait for FinishBlockResponse from " + Util::getAckedStatusStr(acked_flags, "edge"));
+                        is_stale_response = false; // Reset to re-send request
                         break; // Break to resend the remaining control requests not acked yet
                     }
                 } // End of (is_timeout == true)
@@ -610,6 +641,21 @@ namespace covered
                     // Receive the control response message successfully
                     MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
                     assert(control_response_ptr != NULL);
+
+                    // Check if the received message is a stale response
+                    if (control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() != cur_msg_seqnum)
+                    {
+                        is_stale_response = true; // ONLY recv again instead of send if with a stale response
+
+                        std::ostringstream oss_for_stable_response;
+                        oss_for_stable_response << "stale response " << MessageBase::messageTypeToString(control_response_ptr->getMessageType()) << " with seqnum " << control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() << " != " << cur_msg_seqnum;
+                        Util::dumpWarnMsg(base_instance_name_, oss_for_stable_response.str());
+
+                        delete control_response_ptr;
+                        control_response_ptr = NULL;
+                        break; // Jump to while loop
+                    }
+
                     uint32_t tmp_edgeidx = control_response_ptr->getSourceIndex();
                     NetworkAddr tmp_edge_cache_server_worker_recvreq_source_addr = control_response_ptr->getSourceAddr();
 

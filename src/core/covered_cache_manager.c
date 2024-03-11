@@ -407,57 +407,64 @@ namespace covered
             acked_flags.insert(std::pair<uint32_t, bool>(*iter_for_ackflag, false));
         }
 
+        const uint64_t cur_msg_seqnum = edge_wrapper_ptr->getAndIncrNodeMsgSeqnum();
+        const ExtraCommonMsghdr tmp_extra_common_msghdr(extra_common_msghdr.isSkipPropagationLatency(), extra_common_msghdr.isMonitored(), cur_msg_seqnum); // NOTE: use edge-assigned seqnum instead of client-assigned seqnum
+
         // Issue all victim fetch requests simultaneously
         const uint32_t current_edge_idx = edge_wrapper_ptr->getNodeIdx();
+        bool is_stale_response = false; // Only recv again instead of send if with a stale response
         while (acked_edgecnt != victim_fetch_edgecnt) // Timeout-and-retry mechanism
         {
-            // Send (victim_fetch_edgecnt - acked_edgecnt) control requests to each involved edge node that has not acknowledged victim fetch request
-            for (std::unordered_map<uint32_t, bool>::const_iterator iter_for_request = acked_flags.begin(); iter_for_request != acked_flags.end(); iter_for_request++)
+            if (!is_stale_response)
             {
-                if (iter_for_request->second) // Skip the edge node that has acknowledged the victim fetch request
+                // Send (victim_fetch_edgecnt - acked_edgecnt) control requests to each involved edge node that has not acknowledged victim fetch request
+                for (std::unordered_map<uint32_t, bool>::const_iterator iter_for_request = acked_flags.begin(); iter_for_request != acked_flags.end(); iter_for_request++)
                 {
-                    continue;
-                }
-
-                const uint32_t tmp_edge_idx = iter_for_request->first; // Edge node index of an involved edge node that has not acknowledged victim fetch request
-                if (tmp_edge_idx == current_edge_idx) // Local victim fetching
-                {
-                    // Get victim cacheinfos from local edge cache for object size
-                    // NOTE: extra fetched victim cacheinfos from local edge cache MUST be complete
-                    std::list<VictimCacheinfo> tmp_victim_cacheinfos;
-                    bool has_victim_key = edge_wrapper_ptr->getEdgeCachePtr()->fetchVictimCacheinfosForRequiredSize(tmp_victim_cacheinfos, object_size);
-                    assert(has_victim_key == true);
-
-                    // Update extra_peredge_victim_cacheinfos
-                    extra_peredge_victim_cacheinfos.push_back(std::pair<uint32_t, std::list<VictimCacheinfo>>(tmp_edge_idx, tmp_victim_cacheinfos));
-
-                    // Update extra_perkey_victim_dirinfoset
-                    // NOTE: extra fetched victim dirinfo sets from local directory table MUST be complete
-                    GetLocalBeaconedVictimsFromCacheinfosParam tmp_param(tmp_victim_cacheinfos);
-                    edge_wrapper_ptr->getCooperationWrapperPtr()->constCustomFunc(GetLocalBeaconedVictimsFromCacheinfosParam::FUNCNAME, &tmp_param);
-                    const std::list<std::pair<Key, DirinfoSet>>& local_beaconed_local_fetched_victim_dirinfosets_const_ref = tmp_param.getLocalBeaconedVictimDirinfosetsConstRef();
-                    for (std::list<std::pair<Key, DirinfoSet>>::const_iterator tmp_victim_dirinfosets_const_iter = local_beaconed_local_fetched_victim_dirinfosets_const_ref.begin(); tmp_victim_dirinfosets_const_iter != local_beaconed_local_fetched_victim_dirinfosets_const_ref.end(); tmp_victim_dirinfosets_const_iter++)
+                    if (iter_for_request->second) // Skip the edge node that has acknowledged the victim fetch request
                     {
-                        const Key& tmp_victim_key = tmp_victim_dirinfosets_const_iter->first;
-
-                        // NOTE: maybe exist due to local beaconed neighbor cached keys (some victim fetch responses may already be received before fetching local victims)
-                        if (KVListHelper<Key, DirinfoSet>::findVFromListForK(tmp_victim_key, extra_perkey_victim_dirinfoset) == extra_perkey_victim_dirinfoset.end())
-                        {
-                            extra_perkey_victim_dirinfoset.push_back(std::pair<Key, DirinfoSet>(tmp_victim_key, tmp_victim_dirinfosets_const_iter->second));
-                        }
+                        continue;
                     }
 
-                    // Update ack information
-                    assert(!acked_flags[tmp_edge_idx]);
-                    acked_flags[tmp_edge_idx] = true;
-                    acked_edgecnt += 1;
-                }
-                else // Remote victim fetching
-                {
-                    NetworkAddr target_edge_cache_server_recvreq_dst_addr = edge_wrapper_ptr->getTargetDstaddr(DirectoryInfo(tmp_edge_idx)); // Send to cache server of the target edge node for victim fetch processor
-                    sendVictimFetchRequest_(tmp_edge_idx, object_size, edge_wrapper_ptr, recvrsp_source_addr, target_edge_cache_server_recvreq_dst_addr, extra_common_msghdr);
-                }
-            } // End of edgeidx_for_request
+                    const uint32_t tmp_edge_idx = iter_for_request->first; // Edge node index of an involved edge node that has not acknowledged victim fetch request
+                    if (tmp_edge_idx == current_edge_idx) // Local victim fetching
+                    {
+                        // Get victim cacheinfos from local edge cache for object size
+                        // NOTE: extra fetched victim cacheinfos from local edge cache MUST be complete
+                        std::list<VictimCacheinfo> tmp_victim_cacheinfos;
+                        bool has_victim_key = edge_wrapper_ptr->getEdgeCachePtr()->fetchVictimCacheinfosForRequiredSize(tmp_victim_cacheinfos, object_size);
+                        assert(has_victim_key == true);
+
+                        // Update extra_peredge_victim_cacheinfos
+                        extra_peredge_victim_cacheinfos.push_back(std::pair<uint32_t, std::list<VictimCacheinfo>>(tmp_edge_idx, tmp_victim_cacheinfos));
+
+                        // Update extra_perkey_victim_dirinfoset
+                        // NOTE: extra fetched victim dirinfo sets from local directory table MUST be complete
+                        GetLocalBeaconedVictimsFromCacheinfosParam tmp_param(tmp_victim_cacheinfos);
+                        edge_wrapper_ptr->getCooperationWrapperPtr()->constCustomFunc(GetLocalBeaconedVictimsFromCacheinfosParam::FUNCNAME, &tmp_param);
+                        const std::list<std::pair<Key, DirinfoSet>>& local_beaconed_local_fetched_victim_dirinfosets_const_ref = tmp_param.getLocalBeaconedVictimDirinfosetsConstRef();
+                        for (std::list<std::pair<Key, DirinfoSet>>::const_iterator tmp_victim_dirinfosets_const_iter = local_beaconed_local_fetched_victim_dirinfosets_const_ref.begin(); tmp_victim_dirinfosets_const_iter != local_beaconed_local_fetched_victim_dirinfosets_const_ref.end(); tmp_victim_dirinfosets_const_iter++)
+                        {
+                            const Key& tmp_victim_key = tmp_victim_dirinfosets_const_iter->first;
+
+                            // NOTE: maybe exist due to local beaconed neighbor cached keys (some victim fetch responses may already be received before fetching local victims)
+                            if (KVListHelper<Key, DirinfoSet>::findVFromListForK(tmp_victim_key, extra_perkey_victim_dirinfoset) == extra_perkey_victim_dirinfoset.end())
+                            {
+                                extra_perkey_victim_dirinfoset.push_back(std::pair<Key, DirinfoSet>(tmp_victim_key, tmp_victim_dirinfosets_const_iter->second));
+                            }
+                        }
+
+                        // Update ack information
+                        assert(!acked_flags[tmp_edge_idx]);
+                        acked_flags[tmp_edge_idx] = true;
+                        acked_edgecnt += 1;
+                    }
+                    else // Remote victim fetching
+                    {
+                        NetworkAddr target_edge_cache_server_recvreq_dst_addr = edge_wrapper_ptr->getTargetDstaddr(DirectoryInfo(tmp_edge_idx)); // Send to cache server of the target edge node for victim fetch processor
+                        sendVictimFetchRequest_(tmp_edge_idx, object_size, edge_wrapper_ptr, recvrsp_source_addr, target_edge_cache_server_recvreq_dst_addr, tmp_extra_common_msghdr);
+                    }
+                } // End of edgeidx_for_request
+            }
 
             // Receive (blocked_edgecnt - acked_edgecnt) control repsonses from the closest edge nodes
             const uint32_t expected_rspcnt = victim_fetch_edgecnt - acked_edgecnt;
@@ -475,6 +482,7 @@ namespace covered
                     else
                     {
                         Util::dumpWarnMsg(instance_name_, "edge timeout to wait for CoveredVictimFetchResponse from " + Util::getAckedStatusStr(acked_flags, "edge"));
+                        is_stale_response = false; // Reset to re-send request
                         break; // Break to resend the remaining control requests not acked yet
                     }
                 } // End of (is_timeout == true)
@@ -482,7 +490,23 @@ namespace covered
                 {
                     // Receive the control response message successfully
                     MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
-                    assert(control_response_ptr != NULL && control_response_ptr->getMessageType() == MessageType::kCoveredVictimFetchResponse);
+                    assert(control_response_ptr != NULL);
+
+                    // Check if the received message is a stale response
+                    if (control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() != cur_msg_seqnum)
+                    {
+                        is_stale_response = true; // ONLY recv again instead of send if with a stale response
+
+                        std::ostringstream oss_for_stable_response;
+                        oss_for_stable_response << "stale response " << MessageBase::messageTypeToString(control_response_ptr->getMessageType()) << " with seqnum " << control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() << " != " << cur_msg_seqnum;
+                        Util::dumpWarnMsg(instance_name_, oss_for_stable_response.str());
+
+                        delete control_response_ptr;
+                        control_response_ptr = NULL;
+                        break; // Jump to while loop
+                    }
+
+                    assert(control_response_ptr->getMessageType() == MessageType::kCoveredVictimFetchResponse);
                     uint32_t tmp_edge_idx = control_response_ptr->getSourceIndex();
 
                     // Mark the edge node has acknowledged the victim fetch request

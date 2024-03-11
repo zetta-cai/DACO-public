@@ -73,7 +73,7 @@ namespace covered
             // Receive the global request message
             DynamicArray global_request_msg_payload;
             bool is_timeout = cloud_recvreq_socket_server_ptr_->recv(global_request_msg_payload);
-            if (is_timeout == true)
+            if (is_timeout == true) // Timeout-and-retry
             {
                 continue; // Retry to receive global request if cloud is still running
             } // End of (is_timeout == true)

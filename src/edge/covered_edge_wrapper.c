@@ -476,7 +476,7 @@ namespace covered
             // Send CoveredBgplacePlacementNotifyRequest to remote edge node
             // NOTE: source addr will NOT be used by placement processor of remote edge node due to without explicit notification ACK (we use directory update request with is_admit = true as the implicit ACK for placement notification)
             const VictimSyncset victim_syncset = covered_cache_manager_ptr_->accessVictimTrackerForLocalVictimSyncset(tmp_edge_idx, getCacheMarginBytes());
-            CoveredBgplacePlacementNotifyRequest* covered_placement_notify_request_ptr = new CoveredBgplacePlacementNotifyRequest(key, value, is_valid, victim_syncset, current_edge_idx, edge_beacon_server_recvreq_source_addr_for_placement_, extra_common_msghdr);
+            CoveredBgplacePlacementNotifyRequest* covered_placement_notify_request_ptr = new CoveredBgplacePlacementNotifyRequest(key, value, is_valid, victim_syncset, current_edge_idx, edge_beacon_server_recvreq_source_addr_for_placement_, extra_common_msghdr); // NOTE: NO need to assign a new msg seqnum by edge for COVERED background placement notification request, as we do NOT wait for the correpsonding response by a timeout-and-retry mechanism (i.e., duplicate responses do NOT affect)
             assert(covered_placement_notify_request_ptr != NULL);
 
             // Push the global request into edge-to-edge propagation simulator to the remote edge node

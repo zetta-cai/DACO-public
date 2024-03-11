@@ -361,6 +361,9 @@ namespace covered
         // Prepare victim syncset for piggybacking-based victim synchronization
         VictimSyncset victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_beacon_edge_idx_for_compression, tmp_edge_wrapper_ptr->getCacheMarginBytes());
 
+        const uint64_t cur_msg_seqnum = tmp_edge_wrapper_ptr->getAndIncrNodeMsgSeqnum();
+        const ExtraCommonMsghdr tmp_extra_common_msghdr(extra_common_msghdr.isSkipPropagationLatency(), extra_common_msghdr.isMonitored(), cur_msg_seqnum); // NOTE: use edge-assigned seqnum instead of client-assigned seqnum
+
         // Notify result of hybrid data fetching towards the beacon edge node to trigger non-blocking placement notification
         bool is_being_written = false;
         VictimSyncset received_beacon_victim_syncset; // For victim synchronization
@@ -368,39 +371,43 @@ namespace covered
         // -> (i) Remote ones NEVER use coooperation wrapper to get is_neighbor_cached, as sender is NOT beacon here
         // -> (ii) Local ones always need "hybrid fetching" to get value and trigger normal placement (sender MUST be beacon and can get is_neighbor_cached by cooperation wrapper when admiting local directory)
         bool is_neighbor_cached = false; // ONLY used if current_need_placement
+        bool is_stale_response = false; // Only recv again instead of send if with a stale response
         while (true) // Timeout-and-retry mechanism
         {
-            // Prepare control request message to notify the beacon edge node
-            MessageBase* control_request_ptr = NULL;
-            if (!current_need_placement) // Current edge node does NOT need placement
+            if (!is_stale_response)
             {
-                // Prepare CoveredFghybridHybridFetchedRequest
-                control_request_ptr = new CoveredFghybridHybridFetchedRequest(key, value, victim_syncset, tmp_best_placement_edgest, current_edge_idx, recvrsp_source_addr, extra_common_msghdr);
-            }
-            else
-            {
-                // NOTE: we cannot optimistically admit valid object into local edge cache first before issuing dirinfo admission request, as clients may get incorrect value if key is being written
-                if (!current_is_only_placement) // Current edge node is NOT the only placement
+                // Prepare control request message to notify the beacon edge node
+                MessageBase* control_request_ptr = NULL;
+                if (!current_need_placement) // Current edge node does NOT need placement
                 {
-                    // Prepare CoveredFghybridDirectoryAdmitRequest (also equivalent to directory admission request)
-                    control_request_ptr = new CoveredFghybridDirectoryAdmitRequest(key, value, DirectoryInfo(current_edge_idx), victim_syncset, tmp_best_placement_edgest, current_edge_idx, recvrsp_source_addr, extra_common_msghdr);
+                    // Prepare CoveredFghybridHybridFetchedRequest
+                    control_request_ptr = new CoveredFghybridHybridFetchedRequest(key, value, victim_syncset, tmp_best_placement_edgest, current_edge_idx, recvrsp_source_addr, tmp_extra_common_msghdr);
                 }
-                else // Current edge node is the only placement
+                else
                 {
-                    // Prepare CoveredDirectoryUpdateRequest (NOT trigger placement notification; also equivalent to directory admission request)
-                    // NOTE: unlike CoveredBgplaceDirectoryUpdateRequest, CoveredDirectoryUpdateRequest is a foreground message with foreground events and bandwidth usage
-                    const bool is_admit = true;
-                    control_request_ptr = new CoveredDirectoryUpdateRequest(key, is_admit, DirectoryInfo(current_edge_idx), victim_syncset, current_edge_idx, recvrsp_source_addr, extra_common_msghdr);
+                    // NOTE: we cannot optimistically admit valid object into local edge cache first before issuing dirinfo admission request, as clients may get incorrect value if key is being written
+                    if (!current_is_only_placement) // Current edge node is NOT the only placement
+                    {
+                        // Prepare CoveredFghybridDirectoryAdmitRequest (also equivalent to directory admission request)
+                        control_request_ptr = new CoveredFghybridDirectoryAdmitRequest(key, value, DirectoryInfo(current_edge_idx), victim_syncset, tmp_best_placement_edgest, current_edge_idx, recvrsp_source_addr, tmp_extra_common_msghdr);
+                    }
+                    else // Current edge node is the only placement
+                    {
+                        // Prepare CoveredDirectoryUpdateRequest (NOT trigger placement notification; also equivalent to directory admission request)
+                        // NOTE: unlike CoveredBgplaceDirectoryUpdateRequest, CoveredDirectoryUpdateRequest is a foreground message with foreground events and bandwidth usage
+                        const bool is_admit = true;
+                        control_request_ptr = new CoveredDirectoryUpdateRequest(key, is_admit, DirectoryInfo(current_edge_idx), victim_syncset, current_edge_idx, recvrsp_source_addr, tmp_extra_common_msghdr);
+                    }
                 }
+                assert(control_request_ptr != NULL);
+
+                // Push the control request into edge-to-edge propagation simulator to the beacon node
+                bool is_successful = tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(control_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
+                assert(is_successful);
+
+                // NOTE: control_request_ptr will be released by edge-to-edge propagation simulator
+                control_request_ptr = NULL;
             }
-            assert(control_request_ptr != NULL);
-
-            // Push the control request into edge-to-edge propagation simulator to the beacon node
-            bool is_successful = tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(control_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
-            assert(is_successful);
-
-            // NOTE: control_request_ptr will be released by edge-to-edge propagation simulator
-            control_request_ptr = NULL;
 
             // Wait for the corresponding control response from the beacon edge node
             DynamicArray control_response_msg_payload;
@@ -417,6 +424,7 @@ namespace covered
                     std::ostringstream oss;
                     oss << "edge timeout to wait for foreground directory update response after hybrid data fetching for key " << key.getKeyDebugstr() << " from beacon " << dst_beacon_edge_idx_for_compression;
                     Util::dumpWarnMsg(instance_name_, oss.str());
+                    is_stale_response = false; // Reset to re-send request
                     continue; // Resend the control request message
                 }
             } // End of (is_timeout == true)
@@ -425,6 +433,20 @@ namespace covered
                 // Receive the control response message successfully
                 MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
                 assert(control_response_ptr != NULL);
+
+                // Check if the received message is a stale response
+                if (control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() != cur_msg_seqnum)
+                {
+                    is_stale_response = true; // ONLY recv again instead of send if with a stale response
+
+                    std::ostringstream oss_for_stable_response;
+                    oss_for_stable_response << "stale response " << MessageBase::messageTypeToString(control_response_ptr->getMessageType()) << " with seqnum " << control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() << " != " << cur_msg_seqnum;
+                    Util::dumpWarnMsg(instance_name_, oss_for_stable_response.str());
+
+                    delete control_response_ptr;
+                    control_response_ptr = NULL;
+                    continue; // Jump to while loop
+                }
 
                 if (!current_need_placement)
                 {
@@ -491,7 +513,7 @@ namespace covered
 
             // Notify placement processor to admit local edge cache (NOTE: NO need to admit directory) and trigger local cache eviciton, to avoid blocking cache server worker which may serve subsequent placement calculation if sender is beacon
             const bool is_valid = !is_being_written;
-            bool is_successful = tmp_edge_wrapper_ptr->getLocalCacheAdmissionBufferPtr()->push(LocalCacheAdmissionItem(key, value, is_neighbor_cached, is_valid, extra_common_msghdr));
+            bool is_successful = tmp_edge_wrapper_ptr->getLocalCacheAdmissionBufferPtr()->push(LocalCacheAdmissionItem(key, value, is_neighbor_cached, is_valid, tmp_extra_common_msghdr));
             assert(is_successful);
         }
 

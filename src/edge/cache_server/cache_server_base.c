@@ -721,6 +721,9 @@ namespace covered
 
         bool is_finish = false;
 
+        const uint64_t cur_msg_seqnum = edge_component_ptr_->getEdgeWrapperPtr()->getAndIncrNodeMsgSeqnum();
+        const ExtraCommonMsghdr tmp_extra_common_msghdr(extra_common_msghdr.isSkipPropagationLatency(), extra_common_msghdr.isMonitored(), cur_msg_seqnum); // NOTE: use edge-assigned seqnum instead of client-assigned seqnum
+
         // NOTE: each time of partial parallel eviction cannot exceend max victimcnt
         const uint32_t max_victimcnt = Config::getParallelEvictionMaxVictimcnt();
         std::unordered_map<Key, Value, KeyHasher> remaining_victims = total_victims;
@@ -728,7 +731,7 @@ namespace covered
         {
             if (remaining_victims.size() <= max_victimcnt) // Process all remaining victims by one time of partial parallel eviction
             {
-                is_finish = partialParallelEvictDirectory_(remaining_victims, source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, extra_common_msghdr, is_background);
+                is_finish = partialParallelEvictDirectory_(remaining_victims, source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, tmp_extra_common_msghdr, is_background);
 
                 // Clear remaining victims
                 remaining_victims.clear();
@@ -751,7 +754,7 @@ namespace covered
                 assert(partial_victims.size() == max_victimcnt);
 
                 // Process partial victims by one time of partial parallel eviction
-                is_finish = partialParallelEvictDirectory_(partial_victims, source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, extra_common_msghdr, is_background);
+                is_finish = partialParallelEvictDirectory_(partial_victims, source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, tmp_extra_common_msghdr, is_background);
 
                 // Remove processed victims from remaining victims
                 for (std::unordered_map<Key, Value, KeyHasher>::const_iterator partial_victims_const_iter = partial_victims.begin(); partial_victims_const_iter != partial_victims.end(); partial_victims_const_iter++)
@@ -772,6 +775,9 @@ namespace covered
 
     bool CacheServerBase::partialParallelEvictDirectory_(const std::unordered_map<Key, Value, KeyHasher>& partial_victims, const NetworkAddr& source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr, const bool& is_background) const
     {
+        // NOTE: extra_common_msghdr already has edge-assigned seqnum for directory eviction (assigned at CacheServerBase::parallelEvictDirectory_())
+        const uint64_t cur_msg_seqnum = extra_common_msghdr.getMsgSeqnum();
+
         checkPointers_();
         assert(recvrsp_socket_server_ptr != NULL);
 
@@ -795,51 +801,55 @@ namespace covered
         const uint32_t partial_victim_cnt = partial_victims.size();
         const DirectoryInfo directory_info(tmp_edge_wrapper_ptr->getNodeIdx());
         bool _unused_is_being_written = false; // NOTE: is_being_written does NOT affect cache eviction
-        while (acked_cnt != partial_victim_cnt)
+        bool is_stale_response = false; // Only recv again instead of send if with a stale response
+        while (acked_cnt != partial_victim_cnt) // Timeout-and-retry mechanism
         {
-            // Send (partial_victim_cnt - acked_cnt) directory update requests to the beacon nodes that have not acknowledged
-            for (std::unordered_map<Key, std::pair<bool, uint32_t>, KeyHasher>::const_iterator iter_for_request = acked_flags.begin(); iter_for_request != acked_flags.end(); iter_for_request++)
+            if (!is_stale_response) // Resend for the first time or timeout
             {
-                if (iter_for_request->second.first) // Skip the key that has received directory update response
+                // Send (partial_victim_cnt - acked_cnt) directory update requests to the beacon nodes that have not acknowledged
+                for (std::unordered_map<Key, std::pair<bool, uint32_t>, KeyHasher>::const_iterator iter_for_request = acked_flags.begin(); iter_for_request != acked_flags.end(); iter_for_request++)
                 {
-                    continue;
-                }
-
-                const Key& tmp_victim_key = iter_for_request->first; // key that has NOT received any directory update response
-                const uint32_t& tmp_victim_beacon_edge_idx = iter_for_request->second.second;
-                const Value& tmp_victim_value = partial_victims.find(tmp_victim_key)->second; // Used for non-blocking placement notification if need hybrid data fetching for COVERED
-                bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon(tmp_victim_key);
-                if (current_is_beacon) // Evict local directory info for the victim key
-                {
-                    is_finish = evictLocalDirectory_(tmp_victim_key, tmp_victim_value, directory_info, _unused_is_being_written, source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, extra_common_msghdr, is_background);
-                    if (is_finish)
+                    if (iter_for_request->second.first) // Skip the key that has received directory update response
                     {
-                        return is_finish;
+                        continue;
                     }
 
-                    // Update ack information
-                    assert(!acked_flags[tmp_victim_key].first);
-                    acked_flags[tmp_victim_key].first = true;
-                    acked_cnt += 1;
-                }
-                else // Send directory update req with is_admit = false to evict remote directory info for the victim key
-                {
-                    MessageBase* directory_update_request_ptr = getReqToEvictBeaconDirectory_(tmp_victim_key, directory_info, source_addr, extra_common_msghdr, is_background);
-                    assert(directory_update_request_ptr != NULL);
+                    const Key& tmp_victim_key = iter_for_request->first; // key that has NOT received any directory update response
+                    const uint32_t& tmp_victim_beacon_edge_idx = iter_for_request->second.second;
+                    const Value& tmp_victim_value = partial_victims.find(tmp_victim_key)->second; // Used for non-blocking placement notification if need hybrid data fetching for COVERED
+                    bool current_is_beacon = tmp_edge_wrapper_ptr->currentIsBeacon(tmp_victim_key);
+                    if (current_is_beacon) // Evict local directory info for the victim key
+                    {
+                        is_finish = evictLocalDirectory_(tmp_victim_key, tmp_victim_value, directory_info, _unused_is_being_written, source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, extra_common_msghdr, is_background);
+                        if (is_finish)
+                        {
+                            return is_finish;
+                        }
 
-                    // Push the control request into edge-to-edge propagation simulator to the beacon node
-                    NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = tmp_edge_wrapper_ptr->getBeaconDstaddr_(tmp_victim_beacon_edge_idx);
-                    bool is_successful = tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(directory_update_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
-                    assert(is_successful);
+                        // Update ack information
+                        assert(!acked_flags[tmp_victim_key].first);
+                        acked_flags[tmp_victim_key].first = true;
+                        acked_cnt += 1;
+                    }
+                    else // Send directory update req with is_admit = false to evict remote directory info for the victim key
+                    {
+                        MessageBase* directory_update_request_ptr = getReqToEvictBeaconDirectory_(tmp_victim_key, directory_info, source_addr, extra_common_msghdr, is_background);
+                        assert(directory_update_request_ptr != NULL);
 
-                    // NOTE: directory_update_request_ptr will be released by edge-to-edge propagation simulator
-                    directory_update_request_ptr = NULL;
-                }
+                        // Push the control request into edge-to-edge propagation simulator to the beacon node
+                        NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = tmp_edge_wrapper_ptr->getBeaconDstaddr_(tmp_victim_beacon_edge_idx);
+                        bool is_successful = tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(directory_update_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
+                        assert(is_successful);
 
-                #ifdef DEBUG_CACHE_SERVER_BASE
-                Util::dumpVariablesForDebug(base_instance_name_, 7, "eviction;", "keystr:", tmp_victim_key.getKeystr().c_str(), "is value deleted:", Util::toString(tmp_victim_value.isDeleted()).c_str(), "value size:", Util::toString(tmp_victim_value.getValuesize()).c_str());
-                #endif
-            } // End of iter_for_request
+                        // NOTE: directory_update_request_ptr will be released by edge-to-edge propagation simulator
+                        directory_update_request_ptr = NULL;
+                    }
+
+                    #ifdef DEBUG_CACHE_SERVER_BASE
+                    Util::dumpVariablesForDebug(base_instance_name_, 7, "eviction;", "keystr:", tmp_victim_key.getKeystr().c_str(), "is value deleted:", Util::toString(tmp_victim_value.isDeleted()).c_str(), "value size:", Util::toString(tmp_victim_value.getValuesize()).c_str());
+                    #endif
+                } // End of iter_for_request
+            }
 
             // Receive (partial_victim_cnt - acked_cnt) directory update repsonses from the beacon edge nodes
             // NOTE: acked_cnt has already been increased for local diretory eviction
@@ -858,6 +868,7 @@ namespace covered
                     else
                     {
                         Util::dumpWarnMsg(base_instance_name_, "edge timeout to wait for DirectoryUpdateResponse from " + Util::getAckedStatusStr(acked_flags, "beacon"));
+                        is_stale_response = false; // Reset to re-send request
                         break; // Break to resend the remaining control requests not acked yet
                     }
                 } // End of (is_timeout == true)
@@ -866,6 +877,20 @@ namespace covered
                     // Receive the diretory update response message successfully
                     MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
                     assert(control_response_ptr != NULL);
+
+                    // Check if the received message is a stale response
+                    if (control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() != cur_msg_seqnum)
+                    {
+                        is_stale_response = true; // ONLY recv again instead of send if with a stale response
+
+                        std::ostringstream oss_for_stable_response;
+                        oss_for_stable_response << "stale response " << MessageBase::messageTypeToString(control_response_ptr->getMessageType()) << " with seqnum " << control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() << " != " << cur_msg_seqnum;
+                        Util::dumpWarnMsg(base_instance_name_, oss_for_stable_response.str());
+
+                        delete control_response_ptr;
+                        control_response_ptr = NULL;
+                        break; // Jump to while loop
+                    }
 
                     // Mark the key has been acknowledged with DirectoryUpdateResponse
                     const Key tmp_received_key = MessageBase::getKeyFromMessage(control_response_ptr);

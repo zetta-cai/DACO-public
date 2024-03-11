@@ -765,24 +765,32 @@ namespace covered
                 // -> (1) geo-distributed tiered storage is read-intensive (e.g., edge caching workloads), so writes just occupy a small proportion
                 // -> (2) even for the writes, most requests target hot objects which are global cached and hence NO need of explicit placement trigger requests (placement will be  triggered by existing release writelock requests)
 
+                const uint32_t tmp_beacon_edge_idx = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
+                NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = tmp_edge_wrapper_ptr->getBeaconDstaddr_(tmp_beacon_edge_idx);
+
+                const uint64_t cur_msg_seqnum = tmp_edge_wrapper_ptr->getAndIncrNodeMsgSeqnum();
+                const ExtraCommonMsghdr tmp_extra_common_msghdr(extra_common_msghdr.isSkipPropagationLatency(), extra_common_msghdr.isMonitored(), cur_msg_seqnum); // NOTE: use edge-assigned seqnum instead of client-assigned seqnum
+
                 // Issue placement trigger request to remote beacon node
+                bool is_stale_response = false; // Only recv again instead of send if with a stale response
                 while (true) // Timeout-and-retry mechanism
                 {
-                    // Prepare victim syncset for piggybacking-based victim synchronization
-                    VictimSyncset local_victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_beacon_edge_idx, tmp_edge_wrapper_ptr->getCacheMarginBytes());
+                    if (!is_stale_response)
+                    {
+                        // Prepare victim syncset for piggybacking-based victim synchronization
+                        VictimSyncset local_victim_syncset = tmp_covered_cache_manager_ptr->accessVictimTrackerForLocalVictimSyncset(dst_beacon_edge_idx, tmp_edge_wrapper_ptr->getCacheMarginBytes());
 
-                    // Prepare placement trigger request
-                    MessageBase* covered_placement_trigger_request_ptr = new CoveredPlacementTriggerRequest(key, tmp_param_for_popcollect.getCollectedPopularityConstRef(), local_victim_syncset, current_edge_idx, edge_cache_server_worker_recvrsp_source_addr_, extra_common_msghdr);
-                    assert(covered_placement_trigger_request_ptr != NULL);
+                        // Prepare placement trigger request
+                        MessageBase* covered_placement_trigger_request_ptr = new CoveredPlacementTriggerRequest(key, tmp_param_for_popcollect.getCollectedPopularityConstRef(), local_victim_syncset, current_edge_idx, edge_cache_server_worker_recvrsp_source_addr_, tmp_extra_common_msghdr);
+                        assert(covered_placement_trigger_request_ptr != NULL);
 
-                    // Push the control request into edge-to-edge propagation simulator to send to beacon node
-                    const uint32_t tmp_beacon_edge_idx = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
-                    NetworkAddr beacon_edge_beacon_server_recvreq_dst_addr = tmp_edge_wrapper_ptr->getBeaconDstaddr_(tmp_beacon_edge_idx);
-                    bool is_successful = tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(covered_placement_trigger_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
-                    assert(is_successful);
+                        // Push the control request into edge-to-edge propagation simulator to send to beacon node
+                        bool is_successful = tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(covered_placement_trigger_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
+                        assert(is_successful);
 
-                    // NOTE: covered_placement_trigger_request_ptr will be released by edge-to-edge propagation simulator
-                    covered_placement_trigger_request_ptr = NULL;
+                        // NOTE: covered_placement_trigger_request_ptr will be released by edge-to-edge propagation simulator
+                        covered_placement_trigger_request_ptr = NULL;
+                    }
 
                     // Receive the control repsonse from the beacon node
                     DynamicArray control_response_msg_payload;
@@ -799,6 +807,7 @@ namespace covered
                             std::ostringstream oss;
                             oss << "edge timeout to wait for CoveredPlacementTriggerResponse for key " << key.getKeyDebugstr() << " from beacon " << tmp_beacon_edge_idx;
                             Util::dumpWarnMsg(instance_name_, oss.str());
+                            is_stale_response = false; // Reset to re-send request
                             continue; // Resend the control request message
                         }
                     } // End of (is_timeout == true)
@@ -807,6 +816,20 @@ namespace covered
                         // Receive the control response message successfully
                         MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
                         assert(control_response_ptr != NULL);
+
+                        // Check if the received message is a stale response
+                        if (control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() != cur_msg_seqnum)
+                        {
+                            is_stale_response = true; // ONLY recv again instead of send if with a stale response
+
+                            std::ostringstream oss_for_stable_response;
+                            oss_for_stable_response << "stale response " << MessageBase::messageTypeToString(control_response_ptr->getMessageType()) << " with seqnum " << control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() << " != " << cur_msg_seqnum;
+                            Util::dumpWarnMsg(instance_name_, oss_for_stable_response.str());
+
+                            delete control_response_ptr;
+                            control_response_ptr = NULL;
+                            continue; // Jump to while loop
+                        }
 
                         // Get victim syncset and hybrid fetching info if any
                         const MessageType message_type = control_response_ptr->getMessageType();
@@ -846,21 +869,12 @@ namespace covered
             // Trigger placement deployment after hybrid fetching if necessary
             if (need_hybrid_fetching)
             {
-                if (current_is_beacon) // Sender is beacon
+                TryToTriggerPlacementNotificationAfterHybridFetchFuncParam tmp_param(key, value, best_placement_edgeset, total_bandwidth_usage, event_list, extra_common_msghdr);
+                constCustomFunc(TryToTriggerPlacementNotificationAfterHybridFetchFuncParam::FUNCNAME, &tmp_param);
+                is_finish = tmp_param.isFinishConstRef();
+                if (is_finish) // Edge is NOT running now
                 {
-                    NonblockNotifyForPlacementFuncParam tmp_param_for_placement_notify(key, value, best_placement_edgeset, extra_common_msghdr);
-                    tmp_edge_wrapper_ptr->constCustomFunc(NonblockNotifyForPlacementFuncParam::FUNCNAME, &tmp_param_for_placement_notify);
-                }
-                else // Sender is not beacon
-                {
-                    // Trigger placement notification remotely at the beacon edge node
-                    NotifyBeaconForPlacementAfterHybridFetchFuncParam tmp_param_for_hybridfetch(key, value, best_placement_edgeset, edge_cache_server_worker_recvrsp_source_addr_, edge_cache_server_worker_recvrsp_socket_server_ptr_, total_bandwidth_usage, event_list, extra_common_msghdr);
-                    tmp_cache_server_ptr->constCustomFunc(NotifyBeaconForPlacementAfterHybridFetchFuncParam::FUNCNAME, &tmp_param_for_hybridfetch);
-                    is_finish = tmp_param_for_hybridfetch.isFinishConstRef();
-                    if (is_finish)
-                    {
-                        return is_finish;
-                    }
+                    return is_finish;
                 }
             } // End of need_hybrid_fetching
         } // End of (local_result == LockResult::kNoneed)
