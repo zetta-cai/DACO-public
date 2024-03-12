@@ -58,12 +58,13 @@ for tmp_round_index in round_indexes:
             tmp_exp_settings["capacity_mb"] = tmp_capacity_mb
             tmp_exp_settings["cache_name"] = tmp_cache_name
 
+            # NOTE: you can try the following special cases with 10M warmup requests if you have sufficient memory for SegCache, yet our evaluation results and conclusions should NOT change
             # Special case: for segcache+ under 8 GiB per-edge memory, use 4M instead of 10M requests to warmup to avoid being killed by OS kernel due to using up all memory in cache node, which is acceptable due to the following reasons:
-            # (i) The memory issue is caused by the implementation bug (maybe memory leakage) of SegCache itself instead of cooperative caching (you can try SegCache+ with 10M warmup requests if you have sufficient memory or fix the memory issue of SegCache);
+            # (i) The memory issue is caused by the implementation bug (maybe memory leakage) of SegCache itself instead of cooperative caching;
             # (ii) SegCache is actually already warmed up with 4M requests, as from 4M requests until SegCache fails due to memory issue, the cache hit ratio holds stable -> NOT affect our evaluation results;
             # (iii) SegCache is not the best baseline, so slight variation of cache stable performance does not affect our evaluation conclusions.
             if tmp_cache_name == "segcache+" and tmp_capacity_mb == 8192:
-                tmp_exp_settings["warmup_reqcnt_scale"] = 4
+                tmp_exp_settings["warmup_reqcnt_scale"] = 4 # 4M warmup reqcnt
 
             # Launch prototype
             LogUtil.prompt(Common.scriptname, "Run prototype of {} w/ per-edge memory capacity {} for the current round {}...".format(tmp_cache_name, tmp_capacity_mb, tmp_round_index))
