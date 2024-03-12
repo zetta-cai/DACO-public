@@ -233,11 +233,6 @@ namespace covered
         
         checkPointers_();
 
-        // // TMPDEBUG24
-        // std::ostringstream tmposs;
-        // tmposs << "receive " << MessageBase::messageTypeToString(control_request_ptr->getMessageType()) << " for key " << MessageBase::getKeyFromMessage(control_request_ptr).getKeyDebugstr() << " from source " << control_request_ptr->getSourceIndex();
-        // Util::dumpNormalMsg(base_instance_name_, tmposs.str());
-
         bool is_finish = false;
         BandwidthUsage total_bandwidth_usage;
         EventList event_list;
@@ -278,12 +273,6 @@ namespace covered
         // Prepare a directory lookup response
         MessageBase* directory_lookup_response_ptr = getRspToLookupLocalDirectory_(control_request_ptr, is_being_written, is_valid_directory_exist, directory_info, best_placement_edgeset, need_hybrid_fetching, fast_path_hint, total_bandwidth_usage, event_list);
         assert(directory_lookup_response_ptr != NULL);
-
-        // // TMPDEBUG24
-        // tmposs.clear();
-        // tmposs.str("");
-        // tmposs << "issue " << MessageBase::messageTypeToString(directory_lookup_response_ptr->getMessageType()) << " for key " << MessageBase::getKeyFromMessage(directory_lookup_response_ptr).getKeyDebugstr() << " back to edge " << control_request_ptr->getSourceIndex();
-        // Util::dumpNormalMsg(base_instance_name_, tmposs.str());
 
         // Push the directory lookup response into edge-to-edge propagation simulator to cache server worker
         bool is_successful = edge_beacon_server_param_ptr_->getEdgeWrapperPtr()->getEdgeToedgePropagationSimulatorParamPtr()->push(directory_lookup_response_ptr, edge_cache_server_worker_recvrsp_dst_addr);

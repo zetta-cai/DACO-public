@@ -523,11 +523,6 @@ namespace covered
                 Util::dumpVariablesForDebug(base_instance_name_, 4, "beacon edge index:", std::to_string(tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key)).c_str(), "keystr:", key.getKeystr().c_str());
                 #endif
 
-                // // TMPDEBUG24
-                // std::ostringstream tmposs;
-                // tmposs << "issue " << MessageBase::messageTypeToString(directory_lookup_request_ptr->getMessageType()) << " for key " << key.getKeyDebugstr() << " to beacon " << tmp_beacon_edge_idx;
-                // Util::dumpNormalMsg(base_instance_name_, tmposs.str());
-
                 // Push the control request into edge-to-edge propagation simulator to send to beacon node
                 bool is_successful = tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(directory_lookup_request_ptr, beacon_edge_beacon_server_recvreq_dst_addr);
                 assert(is_successful);
@@ -637,11 +632,6 @@ namespace covered
                 // Prepare redirected get request to get data from target edge node if any
                 MessageBase* redirected_get_request_ptr = getReqToRedirectGet_(directory_info.getTargetEdgeIdx(), key, tmp_extra_common_msghdr);
                 assert(redirected_get_request_ptr != NULL);
-
-                // // TMPDEBUG24
-                // std::ostringstream tmposs;
-                // tmposs << "issue " << MessageBase::messageTypeToString(redirected_get_request_ptr->getMessageType()) << " for key " << key.getKeyDebugstr() << " to target " << directory_info.getTargetEdgeIdx();
-                // Util::dumpNormalMsg(base_instance_name_, tmposs.str());
 
                 // Push the redirected data request into edge-to-edge propagation simulator to target node
                 bool is_successful = tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->push(redirected_get_request_ptr, target_edge_cache_server_recvreq_dst_addr);
