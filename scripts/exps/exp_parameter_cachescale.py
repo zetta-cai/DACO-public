@@ -54,7 +54,7 @@ for tmp_round_index in round_indexes:
             # NOTE: Log filepath MUST NOT exist here
 
             # Prepare settings for the current cache name
-            tmp_exp_settings = exp_default_settings
+            tmp_exp_settings = exp_default_settings.copy()
             tmp_exp_settings["clientcnt"] = tmp_edgecnt # At least 1 client connecting with the cache node to saturate the system to evaluate performance
             tmp_exp_settings["edgecnt"] = tmp_edgecnt
             tmp_exp_settings["cache_name"] = tmp_cache_name
