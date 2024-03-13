@@ -482,8 +482,13 @@ namespace covered
         {
             std::ostringstream oss;
             oss << "uint64_t overflow of " << a << " - " << b;
-            dumpErrorMsg(kClassName, oss.str());
-            exit(1);
+            oss << std::endl << boost::stacktrace::stacktrace();
+
+            dumpWarnMsg(kClassName, oss.str());
+            results = 0;
+            
+            // dumpErrorMsg(kClassName, oss.str());
+            // exit(1);
         }
         return results;
     }
@@ -512,8 +517,13 @@ namespace covered
         {
             std::ostringstream oss;
             oss << "uint64_t overflow of " << original_a << " - " << b;
-            dumpErrorMsg(kClassName, oss.str());
-            exit(1);
+            oss << std::endl << boost::stacktrace::stacktrace();
+
+            dumpWarnMsg(kClassName, oss.str());
+            a.store(0, STORE_CONCURRENCY_ORDER);
+            
+            // dumpErrorMsg(kClassName, oss.str());
+            // exit(1);
         }
         return;
     }
