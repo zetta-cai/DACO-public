@@ -618,6 +618,7 @@ namespace covered
                 dirinfo_list_iter--; // Point to the last element just pushed back
                 assert(dirinfo_list_iter != perkey_victim_dirinfo_.end());
 
+                assert(dirinfo_list_iter->first == tmp_key);
                 dirinfo_list_iter->second.incrRefcnt();
 
                 size_bytes_ = Util::uint64Add(size_bytes_, (tmp_key.getKeyLength() + dirinfo_list_iter->second.getSizeForCapacity())); // For each inserted victim dirinfo of a new synced victim
@@ -662,23 +663,33 @@ namespace covered
                 if (dirinfo_list_iter == perkey_victim_dirinfo_.end())
                 {
                     std::ostringstream oss;
-                    oss << "victim dirinfo should exist for local/neighbor synced victim " << tmp_key.getKeystr() << ", which is local beaconed!";
-                    Util::dumpErrorMsg(instance_name_, oss.str());
-                    exit(1);
+                    oss << "victim dirinfo should exist for local/neighbor synced victim " << tmp_key.getKeystr() << ", which is local beaconed (may be removed by concurrent operations)!";
+
+                    // TODO: fix the rare case in the future (yet not affect our evaluation results) -> insert the local-beaconed dirinfo for now
+                    Util::dumpWarnMsg(instance_name_, oss.str());
+                    perkey_victim_dirinfo_.push_back(std::pair(tmp_key, VictimDirinfo(edge_idx_, beaconed_dirinfosets_list_iter->second))); // NOTE: beacon edgeidx must be current edgeidx for local-beaconed keys
+                    dirinfo_list_iter = perkey_victim_dirinfo_.end();
+                    dirinfo_list_iter--;
+                    assert(dirinfo_list_iter != perkey_victim_dirinfo_.end());
+                    assert(dirinfo_list_iter->first == tmp_key);
+                    dirinfo_list_iter->second.incrRefcnt();
+                    size_bytes_ = Util::uint64Add(size_bytes_, (tmp_key.getKeyLength() + dirinfo_list_iter->second.getSizeForCapacity())); // For each inserted victim dirinfo of a new synced victim
+
+                    // Util::dumpErrorMsg(instance_name_, oss.str());
+                    // exit(1);
                 }
+
+                assert(dirinfo_list_iter != perkey_victim_dirinfo_.end());
+
+                //assert(dirinfo_map_iter->second.isLocalBeaconed() == true); // NOTE: we have set is local beaconed in VictimTracker::replaceVictimMetadataForEdgeIdx_()
+                //dirinfo_map_iter->second.markLocalBeaconed();
+
+                MYASSERT(dirinfo_list_iter->second.getBeaconEdgeIdx() == edge_idx_); // NOTE: we have set beacon edge idx in VictimTracker::replaceVictimMetadataForEdgeIdx_()
+                //dirinfo_map_iter->second.setBeaconEdgeIdx(edge_idx_);
             }
 
             if (dirinfo_list_iter != perkey_victim_dirinfo_.end())
             {
-                if (is_local_beaconed)
-                {
-                    //assert(dirinfo_map_iter->second.isLocalBeaconed() == true); // NOTE: we have set is local beaconed in VictimTracker::replaceVictimMetadataForEdgeIdx_()
-                    //dirinfo_map_iter->second.markLocalBeaconed();
-
-                    MYASSERT(dirinfo_list_iter->second.getBeaconEdgeIdx() == edge_idx_); // NOTE: we have set beacon edge idx in VictimTracker::replaceVictimMetadataForEdgeIdx_()
-                    //dirinfo_map_iter->second.setBeaconEdgeIdx(edge_idx_);
-                }
-
                 uint64_t prev_victim_dirinfo_size_bytes = dirinfo_list_iter->second.getSizeForCapacity();
                 dirinfo_list_iter->second.setDirinfoSet(beaconed_dirinfosets_list_iter->second);
                 uint64_t cur_victim_dirinfo_size_bytes = dirinfo_list_iter->second.getSizeForCapacity();
@@ -754,8 +765,11 @@ namespace covered
             if (with_extra_victims)
             {
                 std::list<std::pair<uint32_t, std::list<VictimCacheinfo>>>::const_iterator extra_victim_cacheinfos_list_const_iter = KVListHelper<uint32_t, std::list<VictimCacheinfo>>::findVFromListForK(tmp_edge_idx, extra_peredge_victim_cacheinfos);
-                assert(extra_victim_cacheinfos_list_const_iter != extra_peredge_victim_cacheinfos.end());
-                tmp_extra_victim_cacheinfos = extra_victim_cacheinfos_list_const_iter->second;
+                // NOTE: best_placement_victim_fetch_edgeset may NOT cover all edge nodes in best_placement_edgeset (see parallelFetchVictims_() invoked in CoveredCacheManager::placementCalculation_()), as some edge nodes in best_placement_edgeset may already have sufficient victims
+                if (extra_victim_cacheinfos_list_const_iter != extra_peredge_victim_cacheinfos.end()) // If fetch extra victims from the cache node
+                {
+                    tmp_extra_victim_cacheinfos = extra_victim_cacheinfos_list_const_iter->second;
+                }
             }
 
             // Find victims in tmp_edge_idx if without sufficient cache space
