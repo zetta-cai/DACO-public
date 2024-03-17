@@ -1632,6 +1632,7 @@ namespace covered
     {
         checkPointers_();
         CacheServerBase* tmp_cache_server_ptr = cache_server_worker_param_ptr_->getCacheServerPtr();
+        EdgeWrapperBase* tmp_edge_wrapper_ptr = tmp_cache_server_ptr->getEdgeWrapperPtr();
 
         bool is_finish = false;
 

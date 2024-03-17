@@ -698,17 +698,20 @@ namespace covered
         #endif
 
         // Perform directory updates for all evicted victims in parallel
-        struct timespec update_directory_to_evict_start_timestamp = Util::getCurrentTimespec();
-        is_finish = parallelEvictDirectory_(total_victims, source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, extra_common_msghdr, is_background);
-        struct timespec update_directory_to_evict_end_timestamp = Util::getCurrentTimespec();
-        uint32_t update_directory_to_evict_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(update_directory_to_evict_end_timestamp, update_directory_to_evict_start_timestamp));
-        if (!is_background)
+        if (!Util::isSingleNodeCache(tmp_edge_wrapper_ptr->getCacheName()))
         {
-            event_list.addEvent(Event::EDGE_CACHE_SERVER_UPDATE_DIRECTORY_TO_EVICT_EVENT_NAME, update_directory_to_evict_latency_us); // Add intermediate event if with event tracking
-        }
-        else
-        {
-            event_list.addEvent(Event::BG_EDGE_CACHE_SERVER_UPDATE_DIRECTORY_TO_EVICT_EVENT_NAME, update_directory_to_evict_latency_us); // Add intermediate event if with event tracking
+            struct timespec update_directory_to_evict_start_timestamp = Util::getCurrentTimespec();
+            is_finish = parallelEvictDirectory_(total_victims, source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, extra_common_msghdr, is_background);
+            struct timespec update_directory_to_evict_end_timestamp = Util::getCurrentTimespec();
+            uint32_t update_directory_to_evict_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(update_directory_to_evict_end_timestamp, update_directory_to_evict_start_timestamp));
+            if (!is_background)
+            {
+                event_list.addEvent(Event::EDGE_CACHE_SERVER_UPDATE_DIRECTORY_TO_EVICT_EVENT_NAME, update_directory_to_evict_latency_us); // Add intermediate event if with event tracking
+            }
+            else
+            {
+                event_list.addEvent(Event::BG_EDGE_CACHE_SERVER_UPDATE_DIRECTORY_TO_EVICT_EVENT_NAME, update_directory_to_evict_latency_us); // Add intermediate event if with event tracking
+            }
         }
 
         return is_finish;
