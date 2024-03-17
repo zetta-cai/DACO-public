@@ -919,14 +919,18 @@ namespace covered
         // Acquire write lock from beacon node no matter the locally cached object is valid or not, where the beacon will invalidate all other cache copies for cache coherence
         struct timespec acquire_writelock_start_timestamp = Util::getCurrentTimespec();
         LockResult lock_result = LockResult::kFailure;
-        is_finish = acquireWritelock_(tmp_key, lock_result, total_bandwidth_usage, event_list, extra_common_msghdr);
-        if (is_finish) // Edge node is NOT running
+        if (!Util::isSingleNodeCache(tmp_edge_wrapper_ptr->getCacheName()))
         {
-            return is_finish;
+            is_finish = acquireWritelock_(tmp_key, lock_result, total_bandwidth_usage, event_list, extra_common_msghdr);
+            if (is_finish) // Edge node is NOT running
+            {
+                return is_finish;
+            }
+            assert(lock_result == LockResult::kSuccess || lock_result == LockResult::kNoneed);
         }
         else
         {
-            assert(lock_result == LockResult::kSuccess || lock_result == LockResult::kNoneed);
+            lock_result = LockResult::kNoneed;
         }
         struct timespec acquire_writelock_end_timestamp = Util::getCurrentTimespec();
         uint32_t acquire_writelock_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(acquire_writelock_end_timestamp, acquire_writelock_start_timestamp));
@@ -1636,10 +1640,13 @@ namespace covered
         // Independently admit the new key-value pair into local edge cache
         // NOTE: we cannot optimistically admit valid object into local edge cache first before issuing dirinfo admission request, as clients may get incorrect value if key is being written
         bool is_being_written = false;
-        is_finish = admitDirectory_(key, is_being_written, total_bandwidth_usage, event_list, extra_common_msghdr);
-        if (is_finish)
+        if (!Util::isSingleNodeCache(tmp_edge_wrapper_ptr->getCacheName()))
         {
-            return is_finish;
+            is_finish = admitDirectory_(key, is_being_written, total_bandwidth_usage, event_list, extra_common_msghdr);
+            if (is_finish)
+            {
+                return is_finish;
+            }
         }
         const bool unused_is_neighbor_cached = false; // NOTE: NEVER used by baselines
         tmp_cache_server_ptr->admitLocalEdgeCache_(key, value, unused_is_neighbor_cached, !is_being_written); // valid if not being written
