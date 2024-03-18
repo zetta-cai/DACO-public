@@ -37,11 +37,11 @@ covered_topk_edgecnt_list = [2, 3, 4] # Up to 4 as we use 4 cache nodes by defau
 covered_peredge_synced_victimcnt_list = [10, 30] # 10 and 30 synced victims each time
 
 # NOTE: due to the same conclusions for all the parameters of COVERED, we ONLY show the results of covered_topk_edgecnt for limited space in paper
-test_covered_local_uncached_max_mem_usage_mb = True
-test_covered_popularity_aggregation_max_mem_usage_mb = True
+test_covered_local_uncached_max_mem_usage_mb = False
+test_covered_popularity_aggregation_max_mem_usage_mb = False
 test_covered_popularity_collection_change_ratio = True
 test_covered_topk_edgecnt = True
-test_covered_peredge_synced_victimcnt = True
+test_covered_peredge_synced_victimcnt = False
 
 # Run the experiments with multiple rounds
 for tmp_round_index in round_indexes:

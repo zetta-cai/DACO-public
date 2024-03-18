@@ -4,6 +4,8 @@
 #include <assert.h>
 #include <sstream>
 
+#include "common/util.h"
+
 namespace covered
 {
     const std::string TotalAggregatedStatistics::kClassName("TotalAggregatedStatistics");
@@ -32,7 +34,13 @@ namespace covered
 
         oss << "[Throughput Statistics]" << std::endl;
         oss << "time: " << sec_ << " seconds" << std::endl;
-        oss << "throughput: " << static_cast<double>(total_reqcnt_) / static_cast<double>(sec_) << " OPS" << std::endl;
+        const double throughput = static_cast<double>(total_reqcnt_) / static_cast<double>(sec_);
+        oss << "throughput: " << throughput << " OPS" << std::endl;
+
+        // Dump markdown string to help collect statistics
+        oss << "[Markdown Format]" << std::endl;
+        oss << "| Global Hit Ratio (%) (Local + Cooperative) | Avg Latency (ms) | Thpt (OPS) | Per-request Average Bandwidth Cost (MiB/pkt) (cross-edge/edge-cloud) | Per-request Msgcnt (cross-edge/edge-cloud) |" << std::endl;
+        oss << "| " << getTotalObjectHitRatio() * 100 << " (" << getLocalObjectHitRatio() * 100 << " + " << getCooperativeObjectHitRatio() * 100 << ")" << " | " << static_cast<double>(avg_latency_) / 1000.0 << " | " << throughput << " | " << B2MB(static_cast<double>(total_bandwidth_usage_.getCrossEdgeBandwidthBytes()) / static_cast<double>(total_reqcnt_)) << "/" << B2MB(static_cast<double>(total_bandwidth_usage_.getEdgeCloudBandwidthBytes()) / static_cast<double>(total_reqcnt_)) << " | " << static_cast<double>(total_bandwidth_usage_.getCrossEdgeMsgcnt()) / static_cast<double>(total_reqcnt_) << "/" << static_cast<double>(total_bandwidth_usage_.getEdgeCloudMsgcnt()) / static_cast<double>(total_reqcnt_) << " |" << std::endl;
 
         return oss.str();
     }
