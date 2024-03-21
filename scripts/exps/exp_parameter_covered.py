@@ -32,7 +32,8 @@ exp_default_settings = {
 # NOTE: NO need to run the default setting for COVERED, which is the same as previous experiment (performance against existing methods)
 covered_local_uncached_max_mem_usage_mb_list = [5, 10] # 5MiB and 10MiB
 covered_popularity_aggregation_max_mem_usage_mb_list = [5, 10] # 5MiB and 10MiB
-covered_popularity_collection_change_ratio_list = [0.5, 1.0] # 50% and 100%
+#covered_popularity_collection_change_ratio_list = [0.5, 1.0] # 50% and 100%
+covered_popularity_collection_change_ratio_list = [0.2, 0.4, 0.8] # 20%, 40%, and 80%
 covered_topk_edgecnt_list = [2, 3, 4] # Up to 4 as we use 4 cache nodes by default
 covered_peredge_synced_victimcnt_list = [10, 30] # 10 and 30 synced victims each time
 
