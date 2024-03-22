@@ -328,6 +328,203 @@ namespace covered
         return total_size;
     }
 
+    // Dump/load load cached/uncached metadata for cache metadata in cache snapshot
+
+    template<class T>
+    void CacheMetadataBase<T>::dumpLocalMetadata(std::fstream* fs_ptr) const
+    {
+        assert(fs_ptr != NULL);
+
+        // Dump object-level metadata
+        // (1) perkey_metadata_list_key_size_
+        fs_ptr->write((const char*)&perkey_metadata_list_key_size_, sizeof(uint64_t));
+        // (2) key-KeyLevelMetadata pairs
+        const uint32_t perkey_metadata_list_size = perkey_metadata_list_.size();
+        fs_ptr->write((const char*)&perkey_metadata_list_size, sizeof(uint32_t));
+        for (perkey_metadata_list_t::const_iterator perkey_metadata_list_const_iter = perkey_metadata_list_.begin(); perkey_metadata_list_const_iter != perkey_metadata_list_.end(); perkey_metadata_list_const_iter++)
+        {
+            // Dump the key
+            const Key& tmp_key = perkey_metadata_list_const_iter->first;
+            DynamicArray tmp_dynamic_array_for_key(tmp_key.getKeyPayloadSize());
+            const uint32_t key_serialize_size = tmp_key.serialize(tmp_dynamic_array_for_key, 0);
+            tmp_dynamic_array_for_key.writeBinaryFile(0, fs_ptr, key_serialize_size);
+
+            // Dump KeyLevelMetadata
+            const T& key_level_metadata = perkey_metadata_list_iter->second;
+            key_level_metadata.dumpKeyLevelMetadata(fs_ptr);
+        }
+
+        // Dump group-level metadata
+        // (1) cur_group_id_
+        fs_ptr->write((const char*)&cur_group_id_, sizeof(GroupId));
+        // (2) cur_group_keycnt_
+        fs_ptr->write((const char*)&cur_group_keycnt_, sizeof(uint32_t));
+        // (3) groupid-GroupLevelMetadata pairs
+        const uint32_t pergroup_metadata_map_size = pergroup_metadata_map_.size();
+        fs_ptr->write((const char*)&pergroup_metadata_map_size, sizeof(uint32_t));
+        for (pergroup_metadata_map_t::const_iterator pergroup_metadata_map_const_iter = pergroup_metadata_map_.begin(); pergroup_metadata_map_const_iter != pergroup_metadata_map_.end(); pergroup_metadata_map_const_iter++)
+        {
+            // Dump the group ID
+            const GroupId tmp_group_id = pergroup_metadata_map_const_iter->first;
+            fs_ptr->write((const char*)&tmp_group_id, sizeof(GroupId));
+
+            // Dump GroupLevelMetadata
+            const GroupLevelMetadata& group_level_metadata = pergroup_metadata_map_const_iter->second;
+            group_level_metadata.dumpGroupLevelMetadata(fs_ptr);
+        }
+
+        // Dump reward information
+        // (1) sorted_reward_multimap_key_size_
+        fs_ptr->write((const char*)&sorted_reward_multimap_key_size_, sizeof(uint64_t));
+        // (2) reward-key pairs
+        const uint32_t sorted_reward_multimap_size = sorted_reward_multimap_.size();
+        fs_ptr->write((const char*)&sorted_reward_multimap_size, sizeof(uint32_t));
+        for (sorted_reward_multimap_t::const_iterator sorted_reward_multimap_const_iter = sorted_reward_multimap_.begin(); sorted_reward_multimap_const_iter != sorted_reward_multimap_.end(); sorted_reward_multimap_const_iter++)
+        {
+            // Dump the reward
+            const Reward tmp_reward = sorted_reward_multimap_const_iter->first;
+            fs_ptr->write((const char*)&tmp_reward, sizeof(Reward));
+
+            // Dump the key
+            const Key& tmp_key = sorted_reward_multimap_const_iter->second;
+            DynamicArray tmp_dynamic_array_for_key(tmp_key.getKeyPayloadSize());
+            const uint32_t key_serialize_size = tmp_key.serialize(tmp_dynamic_array_for_key, 0);
+            tmp_dynamic_array_for_key.writeBinaryFile(0, fs_ptr, key_serialize_size);
+        }
+
+        // Dump lookup table
+        // (1) perkey_lookup_table_key_size_
+        fs_ptr->write((const char*)&perkey_lookup_table_key_size_, sizeof(uint64_t));
+        // NOTE: NO need to dump perkey_lookup_table_, which can be built from scratch based on object-level, group-level, and reward information loaded snapshot
+
+        return;
+    }
+
+    template<class T>
+    void CacheMetadataBase<T>::loadLocalMetadata(std::fstream* fs_ptr)
+    {
+        assert(fs_ptr != NULL);
+
+        // Data structures used to rebuild lookup table
+        std::unordered_map<Key, perkey_metadata_list_iter_t> perkey_metadata_listiter;
+        std::unordered_map<Key, sorted_reward_multimap_t::iterator> perkey_reward_mapiter;
+
+        // Clear object-level metadata (updated due to replaying admissions)
+        perkey_metadata_list_key_size_ = 0;
+        perkey_metadata_list_.clear();
+
+        // Load and update object-level metadata
+        // (1) perkey_metadata_list_key_size_
+        fs_ptr->read((char*)&perkey_metadata_list_key_size_, sizeof(uint64_t));
+        // (2) key-KeyLevelMetadata pairs
+        uint32_t perkey_metadata_list_size = 0;
+        fs_ptr->read((char*)&perkey_metadata_list_size, sizeof(uint32_t));
+        for (uint32_t i = 0; i < perkey_metadata_list_size; i++)
+        {
+            // Load the key
+            Key tmp_key;
+            tmp_key.deserialize(fs_ptr);
+
+            // Load the KeyLevelMetadata
+            T key_level_metadata;
+            key_level_metadata.loadKeyLevelMetadata(fs_ptr);
+
+            // Update key-level metadata list
+            perkey_metadata_list_.push_back(std::pair<Key, T>(tmp_key, key_level_metadata));
+
+            perkey_metadata_listiter.insert(std::pair(tmp_key, perkey_metadata_list_.back()));
+        }
+
+        // Clear object-level metadata (updated due to replaying admissions)
+        cur_group_id_ = 0;
+        cur_group_keycnt_ = 0;
+        pergroup_metadata_map_.clear();
+
+        // Load and update object-level metadata
+        // (1) cur_group_id_
+        fs_ptr->read((char*)&cur_group_id_, sizeof(GroupId));
+        // (2) cur_group_keycnt_
+        fs_ptr->read((char*)&cur_group_keycnt_, sizeof(uint32_t));
+        // (3) groupid-GroupLevelMetadata pairs
+        uint32_t pergroup_metadata_map_size = 0;
+        fs_ptr->read((char*)&pergroup_metadata_map_size, sizeof(uint32_t));
+        for (uint32_t i = 0; i < pergroup_metadata_map_size; i++)
+        {
+            // Load the group ID
+            GroupId tmp_group_id;
+            fs_ptr->read((char*)&tmp_group_id, sizeof(GroupId));
+
+            // Load the GroupLevelMetadata
+            GroupLevelMetadata group_level_metadata;
+            group_level_metadata.loadGroupLevelMetadata(fs_ptr);
+
+            // Update group-level metadata map
+            pergroup_metadata_map_.insert(std::pair<GroupId, GroupLevelMetadata>(tmp_group_id, group_level_metadata));
+        }
+
+        // Clear reward information (updated due to replaying admissions)
+        sorted_reward_multimap_key_size_ = 0;
+        sorted_reward_multimap_.clear();
+
+        // Load and update reward information
+        // (1) sorted_reward_multimap_key_size_
+        fs_ptr->read((char*)&sorted_reward_multimap_key_size_, sizeof(uint64_t));
+        // (2) reward-key pairs
+        uint32_t sorted_reward_multimap_size = 0;
+        fs_ptr->read((char*)&sorted_reward_multimap_size, sizeof(uint32_t));
+        for (uint32_t i = 0; i < sorted_reward_multimap_size; i++)
+        {
+            // Load the reward
+            Reward tmp_reward;
+            fs_ptr->read((char*)&tmp_reward, sizeof(Reward));
+
+            // Load the key
+            Key tmp_key;
+            tmp_key.deserialize(fs_ptr);
+
+            // Update reward information
+            sorted_reward_multimap_t::iterator tmp_reward_mapiter = sorted_reward_multimap_.insert(std::pair<Reward, Key>(tmp_reward, tmp_key));
+
+            perkey_reward_mapiter.insert(std::pair(tmp_key, tmp_reward_mapiter));
+        }
+
+        // Clear lookup table (updated due to replaying admissions)
+        perkey_lookup_table_key_size_ = 0;
+        perkey_lookup_table_.clear();
+
+        // Load and update lookup table
+        // (1) perkey_lookup_table_key_size_
+        fs_ptr->read((char*)&perkey_lookup_table_key_size_, sizeof(uint64_t));
+        // NOTE: NO need to load perkey_lookup_table_, which can be built from scratch based on object-level, group-level, and reward information loaded snapshot
+        for (std::unordered_map<Key, perkey_metadata_list_iter_t>::const_iterator perkey_metadata_listiter_const_iter = perkey_metadata_listiter.begin(); perkey_metadata_listiter_const_iter != perkey_metadata_listiter.end(); perkey_metadata_listiter_const_iter++)
+        {
+            // Get the key
+            const Key& tmp_key = perkey_metadata_listiter_const_iter->first;
+
+            // Get the perkey_metadata_list_iter
+            perkey_metadata_list_iter_t tmp_perkey_metadata_list_iter = perkey_metadata_listiter_const_iter->second;
+            assert(tmp_perkey_metadata_list_iter != perkey_metadata_list_.end());
+
+            // Get the sorted_reward_multimap_iter if any
+            std::unordered_map<Key, sorted_reward_multimap_t::iterator>::const_iterator perkey_reward_mapiter_const_iter = perkey_reward_mapiter.find(tmp_key);
+            if (perkey_reward_mapiter_const_iter != perkey_reward_mapiter.end())
+            {
+                sorted_reward_multimap_t::iterator tmp_sorted_reward_multimap_iter = perkey_reward_mapiter_const_iter->second;
+                assert(tmp_sorted_reward_multimap_iter != sorted_reward_multimap_.end());
+
+                // Create LookupMetadata
+                LookupMetadata<perkey_metadata_list_t> tmp_lookup_metadata;
+                tmp_lookup_metadata.setPerkeyMetadataListIter(tmp_perkey_metadata_list_iter);
+                tmp_lookup_metadata.setSortedRewardIter(tmp_sorted_reward_multimap_iter);
+
+                // Update lookup table
+                perkey_lookup_table_.insert(std::pair(tmp_key, tmp_lookup_metadata));
+            }
+        }
+
+        return;
+    }
+
     // For object-level metadata
 
     template<class T>

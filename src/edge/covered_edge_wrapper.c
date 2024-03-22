@@ -785,7 +785,7 @@ namespace covered
         assert(fs_ptr != NULL);
 
         // Dump cache wrapper
-        edge_cache_ptr_->dumpSnapshot(fs_ptr);
+        edge_cache_ptr_->dumpCacheSnapshot(fs_ptr);
 
         // TODO: Dump cooperation wrapper
 

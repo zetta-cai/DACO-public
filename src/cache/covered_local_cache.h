@@ -47,6 +47,10 @@ namespace covered
         virtual ~CoveredLocalCache();
 
         virtual const bool hasFineGrainedManagement() const;
+
+        // (5) Dump/load cache metadata for cache snapshot
+        virtual void dumpCacheMetadata(std::fstream* fs_ptr) const override;
+        virtual void loadCacheMetadata(std::fstream* fs_ptr) override;
     private:
         static const std::string kClassName;
 

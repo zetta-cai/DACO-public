@@ -33,13 +33,17 @@ namespace covered
         Popularity getLocalPopularity() const; // Get local popularity for local requests (local hits for local cached objects or local misses for local uncached objects)
 
         static uint64_t getSizeForCapacity();
+
+        // Dump/load key-level metadata for local cached/uncached metadata of cache metadata in cache snapshot
+        virtual void dumpKeyLevelMetadata(std::fstream* fs_ptr) const;
+        virtual void loadKeyLevelMetadata(std::fstream* fs_ptr);
     protected:
         void updateNoValueDynamicMetadata_(); // Update value-unrelated dynamic metadata
     private:
         static const std::string kClassName;
 
         // Const metadata
-        const GroupId group_id_;
+        GroupId group_id_;
 
         // Non-const value-unrelated dynamic metadata
         Frequency local_frequency_;

@@ -127,4 +127,36 @@ namespace covered
         return sizeof(ObjectCnt);
         #endif
     }
+
+    // Dump/load group-level metadata for local cached/uncached metadata of cache metadata in cache snapshot
+
+    void GroupLevelMetadata::dumpGroupLevelMetadata(std::fstream* fs_ptr) const
+    {
+        assert(fs_ptr != NULL);
+
+        #ifndef ENABLE_TRACK_PERKEY_OBJSIZE
+        // Dump avg object size
+        fs_ptr->write((const char*)&avg_object_size_, sizeof(AvgObjectSize));
+        #endif
+
+        // Dump object cnt
+        fs_ptr->write((const char*)&object_cnt_, sizeof(ObjectCnt));
+
+        return;
+    }
+
+    void GroupLevelMetadata::loadGroupLevelMetadata(std::fstream* fs_ptr)
+    {
+        assert(fs_ptr != NULL);
+
+        #ifndef ENABLE_TRACK_PERKEY_OBJSIZE
+        // Load avg object size
+        fs_ptr->read((char*)&avg_object_size_, sizeof(AvgObjectSize));
+        #endif
+
+        // Load object cnt
+        fs_ptr->read((char*)&object_cnt_, sizeof(ObjectCnt));
+
+        return;
+    }
 }

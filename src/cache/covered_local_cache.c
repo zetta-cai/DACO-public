@@ -572,4 +572,32 @@ namespace covered
     {
         return tommy_hash_u32(0, key.getKeystr().c_str(), key.getKeyLength());
     }
+
+    // (5) Dump/load cache metadata for cache snapshot
+
+    void CoveredLocalCache::dumpCacheMetadata(std::fstream* fs_ptr) const
+    {
+        // NOTE: NO need to dump internal_kvbytes_, which will be updated when replaying admissions by EdgeWrapper::loadCacheSnapshot()
+
+        // Dump local cached metadata
+        local_cached_metadata_.dumpLocalMetadata(fs_ptr);
+
+        // Dump local uncached metadata
+        local_uncached_metadata_.dumpLocalMetadata(fs_ptr);
+
+        return;
+    }
+    
+    void CoveredLocalCache::loadCacheMetadata(std::fstream* fs_ptr)
+    {
+        // NOTE: local_cached_metadata_ should already have corresponding entries for cached objects due to replaying admissions
+
+        // Load local cached metadata
+        local_cached_metadata_.loadLocalMetadata(fs_ptr);
+
+        // Load local uncached metadata
+        local_uncached_metadata_.loadLocalMetadata(fs_ptr);
+
+        return;
+    }
 }

@@ -2,6 +2,8 @@
 
 #include <assert.h>
 
+#include "common/util.h"
+
 namespace covered
 {
     const std::string HeteroKeyLevelMetadata::kClassName("HeteroKeyLevelMetadata");
@@ -79,5 +81,45 @@ namespace covered
         uint64_t total_size = KeyLevelMetadataBase::getSizeForCapacity();
         total_size += sizeof(Frequency) + sizeof(Popularity);
         return total_size;
+    }
+
+    // Dump/load key-level metadata for local cached/uncached metadata of cache metadata in cache snapshot
+    
+    void HeteroKeyLevelMetadata::dumpKeyLevelMetadata(std::fstream* fs_ptr) const
+    {
+        assert(fs_ptr != NULL);
+
+        // Dump key-level metadata in base class
+        KeyLevelMetadataBase::dumpKeyLevelMetadata(fs_ptr);
+
+        // Dump redirected frequency
+        fs_ptr->write((const char*)&redirected_frequency_, sizeof(Frequency));
+
+        // Dump redirected popularity
+        fs_ptr->write((const char*)&redirected_popularity_, sizeof(Popularity));
+
+        // Dump is neighbor cached flag
+        fs_ptr->write((const char*)&is_neighbor_cached_, sizeof(bool));
+
+        return;
+    }
+
+    void HeteroKeyLevelMetadata::loadKeyLevelMetadata(std::fstream* fs_ptr)
+    {
+        assert(fs_ptr != NULL);
+
+        // Load key-level metadata in base class
+        KeyLevelMetadataBase::loadKeyLevelMetadata(fs_ptr);
+
+        // Load redirected frequency
+        fs_ptr->read((char*)&redirected_frequency_, sizeof(Frequency));
+
+        // Load redirected popularity
+        fs_ptr->read((char*)&redirected_popularity_, sizeof(Popularity));
+
+        // Load is neighbor cached flag
+        fs_ptr->read((char*)&is_neighbor_cached_, sizeof(bool));
+
+        return;
     }
 }

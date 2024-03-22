@@ -83,9 +83,9 @@ namespace covered
         // In units of bytes
         uint64_t getSizeForCapacity() const; // sum of internal size (each individual local cache) and external size (metadata for edge caching)
 
-        // (5) Dump/load snapshot
-        virtual void dumpSnapshot(std::fstream* fs_ptr) const;
-        virtual void loadSnapshot(std::fstream* fs_ptr);
+        // (5) Dump/load cache snapshot
+        virtual void dumpCacheSnapshot(std::fstream* fs_ptr) const;
+        virtual void loadCacheSnapshot(std::fstream* fs_ptr);
     private:
         static const std::string kClassName;
 

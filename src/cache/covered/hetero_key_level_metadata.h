@@ -37,6 +37,10 @@ namespace covered
         bool isNeighborCached() const;
 
         static uint64_t getSizeForCapacity();
+
+        // Dump/load key-level metadata for local cached/uncached metadata of cache metadata in cache snapshot
+        virtual void dumpKeyLevelMetadata(std::fstream* fs_ptr) const override;
+        virtual void loadKeyLevelMetadata(std::fstream* fs_ptr) override;
     private:
         static const std::string kClassName;
 

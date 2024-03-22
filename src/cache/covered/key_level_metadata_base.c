@@ -79,6 +79,50 @@ namespace covered
         return total_size;
     }
 
+    // Dump/load key-level metadata for local cached/uncached metadata of cache metadata in cache snapshot
+
+    void KeyLevelMetadataBase::dumpKeyLevelMetadata(std::fstream* fs_ptr) const
+    {
+        assert(fs_ptr != NULL);
+
+        // Dump group id
+        fs_ptr->write((const char*)&group_id_, sizeof(GroupId));
+
+        // Dump local frequency
+        fs_ptr->write((const char*)&local_frequency_, sizeof(Frequency));
+
+        #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
+        // Dump object size
+        fs_ptr->write((const char*)&object_size_, sizeof(ObjectSize));
+        #endif
+
+        // Dump local popularity
+        fs_ptr->write((const char*)&local_popularity_, sizeof(Popularity));
+
+        return;
+    }
+
+    void KeyLevelMetadataBase::loadKeyLevelMetadata(std::fstream* fs_ptr)
+    {
+        assert(fs_ptr != NULL);
+
+        // Load group id
+        fs_ptr->read((char*)&group_id_, sizeof(GroupId));
+
+        // Load local frequency
+        fs_ptr->read((char*)&local_frequency_, sizeof(Frequency));
+
+        #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
+        // Load object size
+        fs_ptr->read((char*)&object_size_, sizeof(ObjectSize));
+        #endif
+
+        // Load local popularity
+        fs_ptr->read((char*)&local_popularity_, sizeof(Popularity));
+
+        return;
+    }
+
     void KeyLevelMetadataBase::updateNoValueDynamicMetadata_()
     {
         local_frequency_++;

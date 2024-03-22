@@ -33,6 +33,10 @@ namespace covered
         ObjectCnt getObjectCnt() const;
 
         static uint64_t getSizeForCapacity();
+
+        // Dump/load group-level metadata for local cached/uncached metadata of cache metadata in cache snapshot
+        void dumpGroupLevelMetadata(std::fstream* fs_ptr) const;
+        void loadGroupLevelMetadata(std::fstream* fs_ptr);
     private:
         static const std::string kClassName;
 

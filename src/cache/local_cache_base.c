@@ -413,4 +413,30 @@ namespace covered
         const ObjectSize object_size = key.getKeyLength() + value.getValuesize();
         return isValidObjsize_(object_size);
     }
+
+    // (5) Dump/load cache metadata for cache snapshot
+    
+    void LocalCacheBase::dumpCacheMetadata(std::fstream* fs_ptr) const
+    {
+        checkPointers_();
+        assert(fs_ptr != NULL);
+
+        // Need to be overwritten by derived classes
+        Util::dumpErrorMsg(base_instance_name_, "dumpCacheMetadata() is not overwritten!");
+        exit(1);
+
+        return;
+    }
+
+    void LocalCacheBase::loadCacheMetadata(std::fstream* fs_ptr)
+    {
+        checkPointers_();
+        assert(fs_ptr != NULL);
+
+        // Need to be overwritten by derived classes
+        Util::dumpErrorMsg(base_instance_name_, "loadCacheMetadata() is not overwritten!");
+        exit(1);
+
+        return;
+    }
 }

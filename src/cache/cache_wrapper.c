@@ -519,7 +519,7 @@ namespace covered
 
     // (5) Dump/load snapshot
 
-    void CacheWrapper::dumpSnapshot(std::fstream* fs_ptr) const
+    void CacheWrapper::dumpCacheSnapshot(std::fstream* fs_ptr) const
     {
         checkPointers_();
 
@@ -529,7 +529,7 @@ namespace covered
         std::vector<Key> keys_in_validity_map;
         validity_map_ptr_->getAllKeys(keys_in_validity_map);
 
-        // Get all cached key-value-validity-beaconifany tuples
+        // Get all cached key-value-validity tuples
         std::vector<Key> cached_keys;
         std::vector<Value> cached_values;
         std::vector<bool> cached_validity;
@@ -561,12 +561,12 @@ namespace covered
             }
         }
         
-        // Dump cached key-value-validity tuples
+        // Dump cached key-value-validity-beaconifany tuples
         const bool is_value_space_efficient = true; // NOT dump value content
         // (1) cached keycnt
         const uint32_t cached_keycnt = cached_keys.size();
         fs_ptr->write((const char*)&cached_keycnt, sizeof(uint32_t));
-        // (2) key-value-validity tuples
+        // (2) key-value-validity-beaconifany tuples
         for (uint32_t i = 0; i < cached_keycnt; i++)
         {
             // Dump the key
@@ -597,6 +597,15 @@ namespace covered
             }
         }
 
+        // Dump cache metadata if necessary
+        if (cache_name_ == Util::COVERED_CACHE_NAME)
+        {
+            // TODO: Disable metadata update when getLocalCache() to prepare key-value pairs for dumping snapshot
+            // NOTE: now we still update metadata, as the effect is limited due to accessing each object only once
+
+            local_cache_ptr_->dumpCacheMetadata(fs_ptr);
+        }
+
         // TMPDEBUG24
         std::ostringstream oss;
         oss << "keycnt from validity map: " << keys_in_validity_map.size() << "; cached keycnt: " << cached_keycnt;
@@ -605,18 +614,18 @@ namespace covered
         return;
     }
 
-    void CacheWrapper::loadSnapshot(std::fstream* fs_ptr)
+    void CacheWrapper::loadCacheSnapshot(std::fstream* fs_ptr)
     {
         checkPointers_();
 
         assert(fs_ptr != NULL);
 
-        // Load cached key-value-validity tuples to replay admissions
+        // Load cached key-value-validity-beaconifany tuples to replay admissions
         const bool is_value_space_efficient = true; // NOT dump value content
         // (1) cached keycnt
         uint32_t cached_keycnt = 0;
         fs_ptr->read((char*)&cached_keycnt, sizeof(uint32_t));
-        // (2) key-value-validity tuples
+        // (2) key-value-validity-beaconifany tuples
         for (uint32_t i = 0; i < cached_keycnt; i++)
         {
             // Load the key
@@ -673,6 +682,14 @@ namespace covered
                 }
                 #endif
             }
+        }
+
+        // Dump cache metadata if necessary
+        if (cache_name_ == Util::COVERED_CACHE_NAME)
+        {
+            // NOTE: the cache metadata updated after replaying admissions will be overwritten by that loaded from snapshot
+
+            local_cache_ptr_->loadCacheMetadata(fs_ptr);
         }
 
         // TMPDEBUG24

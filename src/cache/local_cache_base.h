@@ -77,6 +77,10 @@ namespace covered
         uint64_t getSizeForCapacity() const; // Get size of data and metadata for local edge cache
 
         virtual const bool hasFineGrainedManagement() const = 0; // Whether the local edge cache supports key-level (i.e., object-level) fine-grained cache management
+
+        // (5) Dump/load cache metadata for cache snapshot
+        virtual void dumpCacheMetadata(std::fstream* fs_ptr) const;
+        virtual void loadCacheMetadata(std::fstream* fs_ptr);
     protected:
         const uint64_t capacity_bytes_; // Const variables
         const EdgeWrapperBase* edge_wrapper_ptr_; // ONLY use weight info for local reward calculation

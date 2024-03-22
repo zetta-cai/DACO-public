@@ -98,6 +98,11 @@ namespace covered
 
         virtual uint64_t getSizeForCapacity() const = 0; // Get size for capacity constraint (different for local cached or uncached objects)
         uint64_t getSizeForCapacity_(const bool& is_local_cached_metadata) const;
+
+        // Dump/load load cached/uncached metadata for cache metadata in cache snapshot
+        // NOTE: NO need to be virtual functions, as local cached/uncached metadata do not introduce extra data structured compared with cache metadata base
+        void dumpLocalMetadata(std::fstream* fs_ptr) const;
+        void loadLocalMetadata(std::fstream* fs_ptr);
     protected:
         // For object-level metadata
         const T& getkeyLevelMetadata(const Key& key) const; // Return existing key-level metadata
