@@ -48,16 +48,25 @@ namespace covered
         
         static void* launchEvaluator(void* evaluator_wrapper_param_ptr);
 
-        EvaluatorWrapper(const uint32_t& clientcnt, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& warmup_reqcnt_scale, const uint32_t& warmup_max_duration_sec, const uint32_t& stresstest_duration_sec, const std::string& evaluator_statistics_filepath);
+        EvaluatorWrapper(const uint32_t& clientcnt, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& warmup_reqcnt_scale, const uint32_t& warmup_max_duration_sec, const uint32_t& stresstest_duration_sec, const std::string& evaluator_statistics_filepath, const std::string& realnet_option);
         ~EvaluatorWrapper();
 
         void start();
     private:
         static const std::string kClassName;
 
+        // (1) Before evaluation
         void blockForInitialization_();
         void notifyClientsToStartrun_();
+
+        // (2) Different evaluation cases
+        void normalEval_(); // Normal evaluation for most cases
+        void realnetDumpEval_(); // Real-net dump evaluation for real-network exp warmup
+        void realnetLoadEval_(); // Real-net load evaluation for real-network exp stresstest
+
+        // (3) Evaluation helpers
         void notifyClientsToSwitchSlot_(const bool& is_monitored);
+        bool checkWarmupStatus_();
         void notifyClientsToFinishWarmup_();
         void notifyAllToFinishrun_(); // Finish clients first, and then edge and cloud
         void notifyClientsToFinishrun_(); // Update per-slot/stable total aggregated statistics
@@ -79,6 +88,7 @@ namespace covered
         const uint32_t warmup_max_duration_sec_; // Come from CLI
         const uint32_t stresstest_duration_sec_; // Come from CLI
         const std::string evaluator_statistics_filepath_; // Calculated based on CLI
+        const std::string realnet_option_; // Come from CLI
 
         // (1) Manage evaluation phases
 

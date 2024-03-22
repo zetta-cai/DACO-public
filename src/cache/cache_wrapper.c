@@ -517,6 +517,170 @@ namespace covered
         return total_size;
     }
 
+    // (5) Dump/load snapshot
+
+    void CacheWrapper::dumpSnapshot(std::fstream* fs_ptr) const
+    {
+        checkPointers_();
+
+        assert(fs_ptr != NULL);
+
+        // Get all keys from validity map
+        std::vector<Key> keys_in_validity_map;
+        validity_map_ptr_->getAllKeys(keys_in_validity_map);
+
+        // Get all cached key-value-validity-beaconifany tuples
+        std::vector<Key> cached_keys;
+        std::vector<Value> cached_values;
+        std::vector<bool> cached_validity;
+        for (uint32_t i = 0; i < keys_in_validity_map.size(); i++)
+        {
+            const Key& tmp_key = keys_in_validity_map[i];
+
+            // Get value of the key
+            bool unused_is_redirected = false;
+            Value tmp_value;
+            bool unused_affect_victim_tracker = false;
+            bool is_local_cached = local_cache_ptr_->getLocalCache(tmp_key, unused_is_redirected, tmp_value, unused_affect_victim_tracker); // Still need to update local metadata if key is cached yet invalid
+            UNUSED(unused_is_redirected);
+            UNUSED(unused_affect_victim_tracker);
+
+            if (is_local_cached)
+            {
+                // Get validity of the key
+                bool is_exist = false;
+                bool is_valid = validity_map_ptr_->isValidFlagForKey(tmp_key, is_exist);
+                if (!is_exist)
+                {
+                    assert(is_valid == false);
+                }
+
+                cached_keys.push_back(tmp_key);
+                cached_values.push_back(tmp_value);
+                cached_validity.push_back(is_valid);
+            }
+        }
+        
+        // Dump cached key-value-validity tuples
+        const bool is_value_space_efficient = true; // NOT dump value content
+        // (1) cached keycnt
+        const uint32_t cached_keycnt = cached_keys.size();
+        fs_ptr->write((const char*)&cached_keycnt, sizeof(uint32_t));
+        // (2) key-value-validity tuples
+        for (uint32_t i = 0; i < cached_keycnt; i++)
+        {
+            // Dump the key
+            DynamicArray tmp_dynamic_array_for_key(cached_keys[i].getKeyPayloadSize());
+            const uint32_t key_serialize_size = cached_keys[i].serialize(tmp_dynamic_array_for_key, 0);
+            tmp_dynamic_array_for_key.writeBinaryFile(0, fs_ptr, key_serialize_size);
+
+            // Dump the value
+            DynamicArray tmp_dynamic_array_for_value(cached_values[i].getValuePayloadSize(is_value_space_efficient));
+            const uint32_t value_serialize_size = cached_values[i].serialize(tmp_dynamic_array_for_value, 0, is_value_space_efficient);
+            tmp_dynamic_array_for_value.writeBinaryFile(0, fs_ptr, value_serialize_size);
+
+            // Dump the validity
+            fs_ptr->write((const char*)&cached_validity[i], sizeof(bool));
+
+            // Dump the beacon edge index if any
+            bool tmp_with_beaconidx = false;
+            std::unordered_map<Key, uint32_t, KeyHasher>::const_iterator beacon_edgeidx_const_iter = perkey_beacon_edgeidx_.find(cached_keys[i]);
+            if (beacon_edgeidx_const_iter != perkey_beacon_edgeidx_.end())
+            {
+                tmp_with_beaconidx = true;
+                fs_ptr->write((const char*)&tmp_with_beaconidx, sizeof(bool));
+                fs_ptr->write((const char*)&beacon_edgeidx_const_iter->second, sizeof(uint32_t));
+            }
+            else
+            {
+                fs_ptr->write((const char*)&tmp_with_beaconidx, sizeof(bool));
+            }
+        }
+
+        // TMPDEBUG24
+        std::ostringstream oss;
+        oss << "keycnt from validity map: " << keys_in_validity_map.size() << "; cached keycnt: " << cached_keycnt;
+        Util::dumpNormalMsg(instance_name_, oss.str());
+
+        return;
+    }
+
+    void CacheWrapper::loadSnapshot(std::fstream* fs_ptr)
+    {
+        checkPointers_();
+
+        assert(fs_ptr != NULL);
+
+        // Load cached key-value-validity tuples to replay admissions
+        const bool is_value_space_efficient = true; // NOT dump value content
+        // (1) cached keycnt
+        uint32_t cached_keycnt = 0;
+        fs_ptr->read((char*)&cached_keycnt, sizeof(uint32_t));
+        // (2) key-value-validity tuples
+        for (uint32_t i = 0; i < cached_keycnt; i++)
+        {
+            // Load the key
+            Key tmp_key;
+            tmp_key.deserialize(fs_ptr);
+
+            // Load the value
+            Value tmp_value;
+            tmp_value.deserialize(fs_ptr, is_value_space_efficient);
+
+            // Load the validity
+            bool tmp_validity = false;
+            fs_ptr->read((char*)&tmp_validity, sizeof(bool));
+
+            // Load the beacon edge index if any
+            bool tmp_with_beaconidx = false;
+            fs_ptr->read((char*)&tmp_with_beaconidx, sizeof(bool));
+            uint32_t tmp_beacon_edgeidx = 0;
+            if (tmp_with_beaconidx)
+            {
+                fs_ptr->read((char*)&tmp_beacon_edgeidx, sizeof(uint32_t));
+            }
+
+            // Admit key-value pair
+            bool is_successful = false;
+            const bool is_neighbor_cached = false; // NOT used by baselines; temporarily set false for COVERED, which will be reset with correct local cached metadata loaded from snapshot file later
+            bool unused_affect_victim_tracker = false;
+            local_cache_ptr_->admitLocalCache(tmp_key, tmp_value, is_neighbor_cached, unused_affect_victim_tracker, is_successful);
+            UNUSED(unused_affect_victim_tracker);
+
+            // Update validity map and beacon edgeidx if any
+            if (is_successful) // If key is admited successfully
+            {
+                // Update validity map
+                if (tmp_validity) // w/o writes
+                {
+                    validateKeyForLocalUncachedObject_(tmp_key);
+                }
+                else // w/ writes
+                {
+                    invalidateKeyForLocalUncachedObject_(tmp_key);
+                }
+
+                // Update beacon edgeidx if any
+                if (tmp_with_beaconidx && perkey_beacon_edgeidx_.find(tmp_key) == perkey_beacon_edgeidx_.end())
+                {
+                    perkey_beacon_edgeidx_.insert(std::pair(tmp_key, tmp_beacon_edgeidx));
+                }
+
+                #ifdef DEBUG_CACHE_WRAPPER
+                if (cached_keys_for_debug_.find(tmp_key) == cached_keys_for_debug_.end())
+                {
+                    cached_keys_for_debug_.insert(tmp_key);
+                }
+                #endif
+            }
+        }
+
+        // TMPDEBUG24
+        std::ostringstream oss;
+        oss << "cached keycnt: " << cached_keycnt;
+        Util::dumpNormalMsg(instance_name_, oss.str());
+    }
+
     // (1) Check is cached and access validity
 
     bool CacheWrapper::isValidKeyForLocalCachedObject_(const Key& key) const

@@ -246,14 +246,14 @@ namespace covered
         static bool is_track_event_; // Whether to track per-message events for debugging -> NOT affect evaluation results and NOT changed during evaluation
         static uint32_t latency_histogram_size_; // Size of latency histogram
         //static uint64_t min_capacity_mb_; // Size of minimum capacity in units of MiB (avoid too small cache capacity which cannot work due to large-value objects and necessary memory usage of CacheLib engine)
-        static std::string output_dirpath_; // Dirpath for output files
+        static std::string output_dirpath_; // Dirpath for output files (including logs dumped by exp scripts, statistics dumped by statistics tracker, and snapshots dumped by edge wrappers for realnet exps)
         static uint32_t parallel_eviction_max_victimcnt_; // Max # of victims for parallel eviction (MUST < the ring buffer sizes for edge-to-edge propagation simulator, cache server, edge-to-cloud & cloud-to-edge propagation simulator) -> evicting too many victims each time may incur ring buffer overflow and UDP buffer overflow (even worse if we transmit value content in messages)
         static uint32_t propagation_item_buffer_size_client_toedge_; // Buffer size for client-to-edge propagated messages
         static uint32_t propagation_item_buffer_size_edge_toclient_; // Buffer size for edge-to-client propagated messages
         static uint32_t propagation_item_buffer_size_edge_toedge_; // Buffer size for edge-to-edge propagated messages
         static uint32_t propagation_item_buffer_size_edge_tocloud_; // Buffer size for edge-to-cloud propagated messages
         static uint32_t propagation_item_buffer_size_cloud_toedge_; // Buffer size for cloud-to-edge propagated messages
-        static std::string trace_dirpath_; // Dirpath for trace files
+        static std::string trace_dirpath_; // Dirpath for trace files and dataset/workload files dumped by trace preprocessor
         static std::vector<std::string> wikiimage_trace_filepaths_; // Wikipedia image trace file paths (unsampled traces) under trace dirpath
         static std::vector<std::string> wikitext_trace_filepaths_; // Wikipedia text trace file paths (unsampled traces) under trace dirpath
         static uint32_t trace_sample_opcnt_; // Number of operations to sample from each replayed trace

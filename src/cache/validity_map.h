@@ -61,6 +61,9 @@ namespace covered
         void eraseFlagForKey(const Key& key, bool& is_exist);
 
         uint64_t getSizeForCapacity() const;
+
+        // ONLY used by edge snapshot
+        void getAllKeys(const std::vector<Key>& keys) const;
     private:
         static const std::string kClassName;
 

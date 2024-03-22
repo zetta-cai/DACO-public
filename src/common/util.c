@@ -84,6 +84,11 @@ namespace covered
     // Hash name
     const std::string Util::MMH3_HASH_NAME("mmh3");
 
+    // Real-network options
+    const std::string Util::REALNET_NO_OPTION_NAME("disable");
+    const std::string Util::REALNET_DUMP_OPTION_NAME("dump");
+    const std::string Util::REALNET_LOAD_OPTION_NAME("load");
+
     // (2) For utility functions
 
     // Type conversion/checking
@@ -1067,6 +1072,24 @@ namespace covered
         oss << getCloudRocksdbBasedirForWorkload(keycnt, workload_name) << "/cloud" << cloud_idx << ".db";
         std::string cloud_rocksdb_dirpath = oss.str();
         return cloud_rocksdb_dirpath;
+    }
+
+    std::string Util::getEdgeSnapshotDirpath()
+    {
+        std::ostringstream oss;
+        oss << Config::getOutputDirpath() << "/snapshot";
+        std::string edge_snapshot_dirpath = oss.str();
+        return edge_snapshot_dirpath;
+    }
+    
+    std::string Util::getEdgeSnapshotFilepath(const std::string& realnet_expname, const uint32_t& edgeidx)
+    {
+        assert(realnet_expname != "");
+
+        std::ostringstream oss;
+        oss << getEdgeSnapshotDirpath() << "/" << realnet_expname << "_edge" << edgeidx << ".snapshot";
+        std::string edge_snapshot_filepath = oss.str();
+        return edge_snapshot_filepath;
     }
 
     std::string Util::getInfixForEvaluatorStatisticsFilepath_(EvaluatorCLI* evaluator_cli_ptr)

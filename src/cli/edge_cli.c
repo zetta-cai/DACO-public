@@ -288,6 +288,35 @@ namespace covered
         if (!is_create_required_directories_)
         {
             is_create_required_directories_ = true;
+
+            const std::string edge_snapshot_dirpath = Util::getEdgeSnapshotDirpath();
+            const std::string realnet_option = getRealnetOption();
+            if (realnet_option == Util::REALNET_DUMP_OPTION_NAME)
+            {
+                // Create snapshot dirpath if not exist
+                bool is_dir_exist = Util::isDirectoryExist(edge_snapshot_dirpath);
+                if (!is_dir_exist)
+                {
+                    // Create directory for client statistics
+                    std::ostringstream oss;
+                    oss << "create directory " << edge_snapshot_dirpath << " for edge snapshots";
+                    Util::dumpNormalMsg(kClassName, oss.str());
+
+                    Util::createDirectory(edge_snapshot_dirpath);
+                }
+            }
+            else if (realnet_option == Util::REALNET_LOAD_OPTION_NAME)
+            {
+                // Check snapshot dirpath must exist
+                bool is_file_exist = Util::isFileExist(edge_snapshot_dirpath, true);
+                if (!is_file_exist)
+                {
+                    std::ostringstream oss;
+                    oss << "snapshot directory " << edge_snapshot_dirpath << " does not exist!";
+                    Util::dumpErrorMsg(kClassName, oss.str());
+                    exit(1);
+                }
+            }
         }
         return;
     }

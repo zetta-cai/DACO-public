@@ -41,6 +41,9 @@ namespace covered
 
         uint64_t getTotalKeySizeForCapcity() const;
         uint64_t getTotalValueSizeForCapcity() const;
+
+        // ONLY used by edge snapshot
+        void getAllKeys(const std::vector<Key>& keys) const;
     private:
         static const std::string kClassName;
 

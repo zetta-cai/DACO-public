@@ -129,6 +129,11 @@ namespace covered
         // Hash name
         static const std::string MMH3_HASH_NAME;
 
+        // Real-network options
+        static const std::string REALNET_NO_OPTION_NAME;
+        static const std::string REALNET_DUMP_OPTION_NAME;
+        static const std::string REALNET_LOAD_OPTION_NAME;
+
         // (2) For utility functions
 
         // Type conversion
@@ -278,6 +283,8 @@ namespace covered
         static std::string getEvaluatorStatisticsFilepath(EvaluatorCLI* evaluator_cli_ptr);
         static std::string getCloudRocksdbBasedirForWorkload(const uint32_t& keycnt, const std::string& workload_name);
         static std::string getCloudRocksdbDirpath(const uint32_t& keycnt, const std::string& workload_name, const uint32_t& cloud_idx); // Calculate the RocksDB dirpath for the cloud node
+        static std::string getEdgeSnapshotDirpath();
+        static std::string getEdgeSnapshotFilepath(const std::string& realnet_expname, const uint32_t& edgeidx);
 
         // (7) System settings
         static uint32_t getNetCoreRmemMax();

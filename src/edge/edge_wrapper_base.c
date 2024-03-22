@@ -67,11 +67,11 @@ namespace covered
         const std::string cache_name = edge_cli_ptr->getCacheName();
         if (cache_name == Util::COVERED_CACHE_NAME)
         {
-            edge_wrapper_ptr = new CoveredEdgeWrapper(cache_name, edge_cli_ptr->getCapacityBytes(), edge_idx, edge_cli_ptr->getEdgecnt(), edge_cli_ptr->getHashName(), edge_cli_ptr->getKeycnt(), edge_cli_ptr->getCoveredLocalUncachedMaxMemUsageBytes(), edge_cli_ptr->getPercacheserverWorkercnt(), edge_cli_ptr->getCoveredPeredgeSyncedVictimcnt(), edge_cli_ptr->getCoveredPeredgeMonitoredVictimsetcnt(), edge_cli_ptr->getCoveredPopularityAggregationMaxMemUsageBytes(), edge_cli_ptr->getCoveredPopularityCollectionChangeRatio(), edge_cli_ptr->getPropagationLatencyClientedgeUs(), edge_cli_ptr->getPropagationLatencyCrossedgeUs(), edge_cli_ptr->getPropagationLatencyEdgecloudUs(), edge_cli_ptr->getCoveredTopkEdgecnt());
+            edge_wrapper_ptr = new CoveredEdgeWrapper(cache_name, edge_cli_ptr->getCapacityBytes(), edge_idx, edge_cli_ptr->getEdgecnt(), edge_cli_ptr->getHashName(), edge_cli_ptr->getKeycnt(), edge_cli_ptr->getCoveredLocalUncachedMaxMemUsageBytes(), edge_cli_ptr->getPercacheserverWorkercnt(), edge_cli_ptr->getCoveredPeredgeSyncedVictimcnt(), edge_cli_ptr->getCoveredPeredgeMonitoredVictimsetcnt(), edge_cli_ptr->getCoveredPopularityAggregationMaxMemUsageBytes(), edge_cli_ptr->getCoveredPopularityCollectionChangeRatio(), edge_cli_ptr->getPropagationLatencyClientedgeUs(), edge_cli_ptr->getPropagationLatencyCrossedgeUs(), edge_cli_ptr->getPropagationLatencyEdgecloudUs(), edge_cli_ptr->getCoveredTopkEdgecnt(), edge_cli_ptr->getRealnetOption(), edge_cli_ptr->getRealnetExpname());
         }
         else
         {
-            edge_wrapper_ptr = new BasicEdgeWrapper(cache_name, edge_cli_ptr->getCapacityBytes(), edge_idx, edge_cli_ptr->getEdgecnt(), edge_cli_ptr->getHashName(), edge_cli_ptr->getKeycnt(), edge_cli_ptr->getCoveredLocalUncachedMaxMemUsageBytes(), edge_cli_ptr->getPercacheserverWorkercnt(), edge_cli_ptr->getCoveredPeredgeSyncedVictimcnt(), edge_cli_ptr->getCoveredPeredgeMonitoredVictimsetcnt(), edge_cli_ptr->getCoveredPopularityAggregationMaxMemUsageBytes(), edge_cli_ptr->getCoveredPopularityCollectionChangeRatio(), edge_cli_ptr->getPropagationLatencyClientedgeUs(), edge_cli_ptr->getPropagationLatencyCrossedgeUs(), edge_cli_ptr->getPropagationLatencyEdgecloudUs(), edge_cli_ptr->getCoveredTopkEdgecnt());
+            edge_wrapper_ptr = new BasicEdgeWrapper(cache_name, edge_cli_ptr->getCapacityBytes(), edge_idx, edge_cli_ptr->getEdgecnt(), edge_cli_ptr->getHashName(), edge_cli_ptr->getKeycnt(), edge_cli_ptr->getCoveredLocalUncachedMaxMemUsageBytes(), edge_cli_ptr->getPercacheserverWorkercnt(), edge_cli_ptr->getCoveredPeredgeSyncedVictimcnt(), edge_cli_ptr->getCoveredPeredgeMonitoredVictimsetcnt(), edge_cli_ptr->getCoveredPopularityAggregationMaxMemUsageBytes(), edge_cli_ptr->getCoveredPopularityCollectionChangeRatio(), edge_cli_ptr->getPropagationLatencyClientedgeUs(), edge_cli_ptr->getPropagationLatencyCrossedgeUs(), edge_cli_ptr->getPropagationLatencyEdgecloudUs(), edge_cli_ptr->getCoveredTopkEdgecnt(), edge_cli_ptr->getRealnetOption(), edge_cli_ptr->getRealnetExpname());
         }
         assert(edge_wrapper_ptr != NULL);
         edge_wrapper_ptr->start();
@@ -83,7 +83,7 @@ namespace covered
         return NULL;
     }
 
-    EdgeWrapperBase::EdgeWrapperBase(const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& edge_idx, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& keycnt, const uint64_t& local_uncached_capacity_bytes, const uint32_t& percacheserver_workercnt, const uint32_t& peredge_synced_victimcnt, const uint32_t& peredge_monitored_victimsetcnt, const uint64_t& popularity_aggregation_capacity_bytes, const double& popularity_collection_change_ratio, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us, const uint32_t& topk_edgecnt) : NodeWrapperBase(NodeWrapperBase::EDGE_NODE_ROLE, edge_idx, edgecnt, true), cache_name_(cache_name), capacity_bytes_(capacity_bytes), percacheserver_workercnt_(percacheserver_workercnt), propagation_latency_crossedge_us_(propagation_latency_crossedge_us), propagation_latency_edgecloud_us_(propagation_latency_edgecloud_us), edge_background_counter_for_beacon_server_()
+    EdgeWrapperBase::EdgeWrapperBase(const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& edge_idx, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& keycnt, const uint64_t& local_uncached_capacity_bytes, const uint32_t& percacheserver_workercnt, const uint32_t& peredge_synced_victimcnt, const uint32_t& peredge_monitored_victimsetcnt, const uint64_t& popularity_aggregation_capacity_bytes, const double& popularity_collection_change_ratio, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us, const uint32_t& topk_edgecnt, const std::string& realnet_option, const std::string& realnet_expname) : NodeWrapperBase(NodeWrapperBase::EDGE_NODE_ROLE, edge_idx, edgecnt, true), cache_name_(cache_name), capacity_bytes_(capacity_bytes), percacheserver_workercnt_(percacheserver_workercnt), propagation_latency_crossedge_us_(propagation_latency_crossedge_us), propagation_latency_edgecloud_us_(propagation_latency_edgecloud_us), edge_background_counter_for_beacon_server_(), realnet_option_(realnet_option), realnet_expname_(realnet_expname)
     {
         // Differentiate different edge nodes
         std::ostringstream oss;
@@ -136,6 +136,45 @@ namespace covered
         UNUSED(popularity_aggregation_capacity_bytes);
         UNUSED(popularity_collection_change_ratio);
         UNUSED(topk_edgecnt);
+
+        // Verification for evaluation
+        if (realnet_option == Util::REALNET_DUMP_OPTION_NAME || realnet_option == Util::REALNET_LOAD_OPTION_NAME)
+        {
+            // Check edge snapshot dirpath
+            const std::string edge_snapshot_dirpath = Util::getEdgeSnapshotDirpath();
+            if (!Util::isDirectoryExist(edge_snapshot_dirpath, true))
+            {
+                std::ostringstream oss;
+                oss << "edge snapshot dirpath " << edge_snapshot_dirpath << " does NOT exist!";
+                Util::dumpErrorMsg(base_instance_name_, oss.str());
+                exit(1);
+            }
+
+            // Check edge snapshot filepath
+            const std::string edge_snapshot_filepath = Util::getEdgeSnapshotFilepath(realnet_expname, edge_idx);
+            if (realnet_option == Util::REALNET_DUMP_OPTION_NAME)
+            {
+                // Snapshot filepath should NOT exist for dumping
+                if (Util::isFileExist(edge_snapshot_filepath, true))
+                {
+                    std::ostringstream oss;
+                    oss << "edge snapshot filepath " << edge_snapshot_filepath << " already exists for dumping!";
+                    Util::dumpErrorMsg(base_instance_name_, oss.str());
+                    exit(1);
+                }
+            }
+            else
+            {
+                // Snapshot filepath should exist for loading
+                if (!Util::isFileExist(edge_snapshot_filepath, true))
+                {
+                    std::ostringstream oss;
+                    oss << "edge snapshot filepath " << edge_snapshot_filepath << " does NOT exist for loading!";
+                    Util::dumpErrorMsg(base_instance_name_, oss.str());
+                    exit(1);
+                }
+            }
+        }
     }
         
     EdgeWrapperBase::~EdgeWrapperBase()
@@ -828,6 +867,25 @@ namespace covered
         // Send back SimpleFinishrunResponse to evaluator
         SimpleFinishrunResponse simple_finishrun_response(node_idx_, node_recvmsg_source_addr_, EventList(), finishrun_request_ptr->getExtraCommonMsghdr().getMsgSeqnum());
         node_sendmsg_socket_client_ptr_->send((MessageBase*)&simple_finishrun_response, evaluator_recvmsg_dst_addr_);
+
+        if (realnet_option_ == Util::REALNET_DUMP_OPTION_NAME)
+        {
+            // NOTE: snapshot dirpath/filepath has been checked when initializing the edge node
+            const std::string edge_snapshot_filepath = Util::getEdgeSnapshotFilepath(realnet_expname_, node_idx_);
+            assert(!Util::isFileExist(edge_snapshot_filepath, true)); // Snapshot file MUST NOT exist
+
+            // Open edge snapshot file
+            std::fstream* fs_ptr = Util::openFile(edge_snapshot_filepath, std::ios_base::out | std::ios_base::binary);
+            assert(fs_ptr != NULL);
+
+            // Dump edge snapshot file
+            dumpEdgeSnapshot_(fs_ptr);
+
+            // Close file and release ofstream
+            fs_ptr->close();
+            delete fs_ptr;
+            fs_ptr = NULL;
+        }
 
         return;
     }

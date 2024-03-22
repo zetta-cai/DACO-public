@@ -9,6 +9,8 @@ namespace covered
     const uint32_t CLIBase::DEFAULT_CLIENTCNT = 1;
     const uint32_t CLIBase::DEFAULT_EDGECNT = 1;
     const std::string CLIBase::DEFAULT_CONFIG_FILE = "config.json";
+    const std::string CLIBase::DEFAULT_REALNET_OPTION = "disable"; // Util::REALNET_NO_OPTION_NAME
+    const std::string CLIBase::DEFAULT_REALNET_EXPNAME = "";
 
     const std::string CLIBase::kClassName("CLIBase");
 
@@ -34,6 +36,8 @@ namespace covered
         clientcnt_ = 0;
         edgecnt_ = 0;
         config_file_ = "";
+        realnet_option_ = "";
+        realnet_expname_ = "";
     }
 
     CLIBase::~CLIBase() {}
@@ -46,6 +50,16 @@ namespace covered
     uint32_t CLIBase::getEdgecnt() const
     {
         return edgecnt_;
+    }
+
+    std::string CLIBase::getRealnetOption() const
+    {
+        return realnet_option_;
+    }
+
+    std::string CLIBase::getRealnetExpname() const
+    {
+        return realnet_expname_;
     }
 
     void CLIBase::parseAndProcessCliParameters(int argc, char **argv)
@@ -94,6 +108,14 @@ namespace covered
             {
                 oss << " --config_file " << config_file_;
             }
+            if (realnet_option_ != DEFAULT_REALNET_OPTION)
+            {
+                oss << " --realnet_option " << realnet_option_;
+            }
+            if (realnet_expname_ != DEFAULT_REALNET_EXPNAME)
+            {
+                oss << " --realnet_expname " << realnet_expname_;
+            }
 
             is_to_cli_string_ = true;
         }
@@ -120,6 +142,8 @@ namespace covered
                 ("help,h", "dump help information")
             ;
 
+            std::string realnet_option_descstr = "real-network option: " + Util::REALNET_NO_OPTION_NAME + ", " + Util::REALNET_DUMP_OPTION_NAME + ", or " + Util::REALNET_LOAD_OPTION_NAME;
+
             // Common dynamic configurations
             // NOTE: options_description::add_options() will return an instance of options_description_easy_init, whose operator() will create a new option_description and add it to the options_description
             // NOTE: the created option_description will store the argument of (const char* description) into a new string
@@ -128,6 +152,8 @@ namespace covered
                 ("clientcnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_CLIENTCNT), "the total number of clients")
                 ("edgecnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_EDGECNT), "the number of edge nodes")
                 ("config_file", boost::program_options::value<std::string>()->default_value(DEFAULT_CONFIG_FILE), "config file path of COVERED")
+                ("realnet_option", boost::program_options::value<std::string>()->default_value(DEFAULT_REALNET_OPTION), realnet_option_descstr.c_str())
+                ("realnet_expname", boost::program_options::value<std::string>()->default_value(DEFAULT_REALNET_EXPNAME), "real-network experiment name")
             ;
 
             // Common dynamic actions
@@ -160,11 +186,15 @@ namespace covered
             uint32_t clientcnt = argument_info_["clientcnt"].as<uint32_t>();
             uint32_t edgecnt = argument_info_["edgecnt"].as<uint32_t>();
             std::string config_filepath = argument_info_["config_file"].as<std::string>();
+            std::string realnet_option = argument_info_["realnet_option"].as<std::string>();
+            std::string realnet_expname = argument_info_["realnet_expname"].as<std::string>();
 
             // Store CLI parameters for dynamic configurations
             clientcnt_ = clientcnt;
             edgecnt_ = edgecnt;
             config_file_ = config_filepath;
+            realnet_option_ = realnet_option;
+            realnet_expname_ = realnet_expname;
 
             // (4) Load config file for static configurations
 
@@ -208,6 +238,7 @@ namespace covered
         if (!is_dump_cli_parameters_)
         {
             verifyIntegrity_();
+            verifyRealnetParams_();
             
             // (6) Dump stored CLI parameters and parsed config information if debug
 
@@ -217,7 +248,9 @@ namespace covered
             oss << "[Dynamic configurations from CLI parameters in " << kClassName << "]" << std::endl;
             oss << "Client count: " << clientcnt_ << std::endl;
             oss << "Edge count: " << edgecnt_ << std::endl;
-            oss << "Config filepath: " << config_file_;
+            oss << "Config filepath: " << config_file_ << std::endl;
+            oss << "Real-network option: " << realnet_option_ << std::endl;
+            oss << "Real-network experiment name: " << realnet_expname_;
             Util::dumpDebugMsg(kClassName, oss.str());
 
             is_dump_cli_parameters_ = true;
@@ -236,6 +269,27 @@ namespace covered
         {
             std::ostringstream oss;
             oss << "clientcnt " << clientcnt_ << " should >= edgecnt " << edgecnt_ << " for edge-client mapping!";
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
+
+        return;
+    }
+
+    void CLIBase::verifyRealnetParams_() const
+    {
+        if (realnet_option_ == Util::REALNET_DUMP_OPTION_NAME || realnet_option_ == Util::REALNET_LOAD_OPTION_NAME)
+        {
+            assert(realnet_expname_ != ""); // Must specify real-network experiment name
+        }
+        else if (realnet_option_ == Util::REALNET_NO_OPTION_NAME)
+        {
+            assert(realnet_expname_ == ""); // No need to specify real-network experiment name
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "invalid real-network option: " << realnet_option_;
             Util::dumpErrorMsg(kClassName, oss.str());
             exit(1);
         }

@@ -131,4 +131,9 @@ namespace covered
         uint64_t size = perkey_validity_.getTotalValueSizeForCapcity();
         return size;
     }
+
+    void ValidityMap::getAllKeys(const std::vector<Key>& keys) const
+    {
+        return perkey_validity_.getAllKeys(keys);
+    }
 }

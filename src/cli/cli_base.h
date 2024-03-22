@@ -25,6 +25,8 @@ namespace covered
 
         uint32_t getClientcnt() const;
         uint32_t getEdgecnt() const;
+        std::string getRealnetOption() const;
+        std::string getRealnetExpname() const;
 
         void parseAndProcessCliParameters(int argc, char **argv);
 
@@ -34,10 +36,13 @@ namespace covered
         static const uint32_t DEFAULT_CLIENTCNT;
         static const uint32_t DEFAULT_EDGECNT;
         static const std::string DEFAULT_CONFIG_FILE;
+        static const std::string DEFAULT_REALNET_OPTION;
+        static const std::string DEFAULT_REALNET_EXPNAME;
 
         static const std::string kClassName;
 
         void verifyIntegrity_() const;
+        void verifyRealnetParams_() const;
 
         bool is_add_cli_parameters_;
         bool is_set_param_and_config_;
@@ -49,6 +54,8 @@ namespace covered
         uint32_t clientcnt_;
         uint32_t edgecnt_; // Scalability on the number of edge nodes
         std::string config_file_;
+        std::string realnet_option_;
+        std::string realnet_expname_;
     protected:
         virtual void addCliParameters_();
         void parseCliParameters_(int argc, char **argv);

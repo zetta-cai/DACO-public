@@ -315,6 +315,20 @@ namespace covered
         }
         return;
     }
+
+    template<class V>
+    void ConcurrentHashtable<V>::getAllKeys(const std::vector<Key>& keys) const
+    {
+        for (uint32_t hashtable_idx = 0; hashtable_idx < hashtables_.size(); hashtable_idx++)
+        {
+            const std::unordered_map<Key, V, KeyHasher>& tmp_hashtable_const_ref = hashtables_[hashtable_idx];
+            for (typename std::unordered_map<Key, V, KeyHasher>::const_iterator iter = tmp_hashtable.begin(); iter != tmp_hashtable.end(); iter++)
+            {
+                keys.push_back(iter->first);
+            }
+        }
+        return;
+    }
 }
 
 #endif
