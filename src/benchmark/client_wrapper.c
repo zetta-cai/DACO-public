@@ -61,14 +61,14 @@ namespace covered
         uint32_t client_idx = client_wrapper_param.getClientIdx();
         ClientCLI* client_cli_ptr = client_wrapper_param.getClientCLIPtr();
         
-        ClientWrapper local_client(client_cli_ptr->getCapacityBytes(), client_idx, client_cli_ptr->getClientcnt(), client_cli_ptr->isWarmupSpeedup(), client_cli_ptr->getEdgecnt(), client_cli_ptr->getKeycnt(), client_cli_ptr->getPerclientOpcnt(), client_cli_ptr->getPerclientWorkercnt(), client_cli_ptr->getPropagationLatencyClientedgeUs(), client_cli_ptr->getWarmupReqcntScale(), client_cli_ptr->getWorkloadName());
+        ClientWrapper local_client(client_cli_ptr->getCapacityBytes(), client_idx, client_cli_ptr->getClientcnt(), client_cli_ptr->isWarmupSpeedup(), client_cli_ptr->getEdgecnt(), client_cli_ptr->getKeycnt(), client_cli_ptr->getPerclientOpcnt(), client_cli_ptr->getPerclientWorkercnt(), client_cli_ptr->getPropagationLatencyClientedgeUs(), client_cli_ptr->getRealnetOption(), client_cli_ptr->getWarmupReqcntScale(), client_cli_ptr->getWorkloadName());
         local_client.start();
         
         pthread_exit(NULL);
         return NULL;
     }
 
-    ClientWrapper::ClientWrapper(const uint64_t& capacity_bytes, const uint32_t& client_idx, const uint32_t& clientcnt, const bool& is_warmup_speedup, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge_us, const uint32_t& warmup_reqcnt_scale, const std::string& workload_name) : NodeWrapperBase(NodeWrapperBase::CLIENT_NODE_ROLE, client_idx, clientcnt, false), is_warmup_speedup_(is_warmup_speedup), capacity_bytes_(capacity_bytes), edgecnt_(edgecnt), keycnt_(keycnt), perclient_workercnt_(perclient_workercnt), warmup_reqcnt_scale_(warmup_reqcnt_scale), is_warmup_phase_(true), is_monitored_(false)
+    ClientWrapper::ClientWrapper(const uint64_t& capacity_bytes, const uint32_t& client_idx, const uint32_t& clientcnt, const bool& is_warmup_speedup, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge_us, const std::string& realnet_option, const uint32_t& warmup_reqcnt_scale, const std::string& workload_name) : NodeWrapperBase(NodeWrapperBase::CLIENT_NODE_ROLE, client_idx, clientcnt, false), is_warmup_speedup_(is_warmup_speedup), capacity_bytes_(capacity_bytes), edgecnt_(edgecnt), keycnt_(keycnt), perclient_workercnt_(perclient_workercnt), realnet_option_(realnet_option), warmup_reqcnt_scale_(warmup_reqcnt_scale), is_warmup_phase_(true), is_monitored_(false)
     {
         // Differentiate different clients
         std::ostringstream oss;
@@ -103,6 +103,26 @@ namespace covered
         client_worker_threads_ = new pthread_t[perclient_workercnt];
         assert(client_worker_threads_ != NULL);
         memset(client_worker_threads_, 0, perclient_workercnt * sizeof(pthread_t));
+
+        // Initialize for real-net experiments
+        // NOTE: NO need to implement as a virtual function due to NO difference with baselines and COVERED in client wrapper
+        if (realnet_option == Util::REALNET_LOAD_OPTION_NAME)
+        {
+            // Directly start with stresstest to skip warmup phase for real-net load
+            finishWarmupPhase_(); // Set is_warmup_phase_ as false
+        }
+        else if (realnet_option == Util::REALNET_DUMP_OPTION_NAME || realnet_option == Util::REALNET_NO_OPTION_NAME)
+        {
+            // Do nothing
+        }
+        else
+        {
+            oss.clear();
+            oss.str("");
+            oss << "invalid realnet_option " << realnet_option;
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
     }
 
     ClientWrapper::~ClientWrapper()
@@ -153,6 +173,11 @@ namespace covered
     uint32_t ClientWrapper::getPerclientWorkercnt() const
     {
         return perclient_workercnt_;
+    }
+
+    std::string ClientWrapper::getRealnetOption() const
+    {
+        return realnet_option_;
     }
 
     uint32_t ClientWrapper::getWarmupReqcntScale() const

@@ -70,6 +70,9 @@ namespace covered
         uint32_t getPercacheserverWorkercnt() const;
         uint32_t getPropagationLatencyCrossedgeUs() const;
         uint32_t getPropagationLatencyEdgecloudUs() const;
+        std::string getRealnetOption() const;
+        std::string getRealnetExpname() const;
+
         CacheWrapper* getEdgeCachePtr() const;
         CooperationWrapperBase* getCooperationWrapperPtr() const;
         PropagationSimulatorParam* getEdgeToclientPropagationSimulatorParamPtr() const;
@@ -129,8 +132,9 @@ namespace covered
         virtual void constCustomFunc(const std::string& funcname, EdgeCustomFuncParamBase* func_param_ptr) const = 0;
 
         // (8) Evaluation-related functions
-        virtual void dumpEdgeSnapshot_(std::fstream* fs_ptr) const = 0;
-        virtual void loadEdgeSnapshot_(std::fstream* fs_ptr) = 0;
+        void tryToInitializeForRealnet_(); // NOTE: NO need to implement as a virtual function, as we already distinguish baselines and COVERED by loadEdgeSnapshot_
+        virtual void dumpEdgeSnapshot_(std::fstream* fs_ptr) const = 0; // Invoked by processFinishrunRequest_
+        virtual void loadEdgeSnapshot_(std::fstream* fs_ptr) = 0; // Invoked by tryToInitializeForRealnet_
     private:
         static const std::string kClassName;
 

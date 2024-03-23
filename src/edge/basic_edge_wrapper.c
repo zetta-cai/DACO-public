@@ -20,6 +20,9 @@ namespace covered
         std::ostringstream oss;
         oss << kClassName << " edge" << edge_idx;
         instance_name_ = oss.str();
+
+        // Load snapshot to initialize edge node for real-net exps if necessary
+        tryToInitializeForRealnet_();
     }
         
     BasicEdgeWrapper::~BasicEdgeWrapper()

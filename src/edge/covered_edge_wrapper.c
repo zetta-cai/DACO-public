@@ -40,6 +40,9 @@ namespace covered
         // Allocate covered cache manager
         covered_cache_manager_ptr_ = new CoveredCacheManager(edge_idx, edgecnt, peredge_synced_victimcnt, peredge_monitored_victimsetcnt, popularity_aggregation_capacity_bytes, popularity_collection_change_ratio, topk_edgecnt);
         assert(covered_cache_manager_ptr_ != NULL);
+
+        // Load snapshot to initialize edge node for real-net exps if necessary
+        tryToInitializeForRealnet_();
     }
         
     CoveredEdgeWrapper::~CoveredEdgeWrapper()
@@ -793,7 +796,8 @@ namespace covered
         // Dump covered cache manager
         covered_cache_manager_ptr_->dumpCoveredCacheManagerSnapshot(fs_ptr);
 
-        // TODO: Dump weight tuner
+        // Dump weight tuner
+        weight_tuner_.dumpWeightTunerSnapshot(fs_ptr);
 
         return;
     }
@@ -813,7 +817,8 @@ namespace covered
         // Load covered cache manager
         covered_cache_manager_ptr_->loadCoveredCacheManagerSnapshot(fs_ptr);
 
-        // TODO: Load weight tuner
+        // Load weight tuner
+        weight_tuner_.loadWeightTunerSnapshot(fs_ptr);
 
         return;
     }

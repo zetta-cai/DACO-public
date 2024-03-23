@@ -79,6 +79,40 @@ namespace covered
         warmup_reqcnt_limit_ = (total_warmup_reqcnt - 1) / total_client_workercnt + 1; // Get per-client-worker warmup reqcnt limitation
         assert(warmup_reqcnt_limit_ > 0);
         assert(warmup_reqcnt_limit_ * total_client_workercnt >= total_warmup_reqcnt); // Total # of issued warmup reqs MUST >= total # of required warmup reqs
+
+        // (4) Initialize for real-net experiments
+        // NOTE: NO need to implement as a virtual function due to NO difference with baselines and COVERED in client worker wrapper
+        const std::string realnet_option = client_wrapper_ptr->getRealnetOption();
+        if (realnet_option == Util::REALNET_LOAD_OPTION_NAME)
+        {
+            // Go through workloads to skip warmup requests before finishing initialization
+            WorkloadWrapperBase* workload_generator_ptr = client_wrapper_ptr->getWorkloadWrapperPtr();
+            while (true)
+            {
+                if (cur_warmup_reqcnt_ < warmup_reqcnt_limit_)
+                {
+                    cur_warmup_reqcnt_++;
+                }
+                else
+                {
+                    break; // Skip generating workload items due to passing all warmup requests
+                }
+
+                // Generate key-value request based on a specific workload
+                WorkloadItem workload_item = workload_generator_ptr->generateWorkloadItem(local_client_worker_idx);
+            }
+        }
+        else if (realnet_option == Util::REALNET_DUMP_OPTION_NAME || realnet_option == Util::REALNET_NO_OPTION_NAME)
+        {
+            // Do nothing
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "invalid realnet_option " << realnet_option;
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
     }
     
     ClientWorkerWrapper::~ClientWorkerWrapper()

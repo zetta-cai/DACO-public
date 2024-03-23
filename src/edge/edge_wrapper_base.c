@@ -175,6 +175,17 @@ namespace covered
                 }
             }
         }
+        else if (realnet_option == Util::REALNET_NO_OPTION_NAME)
+        {
+            // Do nothing
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "invalid realnet_option " << realnet_option;
+            Util::dumpErrorMsg(base_instance_name_, oss.str());
+            exit(1);
+        }
     }
         
     EdgeWrapperBase::~EdgeWrapperBase()
@@ -253,6 +264,16 @@ namespace covered
     uint32_t EdgeWrapperBase::getPropagationLatencyEdgecloudUs() const
     {
         return propagation_latency_edgecloud_us_;
+    }
+
+    std::string EdgeWrapperBase::getRealnetOption() const
+    {
+        return realnet_option_;
+    }
+
+    std::string EdgeWrapperBase::getRealnetExpname() const
+    {
+        return realnet_expname_;
     }
 
     CacheWrapper* EdgeWrapperBase::getEdgeCachePtr() const
@@ -1009,5 +1030,33 @@ namespace covered
         uint64_t local_cache_margin_bytes = (capacity_bytes >= used_bytes) ? (capacity_bytes - used_bytes) : 0;
 
         return local_cache_margin_bytes;
+    }
+
+    // (8) Evaluation-related functions
+
+    void EdgeWrapperBase::tryToInitializeForRealnet_()
+    {
+        if (realnet_option_ == Util::REALNET_LOAD_OPTION_NAME)
+        {
+            assert(realnet_expname_ != "");
+
+            // NOTE: snapshot dirpath/filepath has been checked when initializing the edge node
+            const std::string edge_snapshot_filepath = Util::getEdgeSnapshotFilepath(realnet_expname_, node_idx_);
+            assert(Util::isFileExist(edge_snapshot_filepath, true)); // Snapshot file MUST NOT exist
+
+            // Open edge snapshot file
+            std::fstream* fs_ptr = Util::openFile(edge_snapshot_filepath, std::ios_base::in | std::ios_base::binary);
+            assert(fs_ptr != NULL);
+
+            // Load edge snapshot file
+            loadEdgeSnapshot_(fs_ptr);
+
+            // Close file and release ofstream
+            fs_ptr->close();
+            delete fs_ptr;
+            fs_ptr = NULL;
+        }
+
+        return;
     }
 }
