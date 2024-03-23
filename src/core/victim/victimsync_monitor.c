@@ -158,6 +158,68 @@ namespace covered
         return size;
     }
 
+    // Dump/load victim sync monitor for synchronized victims of covered cache manager snapshot
+
+    void VictimsyncMonitor::dumpVictimsyncMonitor(std::fstream* fs_ptr) const
+    {
+        assert(fs_ptr != NULL);
+
+        // Dump cur_seqnum_
+        fs_ptr->write((const char*)&cur_seqnum_, sizeof(SeqNum));
+
+        // NOTE: we do NOT dump prev_victim_syncset_ptr_, such that each cache node will enforce complete victim synchronization first after loading snapshot to continue stresstest phase
+
+        // Dump is_first_complete_received_
+        fs_ptr->write((const char*)&is_first_complete_received_, sizeof(bool));
+
+        // Dump tracked_seqnum_
+        fs_ptr->write((const char*)&tracked_seqnum_, sizeof(SeqNum));
+
+        // Dump cached victim syncsets
+        // (1) cached victim syncset cnt
+        uint32_t cached_victim_syncset_cnt = cached_victim_syncsets_.size();
+        fs_ptr->write((const char*)&cached_victim_syncset_cnt, sizeof(uint32_t));
+        // (2) cached victim syncsets
+        for (uint32_t i = 0; i < cached_victim_syncset_cnt; i++)
+        {
+            cached_victim_syncsets_[i].serialize(fs_ptr);
+        }
+
+        return;
+    }
+
+    void VictimsyncMonitor::loadVictimsyncMonitor(std::fstream* fs_ptr)
+    {
+        assert(fs_ptr != NULL);
+
+        // Load cur_seqnum_
+        fs_ptr->read((char*)&cur_seqnum_, sizeof(SeqNum));
+
+        // NOTE: we do NOT load prev_victim_syncset_ptr_, such that each cache node will enforce complete victim synchronization first after loading snapshot to continue stresstest phase
+        prev_victim_syncset_ptr_ = NULL;
+
+        // Load is_first_complete_received_
+        fs_ptr->read((char*)&is_first_complete_received_, sizeof(bool));
+
+        // Load tracked_seqnum_
+        fs_ptr->read((char*)&tracked_seqnum_, sizeof(SeqNum));
+
+        // Load cached victim syncsets
+        // (1) cached victim syncset cnt
+        uint32_t cached_victim_syncset_cnt = 0;
+        fs_ptr->read((char*)&cached_victim_syncset_cnt, sizeof(uint32_t));
+        // (2) cached victim syncsets
+        cached_victim_syncsets_.clear();
+        for (uint32_t i = 0; i < cached_victim_syncset_cnt; i++)
+        {
+            VictimSyncset tmp_victim_syncset;
+            tmp_victim_syncset.deserialize(fs_ptr);
+            cached_victim_syncsets_.push_back(tmp_victim_syncset);
+        }
+
+        return;
+    }
+
     // As sender edge node
 
     void VictimsyncMonitor::releasePrevVictimSyncset_()

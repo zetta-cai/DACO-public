@@ -11,6 +11,7 @@
 #ifndef DIRECTORY_CACHER_H
 #define DIRECTORY_CACHER_H
 
+#include <fstream>
 #include <string>
 #include <unordered_map>
 
@@ -33,6 +34,10 @@ namespace covered
         uint64_t getSizeForCapacity() const;
 
         const CachedDirectory& operator=(const CachedDirectory& other);
+
+        // Dump/load each of cached directories for cooperation snapshot
+        void dumpCachedDirectory(std::fstream* fs_ptr) const;
+        void loadCachedDirectory(std::fstream* fs_ptr);
     private:
         static const std::string kClassName;
 
@@ -52,6 +57,10 @@ namespace covered
         void updateForNewCachedDirectory(const Key&key, const CachedDirectory& cached_directory); // Add or insert new cached directory for the given key
 
         uint64_t getSizeForCapacity() const;
+
+        // Dump/load cached directories for cooperation snapshot
+        void dumpDirectoryCacher(std::fstream* fs_ptr) const;
+        void loadDirectoryCacher(std::fstream* fs_ptr);
     private:
         typedef std::unordered_map<Key, CachedDirectory, KeyHasher> perkey_dirinfo_map_t;
 

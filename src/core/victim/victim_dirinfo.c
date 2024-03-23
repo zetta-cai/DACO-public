@@ -149,4 +149,38 @@ namespace covered
         
         return *this;
     }
+
+    // Dump/load each per-key victim dirinfo of synchronized victims for covered cache manager snapshot
+
+    void VictimDirinfo::dumpVictimDirinfo(std::fstream* fs_ptr) const
+    {
+        assert(fs_ptr != NULL);
+
+        // Dump refcnt_
+        fs_ptr->write((const char*)&refcnt_, sizeof(uint32_t));
+
+        // Dump beacon_edge_idx_
+        fs_ptr->write((const char*)&beacon_edge_idx_, sizeof(uint32_t));
+
+        // Dump dirinfo_set_
+        dirinfo_set_.serialize(fs_ptr);
+
+        return;
+    }
+
+    void VictimDirinfo::loadVictimDirinfo(std::fstream* fs_ptr)
+    {
+        assert(fs_ptr != NULL);
+
+        // Load refcnt_
+        fs_ptr->read((char*)&refcnt_, sizeof(uint32_t));
+
+        // Load beacon_edge_idx_
+        fs_ptr->read((char*)&beacon_edge_idx_, sizeof(uint32_t));
+
+        // Load dirinfo_set_
+        dirinfo_set_.deserialize(fs_ptr);
+
+        return;
+    }
 }

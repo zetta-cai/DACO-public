@@ -45,9 +45,9 @@ namespace covered
 
         uint64_t getSizeForCapacity() const;
 
-        // Dump/load directory metadata for directory snapshot
-        void dumpDirectoryMetadata(std::fstream* fs_ptr) const;
-        void loadDirectoryMetadata(std::fstream* fs_ptr);
+        // Dump/load directory table for cooperation snapshot
+        void dumpDirectoryTable(std::fstream* fs_ptr) const;
+        void loadDirectoryTable(std::fstream* fs_ptr);
     private:
         typedef ConcurrentHashtable<DirectoryEntry> dirinfo_table_t;
 

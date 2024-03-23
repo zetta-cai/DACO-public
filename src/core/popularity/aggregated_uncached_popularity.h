@@ -52,6 +52,10 @@ namespace covered
         uint64_t getSizeForCapacity() const;
 
         const AggregatedUncachedPopularity& operator=(const AggregatedUncachedPopularity& other);
+
+        // Dump/load each of per-key aggregated popularity for covered cache manager snapshot
+        void dumpAggregatedUncachedPopularity(std::fstream* fs_ptr) const;
+        void loadAggregatedUncachedPopularity(std::fstream* fs_ptr);
     private:
         typedef std::pair<uint32_t, Popularity> edgeidx_popularity_pair_t;
 

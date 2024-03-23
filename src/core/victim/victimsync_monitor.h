@@ -7,6 +7,7 @@
 #ifndef VICTIMSYNC_MONITOR_H
 #define VICTIMSYNC_MONITOR_H
 
+#include <fstream>
 #include <string>
 
 #include "common/covered_common_header.h"
@@ -38,6 +39,10 @@ namespace covered
         // Utils
 
         uint64_t getSizeForCapacity() const;
+
+        // Dump/load victim sync monitor for synchronized victims of covered cache manager snapshot
+        void dumpVictimsyncMonitor(std::fstream* fs_ptr) const;
+        void loadVictimsyncMonitor(std::fstream* fs_ptr);
     private:
         static const std::string kClassName;
 

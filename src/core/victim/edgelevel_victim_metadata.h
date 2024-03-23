@@ -9,6 +9,7 @@
 #ifndef EDGELEVLE_VICTIM_METADATA_H
 #define EDGELEVLE_VICTIM_METADATA_H
 
+#include <fstream>
 #include <list>
 #include <string>
 
@@ -41,6 +42,10 @@ namespace covered
         bool removeVictimsForPlacement(const std::list<Key>& victim_keyset, uint64_t& removed_cacheinfos_size); // Return if victim_cacheinfos_ is empty; removed_size indicates the size of all removed victim cacheinfos
 
         const EdgelevelVictimMetadata& operator=(const EdgelevelVictimMetadata& other);
+
+        // Dump/load edge-level victim metadata of synchronized victims for covered cache manager snapshot
+        void dumpEdgelevelVictimMetadata(std::fstream* fs_ptr) const;
+        void loadEdgelevelVictimMetadata(std::fstream* fs_ptr);
     private:
         static const std::string kClassName;
 

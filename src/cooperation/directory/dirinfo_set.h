@@ -9,6 +9,7 @@
 
 //#define DEBUG_DIRINFO_SET
 
+#include <fstream>
 #include <list>
 #include <string>
 
@@ -47,7 +48,9 @@ namespace covered
 
         uint32_t getDirinfoSetPayloadSize() const;
         uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position) const;
+        uint32_t serialize(std::fstream* fs_ptr) const;
         uint32_t deserialize(const DynamicArray& msg_payload, const uint32_t& position);
+        uint32_t deserialize(std::fstream* fs_ptr);
 
         uint64_t getSizeForCapacity() const;
 
@@ -63,7 +66,9 @@ namespace covered
 
         uint32_t getDirinfoSetPayloadSizeInternal_(const std::list<DirectoryInfo>& dirinfo_set) const;
         uint32_t serializeDirinfoSetInternal_(DynamicArray& msg_payload, const uint32_t& position, const std::list<DirectoryInfo>& dirinfo_set) const;
+        uint32_t serializeDirinfoSetInternal_(std::fstream* fs_ptr, const std::list<DirectoryInfo>& dirinfo_set) const;
         uint32_t deserializeDirinfoSetInternal_(const DynamicArray& msg_payload, const uint32_t& position, std::list<DirectoryInfo>& dirinfo_set);
+        uint32_t deserializeDirinfoSetInternal_(std::fstream* fs_ptr, std::list<DirectoryInfo>& dirinfo_set);
 
         uint32_t getDirinfoSetSizeForCapacityInternal_(const std::list<DirectoryInfo>& dirinfo_set) const;
 

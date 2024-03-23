@@ -66,10 +66,10 @@ namespace covered
 
         uint64_t getSizeForCapacity() const;
 
-        // (4) Dump/load directory snapshot
+        // (4) Dump/load cooperation snapshot
         // NOTE: NO need to be virtual functions, as basic/covered cooperation wrapper do not introduce extra data structures compared with cooperation wrapper base
-        void dumpDirectorySnapshot(std::fstream* fs_ptr) const;
-        void loadDirectorySnapshot(std::fstream* fs_ptr);
+        void dumpCooperationSnapshot(std::fstream* fs_ptr) const;
+        void loadCooperationSnapshot(std::fstream* fs_ptr);
     private:
         static const std::string kClassName;
 

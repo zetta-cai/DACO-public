@@ -262,6 +262,43 @@ namespace covered
         return total_size;
     }
 
+    // Dump/load covered cache manager snapshot
+
+    void CoveredCacheManager::dumpCoveredCacheManagerSnapshot(std::fstream* fs_ptr) const
+    {
+        checkPointers_();
+        assert(fs_ptr != NULL);
+
+        // Dump aggregated popularities
+        popularity_aggregator_ptr_->dumpPopularityAggregator(fs_ptr);
+
+        // Dump synchronized victims
+        victim_tracker_ptr_->dumpVictimTracker(fs_ptr);
+
+        // Dump cached directories
+        directory_cacher_.dumpDirectoryCacher(fs_ptr);
+
+        return;
+    }
+
+    void CoveredCacheManager::loadCoveredCacheManagerSnapshot(std::fstream* fs_ptr)
+    {
+        checkPointers_();
+        assert(fs_ptr != NULL);
+
+        // Load aggregated popularities
+        popularity_aggregator_ptr_->loadPopularityAggregator(fs_ptr);
+
+        // Load synchronized victims
+        victim_tracker_ptr_->loadVictimTracker(fs_ptr);
+
+        // Load cached directories
+        directory_cacher_.loadDirectoryCacher(fs_ptr);
+
+        return;
+    }
+
+
     bool CoveredCacheManager::placementCalculation_(const Key& key, const bool& is_global_cached, bool& has_best_placement, Edgeset& best_placement_edgeset, std::list<std::pair<uint32_t, std::list<Key>>>& best_placement_peredge_synced_victimset, std::list<std::pair<uint32_t, std::list<Key>>>& best_placement_peredge_fetched_victimset, const EdgeWrapperBase* edge_wrapper_ptr, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr) const
     {
         bool is_finish = false;

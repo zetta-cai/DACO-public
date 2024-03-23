@@ -616,6 +616,7 @@ namespace covered
         uint32_t cached_keycnt = 0;
         fs_ptr->read((char*)&cached_keycnt, sizeof(uint32_t));
         // (2) key-value-validity-beaconifany tuples
+        perkey_beacon_edgeidx_.clear();
         for (uint32_t i = 0; i < cached_keycnt; i++)
         {
             // Load the key

@@ -410,15 +410,15 @@ namespace covered
         assert(block_tracker_ptr_ != NULL);
     }
 
-    // (4) Dump/load directory snapshot
+    // (4) Dump/load cooperation snapshot
 
-    void CooperationWrapperBase::dumpDirectorySnapshot(std::fstream* fs_ptr) const
+    void CooperationWrapperBase::dumpCooperationSnapshot(std::fstream* fs_ptr) const
     {
         checkPointers_();
         assert(fs_ptr != NULL);
 
         // Dump directory table
-        directory_table_ptr_->dumpDirectoryMetadata();
+        directory_table_ptr_->dumpDirectoryTable(fs_ptr);
 
         // NOTE: NO need to dump block info, as no remaining operations (e.g., directory update, cache invalidation, and finish block caused by duplicated requests after timeout and retry) should be ongoing before dumping snapshots (we wait 5s for them in EvaluatorWrapper::realnetDumpEval_() before issue finish run requests), and thus no cache nodes polling or waiting for finish block requests
         // -> Even if with block info, the cache nodes will not wait for finish block requests due to re-initialization before loading snapshots to continue stresstest phases
@@ -426,13 +426,13 @@ namespace covered
         return;
     }
 
-    void CooperationWrapperBase::loadDirectorySnapshot(std::fstream* fs_ptr)
+    void CooperationWrapperBase::loadCooperationSnapshot(std::fstream* fs_ptr)
     {
         checkPointers_();
         assert(fs_ptr != NULL);
 
         // Load directory table
-        directory_table_ptr_->loadDirectoryMetadata();
+        directory_table_ptr_->loadDirectoryTable(fs_ptr);
 
         // NOTE: NO need to load block info, as we do NOT dump block info due to the aforementioned reasons
 

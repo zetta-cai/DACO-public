@@ -83,7 +83,7 @@ namespace covered
         return NULL;
     }
 
-    EdgeWrapperBase::EdgeWrapperBase(const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& edge_idx, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& keycnt, const uint64_t& local_uncached_capacity_bytes, const uint32_t& percacheserver_workercnt, const uint32_t& peredge_synced_victimcnt, const uint32_t& peredge_monitored_victimsetcnt, const uint64_t& popularity_aggregation_capacity_bytes, const double& popularity_collection_change_ratio, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us, const uint32_t& topk_edgecnt, const std::string& realnet_option, const std::string& realnet_expname) : NodeWrapperBase(NodeWrapperBase::EDGE_NODE_ROLE, edge_idx, edgecnt, true), cache_name_(cache_name), capacity_bytes_(capacity_bytes), percacheserver_workercnt_(percacheserver_workercnt), propagation_latency_crossedge_us_(propagation_latency_crossedge_us), propagation_latency_edgecloud_us_(propagation_latency_edgecloud_us), edge_background_counter_for_beacon_server_(), realnet_option_(realnet_option), realnet_expname_(realnet_expname)
+    EdgeWrapperBase::EdgeWrapperBase(const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& edge_idx, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& keycnt, const uint64_t& local_uncached_capacity_bytes, const uint32_t& percacheserver_workercnt, const uint32_t& peredge_synced_victimcnt, const uint32_t& peredge_monitored_victimsetcnt, const uint64_t& popularity_aggregation_capacity_bytes, const double& popularity_collection_change_ratio, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us, const uint32_t& topk_edgecnt, const std::string& realnet_option, const std::string& realnet_expname) : NodeWrapperBase(NodeWrapperBase::EDGE_NODE_ROLE, edge_idx, edgecnt, true), cache_name_(cache_name), capacity_bytes_(capacity_bytes), percacheserver_workercnt_(percacheserver_workercnt), propagation_latency_crossedge_us_(propagation_latency_crossedge_us), propagation_latency_edgecloud_us_(propagation_latency_edgecloud_us), edge_background_counter_for_beacon_server_(), realnet_option_(realnet_option), realnet_expname_(realnet_expname), is_dumped_for_realnet_(false)
     {
         // Differentiate different edge nodes
         std::ostringstream oss;
@@ -864,28 +864,41 @@ namespace covered
         // Mark the current node as NOT running to finish benchmark
         resetNodeRunning_();
 
+        if (realnet_option_ == Util::REALNET_DUMP_OPTION_NAME)
+        {
+            if (!is_dumped_for_realnet_) // The first finish run request
+            {
+                // NOTE: snapshot dirpath/filepath has been checked when initializing the edge node
+                const std::string edge_snapshot_filepath = Util::getEdgeSnapshotFilepath(realnet_expname_, node_idx_);
+                assert(!Util::isFileExist(edge_snapshot_filepath, true)); // Snapshot file MUST NOT exist
+
+                // Open edge snapshot file
+                std::fstream* fs_ptr = Util::openFile(edge_snapshot_filepath, std::ios_base::out | std::ios_base::binary);
+                assert(fs_ptr != NULL);
+
+                // Dump edge snapshot file
+                dumpEdgeSnapshot_(fs_ptr);
+
+                // Close file and release ofstream
+                fs_ptr->close();
+                delete fs_ptr;
+                fs_ptr = NULL;
+
+                is_dumped_for_realnet_ = true;
+            }
+            else // Duplicate finish run requests
+            {
+                // NOTE: snapshot should already be dumped for the first finish run request
+                const std::string edge_snapshot_filepath = Util::getEdgeSnapshotFilepath(realnet_expname_, node_idx_);
+                assert(Util::isFileExist(edge_snapshot_filepath, true)); // Snapshot file MUST exist
+
+                Util::dumpWarnMsg(base_instance_name_, "edge snapshot has already been dumped for previouse finish run request!");
+            }
+        }
+
         // Send back SimpleFinishrunResponse to evaluator
         SimpleFinishrunResponse simple_finishrun_response(node_idx_, node_recvmsg_source_addr_, EventList(), finishrun_request_ptr->getExtraCommonMsghdr().getMsgSeqnum());
         node_sendmsg_socket_client_ptr_->send((MessageBase*)&simple_finishrun_response, evaluator_recvmsg_dst_addr_);
-
-        if (realnet_option_ == Util::REALNET_DUMP_OPTION_NAME)
-        {
-            // NOTE: snapshot dirpath/filepath has been checked when initializing the edge node
-            const std::string edge_snapshot_filepath = Util::getEdgeSnapshotFilepath(realnet_expname_, node_idx_);
-            assert(!Util::isFileExist(edge_snapshot_filepath, true)); // Snapshot file MUST NOT exist
-
-            // Open edge snapshot file
-            std::fstream* fs_ptr = Util::openFile(edge_snapshot_filepath, std::ios_base::out | std::ios_base::binary);
-            assert(fs_ptr != NULL);
-
-            // Dump edge snapshot file
-            dumpEdgeSnapshot_(fs_ptr);
-
-            // Close file and release ofstream
-            fs_ptr->close();
-            delete fs_ptr;
-            fs_ptr = NULL;
-        }
 
         return;
     }

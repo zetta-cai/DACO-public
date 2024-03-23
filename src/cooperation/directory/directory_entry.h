@@ -84,6 +84,10 @@ namespace covered
         void constCall(const std::string& function_name, void* param_ptr) const;
 
         const DirectoryEntry& operator=(const DirectoryEntry& other);
+
+        // (3) Dump/load directory entry for directory table of cooperation snapshot
+        void dumpDirectoryEntry(std::fstream* fs_ptr) const;
+        void loadDirectoryEntry(std::fstream* fs_ptr);
     private:
         typedef std::unordered_map<DirectoryInfo, DirectoryMetadata, DirectoryInfoHasher> dirinfo_entry_t;
 

@@ -130,6 +130,7 @@ namespace covered
 
         // (8) Evaluation-related functions
         virtual void dumpEdgeSnapshot_(std::fstream* fs_ptr) const = 0;
+        virtual void loadEdgeSnapshot_(std::fstream* fs_ptr) = 0;
     private:
         static const std::string kClassName;
 
@@ -187,6 +188,9 @@ namespace covered
 
         // Shared variables
         mutable BackgroundCounter edge_background_counter_for_beacon_server_; // Update and load by beacon server (thread safe; used by COVERED and BestGuess)
+
+        // Keep real-net dump idempotent
+        bool is_dumped_for_realnet_;
     };
 }
 

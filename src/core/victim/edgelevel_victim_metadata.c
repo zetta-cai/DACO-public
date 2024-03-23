@@ -244,6 +244,56 @@ namespace covered
         return *this;
     }
 
+    // Dump/load edge-level victim metadata of synchronized victims for covered cache manager snapshot
+    
+    void EdgelevelVictimMetadata::dumpEdgelevelVictimMetadata(std::fstream* fs_ptr) const
+    {
+        assert(fs_ptr != NULL);
+        assert(is_valid_ == true);
+
+        // Dump cache_margin_bytes_
+        fs_ptr->write((const char*)&cache_margin_bytes_, sizeof(uint64_t));
+
+        // Dump victim cacheinfos
+        // (1) victim cacheinfo cnt
+        uint32_t victim_cacheinfo_cnt = victim_cacheinfos_.size();
+        fs_ptr->write((const char*)&victim_cacheinfo_cnt, sizeof(uint32_t));
+        // (2) victim cacheinfos
+        for (uint32_t i = 0; i < victim_cacheinfo_cnt; i++)
+        {
+            // Dump the victim cacheinfo
+            const VictimCacheinfo& tmp_victim_cacheinfo = victim_cacheinfos_.front();
+            tmp_victim_cacheinfo.serialize(fs_ptr);
+        }
+
+        return;
+    }
+
+    void EdgelevelVictimMetadata::loadEdgelevelVictimMetadata(std::fstream* fs_ptr)
+    {
+        assert(fs_ptr != NULL);
+
+        // Load cache_margin_bytes_
+        fs_ptr->read((char*)&cache_margin_bytes_, sizeof(uint64_t));
+
+        // Load victim cacheinfos
+        // (1) victim cacheinfo cnt
+        uint32_t victim_cacheinfo_cnt = 0;
+        fs_ptr->read((char*)&victim_cacheinfo_cnt, sizeof(uint32_t));
+        // (2) victim cacheinfos
+        victim_cacheinfos_.clear();
+        for (uint32_t i = 0; i < victim_cacheinfo_cnt; i++)
+        {
+            // Load the victim cacheinfo
+            VictimCacheinfo tmp_victim_cacheinfo;
+            tmp_victim_cacheinfo.deserialize(fs_ptr);
+            victim_cacheinfos_.push_back(tmp_victim_cacheinfo);
+        }
+
+        is_valid_ = true;
+        return;
+    }
+
     void EdgelevelVictimMetadata::updatePervictimEdgeset_(std::list<std::pair<Key, Edgeset>>& pervictim_edgeset, const Key& victim_key, const uint32_t edge_idx) const
     {
         std::list<std::pair<Key, Edgeset>>::iterator pervictim_edgeset_iter = KVListHelper<Key, Edgeset>::findVFromListForK(victim_key, pervictim_edgeset);

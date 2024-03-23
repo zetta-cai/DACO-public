@@ -12,6 +12,7 @@
 #define ENABLE_PROBABILITY_TUNING
 #define ENABLE_WEIGHT_TUNING
 
+#include <fstream>
 #include <string>
 
 #include "common/covered_common_header.h"
@@ -32,6 +33,10 @@ namespace covered
         uint64_t getSizeForCapacity() const;
 
         const WeightInfo& operator=(const WeightInfo& other);
+
+        // Dump/load weight info for weight tuner snapshot
+        void dumpWeightInfo(std::fstream* fs_ptr) const;
+        void loadWeightInfo(std::fstream* fs_ptr);
     private:
         static const std::string kClassName;
 
@@ -56,6 +61,10 @@ namespace covered
         //void tuneWeightInfo();
 
         uint64_t getSizeForCapacity() const;
+
+        // Dump/load weight tuner snapshot
+        void dumpWeightTunerSnapshot(std::fstream* fs_ptr) const;
+        void loadWeightTunerSnapshot(std::fstream* fs_ptr);
     private:
         static const std::string kClassName;
 

@@ -408,6 +408,41 @@ namespace covered
         return size - position;
     }
 
+    uint32_t DirinfoSet::serialize(std::fstream* fs_ptr) const
+    {
+        assert(fs_ptr != NULL);
+        assert(delta_bitmap_ != INVALID_BITMAP);
+
+        uint32_t size = 0;
+        fs_ptr->write((const char*)&delta_bitmap_, sizeof(uint8_t));
+        size += sizeof(uint8_t);
+        bool with_complete_dirinfo_set = isComplete();
+        if (with_complete_dirinfo_set)
+        {
+            uint32_t dirinfo_set_serialize_size = serializeDirinfoSetInternal_(fs_ptr, dirinfo_set_);
+            size += dirinfo_set_serialize_size;
+        }
+        else
+        {
+            if ((delta_bitmap_ & NEW_DIRINFO_SET_DELTA_MASK) == NEW_DIRINFO_SET_DELTA_MASK)
+            {
+                assert(new_dirinfo_delta_set_.size() > 0);
+
+                uint32_t new_dirinfo_delta_set_serialize_size = serializeDirinfoSetInternal_(fs_ptr, new_dirinfo_delta_set_);
+                size += new_dirinfo_delta_set_serialize_size;
+            }
+            if ((delta_bitmap_ & STALE_DIRINFO_SET_DELTA_MASK) == STALE_DIRINFO_SET_DELTA_MASK)
+            {
+                assert(stale_dirinfo_delta_set_.size() > 0);
+
+                uint32_t stale_dirinfo_delta_set_serialize_size = serializeDirinfoSetInternal_(fs_ptr, stale_dirinfo_delta_set_);
+                size += stale_dirinfo_delta_set_serialize_size;
+            }
+        }
+
+        return size;
+    }
+
     uint32_t DirinfoSet::deserialize(const DynamicArray& msg_payload, const uint32_t& position)
     {
         uint32_t size = position;
@@ -440,6 +475,42 @@ namespace covered
         }
 
         return size - position;
+    }
+
+    uint32_t DirinfoSet::deserialize(std::fstream* fs_ptr)
+    {
+        assert(fs_ptr != NULL);
+
+        uint32_t size = 0;
+        fs_ptr->read((char*)&delta_bitmap_, sizeof(uint8_t));
+        size += sizeof(uint8_t);
+        assert(delta_bitmap_ != INVALID_BITMAP);
+
+        bool with_complete_dirinfo_set = isComplete();
+        if (with_complete_dirinfo_set)
+        {
+            uint32_t dirinfo_set_deserialize_size = deserializeDirinfoSetInternal_(fs_ptr, dirinfo_set_);
+            size += dirinfo_set_deserialize_size;
+        }
+        else
+        {
+            if ((delta_bitmap_ & NEW_DIRINFO_SET_DELTA_MASK) == NEW_DIRINFO_SET_DELTA_MASK)
+            {
+                uint32_t new_dirinfo_delta_set_deserialize_size = deserializeDirinfoSetInternal_(fs_ptr, new_dirinfo_delta_set_);
+                size += new_dirinfo_delta_set_deserialize_size;
+
+                assert(new_dirinfo_delta_set_.size() > 0);
+            }
+            if ((delta_bitmap_ & STALE_DIRINFO_SET_DELTA_MASK) == STALE_DIRINFO_SET_DELTA_MASK)
+            {
+                uint32_t stale_dirinfo_delta_set_deserialize_size = deserializeDirinfoSetInternal_(fs_ptr, stale_dirinfo_delta_set_);
+                size += stale_dirinfo_delta_set_deserialize_size;
+
+                assert(stale_dirinfo_delta_set_.size() > 0);
+            }
+        }
+
+        return size;
     }
 
     uint64_t DirinfoSet::getSizeForCapacity() const
@@ -510,6 +581,23 @@ namespace covered
         return size - position;
     }
 
+    uint32_t DirinfoSet::serializeDirinfoSetInternal_(std::fstream* fs_ptr, const std::list<DirectoryInfo>& dirinfo_set) const
+    {
+        assert(fs_ptr != NULL);
+
+        uint32_t size = 0;
+        uint32_t dirinfo_set_size = dirinfo_set.size();
+        fs_ptr->write((const char*)&dirinfo_set_size, sizeof(uint32_t));
+        size += sizeof(uint32_t);
+        for (std::list<DirectoryInfo>::const_iterator dirinfo_const_iter = dirinfo_set.begin(); dirinfo_const_iter != dirinfo_set.end(); dirinfo_const_iter++)
+        {
+            uint32_t dirinfo_serialize_size = dirinfo_const_iter->serialize(fs_ptr);
+            size += dirinfo_serialize_size;
+        }
+
+        return size;
+    }
+
     uint32_t DirinfoSet::deserializeDirinfoSetInternal_(const DynamicArray& msg_payload, const uint32_t& position, std::list<DirectoryInfo>& dirinfo_set)
     {
         uint32_t size = position;
@@ -524,6 +612,25 @@ namespace covered
             dirinfo_set.push_back(dirinfo);
         }
         return size - position;
+    }
+
+    uint32_t DirinfoSet::deserializeDirinfoSetInternal_(std::fstream* fs_ptr, std::list<DirectoryInfo>& dirinfo_set)
+    {
+        assert(fs_ptr != NULL);
+
+        uint32_t size = 0;
+        uint32_t dirinfo_set_size = 0;
+        fs_ptr->read((char*)&dirinfo_set_size, sizeof(uint32_t));
+        size += sizeof(uint32_t);
+        for (uint32_t i = 0; i < dirinfo_set_size; i++)
+        {
+            DirectoryInfo dirinfo;
+            uint32_t dirinfo_deserialize_size = dirinfo.deserialize(fs_ptr);
+            size += dirinfo_deserialize_size;
+            dirinfo_set.push_back(dirinfo);
+        }
+
+        return size;
     }
 
     uint32_t DirinfoSet::getDirinfoSetSizeForCapacityInternal_(const std::list<DirectoryInfo>& dirinfo_set) const

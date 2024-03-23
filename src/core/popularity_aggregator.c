@@ -304,6 +304,81 @@ namespace covered
         return size_bytes_;
     }
 
+    // Dump/load per-key aggregated popularity for covered cache manager snapshot
+
+    void PopularityAggregator::dumpPopularityAggregator(std::fstream* fs_ptr) const
+    {
+        checkPointers_();
+        assert(fs_ptr != NULL);
+
+        // Dump size_bytes_
+        fs_ptr->write((const char*)&size_bytes_, sizeof(uint64_t));
+
+        // Dump benfit-popularity pairs
+        // (1) pair cnt
+        const uint32_t benefit_popularity_pair_cnt = benefit_popularity_multimap_.size();
+        fs_ptr->write((const char*)&benefit_popularity_pair_cnt, sizeof(uint32_t));
+        // (2) benefit-popularity pairs
+        for (benefit_popularity_multimap_t::const_iterator tmp_const_iter = benefit_popularity_multimap_.begin(); tmp_const_iter != benefit_popularity_multimap_.end(); tmp_const_iter++)
+        {
+            // Dump max admission benefit
+            const DeltaReward max_admission_benefit = tmp_const_iter->first;
+            fs_ptr->write((const char*)&max_admission_benefit, sizeof(DeltaReward));
+
+            // Dump aggregated popularity
+            const AggregatedUncachedPopularity& aggregated_uncached_popularity = tmp_const_iter->second;
+            aggregated_uncached_popularity.dumpAggregatedUncachedPopularity(fs_ptr);
+        }
+
+        // NOTE: NO need to dump perkey_benefit_popularity_table_, which can be built from scratch based on benefit-popularity pairs loaded from snapshot
+
+        // NOTE: NO need to dump perkey_preserved_edgeset_, which should be empty as we wait 5s for remaining operations in EvaluatorWrapper::realnetDumpEval_() before issue finish run requests, and no placement/admission should be ongoing
+
+        return;
+    }
+
+    void PopularityAggregator::loadPopularityAggregator(std::fstream* fs_ptr)
+    {
+        checkPointers_();
+        assert(fs_ptr != NULL);
+
+        // Load size_bytes_
+        fs_ptr->read((char*)&size_bytes_, sizeof(uint64_t));
+
+        // Load benfit-popularity pairs
+        // (1) pair cnt
+        uint32_t benefit_popularity_pair_cnt = 0;
+        fs_ptr->read((char*)&benefit_popularity_pair_cnt, sizeof(uint32_t));
+        // (2) benefit-popularity pairs
+        benefit_popularity_multimap_.clear();
+        perkey_benefit_popularity_table_.clear();
+        for (uint32_t i = 0; i < benefit_popularity_pair_cnt; i++)
+        {
+            // Load max admission benefit
+            DeltaReward max_admission_benefit = 0.0;
+            fs_ptr->read((char*)&max_admission_benefit, sizeof(DeltaReward));
+
+            // Load aggregated popularity
+            AggregatedUncachedPopularity aggregated_uncached_popularity;
+            aggregated_uncached_popularity.loadAggregatedUncachedPopularity(fs_ptr);
+
+            // Insert max admission benefit and aggregated popularity into benefit-popularity multimap
+            benefit_popularity_multimap_iter_t benefit_popularity_iter = benefit_popularity_multimap_.insert(std::pair(max_admission_benefit, aggregated_uncached_popularity));
+
+            // Build per-key lookup table based on loaded pairs
+            const Key& tmp_key = aggregated_uncached_popularity.getKey();
+            if (perkey_benefit_popularity_table_.find(tmp_key) == perkey_benefit_popularity_table_.end())
+            {
+                perkey_benefit_popularity_table_.insert(std::pair(tmp_key, benefit_popularity_iter));
+            }
+        }
+
+        // NOTE: NO need to load perkey_preserved_edgeset_, as NO cache node should be performing cache placement/admission after loading snapshot to continue stresstest phase
+        perkey_preserved_edgeset_.clear();
+
+        return;
+    }
+
     // Utils
 
     bool PopularityAggregator::getAggregatedUncachedPopularity_(const Key& key, AggregatedUncachedPopularity& aggregated_uncached_popularity) const

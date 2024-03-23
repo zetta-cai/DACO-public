@@ -22,6 +22,7 @@
 
 //#define DEBUG_COVERED_CACHE_MANAGER
 
+#include <fstream>
 #include <list>
 #include <string>
 
@@ -85,6 +86,10 @@ namespace covered
         DeltaReward accessVictimTrackerForFastPathEvictionCost(const EdgeWrapperBase* edge_wrapper_ptr, const std::list<VictimCacheinfo>& curedge_local_cached_victim_cacheinfos, const std::list<std::pair<Key, DirinfoSet>>& curedge_local_beaconed_local_cached_victim_dirinfosets) const; // NOTE: ONLY consider a single placement of edge_idx_
 
         uint64_t getSizeForCapacity() const;
+
+        // Dump/load covered cache manager snapshot
+        void dumpCoveredCacheManagerSnapshot(std::fstream* fs_ptr) const;
+        void loadCoveredCacheManagerSnapshot(std::fstream* fs_ptr);
     private:
         typedef DeltaReward PlacementGain; // Admission benefit - eviction cost for trade-off-aware cache placement and eviction
 

@@ -8,6 +8,7 @@
 #define DIRECTORY_INFO_H
 
 #include <list>
+#include <fstream>
 #include <string>
 #include <unordered_set>
 
@@ -30,7 +31,9 @@ namespace covered
 
         uint32_t getDirectoryInfoPayloadSize() const;
         uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position) const;
+        uint32_t serialize(std::fstream* fs_ptr) const;
         uint32_t deserialize(const DynamicArray& msg_payload, const uint32_t& position);
+        uint32_t deserialize(std::fstream* fs_ptr);
 
         uint64_t getSizeForCapacity() const;
 

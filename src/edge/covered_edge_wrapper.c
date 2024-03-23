@@ -787,11 +787,33 @@ namespace covered
         // Dump cache wrapper
         edge_cache_ptr_->dumpCacheSnapshot(fs_ptr);
 
-        // TODO: Dump cooperation wrapper
+        // Dump cooperation wrapper
+        cooperation_wrapper_ptr_->dumpCooperationSnapshot(fs_ptr);
 
-        // TODO: Dump covered cache manager
+        // Dump covered cache manager
+        covered_cache_manager_ptr_->dumpCoveredCacheManagerSnapshot(fs_ptr);
 
         // TODO: Dump weight tuner
+
+        return;
+    }
+
+    void CoveredEdgeWrapper::loadEdgeSnapshot_(std::fstream* fs_ptr)
+    {
+        checkPointers_();
+
+        assert(fs_ptr != NULL);
+
+        // Load cache wrapper
+        edge_cache_ptr_->loadCacheSnapshot(fs_ptr);
+
+        // Load cooperation wrapper
+        cooperation_wrapper_ptr_->loadCooperationSnapshot(fs_ptr);
+
+        // Load covered cache manager
+        covered_cache_manager_ptr_->loadCoveredCacheManagerSnapshot(fs_ptr);
+
+        // TODO: Load weight tuner
 
         return;
     }

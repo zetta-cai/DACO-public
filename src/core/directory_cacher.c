@@ -45,6 +45,34 @@ namespace covered
         return *this;
     }
 
+    // Dump/load each of cached directories for cooperation snapshot
+
+    void CachedDirectory::dumpCachedDirectory(std::fstream* fs_ptr) const
+    {
+        assert(fs_ptr != NULL);
+        
+        // Dump the directory info
+        dirinfo_.serialize(fs_ptr);
+
+        // Dump prev collected popularity
+        fs_ptr->write((const char*)&prev_collect_popularity_, sizeof(Popularity));
+
+        return;
+    }
+
+    void CachedDirectory::loadCachedDirectory(std::fstream* fs_ptr)
+    {
+        assert(fs_ptr != NULL);
+
+        // Load the directory info
+        dirinfo_.deserialize(fs_ptr);
+
+        // Load prev collected popularity
+        fs_ptr->read((char*)&prev_collect_popularity_, sizeof(Popularity));
+
+        return;
+    }
+
     // DirectoryCacher
 
     const std::string DirectoryCacher::kClassName("DirectoryCacher");
@@ -153,6 +181,66 @@ namespace covered
         // NOTE: NO need to acquire a read lock as approxiate cache size usage is enough
 
         return size_bytes_;
+    }
+
+    // Dump/load cached directories for cooperation snapshot
+
+    void DirectoryCacher::dumpDirectoryCacher(std::fstream* fs_ptr) const
+    {
+        checkPointers_();
+        assert(fs_ptr != NULL);
+
+        // Dump size_bytes_
+        fs_ptr->write((const char*)&size_bytes_, sizeof(uint64_t));
+
+        // Dump per-key dirinfos
+        // (1) per-key dirinfo cnt
+        uint32_t perkey_dirinfo_cnt = perkey_dirinfo_map_.size();
+        fs_ptr->write((const char*)&perkey_dirinfo_cnt, sizeof(uint32_t));
+        // (2) per-key dirinfos
+        for (perkey_dirinfo_map_t::const_iterator map_iter = perkey_dirinfo_map_.begin(); map_iter != perkey_dirinfo_map_.end(); ++map_iter)
+        {
+            // Dump the key
+            const Key& tmp_key = map_iter->first;
+            tmp_key.serialize(fs_ptr);
+
+            // Dump the cached directory
+            const CachedDirectory& tmp_cached_directory = map_iter->second;
+            tmp_cached_directory.dumpCachedDirectory(fs_ptr);
+        }
+
+        return;
+    }
+
+    void DirectoryCacher::loadDirectoryCacher(std::fstream* fs_ptr)
+    {
+        checkPointers_();
+        assert(fs_ptr != NULL);
+
+        // Load size_bytes_
+        fs_ptr->read((char*)&size_bytes_, sizeof(uint64_t));
+
+        // Load per-key dirinfos
+        // (1) per-key dirinfo cnt
+        uint32_t perkey_dirinfo_cnt = 0;
+        fs_ptr->read((char*)&perkey_dirinfo_cnt, sizeof(uint32_t));
+        // (2) per-key dirinfos
+        perkey_dirinfo_map_.clear();
+        for (uint32_t i = 0; i < perkey_dirinfo_cnt; ++i)
+        {
+            // Load the key
+            Key tmp_key;
+            tmp_key.deserialize(fs_ptr);
+
+            // Load the cached directory
+            CachedDirectory tmp_cached_directory;
+            tmp_cached_directory.loadCachedDirectory(fs_ptr);
+
+            // Insert new cached directory
+            perkey_dirinfo_map_.insert(std::pair(tmp_key, tmp_cached_directory));
+        }
+
+        return;
     }
 
     void DirectoryCacher::updateForNewCachedDirectory(const Key&key, const CachedDirectory& cached_directory)

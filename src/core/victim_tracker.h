@@ -16,6 +16,7 @@
 #ifndef VICTIM_TRACKER_H
 #define VICTIM_TRACKER_H
 
+#include <fstream>
 #include <list>
 #include <string>
 #include <vector>
@@ -65,6 +66,10 @@ namespace covered
         DeltaReward calcEvictionCostForFastPathPlacement(const EdgeWrapperBase* edge_wrapper_ptr, const std::list<VictimCacheinfo>& curedge_local_cached_victim_cacheinfos, const std::list<std::pair<Key, DirinfoSet>>& curedge_local_beaconed_local_cached_victim_dirinfosets) const; // NOTE: ONLY consider a single placement of edge_idx_
 
         uint64_t getSizeForCapacity() const;
+
+        // Dump/load synchronized victims of covered cache manager snapshot
+        void dumpVictimTracker(std::fstream* fs_ptr) const;
+        void loadVictimTracker(std::fstream* fs_ptr);
     private:
         // NOTE: the list of VictimCacheinfos follows the ascending order of local rewards
         typedef std::vector<EdgelevelVictimMetadata> peredge_victim_metadata_t;

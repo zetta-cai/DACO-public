@@ -46,6 +46,33 @@ namespace covered
         return *this;
     }
 
+    // Dump/load weight info for weight tuner snapshot
+    void WeightInfo::dumpWeightInfo(std::fstream* fs_ptr) const
+    {
+        assert(fs_ptr != NULL);
+
+        // Dump local_hit_weight_
+        fs_ptr->write((const char*)&local_hit_weight_, sizeof(Weight));
+
+        // Dump cooperative_hit_weight_
+        fs_ptr->write((const char*)&cooperative_hit_weight_, sizeof(Weight));
+
+        return;
+    }
+
+    void WeightInfo::loadWeightInfo(std::fstream* fs_ptr)
+    {
+        assert(fs_ptr != NULL);
+
+        // Load local_hit_weight_
+        fs_ptr->read((char*)&local_hit_weight_, sizeof(Weight));
+
+        // Load cooperative_hit_weight_
+        fs_ptr->read((char*)&cooperative_hit_weight_, sizeof(Weight));
+
+        return;
+    }
+
     // WeightTuner
 
     const float WeightTuner::BEACON_ACCESS_CNT_FOR_PROB_WINDOW_SIZE = 100.0; // Tune prob every 100 beacon accesses for content discovery
@@ -193,6 +220,62 @@ namespace covered
     {
         // NOTE: NOT count sizeof(ewma_propagation_latency_clientedge_us_), which is actually NO need to be tracked and does NOT affect weight_info_ (we track it here just for better understanding of source code)
         return sizeof(float) + sizeof(uint32_t) * 2 + weight_info_.getSizeForCapacity();
+    }
+
+    // Dump/load weight tuner snapshot
+
+    void WeightTuner::dumpWeightTunerSnapshot(std::fstream* fs_ptr) const
+    {
+        assert(fs_ptr != NULL);
+
+        // Dump local_beacon_access_cnt_
+        fs_ptr->write((const char*)&local_beacon_access_cnt_, sizeof(float));
+
+        // Dump remote_beacon_access_cnt_
+        fs_ptr->write((const char*)&remote_beacon_access_cnt_, sizeof(float));
+
+        // Dump ewma_remote_beacon_prob_
+        fs_ptr->write((const char*)&ewma_remote_beacon_prob_, sizeof(float));
+
+        // NOTE: NO need to dump ewma_propagation_latency_clientedge_us_, which is not changed after initialization and not affect weights
+
+        // Dump ewma_propagation_latency_crossedge_us_
+        fs_ptr->write((const char*)&ewma_propagation_latency_crossedge_us_, sizeof(uint32_t));
+
+        // Dump ewma_propagation_latency_edgecloud_us_
+        fs_ptr->write((const char*)&ewma_propagation_latency_edgecloud_us_, sizeof(uint32_t));
+
+        // Dump weight_info_
+        weight_info_.dumpWeightInfo(fs_ptr);
+
+        return;
+    }
+
+    void WeightTuner::loadWeightTunerSnapshot(std::fstream* fs_ptr)
+    {
+        assert(fs_ptr != NULL);
+
+        // Load local_beacon_access_cnt_
+        fs_ptr->read((char*)&local_beacon_access_cnt_, sizeof(float));
+
+        // Load remote_beacon_access_cnt_
+        fs_ptr->read((char*)&remote_beacon_access_cnt_, sizeof(float));
+
+        // Load ewma_remote_beacon_prob_
+        fs_ptr->read((char*)&ewma_remote_beacon_prob_, sizeof(float));
+
+        // NOTE: NO need to load ewma_propagation_latency_clientedge_us_, which is not changed after initialization and not affect weights
+
+        // Load ewma_propagation_latency_crossedge_us_
+        fs_ptr->read((char*)&ewma_propagation_latency_crossedge_us_, sizeof(uint32_t));
+
+        // Load ewma_propagation_latency_edgecloud_us_
+        fs_ptr->read((char*)&ewma_propagation_latency_edgecloud_us_, sizeof(uint32_t));
+
+        // Load weight_info_
+        weight_info_.loadWeightInfo(fs_ptr);
+
+        return;
     }
 
     void WeightTuner::updateEwmaRemoteBeaconProb_()

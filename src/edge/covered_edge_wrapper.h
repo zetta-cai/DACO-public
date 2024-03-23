@@ -90,6 +90,7 @@ namespace covered
 
         // (8) Evaluation-related functions
         virtual void dumpEdgeSnapshot_(std::fstream* fs_ptr) const override;
+        virtual void loadEdgeSnapshot_(std::fstream* fs_ptr) override;
     private:
         static const std::string kClassName;
 

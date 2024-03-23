@@ -9,6 +9,7 @@
 #ifndef VICTIM_DIRINFO_H
 #define VICTIM_DIRINFO_H
 
+#include <fstream>
 #include <string>
 
 #include "cooperation/directory/dirinfo_set.h"
@@ -42,6 +43,10 @@ namespace covered
         uint64_t getSizeForCapacity() const;
 
         const VictimDirinfo& operator=(const VictimDirinfo& other);
+
+        // Dump/load each per-key victim dirinfo of synchronized victims for covered cache manager snapshot
+        void dumpVictimDirinfo(std::fstream* fs_ptr) const;
+        void loadVictimDirinfo(std::fstream* fs_ptr);
     private:
         static const std::string kClassName;
 

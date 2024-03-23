@@ -1,6 +1,7 @@
 #include "cooperation/directory/directory_info.h"
 
 #include <arpa/inet.h> // htonl ntohl
+#include <assert.h>
 
 namespace covered
 {
@@ -69,6 +70,18 @@ namespace covered
         return size - position;
     }
 
+    uint32_t DirectoryInfo::serialize(std::fstream* fs_ptr) const
+    {
+        assert(fs_ptr != NULL);
+
+        uint32_t size = 0;
+        uint32_t bigendian_target_edge_idx = 0;
+        fs_ptr->write((const char*)&bigendian_target_edge_idx, sizeof(uint32_t));
+        size += sizeof(uint32_t);
+
+        return size;
+    }
+
     uint32_t DirectoryInfo::deserialize(const DynamicArray& msg_payload, const uint32_t& position)
     {
         uint32_t size = position;
@@ -77,6 +90,19 @@ namespace covered
         target_edge_idx_ = ntohl(bigendian_target_edge_idx);
         size += sizeof(uint32_t);
         return size - position;
+    }
+
+    uint32_t DirectoryInfo::deserialize(std::fstream* fs_ptr)
+    {
+        assert(fs_ptr != NULL);
+
+        uint32_t size = 0;
+        uint32_t bigendian_target_edge_idx = 0;
+        fs_ptr->read((char*)&bigendian_target_edge_idx, sizeof(uint32_t));
+        target_edge_idx_ = ntohl(bigendian_target_edge_idx);
+        size += sizeof(uint32_t);
+
+        return size;
     }
 
     uint64_t DirectoryInfo::getSizeForCapacity() const

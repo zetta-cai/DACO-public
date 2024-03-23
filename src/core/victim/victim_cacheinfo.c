@@ -404,6 +404,46 @@ namespace covered
         return size - position;
     }
 
+    uint32_t VictimCacheinfo::serialize(std::fstream* fs_ptr) const
+    {
+        assert(fs_ptr != NULL);
+        assert(dedup_bitmap_ != INVALID_BITMAP);
+
+        uint32_t size = 0;
+        fs_ptr->write((const char*)&dedup_bitmap_, sizeof(uint8_t));
+        size += sizeof(uint8_t);
+        uint32_t key_serialize_size = key_.serialize(fs_ptr);
+        size += key_serialize_size;
+        fs_ptr->write((const char*)&beacon_edgeidx_, sizeof(uint32_t));
+        size += sizeof(uint32_t);
+        bool with_complete_object_size = ((dedup_bitmap_ & OBJECT_SIZE_DEDUP_MASK) != OBJECT_SIZE_DEDUP_MASK);
+        if (with_complete_object_size)
+        {
+            fs_ptr->write((const char*)&object_size_, sizeof(ObjectSize));
+            size += sizeof(ObjectSize);
+        }
+        bool with_complete_local_cached_popularity = ((dedup_bitmap_ & LOCAL_CACHED_POPULARITY_DEDUP_MASK) != LOCAL_CACHED_POPULARITY_DEDUP_MASK);
+        if (with_complete_local_cached_popularity)
+        {
+            fs_ptr->write((const char*)&local_cached_popularity_, sizeof(Popularity));
+            size += sizeof(Popularity);
+        }
+        bool with_complete_redirected_cached_popularity = ((dedup_bitmap_ & REDIRECTED_CACHED_POPULARITY_DEDUP_MASK) != REDIRECTED_CACHED_POPULARITY_DEDUP_MASK);
+        if (with_complete_redirected_cached_popularity)
+        {
+            fs_ptr->write((const char*)&redirected_cached_popularity_, sizeof(Popularity));
+            size += sizeof(Popularity);
+        }
+        bool with_complete_local_reward = ((dedup_bitmap_ & LOCAL_REWARD_DEDUP_MASK) != LOCAL_REWARD_DEDUP_MASK);
+        if (with_complete_local_reward)
+        {
+            fs_ptr->write((const char*)&local_reward_, sizeof(Reward));
+            size += sizeof(Reward);
+        }
+
+        return size;
+    }
+
     uint32_t VictimCacheinfo::deserialize(const DynamicArray& msg_payload, const uint32_t& position)
     {
         uint32_t size = position;
@@ -441,6 +481,47 @@ namespace covered
         }
 
         return size - position;
+    }
+
+    uint32_t VictimCacheinfo::deserialize(std::fstream* fs_ptr)
+    {
+        assert(fs_ptr != NULL);
+        
+        uint32_t size = 0;
+        fs_ptr->read((char *)&dedup_bitmap_, sizeof(uint8_t));
+        size += sizeof(uint8_t);
+        assert(dedup_bitmap_ != INVALID_BITMAP);
+        
+        uint32_t key_deserialize_size = key_.deserialize(fs_ptr);
+        size += key_deserialize_size;
+        fs_ptr->read((char *)&beacon_edgeidx_, sizeof(uint32_t));
+        size += sizeof(uint32_t);
+        bool with_complete_object_size = ((dedup_bitmap_ & OBJECT_SIZE_DEDUP_MASK) != OBJECT_SIZE_DEDUP_MASK);
+        if (with_complete_object_size)
+        {
+            fs_ptr->read((char*)&object_size_, sizeof(ObjectSize));
+            size += sizeof(ObjectSize);
+        }
+        bool with_complete_local_cached_popularity = ((dedup_bitmap_ & LOCAL_CACHED_POPULARITY_DEDUP_MASK) != LOCAL_CACHED_POPULARITY_DEDUP_MASK);
+        if (with_complete_local_cached_popularity)
+        {
+            fs_ptr->read((char*)&local_cached_popularity_, sizeof(Popularity));
+            size += sizeof(Popularity);
+        }
+        bool with_complete_redirected_cached_popularity = ((dedup_bitmap_ & REDIRECTED_CACHED_POPULARITY_DEDUP_MASK) != REDIRECTED_CACHED_POPULARITY_DEDUP_MASK);
+        if (with_complete_redirected_cached_popularity)
+        {
+            fs_ptr->read((char*)&redirected_cached_popularity_, sizeof(Popularity));
+            size += sizeof(Popularity);
+        }
+        bool with_complete_local_reward = ((dedup_bitmap_ & LOCAL_REWARD_DEDUP_MASK) != LOCAL_REWARD_DEDUP_MASK);
+        if (with_complete_local_reward)
+        {
+            fs_ptr->read((char*)&local_reward_, sizeof(Reward));
+            size += sizeof(Reward);
+        }
+
+        return size;
     }
 
     uint64_t VictimCacheinfo::getSizeForCapacity() const

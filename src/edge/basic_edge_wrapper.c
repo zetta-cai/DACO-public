@@ -245,7 +245,23 @@ namespace covered
         // Dump cache wrapper
         edge_cache_ptr_->dumpCacheSnapshot(fs_ptr);
 
-        // TODO: Dump cooperation wrapper
+        // Dump cooperation wrapper
+        cooperation_wrapper_ptr_->dumpCooperationSnapshot(fs_ptr);
+
+        return;
+    }
+
+    void BasicEdgeWrapper::loadEdgeSnapshot_(std::fstream* fs_ptr)
+    {
+        checkPointers_();
+
+        assert(fs_ptr != NULL);
+
+        // Load cache wrapper
+        edge_cache_ptr_->loadCacheSnapshot(fs_ptr);
+
+        // Load cooperation wrapper
+        cooperation_wrapper_ptr_->loadCooperationSnapshot(fs_ptr);
 
         return;
     }

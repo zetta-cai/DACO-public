@@ -949,6 +949,79 @@ namespace covered
         return size - position;
     }
 
+    uint32_t VictimSyncset::serialize(std::fstream* fs_ptr) const
+    {
+        checkValidity_();
+        assert(fs_ptr != NULL);
+
+        uint32_t size = 0;
+
+        // Compressed bitmap
+        fs_ptr->write((const char*)&compressed_bitmap_, sizeof(uint8_t));
+        size += sizeof(uint8_t);
+
+        // Seqnum
+        fs_ptr->write((const char*)&seqnum_, sizeof(SeqNum));
+        size += sizeof(SeqNum);
+
+        // is_enforce_complete
+        fs_ptr->write((const char*)&is_enforce_complete_, sizeof(bool));
+        size += sizeof(bool);
+
+        // Cache margin bytes
+        bool with_complete_cache_margin_bytes = ((compressed_bitmap_ & CACHE_MARGIN_BYTES_DELTA_MASK) != CACHE_MARGIN_BYTES_DELTA_MASK);
+        if (with_complete_cache_margin_bytes)
+        {
+            fs_ptr->write((const char*)&cache_margin_bytes_, sizeof(uint64_t));
+            size += sizeof(uint64_t);
+        }
+        else
+        {
+            fs_ptr->write((const char*)&cache_margin_delta_bytes_, sizeof(int));
+            size += sizeof(int);
+
+        }
+
+        // Size of local synced victims
+        bool is_empty_local_synced_victims = ((compressed_bitmap_ & LOCAL_SYNCED_VICTIMS_EMPTY_MASK) == LOCAL_SYNCED_VICTIMS_EMPTY_MASK);
+        if (!is_empty_local_synced_victims) // Non-empty local synced victims
+        {
+            uint32_t local_synced_victims_size = local_synced_victims_.size();
+            fs_ptr->write((const char*)&local_synced_victims_size, sizeof(uint32_t));
+            size += sizeof(uint32_t);
+
+            // Local synced victims
+            for (std::list<VictimCacheinfo>::const_iterator cacheinfo_list_iter = local_synced_victims_.begin(); cacheinfo_list_iter != local_synced_victims_.end(); cacheinfo_list_iter++)
+            {
+                uint32_t cacheinfo_serialize_size = cacheinfo_list_iter->serialize(fs_ptr); // Complete or compressed
+                size += cacheinfo_serialize_size;
+            }
+        }
+
+        // Size of local beaconed victims
+        bool is_empty_local_beaconed_victims = ((compressed_bitmap_ & LOCAL_BEACONED_VICTIMS_EMPTY_MASK) == LOCAL_BEACONED_VICTIMS_EMPTY_MASK);
+        if (!is_empty_local_beaconed_victims) // Non-empty local beaconed victims
+        {
+            uint32_t local_beaconed_victims_size = local_beaconed_victims_.size();
+            fs_ptr->write((const char*)&local_beaconed_victims_size, sizeof(uint32_t));
+            size += sizeof(uint32_t);
+
+            // Local beaconed victims
+            for (std::list<std::pair<Key, DirinfoSet>>::const_iterator key_dirinfoset_list_iter = local_beaconed_victims_.begin(); key_dirinfoset_list_iter != local_beaconed_victims_.end(); key_dirinfoset_list_iter++)
+            {
+                uint32_t key_serialize_size = key_dirinfoset_list_iter->first.serialize(fs_ptr);
+                size += key_serialize_size;
+
+                // Dirinfo set for the given key
+                const DirinfoSet& tmp_dirinfo_set = key_dirinfoset_list_iter->second;
+                uint32_t dirinfo_set_serialize_size = tmp_dirinfo_set.serialize(fs_ptr); // Complete or compressed
+                size += dirinfo_set_serialize_size;
+            }
+        }
+
+        return size;
+    }
+
     uint32_t VictimSyncset::deserialize(const DynamicArray& msg_payload, const uint32_t& position)
     {
         uint32_t size = position;
@@ -1027,6 +1100,88 @@ namespace covered
         }
 
         return size - position;
+    }
+
+    uint32_t VictimSyncset::deserialize(std::fstream* fs_ptr)
+    {
+        assert(fs_ptr != NULL);
+
+        uint32_t size = 0;
+
+        // Compressed bitmap
+        fs_ptr->read((char*)&compressed_bitmap_, sizeof(uint8_t));
+        assert(compressed_bitmap_ != INVALID_BITMAP);
+        size += sizeof(uint8_t);
+
+        // Seqnum
+        fs_ptr->read((char*)&seqnum_, sizeof(SeqNum));
+        size += sizeof(SeqNum);
+
+        // is_enforce_complete
+        fs_ptr->read((char*)&is_enforce_complete_, sizeof(bool));
+        size += sizeof(bool);
+
+        // Cache margin bytes
+        bool with_complete_cache_margin_bytes = ((compressed_bitmap_ & CACHE_MARGIN_BYTES_DELTA_MASK) != CACHE_MARGIN_BYTES_DELTA_MASK);
+        if (with_complete_cache_margin_bytes)
+        {
+            fs_ptr->read((char*)&cache_margin_bytes_, sizeof(uint64_t));
+            size += sizeof(uint64_t);
+        }
+        else
+        {
+            fs_ptr->read((char*)&cache_margin_delta_bytes_, sizeof(int));
+            size += sizeof(int);
+        }
+
+        // Size of local synced victims
+        bool is_empty_local_synced_victims = ((compressed_bitmap_ & LOCAL_SYNCED_VICTIMS_EMPTY_MASK) == LOCAL_SYNCED_VICTIMS_EMPTY_MASK);
+        if (!is_empty_local_synced_victims) // Non-empty local synced victims
+        {
+            uint32_t local_synced_victims_size = 0;
+            fs_ptr->read((char*)&local_synced_victims_size, sizeof(uint32_t));
+            size += sizeof(uint32_t);
+
+            // Local synced victims
+            local_synced_victims_.clear();
+            for (uint32_t i = 0; i < local_synced_victims_size; i++)
+            {
+                VictimCacheinfo cacheinfo;
+                uint32_t cacheinfo_deserialize_size = cacheinfo.deserialize(fs_ptr); // Complete or compressed
+                size += cacheinfo_deserialize_size;
+                assert(!cacheinfo.isInvalid());
+                
+                local_synced_victims_.push_back(cacheinfo);
+            }
+        }
+
+        // Size of local beaconed victims
+        bool is_empty_local_beaconed_victims = ((compressed_bitmap_ & LOCAL_BEACONED_VICTIMS_EMPTY_MASK) == LOCAL_BEACONED_VICTIMS_EMPTY_MASK);
+        if (!is_empty_local_beaconed_victims) // Non-empty local beaconed victims
+        {
+            uint32_t local_beaconed_victims_size = 0;
+            fs_ptr->read((char*)&local_beaconed_victims_size, sizeof(uint32_t));
+            size += sizeof(uint32_t);
+
+            // Local beaconed victims
+            local_beaconed_victims_.clear();
+            for (uint32_t i = 0; i < local_beaconed_victims_size; i++)
+            {
+                Key key;
+                uint32_t key_deserialize_size = key.deserialize(fs_ptr);
+                size += key_deserialize_size;
+
+                // Dirinfo set for the given key
+                DirinfoSet tmp_dirinfo_set;
+                uint32_t dirinfo_set_deserialize_size = tmp_dirinfo_set.deserialize(fs_ptr); // Complete or compressed
+                size += dirinfo_set_deserialize_size;
+                assert(!tmp_dirinfo_set.isInvalid());
+
+                local_beaconed_victims_.push_back(std::pair(key, tmp_dirinfo_set));
+            }
+        }
+
+        return size;
     }
 
     uint64_t VictimSyncset::getSizeForCapacity() const

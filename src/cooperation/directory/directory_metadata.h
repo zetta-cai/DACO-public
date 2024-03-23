@@ -7,6 +7,7 @@
 #ifndef DIRECTORY_METADATA_H
 #define DIRECTORY_METADATA_H
 
+#include <fstream>
 #include <string>
 
 namespace covered
@@ -14,6 +15,7 @@ namespace covered
     class DirectoryMetadata
     {
     public:
+        DirectoryMetadata();
         DirectoryMetadata(const bool& is_valid);
         ~DirectoryMetadata();
 
@@ -24,6 +26,10 @@ namespace covered
         uint64_t getSizeForCapacity() const;
 
         const DirectoryMetadata& operator=(const DirectoryMetadata& other);
+
+        // Dump/load directory metadata of directory entry of directory table for cooperation snapshot
+        void dumpDirectoryMetadata(std::fstream* fs_ptr) const;
+        void loadDirectoryMetadata(std::fstream* fs_ptr);
     private:
         static const std::string kClassName;
 

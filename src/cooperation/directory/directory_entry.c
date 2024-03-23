@@ -248,4 +248,56 @@ namespace covered
         directory_entry_ = other.directory_entry_;
         return *this;
     }
+
+    // (3) Dump/load directory entry for directory table of cooperation snapshot
+
+    void DirectoryEntry::dumpDirectoryEntry(std::fstream* fs_ptr) const
+    {
+        assert(fs_ptr != NULL);
+
+        // Dump dirinfo-dirmetadata pairs
+        // (1) pair cnt
+        const uint32_t pair_cnt = directory_entry_.size();
+        fs_ptr->write((const char*)&pair_cnt, sizeof(uint32_t));
+        // (2) dirinfo-dirmetadata pairs
+        for (dirinfo_entry_t::const_iterator tmp_const_iter = directory_entry_.begin(); tmp_const_iter != directory_entry_.end(); tmp_const_iter++)
+        {
+            // Dump the dirinfo
+            const DirectoryInfo& directory_info = tmp_const_iter->first;
+            directory_info.serialize(fs_ptr);
+
+            // Dump the directory metadata
+            const DirectoryMetadata& directory_metadata = tmp_const_iter->second;
+            directory_metadata.dumpDirectoryMetadata(fs_ptr);
+        }
+
+        return;
+    }
+
+    void DirectoryEntry::loadDirectoryEntry(std::fstream* fs_ptr)
+    {
+        assert(fs_ptr != NULL);
+
+        // Load dirinfo-dirmetadata pairs
+        // (1) pair cnt
+        uint32_t pair_cnt = 0;
+        fs_ptr->read((char*)&pair_cnt, sizeof(uint32_t));
+        // (2) dirinfo-dirmetadata pairs
+        directory_entry_.clear();
+        for (uint32_t i = 0; i < pair_cnt; i++)
+        {
+            // Load the dirinfo
+            DirectoryInfo directory_info;
+            directory_info.deserialize(fs_ptr);
+
+            // Load the directory metadata
+            DirectoryMetadata directory_metadata;
+            directory_metadata.loadDirectoryMetadata(fs_ptr);
+
+            // Update the directory entry
+            directory_entry_.insert(std::pair<DirectoryInfo, DirectoryMetadata>(directory_info, directory_metadata));
+        }
+
+        return;
+    }
 }

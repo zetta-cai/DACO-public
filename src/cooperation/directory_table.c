@@ -264,9 +264,9 @@ namespace covered
         return size;
     }
 
-    // Dump/load directory metadata for directory snapshot
+    // Dump/load directory table for cooperation snapshot
 
-    void DirectoryTable::dumpDirectoryMetadata(std::fstream* fs_ptr) const
+    void DirectoryTable::dumpDirectoryTable(std::fstream* fs_ptr) const
     {
         assert(fs_ptr != NULL);
 
@@ -285,7 +285,7 @@ namespace covered
             const Key& tmp_key = key_direntry_map_const_iter->first;
             const uint32_t key_serialize_size = tmp_key.serialize(fs_ptr);
 
-            // Dump the direntry (TODO: END HERE)
+            // Dump the direntry
             const DirectoryEntry& direntry = key_direntry_map_const_iter->second;
             direntry.dumpDirectoryEntry(fs_ptr);
         }
@@ -293,7 +293,7 @@ namespace covered
         return;
     }
 
-    void DirectoryTable::loadDirectoryMetadata(std::fstream* fs_ptr)
+    void DirectoryTable::loadDirectoryTable(std::fstream* fs_ptr)
     {
         assert(fs_ptr != NULL);
 

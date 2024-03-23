@@ -521,6 +521,116 @@ namespace covered
         return size_bytes_;
     }
 
+    // Dump/load synchronized victims of covered cache manager snapshot
+
+    void VictimTracker::dumpVictimTracker(std::fstream* fs_ptr) const
+    {
+        checkPointers_();
+        assert(fs_ptr != NULL);
+
+        // Dump size_bytes_
+        fs_ptr->write((const char*)&size_bytes_, sizeof(uint64_t));
+
+        // Dump per-edge victim metadata
+        // (1) per-edge victim metadata cnt
+        uint32_t peredge_victim_metadata_cnt = peredge_victim_metadata_.size();
+        fs_ptr->write((const char*)&peredge_victim_metadata_cnt, sizeof(uint32_t));
+        // (2) per-edge victim metadata
+        for (uint32_t i = 0; i < peredge_victim_metadata_cnt; i++)
+        {
+            // Dump the edge-level victim metadata
+            peredge_victim_metadata_[i].dumpEdgelevelVictimMetadata(fs_ptr);
+        }
+
+        // Dump per-key victim dirinfo
+        // (1) per-key victim dirinfo cnt
+        uint32_t perkey_victim_dirinfo_cnt = perkey_victim_dirinfo_.size();
+        fs_ptr->write((const char*)&perkey_victim_dirinfo_cnt, sizeof(uint32_t));
+        // (2) key-victim_dirinfo pairs
+        for (perkey_victim_dirinfo_t::const_iterator dirinfo_list_iter = perkey_victim_dirinfo_.begin(); dirinfo_list_iter != perkey_victim_dirinfo_.end(); dirinfo_list_iter++)
+        {
+            // Dump the key
+            const Key& tmp_key = dirinfo_list_iter->first;
+            tmp_key.serialize(fs_ptr);
+
+            // Dump the victim dirinfo
+            const VictimDirinfo& tmp_victim_dirinfo = dirinfo_list_iter->second;
+            tmp_victim_dirinfo.dumpVictimDirinfo(fs_ptr);
+        }
+
+        // Dump per-edge victim syncmonitor
+        // (1) per-edge victim syncmonitor cnt
+        uint32_t peredge_victimsync_monitor_cnt = peredge_victimsync_monitor_.size();
+        fs_ptr->write((const char*)&peredge_victimsync_monitor_cnt, sizeof(uint32_t));
+        // (2) per-edge victim syncmonitor
+        for (uint32_t i = 0; i < peredge_victimsync_monitor_cnt; i++)
+        {
+            // Dump the victim syncmonitor
+            peredge_victimsync_monitor_[i].dumpVictimsyncMonitor(fs_ptr);
+        }
+
+        return;
+    }
+
+    void VictimTracker::loadVictimTracker(std::fstream* fs_ptr)
+    {
+        checkPointers_();
+        assert(fs_ptr != NULL);
+
+        // Load size_bytes_
+        fs_ptr->read((char*)&size_bytes_, sizeof(uint64_t));
+
+        // Load per-edge victim metadata
+        // (1) per-edge victim metadata cnt
+        uint32_t peredge_victim_metadata_cnt = 0;
+        fs_ptr->read((char*)&peredge_victim_metadata_cnt, sizeof(uint32_t));
+        // (2) per-edge victim metadata
+        peredge_victim_metadata_.clear();
+        for (uint32_t i = 0; i < peredge_victim_metadata_cnt; i++)
+        {
+            // Load the edge-level victim metadata
+            EdgelevelVictimMetadata tmp_victim_metadata;
+            tmp_victim_metadata.loadEdgelevelVictimMetadata(fs_ptr);
+            peredge_victim_metadata_.push_back(tmp_victim_metadata);
+        }
+
+        // Load per-key victim dirinfo
+        // (1) per-key victim dirinfo cnt
+        uint32_t perkey_victim_dirinfo_cnt = 0;
+        fs_ptr->read((char*)&perkey_victim_dirinfo_cnt, sizeof(uint32_t));
+        // (2) key-victim_dirinfo pairs
+        perkey_victim_dirinfo_.clear();
+        for (uint32_t i = 0; i < perkey_victim_dirinfo_cnt; i++)
+        {
+            // Load the key
+            Key tmp_key;
+            tmp_key.deserialize(fs_ptr);
+
+            // Load the victim dirinfo
+            VictimDirinfo tmp_victim_dirinfo;
+            tmp_victim_dirinfo.loadVictimDirinfo(fs_ptr);
+
+            // Insert the key-victim_dirinfo pair
+            perkey_victim_dirinfo_.push_back(std::pair(tmp_key, tmp_victim_dirinfo));
+        }
+
+        // Load per-edge victim syncmonitor
+        // (1) per-edge victim syncmonitor cnt
+        uint32_t peredge_victimsync_monitor_cnt = 0;
+        fs_ptr->read((char*)&peredge_victimsync_monitor_cnt, sizeof(uint32_t));
+        // (2) per-edge victim syncmonitor
+        peredge_victimsync_monitor_.clear();
+        for (uint32_t i = 0; i < peredge_victimsync_monitor_cnt; i++)
+        {
+            // Load the victim syncmonitor
+            VictimsyncMonitor tmp_victimsync_monitor;
+            tmp_victimsync_monitor.loadVictimsyncMonitor(fs_ptr);
+            peredge_victimsync_monitor_.push_back(tmp_victimsync_monitor);
+        }
+
+        return;
+    }
+
     // Utils
 
     // For victim synchronization

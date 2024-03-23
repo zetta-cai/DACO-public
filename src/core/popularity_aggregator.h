@@ -9,6 +9,7 @@
 #ifndef POPULARITY_AGGREGATOR_H
 #define POPULARITY_AGGREGATOR_H
 
+#include <fstream>
 #include <map> // std::multimap
 #include <string>
 #include <unordered_map> // std::unordered_map
@@ -44,6 +45,10 @@ namespace covered
         void clearPreservedEdgesetAfterAdmission(const Key& key, const uint32_t& source_edge_idx); // Clear preserved edge nodes for the given key at the source edge node for metadata releasing after local/remote admission notification (NOTE: is_global_cached MUST be true)
 
         uint64_t getSizeForCapacity() const;
+
+        // Dump/load per-key aggregated popularity for covered cache manager snapshot
+        void dumpPopularityAggregator(std::fstream* fs_ptr) const;
+        void loadPopularityAggregator(std::fstream* fs_ptr);
     private:
         // NOTE: we MUST store Key in ordered list to locate lookup table during eviciton; use duplicate Keys in lookup table to update ordered list -> if we store Key pointer in ordered list and use duplicate popularity/LRU-order in lookup table, we still can locate lookup table during eviction, yet cannot locate the corresponding popularity entry / have to access all LRU entries to update ordered list
         typedef std::multimap<DeltaReward, AggregatedUncachedPopularity> benefit_popularity_multimap_t; // Aggregated popularities for each global popular objects sorted in ascending order of Delta rewards (i.e., max admission benefits)

@@ -193,6 +193,114 @@ namespace covered
         return *this;
     }
 
+    // Dump/load each of per-key aggregated popularity for covered cache manager snapshot
+
+    void AggregatedUncachedPopularity::dumpAggregatedUncachedPopularity(std::fstream* fs_ptr) const
+    {
+        assert(fs_ptr != NULL);
+
+        // Dump the key
+        key_.serialize(fs_ptr);
+
+        // Dump the object size
+        fs_ptr->write((const char*)&object_size_, sizeof(ObjectSize));
+
+        // Dump the sum of local uncached popularity
+        fs_ptr->write((const char*)&sum_local_uncached_popularity_, sizeof(Popularity));
+
+        // Dump top-k of edgeidx-local_uncached_popularity pairs
+        // (1) top-k list size
+        const uint32_t topk_list_size = topk_edgeidx_local_uncached_popularity_pairs_.size();
+        fs_ptr->write((const char*)&topk_list_size, sizeof(uint32_t));
+        // (2) edgeidx-local_uncached_popularity pairs
+        for (std::list<edgeidx_popularity_pair_t>::const_iterator topk_list_iter = topk_edgeidx_local_uncached_popularity_pairs_.begin(); topk_list_iter != topk_edgeidx_local_uncached_popularity_pairs_.end(); topk_list_iter++)
+        {
+            // Dump the edgeidx
+            fs_ptr->write((const char*)&(topk_list_iter->first), sizeof(uint32_t));
+
+            // Dump the local uncached popularity
+            fs_ptr->write((const char*)&(topk_list_iter->second), sizeof(Popularity));
+        }
+
+        // Dump the bitmap
+        // (1) bitmap size
+        const uint32_t bitmap_size = bitmap_.size();
+        fs_ptr->write((const char*)&bitmap_size, sizeof(uint32_t));
+        // (2) bits
+        for (uint32_t i = 0; i < bitmap_size; i++)
+        {
+            // Dump the bit
+            const bool tmp_bit = bitmap_[i];
+            fs_ptr->write((const char*)&tmp_bit, sizeof(bool));
+        }
+
+        // NOTE: NO need to dump exist_edgecnt_, as it can be calculated from bitmap_ loaded from snapshot
+
+        return;
+    }
+
+    void AggregatedUncachedPopularity::loadAggregatedUncachedPopularity(std::fstream* fs_ptr)
+    {
+        assert(fs_ptr != NULL);
+
+        // Load the key
+        key_.deserialize(fs_ptr);
+
+        // Load the object size
+        fs_ptr->read((char*)&object_size_, sizeof(ObjectSize));
+
+        // Load the sum of local uncached popularity
+        fs_ptr->read((char*)&sum_local_uncached_popularity_, sizeof(Popularity));
+
+        // Load top-k of edgeidx-local_uncached_popularity pairs
+        // (1) top-k list size
+        uint32_t topk_list_size = 0;
+        fs_ptr->read((char*)&topk_list_size, sizeof(uint32_t));
+        // (2) edgeidx-local_uncached_popularity pairs
+        topk_edgeidx_local_uncached_popularity_pairs_.clear();
+        for (uint32_t i = 0; i < topk_list_size; i++)
+        {
+            // Load the edgeidx
+            uint32_t tmp_edge_idx = 0;
+            fs_ptr->read((char*)&tmp_edge_idx, sizeof(uint32_t));
+
+            // Load the local uncached popularity
+            Popularity tmp_local_uncached_popularity = 0.0;
+            fs_ptr->read((char*)&tmp_local_uncached_popularity, sizeof(Popularity));
+
+            // Insert the edgeidx-local_uncached_popularity pair
+            topk_edgeidx_local_uncached_popularity_pairs_.push_back(std::pair(tmp_edge_idx, tmp_local_uncached_popularity));
+        }
+
+        // Load the bitmap
+        // (1) bitmap size
+        uint32_t bitmap_size = 0;
+        fs_ptr->read((char*)&bitmap_size, sizeof(uint32_t));
+        // (2) bits
+        bitmap_.clear();
+        for (uint32_t i = 0; i < bitmap_size; i++)
+        {
+            // Load the bit
+            bool tmp_bit = false;
+            fs_ptr->read((char*)&tmp_bit, sizeof(bool));
+
+            // Insert the bit
+            bitmap_.push_back(tmp_bit);
+        }
+
+        // Calculate exist_edgecnt_ from bitmap_
+        exist_edgecnt_ = 0;
+        for (uint32_t i = 0; i < bitmap_size; i++)
+        {
+            if (bitmap_[i] == true)
+            {
+                exist_edgecnt_ += 1;
+            }
+        }
+
+        return;
+    }
+
     Popularity AggregatedUncachedPopularity::getLocalUncachedPopularityForExistingEdgeIdx_(const uint32_t& source_edge_idx) const
     {
         assert(bitmap_[source_edge_idx] == true);
