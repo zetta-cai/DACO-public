@@ -526,16 +526,17 @@ namespace covered
         assert(fs_ptr != NULL);
 
         // Get all keys from validity map
-        std::vector<Key> keys_in_validity_map;
-        validity_map_ptr_->getAllKeys(keys_in_validity_map);
+        std::unordered_map<Key, ValidityFlag, KeyHasher> key_validity_pairs_in_validity_map;
+        validity_map_ptr_->getAllKeyValidityPairs(key_validity_pairs_in_validity_map);
 
         // Get all cached key-value-validity tuples
         std::vector<Key> cached_keys;
         std::vector<Value> cached_values;
         std::vector<bool> cached_validity;
-        for (uint32_t i = 0; i < keys_in_validity_map.size(); i++)
+        for (std::unordered_map<Key, ValidityFlag>::const_iterator key_validity_pairs_in_validity_map_const_iter = key_validity_pairs_in_validity_map.begin(); key_validity_pairs_in_validity_map_const_iter != key_validity_pairs_in_validity_map.end(); key_validity_pairs_in_validity_map_const_iter++)
         {
-            const Key& tmp_key = keys_in_validity_map[i];
+            const Key& tmp_key = key_validity_pairs_in_validity_map_const_iter->first;
+            const bool is_valid = key_validity_pairs_in_validity_map_const_iter->second.isValidFlag();
 
             // Get value of the key
             bool unused_is_redirected = false;
@@ -547,14 +548,6 @@ namespace covered
 
             if (is_local_cached)
             {
-                // Get validity of the key
-                bool is_exist = false;
-                bool is_valid = validity_map_ptr_->isValidFlagForKey(tmp_key, is_exist);
-                if (!is_exist)
-                {
-                    assert(is_valid == false);
-                }
-
                 cached_keys.push_back(tmp_key);
                 cached_values.push_back(tmp_value);
                 cached_validity.push_back(is_valid);
@@ -570,14 +563,11 @@ namespace covered
         for (uint32_t i = 0; i < cached_keycnt; i++)
         {
             // Dump the key
-            DynamicArray tmp_dynamic_array_for_key(cached_keys[i].getKeyPayloadSize());
-            const uint32_t key_serialize_size = cached_keys[i].serialize(tmp_dynamic_array_for_key, 0);
-            tmp_dynamic_array_for_key.writeBinaryFile(0, fs_ptr, key_serialize_size);
+            const uint32_t key_serialize_size = cached_keys[i].serialize(fs_ptr);
 
             // Dump the value
-            DynamicArray tmp_dynamic_array_for_value(cached_values[i].getValuePayloadSize(is_value_space_efficient));
-            const uint32_t value_serialize_size = cached_values[i].serialize(tmp_dynamic_array_for_value, 0, is_value_space_efficient);
-            tmp_dynamic_array_for_value.writeBinaryFile(0, fs_ptr, value_serialize_size);
+            const uint32_t value_serialize_size = cached_values[i].serialize(fs_ptr, is_value_space_efficient);
+            assert(value_serialize_size == cached_values[i].getValuePayloadSize(is_value_space_efficient));
 
             // Dump the validity
             fs_ptr->write((const char*)&cached_validity[i], sizeof(bool));
@@ -608,7 +598,7 @@ namespace covered
 
         // TMPDEBUG24
         std::ostringstream oss;
-        oss << "keycnt from validity map: " << keys_in_validity_map.size() << "; cached keycnt: " << cached_keycnt;
+        oss << "keycnt from validity map: " << key_validity_pairs_in_validity_map.size() << "; cached keycnt: " << cached_keycnt;
         Util::dumpNormalMsg(instance_name_, oss.str());
 
         return;

@@ -7,6 +7,7 @@
 #ifndef KEY_LEVEL_METADATA_BASE_H
 #define KEY_LEVEL_METADATA_BASE_H
 
+#include <fstream>
 #include <string>
 
 #include "common/covered_common_header.h"

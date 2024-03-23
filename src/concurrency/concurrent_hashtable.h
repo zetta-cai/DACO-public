@@ -43,7 +43,7 @@ namespace covered
         uint64_t getTotalValueSizeForCapcity() const;
 
         // ONLY used by edge snapshot
-        void getAllKeys(const std::vector<Key>& keys) const;
+        void getAllKeyValuePairs(std::unordered_map<Key, V, KeyHasher>& kvpairs) const;
     private:
         static const std::string kClassName;
 

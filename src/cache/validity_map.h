@@ -63,7 +63,7 @@ namespace covered
         uint64_t getSizeForCapacity() const;
 
         // ONLY used by edge snapshot
-        void getAllKeys(const std::vector<Key>& keys) const;
+        void getAllKeyValidityPairs(std::unordered_map<Key, ValidityFlag, KeyHasher>& key_validity_map) const;
     private:
         static const std::string kClassName;
 

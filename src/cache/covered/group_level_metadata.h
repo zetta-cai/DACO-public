@@ -7,6 +7,7 @@
 #ifndef GROUP_LEVEL_METADATA_H
 #define GROUP_LEVEL_METADATA_H
 
+#include <fstream>
 #include <string>
 
 #include "common/covered_common_header.h"

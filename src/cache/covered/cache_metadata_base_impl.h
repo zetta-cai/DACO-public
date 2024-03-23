@@ -345,9 +345,7 @@ namespace covered
         {
             // Dump the key
             const Key& tmp_key = perkey_metadata_list_const_iter->first;
-            DynamicArray tmp_dynamic_array_for_key(tmp_key.getKeyPayloadSize());
-            const uint32_t key_serialize_size = tmp_key.serialize(tmp_dynamic_array_for_key, 0);
-            tmp_dynamic_array_for_key.writeBinaryFile(0, fs_ptr, key_serialize_size);
+            const uint32_t key_serialize_size = tmp_key.serialize(fs_ptr);
 
             // Dump KeyLevelMetadata
             const T& key_level_metadata = perkey_metadata_list_iter->second;
@@ -387,9 +385,7 @@ namespace covered
 
             // Dump the key
             const Key& tmp_key = sorted_reward_multimap_const_iter->second;
-            DynamicArray tmp_dynamic_array_for_key(tmp_key.getKeyPayloadSize());
-            const uint32_t key_serialize_size = tmp_key.serialize(tmp_dynamic_array_for_key, 0);
-            tmp_dynamic_array_for_key.writeBinaryFile(0, fs_ptr, key_serialize_size);
+            const uint32_t key_serialize_size = tmp_key.serialize(fs_ptr);
         }
 
         // Dump lookup table

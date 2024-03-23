@@ -100,7 +100,7 @@ namespace covered
         uint64_t getSizeForCapacity_(const bool& is_local_cached_metadata) const;
 
         // Dump/load load cached/uncached metadata for cache metadata in cache snapshot
-        // NOTE: NO need to be virtual functions, as local cached/uncached metadata do not introduce extra data structured compared with cache metadata base
+        // NOTE: NO need to be virtual functions, as local cached/uncached metadata do not introduce extra data structures compared with cache metadata base
         void dumpLocalMetadata(std::fstream* fs_ptr) const;
         void loadLocalMetadata(std::fstream* fs_ptr);
     protected:

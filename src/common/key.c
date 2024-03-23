@@ -80,6 +80,19 @@ namespace covered
         return size - position;
     }
 
+    uint32_t Key::serialize(std::fstream* fs_ptr) const
+    {
+        assert(fs_ptr != NULL);
+
+        uint32_t size = 0;
+        uint32_t bigendian_keysize = htonl(keystr_.length());
+        fs_ptr->write((const char*)&bigendian_keysize, sizeof(uint32_t));
+        size += sizeof(uint32_t);
+        fs_ptr->write((const char*)keystr_.data(), keystr_.length());
+        size += keystr_.length();
+        return size;
+    }
+
     uint32_t Key::deserialize(const DynamicArray& msg_payload, const uint32_t& position)
     {
         uint32_t size = position;
@@ -96,6 +109,8 @@ namespace covered
 
     uint32_t Key::deserialize(std::fstream* fs_ptr)
     {
+        assert(fs_ptr != NULL);
+        
         uint32_t size = 0;
         uint32_t bitendian_keysize = 0;
         fs_ptr->read((char*)&bitendian_keysize, sizeof(uint32_t));

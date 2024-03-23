@@ -3,8 +3,6 @@
 #include <assert.h>
 #include <sstream>
 
-#include "common/util.h"
-
 namespace covered
 {
     const std::string GroupLevelMetadata::kClassName("GroupLevelMetadata");

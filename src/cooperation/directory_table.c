@@ -263,4 +263,61 @@ namespace covered
 
         return size;
     }
+
+    // Dump/load directory metadata for directory snapshot
+
+    void DirectoryTable::dumpDirectoryMetadata(std::fstream* fs_ptr) const
+    {
+        assert(fs_ptr != NULL);
+
+        // Get all key-direntry pairs
+        std::unordered_map<Key, DirectoryEntry, KeyHasher> key_direntry_map;
+        directory_hashtable_.getAllKeyValuePairs(key_direntry_map);
+        
+        // Dump key-direntry pairs
+        // (1) pair cnt
+        const uint32_t key_direntry_mapsize = key_direntry_map.size();
+        fs_ptr->write((const char*)&key_direntry_mapsize, sizeof(uint32_t));
+        // (2) key-direntry pairs
+        for (std::unordered_map<Key, DirectoryEntry, KeyHasher>::const_iterator key_direntry_map_const_iter = key_direntry_map.begin(); key_direntry_map_const_iter != key_direntry_map.end(); key_direntry_map_const_iter++)
+        {
+            // Dump the key
+            const Key& tmp_key = key_direntry_map_const_iter->first;
+            const uint32_t key_serialize_size = tmp_key.serialize(fs_ptr);
+
+            // Dump the direntry (TODO: END HERE)
+            const DirectoryEntry& direntry = key_direntry_map_const_iter->second;
+            direntry.dumpDirectoryEntry(fs_ptr);
+        }
+
+        return;
+    }
+
+    void DirectoryTable::loadDirectoryMetadata(std::fstream* fs_ptr)
+    {
+        assert(fs_ptr != NULL);
+
+        // Load key-direntry pairs
+        // (1) pair cnt
+        uint32_t key_direntry_mapsize = 0;
+        fs_ptr->read((char*)&key_direntry_mapsize, sizeof(uint32_t));
+        // (2) key-direntry pairs
+        for (uint32_t i = 0; i < key_direntry_mapsize; i++)
+        {
+            // Load the key
+            Key tmp_key;
+            tmp_key.deserialize(fs_ptr);
+
+            // Load the direntry
+            DirectoryEntry direntry;
+            direntry.loadDirectoryEntry(fs_ptr);
+
+            // Insert the key-direntry pair
+            bool is_exist = false;
+            directory_hashtable_.insertOrCall(tmp_key, direntry, is_exist, DirectoryEntry::ADD_DIRINFO_FUNCNAME, NULL);
+            assert(!is_exist); // NOTE: key MUST NOT exist in the directory hashtable
+        }
+
+        return;
+    }
 }

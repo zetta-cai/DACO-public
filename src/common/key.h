@@ -29,6 +29,7 @@ namespace covered
 
         uint32_t getKeyPayloadSize() const;
         uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position) const;
+        uint32_t serialize(std::fstream* fs_ptr) const;
         uint32_t deserialize(const DynamicArray& msg_payload, const uint32_t& position);
         uint32_t deserialize(std::fstream* fs_ptr);
 

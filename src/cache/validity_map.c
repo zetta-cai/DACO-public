@@ -132,8 +132,8 @@ namespace covered
         return size;
     }
 
-    void ValidityMap::getAllKeys(const std::vector<Key>& keys) const
+    void ValidityMap::getAllKeyValidityPairs(std::unordered_map<Key, ValidityFlag, KeyHasher>& key_validity_map) const
     {
-        return perkey_validity_.getAllKeys(keys);
+        return perkey_validity_.getAllKeyValuePairs(key_validity_map);
     }
 }

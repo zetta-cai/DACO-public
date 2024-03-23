@@ -78,6 +78,26 @@ namespace covered
         return size - position;
     }
 
+    uint32_t Value::serialize(std::fstream* fs_ptr, const bool& is_space_efficient) const
+    {
+        uint32_t size = 0;
+        fs_ptr->write((const char*)&is_deleted_, sizeof(bool));
+        size += sizeof(bool);
+        uint32_t bigendian_valuesize = htonl(valuesize_);
+        fs_ptr->write((const char*)&bigendian_valuesize, sizeof(uint32_t));
+        size += sizeof(uint32_t);
+        if (!is_space_efficient) // For network packets
+        {
+            std::string valuestr_for_network = generateValuestrForNetwork_();
+            if (valuestr_for_network.length() > 0)
+            {
+                fs_ptr->write((const char*)valuestr_for_network.data(), valuestr_for_network.length());
+                size += valuestr_for_network.length();
+            }
+        }
+        return size;
+    }
+
     uint32_t Value::deserialize(const DynamicArray& msg_payload, const uint32_t& position, const bool& is_space_efficient)
     {
         uint32_t size = position;

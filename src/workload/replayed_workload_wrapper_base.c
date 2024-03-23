@@ -399,9 +399,7 @@ namespace covered
         {
             // Key
             const Key& tmp_key = dataset_kvpairs_[i].first;
-            DynamicArray tmp_dynamic_array_for_key(tmp_key.getKeyPayloadSize());
-            const uint32_t key_serialize_size = tmp_key.serialize(tmp_dynamic_array_for_key, 0);
-            tmp_dynamic_array_for_key.writeBinaryFile(0, fs_ptr, key_serialize_size);
+            const uint32_t key_serialize_size = tmp_key.serialize(fs_ptr);
             size += key_serialize_size;
 
             // Must be sampled key
@@ -410,9 +408,8 @@ namespace covered
 
             // Value
             const Value& tmp_value = dataset_kvpairs_[i].second;
-            DynamicArray tmp_dynamic_array_for_value(tmp_value.getValuePayloadSize(is_value_space_efficient));
-            const uint32_t value_serialize_size = tmp_value.serialize(tmp_dynamic_array_for_value, 0, is_value_space_efficient);
-            tmp_dynamic_array_for_value.writeBinaryFile(0, fs_ptr, value_serialize_size);
+            const uint32_t value_serialize_size = tmp_value.serialize(fs_ptr, is_value_space_efficient);
+            assert(value_serialize_size == tmp_value.getValuePayloadSize(is_value_space_efficient));
             size += value_serialize_size;
         }
 
@@ -453,9 +450,7 @@ namespace covered
         {
             // Key
             const Key& tmp_key = sample_workload_keys_[i];
-            DynamicArray tmp_dynamic_array_for_key(tmp_key.getKeyPayloadSize());
-            const uint32_t key_serialize_size = tmp_key.serialize(tmp_dynamic_array_for_key, 0);
-            tmp_dynamic_array_for_key.writeBinaryFile(0, fs_ptr, key_serialize_size);
+            const uint32_t key_serialize_size = tmp_key.serialize(fs_ptr);
             size += key_serialize_size;
 
             // Coded value size (< 0: read; = 0: delete; > 0: write)

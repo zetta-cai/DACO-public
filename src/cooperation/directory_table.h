@@ -9,6 +9,7 @@
 #ifndef DIRECTORY_TABLE_H
 #define DIRECTORY_TABLE_H
 
+#include <fstream>
 #include <random> // std::mt19937_64
 #include <string>
 #include <unordered_map>
@@ -43,6 +44,10 @@ namespace covered
         void validateDirinfoForKeyIfExist(const Key& key, const DirectoryInfo& directory_info, bool& is_key_exist, bool& is_dirinfo_exist); // Validate only if key and dirinfo exist (NOT add a valid dirinfo)
 
         uint64_t getSizeForCapacity() const;
+
+        // Dump/load directory metadata for directory snapshot
+        void dumpDirectoryMetadata(std::fstream* fs_ptr) const;
+        void loadDirectoryMetadata(std::fstream* fs_ptr);
     private:
         typedef ConcurrentHashtable<DirectoryEntry> dirinfo_table_t;
 

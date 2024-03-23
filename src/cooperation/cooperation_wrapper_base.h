@@ -11,6 +11,7 @@
 #ifndef COOPERATION_WRAPPER_BASE_H
 #define COOPERATION_WRAPPER_BASE_H
 
+#include <fstream>
 #include <string>
 #include <unordered_set>
 
@@ -64,6 +65,11 @@ namespace covered
         // (3) Other functions
 
         uint64_t getSizeForCapacity() const;
+
+        // (4) Dump/load directory snapshot
+        // NOTE: NO need to be virtual functions, as basic/covered cooperation wrapper do not introduce extra data structures compared with cooperation wrapper base
+        void dumpDirectorySnapshot(std::fstream* fs_ptr) const;
+        void loadDirectorySnapshot(std::fstream* fs_ptr);
     private:
         static const std::string kClassName;
 

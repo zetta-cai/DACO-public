@@ -41,6 +41,7 @@ namespace covered
         // -> If is_space_efficient = false (to serialize/deserialize network packets), value content will consume space (up to MAX_VALUE_CONTENT_SIZE bytes)
         uint32_t getValuePayloadSize(const bool& is_space_efficient = false) const;
         uint32_t serialize(DynamicArray& msg_payload, const uint32_t& position, const bool& is_space_efficient = false) const;
+        uint32_t serialize(std::fstream* fs_ptr, const bool& is_space_efficient = false) const;
         uint32_t deserialize(const DynamicArray& msg_payload, const uint32_t& position, const bool& is_space_efficient = false);
         uint32_t deserialize(std::fstream* fs_ptr, const bool& is_space_efficient = false);
 

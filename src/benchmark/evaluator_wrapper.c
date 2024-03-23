@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <sstream>
+#include <unistd.h> // sleep
 
 #include "common/config.h"
 #include "common/dynamic_array.h"
@@ -435,6 +436,10 @@ namespace covered
                 // Finish warmup phase
                 if (need_finish_warmup)
                 {
+                    // NOTE: some operations (e.g., directory update, cache invalidation, and finish block caused by duplicated requests after timeout and retry) may still be ongoing
+                    Util::dumpNormalMsg(kClassName, "Sleep to wait for remaining operations...");
+                    sleep(5); // Sleep 5s
+
                     Util::dumpNormalMsg(kClassName, "Stop benchmark...");
 
                     // Notify client/edge/cloud to finish run
