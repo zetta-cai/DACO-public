@@ -391,7 +391,13 @@ namespace covered
             std::list<std::pair<Key, std::list<VictimCacheinfo>>>::const_iterator pervictim_cacheinfos_const_iter = KVListHelper<Key, std::list<VictimCacheinfo>>::findVFromListForK(tmp_victim_key, pervictim_cacheinfos);
             assert(pervictim_cacheinfos_const_iter != pervictim_cacheinfos.end());
             const std::list<VictimCacheinfo>& tmp_victim_cacheinfos = pervictim_cacheinfos_const_iter->second;
-            assert(tmp_victim_cacheinfos.size() == tmp_victim_edgeset_ref.size());
+            if (tmp_victim_cacheinfos.size() != tmp_victim_edgeset_ref.size())
+            {
+                std::ostringstream oss;
+                oss << "victim " << tmp_victim_key.getKeyDebugstr() << " has " << tmp_victim_cacheinfos.size() << " cacheinfos but " << tmp_victim_edgeset_ref.size() << " edges in edgeset (" << tmp_victim_edgeset_ref.toString() << ")";
+                Util::dumpErrorMsg(instance_name_, oss.str());
+                exit(1);
+            }
 
             // Calculate eviction cost based on is_last_copies and tmp_victim_cacheinfos
             for (std::list<VictimCacheinfo>::const_iterator victim_cacheinfo_list_const_iter = tmp_victim_cacheinfos.begin(); victim_cacheinfo_list_const_iter != tmp_victim_cacheinfos.end(); victim_cacheinfo_list_const_iter++)
