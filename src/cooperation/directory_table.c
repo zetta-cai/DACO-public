@@ -284,6 +284,7 @@ namespace covered
             // Dump the key
             const Key& tmp_key = key_direntry_map_const_iter->first;
             const uint32_t key_serialize_size = tmp_key.serialize(fs_ptr);
+            UNUSED(key_serialize_size);
 
             // Dump the direntry
             const DirectoryEntry& direntry = key_direntry_map_const_iter->second;

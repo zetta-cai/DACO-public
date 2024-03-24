@@ -341,14 +341,14 @@ namespace covered
         // (2) key-KeyLevelMetadata pairs
         const uint32_t perkey_metadata_list_size = perkey_metadata_list_.size();
         fs_ptr->write((const char*)&perkey_metadata_list_size, sizeof(uint32_t));
-        for (perkey_metadata_list_t::const_iterator perkey_metadata_list_const_iter = perkey_metadata_list_.begin(); perkey_metadata_list_const_iter != perkey_metadata_list_.end(); perkey_metadata_list_const_iter++)
+        for (typename perkey_metadata_list_t::const_iterator perkey_metadata_list_const_iter = perkey_metadata_list_.begin(); perkey_metadata_list_const_iter != perkey_metadata_list_.end(); perkey_metadata_list_const_iter++)
         {
             // Dump the key
             const Key& tmp_key = perkey_metadata_list_const_iter->first;
             const uint32_t key_serialize_size = tmp_key.serialize(fs_ptr);
 
             // Dump KeyLevelMetadata
-            const T& key_level_metadata = perkey_metadata_list_iter->second;
+            const T& key_level_metadata = perkey_metadata_list_const_iter->second;
             key_level_metadata.dumpKeyLevelMetadata(fs_ptr);
         }
 
@@ -402,8 +402,8 @@ namespace covered
         assert(fs_ptr != NULL);
 
         // Data structures used to rebuild lookup table
-        std::unordered_map<Key, perkey_metadata_list_iter_t> perkey_metadata_listiter;
-        std::unordered_map<Key, sorted_reward_multimap_t::iterator> perkey_reward_mapiter;
+        std::unordered_map<Key, perkey_metadata_list_iter_t, KeyHasher> perkey_metadata_listiter;
+        std::unordered_map<Key, sorted_reward_multimap_t::iterator, KeyHasher> perkey_reward_mapiter;
 
         // Clear object-level metadata (updated due to replaying admissions)
         perkey_metadata_list_key_size_ = 0;
@@ -428,7 +428,9 @@ namespace covered
             // Update key-level metadata list
             perkey_metadata_list_.push_back(std::pair<Key, T>(tmp_key, key_level_metadata));
 
-            perkey_metadata_listiter.insert(std::pair(tmp_key, perkey_metadata_list_.back()));
+            perkey_metadata_list_iter_t tmp_perkey_metadata_list_iter = perkey_metadata_list_.end();
+            tmp_perkey_metadata_list_iter--;
+            perkey_metadata_listiter.insert(std::pair(tmp_key, tmp_perkey_metadata_list_iter));
         }
 
         // Clear object-level metadata (updated due to replaying admissions)
@@ -492,7 +494,7 @@ namespace covered
         // (1) perkey_lookup_table_key_size_
         fs_ptr->read((char*)&perkey_lookup_table_key_size_, sizeof(uint64_t));
         // NOTE: NO need to load perkey_lookup_table_, which can be built from scratch based on object-level, group-level, and reward information loaded snapshot
-        for (std::unordered_map<Key, perkey_metadata_list_iter_t>::const_iterator perkey_metadata_listiter_const_iter = perkey_metadata_listiter.begin(); perkey_metadata_listiter_const_iter != perkey_metadata_listiter.end(); perkey_metadata_listiter_const_iter++)
+        for (typename std::unordered_map<Key, perkey_metadata_list_iter_t>::const_iterator perkey_metadata_listiter_const_iter = perkey_metadata_listiter.begin(); perkey_metadata_listiter_const_iter != perkey_metadata_listiter.end(); perkey_metadata_listiter_const_iter++)
         {
             // Get the key
             const Key& tmp_key = perkey_metadata_listiter_const_iter->first;

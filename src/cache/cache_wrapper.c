@@ -564,13 +564,15 @@ namespace covered
         {
             // Dump the key
             const uint32_t key_serialize_size = cached_keys[i].serialize(fs_ptr);
+            UNUSED(key_serialize_size);
 
             // Dump the value
             const uint32_t value_serialize_size = cached_values[i].serialize(fs_ptr, is_value_space_efficient);
             assert(value_serialize_size == cached_values[i].getValuePayloadSize(is_value_space_efficient));
 
             // Dump the validity
-            fs_ptr->write((const char*)&cached_validity[i], sizeof(bool));
+            const bool tmp_validity = cached_validity[i];
+            fs_ptr->write((const char*)&tmp_validity, sizeof(bool));
 
             // Dump the beacon edge index if any
             bool tmp_with_beaconidx = false;

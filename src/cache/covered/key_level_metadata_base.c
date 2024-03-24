@@ -8,6 +8,17 @@ namespace covered
 {
     const std::string KeyLevelMetadataBase::kClassName("KeyLevelMetadataBase");
 
+    KeyLevelMetadataBase::KeyLevelMetadataBase() : group_id_(0)
+    {
+        local_frequency_ = 0;
+        #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
+        object_size_ = 0;
+        #endif
+        local_popularity_ = 0.0;
+
+        is_valid_ = false;
+    }
+
     KeyLevelMetadataBase::KeyLevelMetadataBase(const GroupId& group_id, const bool& is_neighbor_cached) : group_id_(group_id)
     {
         UNUSED(is_neighbor_cached);
@@ -17,6 +28,8 @@ namespace covered
         object_size_ = 0;
         #endif
         local_popularity_ = 0.0;
+
+        // NOTE: is_valid_ will be set by derived classes
     }
 
     KeyLevelMetadataBase::KeyLevelMetadataBase(const KeyLevelMetadataBase& other) : group_id_(other.group_id_)
@@ -26,12 +39,16 @@ namespace covered
         object_size_ = other.object_size_;
         #endif
         local_popularity_ = other.local_popularity_;
+
+        is_valid_ = other.is_valid_;
     }
 
     KeyLevelMetadataBase::~KeyLevelMetadataBase() {}
 
     void KeyLevelMetadataBase::updateValueDynamicMetadata(const ObjectSize& object_size, const ObjectSize& original_object_size)
     {
+        checkValidity_();
+
         #ifdef ENABLE_TRACK_PERKEY_OBJSIZE        
         assert(object_size_ == original_object_size);
         object_size_ = object_size;
@@ -42,6 +59,8 @@ namespace covered
 
     void KeyLevelMetadataBase::updateLocalPopularity(const Popularity& local_popularity)
     {
+        checkValidity_();
+
         local_popularity_ = local_popularity;
 
         return;
@@ -49,23 +68,31 @@ namespace covered
 
     GroupId KeyLevelMetadataBase::getGroupId() const
     {
+        checkValidity_();
+
         return group_id_;
     }
 
     Frequency KeyLevelMetadataBase::getLocalFrequency() const
     {
+        checkValidity_();
+
         return local_frequency_;
     }
 
     #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
     ObjectSize KeyLevelMetadataBase::getObjectSize() const
     {
+        checkValidity_();
+
         return object_size_;
     }
     #endif
 
     Popularity KeyLevelMetadataBase::getLocalPopularity() const
     {
+        checkValidity_();
+
         return local_popularity_;
     }
 
@@ -83,6 +110,7 @@ namespace covered
 
     void KeyLevelMetadataBase::dumpKeyLevelMetadata(std::fstream* fs_ptr) const
     {
+        checkValidity_();
         assert(fs_ptr != NULL);
 
         // Dump group id
@@ -120,11 +148,21 @@ namespace covered
         // Load local popularity
         fs_ptr->read((char*)&local_popularity_, sizeof(Popularity));
 
+        // NOTE: is_valid_ will be set by derived classes
+
+        return;
+    }
+
+    void KeyLevelMetadataBase::checkValidity_() const
+    {
+        assert(is_valid_ == true);
         return;
     }
 
     void KeyLevelMetadataBase::updateNoValueDynamicMetadata_()
     {
+        checkValidity_();
+
         local_frequency_++;
 
         return;

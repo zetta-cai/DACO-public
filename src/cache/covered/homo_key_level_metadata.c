@@ -8,20 +8,32 @@ namespace covered
 {
     const std::string HomoKeyLevelMetadata::kClassName("HomoKeyLevelMetadata");
 
+    HomoKeyLevelMetadata::HomoKeyLevelMetadata() : KeyLevelMetadataBase()
+    {
+        is_global_cached_ = false;
+
+        // NOTE: base class will set is_valid_ as false
+    }
+
     HomoKeyLevelMetadata::HomoKeyLevelMetadata(const GroupId& group_id, const bool& is_neighbor_cached) : KeyLevelMetadataBase(group_id, is_neighbor_cached)
     {
         is_global_cached_ = true; // Conservatively treat the object is already global cached
+
+        is_valid_ = true;
     }
 
     HomoKeyLevelMetadata::HomoKeyLevelMetadata(const HomoKeyLevelMetadata& other) : KeyLevelMetadataBase(other)
     {
         is_global_cached_ = other.is_global_cached_;
+
+        // NOTE: base class will set is_valid_ as other.is_valid_
     }
 
     HomoKeyLevelMetadata::~HomoKeyLevelMetadata() {}
 
     void HomoKeyLevelMetadata::updateNoValueDynamicMetadata(const bool& is_redirected, const bool& is_global_cached)
     {
+        checkValidity_();
         assert(!is_redirected); // MUST be local request for local uncached objects
 
         KeyLevelMetadataBase::updateNoValueDynamicMetadata_();
@@ -32,11 +44,13 @@ namespace covered
 
     bool HomoKeyLevelMetadata::isGlobalCached() const
     {
+        checkValidity_();
         return is_global_cached_;
     }
 
     void HomoKeyLevelMetadata::updateIsGlobalCached(const bool& is_global_cached)
     {
+        checkValidity_();
         is_global_cached_ = is_global_cached;
         return;
     }
@@ -52,6 +66,7 @@ namespace covered
     
     void HomoKeyLevelMetadata::dumpKeyLevelMetadata(std::fstream* fs_ptr) const
     {
+        checkValidity_();
         assert(fs_ptr != NULL);
 
         // Dump key-level metadata in base class
@@ -72,6 +87,8 @@ namespace covered
 
         // Load is global cached flag
         fs_ptr->read((char*)&is_global_cached_, sizeof(bool));
+
+        is_valid_ = true;
 
         return;
     }

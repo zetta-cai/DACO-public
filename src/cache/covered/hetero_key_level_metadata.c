@@ -8,12 +8,24 @@ namespace covered
 {
     const std::string HeteroKeyLevelMetadata::kClassName("HeteroKeyLevelMetadata");
 
+    HeteroKeyLevelMetadata::HeteroKeyLevelMetadata() : KeyLevelMetadataBase()
+    {
+        redirected_frequency_ = 0;
+        redirected_popularity_ = 0.0;
+
+        is_neighbor_cached_ = false;
+
+        // NOTE: base class will set is_valid_ as false
+    }
+
     HeteroKeyLevelMetadata::HeteroKeyLevelMetadata(const GroupId& group_id, const bool& is_neighbor_cached) : KeyLevelMetadataBase(group_id, is_neighbor_cached)
     {
         redirected_frequency_ = 0;
         redirected_popularity_ = 0.0;
 
         is_neighbor_cached_ = is_neighbor_cached;
+
+        is_valid_ = true;
     }
 
     HeteroKeyLevelMetadata::HeteroKeyLevelMetadata(const HeteroKeyLevelMetadata& other) : KeyLevelMetadataBase(other)
@@ -21,12 +33,15 @@ namespace covered
         redirected_frequency_ = other.redirected_frequency_;
         redirected_popularity_ = other.redirected_popularity_;
         is_neighbor_cached_ = other.is_neighbor_cached_;
+
+        // NOTE: base class will set is_valid_ as other.is_valid_
     }
 
     HeteroKeyLevelMetadata::~HeteroKeyLevelMetadata() {}
 
     void HeteroKeyLevelMetadata::updateNoValueDynamicMetadata(const bool& is_redirected, const bool& is_global_cached)
     {
+        checkValidity_();
         assert(is_global_cached == true); // Local cached objects MUST be global cached
         
         if (is_redirected)
@@ -43,6 +58,7 @@ namespace covered
 
     void HeteroKeyLevelMetadata::updateRedirectedPopularity(const Popularity& redirected_popularity)
     {
+        checkValidity_();
         redirected_popularity_ = redirected_popularity;
 
         return;
@@ -50,28 +66,33 @@ namespace covered
 
     Frequency HeteroKeyLevelMetadata::getRedirectedFrequency() const
     {
+        checkValidity_();
         return redirected_frequency_;
     }
 
     Popularity HeteroKeyLevelMetadata::getRedirectedPopularity() const
     {
+        checkValidity_();
         return redirected_popularity_;
     }
 
     void HeteroKeyLevelMetadata::enableIsNeighborCached()
     {
+        checkValidity_();
         is_neighbor_cached_ = true;
         return;
     }
 
     void HeteroKeyLevelMetadata::disableIsNeighborCached()
     {
+        checkValidity_();
         is_neighbor_cached_ = false;
         return;
     }
 
     bool HeteroKeyLevelMetadata::isNeighborCached() const
     {
+        checkValidity_();
         bool is_neighbor_cached = is_neighbor_cached_;
         return is_neighbor_cached;
     }
@@ -87,6 +108,7 @@ namespace covered
     
     void HeteroKeyLevelMetadata::dumpKeyLevelMetadata(std::fstream* fs_ptr) const
     {
+        checkValidity_();
         assert(fs_ptr != NULL);
 
         // Dump key-level metadata in base class
@@ -119,6 +141,8 @@ namespace covered
 
         // Load is neighbor cached flag
         fs_ptr->read((char*)&is_neighbor_cached_, sizeof(bool));
+
+        is_valid_ = true;
 
         return;
     }

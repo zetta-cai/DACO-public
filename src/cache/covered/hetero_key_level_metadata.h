@@ -21,6 +21,7 @@ namespace covered
     class HeteroKeyLevelMetadata : public KeyLevelMetadataBase
     {
     public:
+        HeteroKeyLevelMetadata();
         HeteroKeyLevelMetadata(const GroupId& group_id, const bool& is_neighbor_cached); // NOTE: is_neighbor_cached ONLY used by HeteroKeyLevelMetadata for local cached metadata
         HeteroKeyLevelMetadata(const HeteroKeyLevelMetadata& other);
         ~HeteroKeyLevelMetadata();

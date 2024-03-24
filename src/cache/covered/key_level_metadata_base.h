@@ -17,6 +17,7 @@ namespace covered
     class KeyLevelMetadataBase
     {
     public:
+        KeyLevelMetadataBase();
         KeyLevelMetadataBase(const GroupId& group_id, const bool& is_neighbor_cached); // NOTE: is_neighbor_cached ONLY used by HeteroKeyLevelMetadata for local cached metadata
         KeyLevelMetadataBase(const KeyLevelMetadataBase& other);
         ~KeyLevelMetadataBase();
@@ -40,6 +41,10 @@ namespace covered
         virtual void loadKeyLevelMetadata(std::fstream* fs_ptr);
     protected:
         void updateNoValueDynamicMetadata_(); // Update value-unrelated dynamic metadata
+
+        // Just impl trick to avoid bugs (NOT count into cache size)
+        bool is_valid_;
+        void checkValidity_() const;
     private:
         static const std::string kClassName;
 

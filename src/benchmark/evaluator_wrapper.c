@@ -590,7 +590,7 @@ namespace covered
         // (1) First stable condition: warmup_reqcnt requests have been processed during warmup phase
 
         const uint64_t total_reqcnt = total_statistics_tracker_ptr_->getTotalReqcnt();
-        bool need_finish_warmup = (total_reqcnt >= static_cast<uint64_t>(warmup_reqcnt_));
+        need_finish_warmup = (total_reqcnt >= static_cast<uint64_t>(warmup_reqcnt_));
         #else
         // (2) Second stable condition (if ENABLE_WARMUP_MAX_DURATION is defined): monitor stable global hit ratio (i.e., cache is filled up and total object hit ratio converges) within warmup max duration
 

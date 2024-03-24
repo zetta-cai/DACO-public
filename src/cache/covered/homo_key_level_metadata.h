@@ -17,6 +17,7 @@ namespace covered
     class HomoKeyLevelMetadata : public KeyLevelMetadataBase
     {
     public:
+        HomoKeyLevelMetadata();
         HomoKeyLevelMetadata(const GroupId& group_id, const bool& is_neighbor_cached); // NOTE: is_neighbor_cached ONLY used by HeteroKeyLevelMetadata for local cached metadata
         HomoKeyLevelMetadata(const HomoKeyLevelMetadata& other);
         ~HomoKeyLevelMetadata();
