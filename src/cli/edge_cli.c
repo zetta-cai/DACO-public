@@ -308,8 +308,8 @@ namespace covered
             else if (realnet_option == Util::REALNET_LOAD_OPTION_NAME)
             {
                 // Check snapshot dirpath must exist
-                bool is_file_exist = Util::isFileExist(edge_snapshot_dirpath, true);
-                if (!is_file_exist)
+                bool is_dir_exist = Util::isDirectoryExist(edge_snapshot_dirpath, true);
+                if (!is_dir_exist)
                 {
                     std::ostringstream oss;
                     oss << "snapshot directory " << edge_snapshot_dirpath << " does not exist!";

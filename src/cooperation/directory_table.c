@@ -315,7 +315,7 @@ namespace covered
 
             // Insert the key-direntry pair
             bool is_exist = false;
-            directory_hashtable_.insertOrCall(tmp_key, direntry, is_exist, DirectoryEntry::ADD_DIRINFO_FUNCNAME, NULL);
+            directory_hashtable_.putKeyValuePair(tmp_key, direntry, is_exist);
             assert(!is_exist); // NOTE: key MUST NOT exist in the directory hashtable
         }
 

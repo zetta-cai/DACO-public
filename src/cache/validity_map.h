@@ -64,6 +64,7 @@ namespace covered
 
         // ONLY used by edge snapshot
         void getAllKeyValidityPairs(std::unordered_map<Key, ValidityFlag, KeyHasher>& key_validity_map) const;
+        void putKeyValidityPair(const Key& tmp_key, const ValidityFlag& tmp_validity_flag, bool& is_exist);
     private:
         static const std::string kClassName;
 

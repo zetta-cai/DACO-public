@@ -136,4 +136,11 @@ namespace covered
     {
         return perkey_validity_.getAllKeyValuePairs(key_validity_map);
     }
+
+    void ValidityMap::putKeyValidityPair(const Key& tmp_key, const ValidityFlag& tmp_validity_flag, bool& is_exist)
+    {
+        is_exist = false;
+        perkey_validity_.putKeyValuePair(tmp_key, tmp_validity_flag, is_exist);
+        return;
+    }
 }

@@ -74,7 +74,14 @@ namespace covered
 
     EvaluatorWrapper::EvaluatorWrapper(const uint32_t& clientcnt, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& warmup_reqcnt_scale, const uint32_t& warmup_max_duration_sec, const uint32_t& stresstest_duration_sec, const std::string& evaluator_statistics_filepath, const std::string& realnet_option) : clientcnt_(clientcnt), edgecnt_(edgecnt), warmup_reqcnt_(keycnt * warmup_reqcnt_scale), warmup_max_duration_sec_(warmup_max_duration_sec), stresstest_duration_sec_(stresstest_duration_sec), evaluator_statistics_filepath_(evaluator_statistics_filepath), realnet_option_(realnet_option)
     {
-        is_warmup_phase_ = true;
+        if (realnet_option == Util::REALNET_LOAD_OPTION_NAME)
+        {
+            is_warmup_phase_ = false;
+        }
+        else
+        {
+            is_warmup_phase_ = true;
+        }
         target_slot_idx_ = 0;
 
         // (1) Manage evaluation phases
@@ -357,7 +364,7 @@ namespace covered
             // Monitor if cache object hit ratio is stable to finish the warmup phase if any
             if (is_warmup_phase_) // Warmup phase
             {
-                bool need_finish_warmup = checkWarmupStatus_();
+                bool need_finish_warmup = checkWarmupStatus_(start_timestamp, cur_timestamp);
 
                 // Finish warmup phase
                 if (need_finish_warmup)
@@ -404,7 +411,8 @@ namespace covered
     {
         // Monitor cache object hit ratio for warmup and stresstest phases
         const uint32_t client_raw_statistics_slot_interval_sec = Config::getClientRawStatisticsSlotIntervalSec();
-        struct timespec prev_timestamp = Util::getCurrentTimespec(); // For switch slot
+        struct timespec start_timestamp = Util::getCurrentTimespec(); // For max duration of warmup phase and duration of stresstest phase
+        struct timespec prev_timestamp = start_timestamp; // For switch slot
         bool is_monitored = false; // Whether to monitor messages for debugging
         while (true)
         {
@@ -431,7 +439,7 @@ namespace covered
             // Monitor if cache object hit ratio is stable to finish the warmup phase if any
             if (is_warmup_phase_) // Warmup phase
             {
-                bool need_finish_warmup = checkWarmupStatus_();
+                bool need_finish_warmup = checkWarmupStatus_(start_timestamp, cur_timestamp);
 
                 // Finish warmup phase
                 if (need_finish_warmup)
@@ -444,6 +452,8 @@ namespace covered
 
                     // Notify client/edge/cloud to finish run
                     notifyAllToFinishrun_(); // Update per-slot/stable total aggregated statistics
+
+                    break;
                 } // End of finish warmup phase
             } // End if (is_warmup_phase == true)
 
@@ -456,12 +466,83 @@ namespace covered
             }
         } // End of while loop
 
+        // Print last-slot total aggregated statistics
+        std::ostringstream oss;
+        oss << total_statistics_tracker_ptr_->curslotToString(target_slot_idx_) << std::endl;
+        Util::dumpNormalMsg(kClassName, oss.str());
+
         return;
     }
 
     void EvaluatorWrapper::realnetLoadEval_()
     {
-        // TODO
+        // Monitor cache object hit ratio for warmup and stresstest phases
+        const uint32_t client_raw_statistics_slot_interval_sec = Config::getClientRawStatisticsSlotIntervalSec();
+        struct timespec start_timestamp = Util::getCurrentTimespec(); // For max duration of warmup phase and duration of stresstest phase
+        struct timespec prev_timestamp = start_timestamp; // For switch slot
+        bool is_monitored = false; // Whether to monitor messages for debugging
+        while (true)
+        {
+            usleep(Util::SLEEP_INTERVAL_US);
+
+            struct timespec cur_timestamp = Util::getCurrentTimespec();
+            bool with_new_slot_statistics = false;
+
+            assert(is_warmup_phase_ == false); // Realnet load will directly perform stresstest after loading snapshot instead of warmup
+
+            // Count down duration for stresstest phase to judge if benchmark is finished
+            if (!is_warmup_phase_) // Stresstest phase
+            {
+                double delta_us_for_finishrun = Util::getDeltaTimeUs(cur_timestamp, start_timestamp);
+                if (delta_us_for_finishrun >= SEC2US(stresstest_duration_sec_))
+                {
+                    Util::dumpNormalMsg(kClassName, "Stop benchmark...");
+
+                    // Notify client/edge/cloud to finish run
+                    notifyAllToFinishrun_(); // Update per-slot/stable total aggregated statistics
+
+                    break;
+                }
+            }
+
+            // Switch cur-slot client raw statistics to track per-slot aggregated statistics
+            double delta_us_for_switch_slot = Util::getDeltaTimeUs(cur_timestamp, prev_timestamp);
+            if (delta_us_for_switch_slot >= static_cast<double>(SEC2US(client_raw_statistics_slot_interval_sec)))
+            {
+                // Notify clients to switch cur-slot client raw statistics
+                notifyClientsToSwitchSlot_(is_monitored); // Increase target_slot_idx_ by one, update per-slot total aggregated statistics, and update total_reqcnt in TotalStatisticsTracker
+
+                with_new_slot_statistics = true;
+
+                // Update prev_timestamp for the next slot
+                prev_timestamp = cur_timestamp;
+            }
+
+            if (with_new_slot_statistics)
+            {
+                // Print latest-slot total aggregated statistics
+                std::ostringstream oss;
+                oss << total_statistics_tracker_ptr_->curslotToString(target_slot_idx_ - 1);
+                Util::dumpNormalMsg(kClassName, oss.str());
+            }
+        } // End of while loop
+
+        // Print last-slot/stable total aggregated statistics
+        std::ostringstream oss;
+        oss << total_statistics_tracker_ptr_->curslotToString(target_slot_idx_) << std::endl;
+        oss << total_statistics_tracker_ptr_->stableToString() << std::endl;
+        Util::dumpNormalMsg(kClassName, oss.str());
+
+        // Dump per-slot/stable total aggregated statistics
+        oss.clear();
+        oss.str("");
+        oss << "dump per-slot/stable total aggregated statistics into " << evaluator_statistics_filepath_;
+        Util::dumpNormalMsg(kClassName, oss.str());
+        uint32_t dump_size = total_statistics_tracker_ptr_->dump(evaluator_statistics_filepath_);
+        oss.clear();
+        oss.str("");
+        oss << "finish dump for " << dump_size << " bytes";
+        Util::dumpNormalMsg(kClassName, oss.str());
     }
 
     // (3) Evaluation helpers
@@ -582,7 +663,7 @@ namespace covered
         return;
     }
 
-    bool EvaluatorWrapper::checkWarmupStatus_()
+    bool EvaluatorWrapper::checkWarmupStatus_(const struct timespec& start_timestamp, const struct timespec& cur_timestamp)
     {
         bool need_finish_warmup = false;
 

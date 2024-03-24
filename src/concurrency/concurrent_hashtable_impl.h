@@ -316,6 +316,8 @@ namespace covered
         return;
     }
 
+    // ONLY used by edge snapshot (without locking)
+
     template<class V>
     void ConcurrentHashtable<V>::getAllKeyValuePairs(std::unordered_map<Key, V, KeyHasher>& kvpairs) const
     {
@@ -328,6 +330,38 @@ namespace covered
                 kvpairs.insert(*iter);
             }
         }
+        return;
+    }
+
+    template<class V>
+    void ConcurrentHashtable<V>::putKeyValuePair(const Key& key, const V& value, bool& is_exist)
+    {
+        // NOTE: NO need to acquire any lock due to only used for snapshots with only one thread for edge wrapper
+
+        assert(perkey_rwlock_ptr_ != NULL);
+        uint32_t hashidx = perkey_rwlock_ptr_->getRwlockIndex(key);
+
+        std::unordered_map<Key, V, KeyHasher>& tmp_hashtable = hashtables_[hashidx];
+        typename std::unordered_map<Key, V, KeyHasher>::iterator iter = tmp_hashtable.find(key);
+        if (iter == tmp_hashtable.end()) // key NOT exist
+        {
+            tmp_hashtable.insert(std::pair<Key, V>(key, value));
+            is_exist = false;
+
+            Util::uint64AddForAtomic(total_key_size_, static_cast<uint64_t>(key.getKeyLength()));
+            Util::uint64AddForAtomic(total_value_size_, static_cast<uint64_t>(value.getSizeForCapacity()));
+        }
+        else // key exists
+        {
+            uint64_t original_value_size = iter->second.getSizeForCapacity();
+
+            // Update value
+            iter->second = value;
+            is_exist = true;
+
+            updateTotalValueSize_(iter->second.getSizeForCapacity(), original_value_size);
+        }
+
         return;
     }
 }

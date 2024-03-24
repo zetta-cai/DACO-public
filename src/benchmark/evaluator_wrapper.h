@@ -66,7 +66,7 @@ namespace covered
 
         // (3) Evaluation helpers
         void notifyClientsToSwitchSlot_(const bool& is_monitored);
-        bool checkWarmupStatus_();
+        bool checkWarmupStatus_(const struct timespec& start_timestamp, const struct timespec& cur_timestamp);
         void notifyClientsToFinishWarmup_();
         void notifyAllToFinishrun_(); // Finish clients first, and then edge and cloud
         void notifyClientsToFinishrun_(); // Update per-slot/stable total aggregated statistics

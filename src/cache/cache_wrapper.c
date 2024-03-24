@@ -653,15 +653,15 @@ namespace covered
             if (is_successful) // If key is admited successfully
             {
                 // Update validity map
-                if (tmp_validity) // w/o writes
+                bool is_exist = false;
+                validity_map_ptr_->putKeyValidityPair(tmp_key, tmp_validity, is_exist);
+                if (is_exist) // a key not locally cached is found in validity_map_
                 {
-                    validateKeyForLocalUncachedObject_(tmp_key);
+                    std::ostringstream oss;
+                    oss << "key " << tmp_key.getKeyDebugstr() << " already exists in validity_map_ for loadCacheSnapshot()";
+                    Util::dumpWarnMsg(instance_name_, oss.str());
                 }
-                else // w/ writes
-                {
-                    invalidateKeyForLocalUncachedObject_(tmp_key);
-                }
-
+                
                 // Update beacon edgeidx if any
                 if (tmp_with_beaconidx && perkey_beacon_edgeidx_.find(tmp_key) == perkey_beacon_edgeidx_.end())
                 {

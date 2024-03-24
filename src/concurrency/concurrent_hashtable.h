@@ -42,8 +42,9 @@ namespace covered
         uint64_t getTotalKeySizeForCapcity() const;
         uint64_t getTotalValueSizeForCapcity() const;
 
-        // ONLY used by edge snapshot
+        // ONLY used by edge snapshot (without locking due to only one thread for edge wrapper now)
         void getAllKeyValuePairs(std::unordered_map<Key, V, KeyHasher>& kvpairs) const;
+        void putKeyValuePair(const Key& key, const V& value, bool& is_exist);
     private:
         static const std::string kClassName;
 
