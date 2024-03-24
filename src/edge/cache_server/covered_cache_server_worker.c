@@ -48,14 +48,6 @@ namespace covered
         bool is_source_cached = false;
         bool is_global_cached = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->lookupDirectoryTableByCacheServer(key, current_edge_idx, is_being_written, is_valid_directory_exist, directory_info, is_source_cached);
 
-        // TMPDEBUG24
-        if (key.getKeystr() == "vmxbfcudfmgp")
-        {
-            std::ostringstream oss;
-            oss << "CoveredCacheServerWorker::lookupLocalDirectory_ for vmxbfcudfmgp with is_source_cached = " << Util::toString(is_source_cached);
-            Util::dumpNormalMsg(instance_name_, oss.str());
-        }
-
         // Update local/remote beacon access cnt for workload-aware probability tuning (NOTE: lookupLocalDirectory_() is ONLY invoked by CacheServerWorkerBase::fetchDataFromNeighbor_())
         tmp_edge_wrapper_ptr->getWeightTunerRef().incrLocalBeaconAccessCnt(); // Local beacon access (sender is beacon)
 
@@ -931,6 +923,12 @@ namespace covered
     // Trigger cache placement for getrsp
     bool CoveredCacheServerWorker::tryToTriggerCachePlacementForGetrspInternal_(const Key& key, const Value& value, const CollectedPopularity& collected_popularity_after_fetch_value, const FastPathHint& fast_path_hint, const bool& is_global_cached, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr) const
     {
+        // TODO: Disable cache admission for stresstest phase for debugging
+        // if (!extra_common_msghdr.isSkipPropagationLatency()) // Stresstest phase
+        // {
+        //     return false;
+        // }
+
         checkPointers_();
         assert(collected_popularity_after_fetch_value.isTracked()); // MUST be tracked (actually newly-tracked) after fetching value from neighbor/cloud
 
@@ -950,14 +948,6 @@ namespace covered
             bool latest_is_global_cached = false; // NOTE: passed param (is_global_cached) is looked up before fetching value, which may be stale, so we use the latest is_global_cached here
             bool is_source_cached = false;
             tmp_cooperation_wrapper_ptr->isGlobalAndSourceCached(key, current_edge_idx, latest_is_global_cached, is_source_cached);
-
-            // TMPDEBUG24
-            if (key.getKeystr() == "vmxbfcudfmgp")
-            {
-                std::ostringstream oss;
-                oss << "CoveredCacheServerWorker::tryToTriggerCachePlacementForGetrspInternal_ for vmxbfcudfmgp with is_source_cached = " << Util::toString(is_source_cached);
-                Util::dumpNormalMsg(instance_name_, oss.str());
-            }
 
             // Selective popularity aggregation
             const bool need_placement_calculation = true;
@@ -1035,11 +1025,6 @@ namespace covered
                 // Trigger local cache placement if local admission benefit is larger than local eviction cost
                 if (local_admission_benefit > local_eviction_cost)
                 {
-                    // TMPDEBUG24
-                    std::ostringstream oss;
-                    oss << "key " << key.getKeyDebugstr() << " with fast placement has local admission benefit " << local_admission_benefit << " and local eviction cost " << local_eviction_cost;
-                    Util::dumpNormalMsg(instance_name_, oss.str());
-
                     // Admit dirinfo into remote beacon edge node
                     bool tmp_is_being_written = false;
                     const bool is_background = false; // Similar as only-sender hybrid data fetching

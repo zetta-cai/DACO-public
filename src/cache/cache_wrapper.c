@@ -598,11 +598,6 @@ namespace covered
             local_cache_ptr_->dumpCacheMetadata(fs_ptr);
         }
 
-        // TMPDEBUG24
-        std::ostringstream oss;
-        oss << "keycnt from validity map: " << key_validity_pairs_in_validity_map.size() << "; cached keycnt: " << cached_keycnt;
-        Util::dumpNormalMsg(instance_name_, oss.str());
-
         return;
     }
 
@@ -684,11 +679,6 @@ namespace covered
 
             local_cache_ptr_->loadCacheMetadata(fs_ptr);
         }
-
-        // TMPDEBUG24
-        std::ostringstream oss;
-        oss << "cached keycnt: " << cached_keycnt;
-        Util::dumpNormalMsg(instance_name_, oss.str());
     }
 
     // (1) Check is cached and access validity

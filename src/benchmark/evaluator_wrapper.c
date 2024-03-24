@@ -321,9 +321,6 @@ namespace covered
 
     void EvaluatorWrapper::normalEval_()
     {
-        // TMPDEBUG24
-        bool is_first_second_after_warmup = false;
-
         // Monitor cache object hit ratio for warmup and stresstest phases
         const uint32_t client_raw_statistics_slot_interval_sec = Config::getClientRawStatisticsSlotIntervalSec();
         struct timespec start_timestamp = Util::getCurrentTimespec(); // For max duration of warmup phase and duration of stresstest phase
@@ -355,17 +352,6 @@ namespace covered
             double delta_us_for_switch_slot = Util::getDeltaTimeUs(cur_timestamp, prev_timestamp);
             if (delta_us_for_switch_slot >= static_cast<double>(SEC2US(client_raw_statistics_slot_interval_sec)))
             {
-                // TMPDEBUG24
-                if (is_first_second_after_warmup)
-                {
-                    is_monitored = true;
-                    is_first_second_after_warmup = false;
-                }
-                else
-                {
-                    is_monitored = false;
-                }
-
                 // Notify clients to switch cur-slot client raw statistics
                 notifyClientsToSwitchSlot_(is_monitored); // Increase target_slot_idx_ by one, update per-slot total aggregated statistics, and update total_reqcnt in TotalStatisticsTracker
 
@@ -388,9 +374,6 @@ namespace covered
 
                     // Duration starts from the end of warmup phase
                     is_warmup_phase_ = false;
-
-                    // TMPDEBUG24
-                    is_first_second_after_warmup = true;
 
                     // Reset start_timestamp for duration of stresstest phase
                     start_timestamp = Util::getCurrentTimespec();
@@ -438,23 +421,7 @@ namespace covered
             struct timespec cur_timestamp = Util::getCurrentTimespec();
             bool with_new_slot_statistics = false;
 
-            // TMPDEBUG24
-            // assert(is_warmup_phase_ == true); // Realnet dump will directly finish run instead of finish warmup after warmup
-
-            // TMPDEBUG24
-            if (!is_warmup_phase_) // Stresstest phase
-            {
-                double delta_us_for_finishrun = Util::getDeltaTimeUs(cur_timestamp, start_timestamp);
-                if (delta_us_for_finishrun >= SEC2US(stresstest_duration_sec_))
-                {
-                    Util::dumpNormalMsg(kClassName, "Stop benchmark...");
-
-                    // Notify client/edge/cloud to finish run
-                    notifyAllToFinishrun_(); // Update per-slot/stable total aggregated statistics
-
-                    break;
-                }
-            }
+            assert(is_warmup_phase_ == true); // Realnet dump will directly finish run instead of finish warmup after warmup
 
             // Switch cur-slot client raw statistics to track per-slot aggregated statistics
             double delta_us_for_switch_slot = Util::getDeltaTimeUs(cur_timestamp, prev_timestamp);
@@ -485,13 +452,9 @@ namespace covered
                     Util::dumpNormalMsg(kClassName, "Notify edge nodes to dump snapshots...");
                     notifyEdgesToDumpSnapshot_();
 
-                    // TMPDEBUG24 (continue stresstest for debugging)
-                    is_warmup_phase_ = false;
-
-                    // TMPDEBUG24
-                    // // Notify client/edge/cloud to finish run
-                    // Util::dumpNormalMsg(kClassName, "Stop benchmark...");
-                    // notifyAllToFinishrun_(); // Update per-slot/stable total aggregated statistics
+                    // Notify client/edge/cloud to finish run
+                    Util::dumpNormalMsg(kClassName, "Stop benchmark...");
+                    notifyAllToFinishrun_(); // Update per-slot/stable total aggregated statistics
 
                     break;
                 } // End of finish warmup phase
@@ -516,9 +479,6 @@ namespace covered
 
     void EvaluatorWrapper::realnetLoadEval_()
     {
-        // TMPDEBUG24
-        bool is_first_second_after_warmup = true;
-
         // Monitor cache object hit ratio for warmup and stresstest phases
         const uint32_t client_raw_statistics_slot_interval_sec = Config::getClientRawStatisticsSlotIntervalSec();
         struct timespec start_timestamp = Util::getCurrentTimespec(); // For max duration of warmup phase and duration of stresstest phase
@@ -552,17 +512,6 @@ namespace covered
             double delta_us_for_switch_slot = Util::getDeltaTimeUs(cur_timestamp, prev_timestamp);
             if (delta_us_for_switch_slot >= static_cast<double>(SEC2US(client_raw_statistics_slot_interval_sec)))
             {
-                // TMPDEBUG24
-                if (is_first_second_after_warmup)
-                {
-                    is_monitored = true;
-                    is_first_second_after_warmup = false;
-                }
-                else
-                {
-                    is_monitored = false;
-                }
-
                 // Notify clients to switch cur-slot client raw statistics
                 notifyClientsToSwitchSlot_(is_monitored); // Increase target_slot_idx_ by one, update per-slot total aggregated statistics, and update total_reqcnt in TotalStatisticsTracker
 

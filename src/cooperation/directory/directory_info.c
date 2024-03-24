@@ -75,7 +75,7 @@ namespace covered
         assert(fs_ptr != NULL);
 
         uint32_t size = 0;
-        uint32_t bigendian_target_edge_idx = 0;
+        uint32_t bigendian_target_edge_idx = htonl(target_edge_idx_);
         fs_ptr->write((const char*)&bigendian_target_edge_idx, sizeof(uint32_t));
         size += sizeof(uint32_t);
 
