@@ -321,6 +321,9 @@ namespace covered
 
     void EvaluatorWrapper::normalEval_()
     {
+        // TMPDEBUG24
+        bool is_first_second_after_warmup = false;
+
         // Monitor cache object hit ratio for warmup and stresstest phases
         const uint32_t client_raw_statistics_slot_interval_sec = Config::getClientRawStatisticsSlotIntervalSec();
         struct timespec start_timestamp = Util::getCurrentTimespec(); // For max duration of warmup phase and duration of stresstest phase
@@ -352,6 +355,17 @@ namespace covered
             double delta_us_for_switch_slot = Util::getDeltaTimeUs(cur_timestamp, prev_timestamp);
             if (delta_us_for_switch_slot >= static_cast<double>(SEC2US(client_raw_statistics_slot_interval_sec)))
             {
+                // TMPDEBUG24
+                if (is_first_second_after_warmup)
+                {
+                    is_monitored = true;
+                    is_first_second_after_warmup = false;
+                }
+                else
+                {
+                    is_monitored = false;
+                }
+
                 // Notify clients to switch cur-slot client raw statistics
                 notifyClientsToSwitchSlot_(is_monitored); // Increase target_slot_idx_ by one, update per-slot total aggregated statistics, and update total_reqcnt in TotalStatisticsTracker
 
@@ -374,6 +388,9 @@ namespace covered
 
                     // Duration starts from the end of warmup phase
                     is_warmup_phase_ = false;
+
+                    // TMPDEBUG24
+                    is_first_second_after_warmup = true;
 
                     // Reset start_timestamp for duration of stresstest phase
                     start_timestamp = Util::getCurrentTimespec();
@@ -421,7 +438,23 @@ namespace covered
             struct timespec cur_timestamp = Util::getCurrentTimespec();
             bool with_new_slot_statistics = false;
 
-            assert(is_warmup_phase_ == true); // Realnet dump will directly finish run instead of finish warmup after warmup
+            // TMPDEBUG24
+            // assert(is_warmup_phase_ == true); // Realnet dump will directly finish run instead of finish warmup after warmup
+
+            // TMPDEBUG24
+            if (!is_warmup_phase_) // Stresstest phase
+            {
+                double delta_us_for_finishrun = Util::getDeltaTimeUs(cur_timestamp, start_timestamp);
+                if (delta_us_for_finishrun >= SEC2US(stresstest_duration_sec_))
+                {
+                    Util::dumpNormalMsg(kClassName, "Stop benchmark...");
+
+                    // Notify client/edge/cloud to finish run
+                    notifyAllToFinishrun_(); // Update per-slot/stable total aggregated statistics
+
+                    break;
+                }
+            }
 
             // Switch cur-slot client raw statistics to track per-slot aggregated statistics
             double delta_us_for_switch_slot = Util::getDeltaTimeUs(cur_timestamp, prev_timestamp);
@@ -448,10 +481,17 @@ namespace covered
                     Util::dumpNormalMsg(kClassName, "Sleep to wait for remaining operations...");
                     sleep(5); // Sleep 5s
 
-                    Util::dumpNormalMsg(kClassName, "Stop benchmark...");
+                    // Notify edges to dump snapshot
+                    Util::dumpNormalMsg(kClassName, "Notify edge nodes to dump snapshots...");
+                    notifyEdgesToDumpSnapshot_();
 
-                    // Notify client/edge/cloud to finish run
-                    notifyAllToFinishrun_(); // Update per-slot/stable total aggregated statistics
+                    // TMPDEBUG24 (continue stresstest for debugging)
+                    is_warmup_phase_ = false;
+
+                    // TMPDEBUG24
+                    // // Notify client/edge/cloud to finish run
+                    // Util::dumpNormalMsg(kClassName, "Stop benchmark...");
+                    // notifyAllToFinishrun_(); // Update per-slot/stable total aggregated statistics
 
                     break;
                 } // End of finish warmup phase
@@ -476,6 +516,9 @@ namespace covered
 
     void EvaluatorWrapper::realnetLoadEval_()
     {
+        // TMPDEBUG24
+        bool is_first_second_after_warmup = true;
+
         // Monitor cache object hit ratio for warmup and stresstest phases
         const uint32_t client_raw_statistics_slot_interval_sec = Config::getClientRawStatisticsSlotIntervalSec();
         struct timespec start_timestamp = Util::getCurrentTimespec(); // For max duration of warmup phase and duration of stresstest phase
@@ -509,6 +552,17 @@ namespace covered
             double delta_us_for_switch_slot = Util::getDeltaTimeUs(cur_timestamp, prev_timestamp);
             if (delta_us_for_switch_slot >= static_cast<double>(SEC2US(client_raw_statistics_slot_interval_sec)))
             {
+                // TMPDEBUG24
+                if (is_first_second_after_warmup)
+                {
+                    is_monitored = true;
+                    is_first_second_after_warmup = false;
+                }
+                else
+                {
+                    is_monitored = false;
+                }
+
                 // Notify clients to switch cur-slot client raw statistics
                 notifyClientsToSwitchSlot_(is_monitored); // Increase target_slot_idx_ by one, update per-slot total aggregated statistics, and update total_reqcnt in TotalStatisticsTracker
 
@@ -773,6 +827,79 @@ namespace covered
         return;
     }
 
+    void EvaluatorWrapper::notifyEdgesToDumpSnapshot_()
+    {
+        checkPointers_();
+
+        // Edge ack flags
+        std::unordered_map<NetworkAddr, std::pair<bool, std::string>, NetworkAddrHasher> dump_snapshot_acked_flags = getAckedFlagsForEdges_();
+
+        Util::dumpNormalMsg(kClassName, "Notify all edge nodes to dump snapshots...");
+
+        const uint64_t cur_msg_seqnum = evaluator_msg_seqnum_.fetch_add(1, Util::RMW_CONCURRENCY_ORDER); // NOTE: ONLY need one msg seqnum for multiple dump snapshot requests due to issuing to different edge nodes
+
+        // Timeout-and-retry mechanism
+        uint32_t acked_cnt = 0;
+        bool is_stale_response = false; // Only recv again instead of send if with a stale response
+        while (acked_cnt < dump_snapshot_acked_flags.size())
+        {
+            if (!is_stale_response)
+            {
+                // Issue DumpSnapshotRequest to unacked edge nodes simultaneously
+                DumpSnapshotRequest tmp_dump_snapshot_request(0, evaluator_recvmsg_source_addr_, cur_msg_seqnum);
+                issueMsgToUnackedNodes_((MessageBase*)&tmp_dump_snapshot_request, dump_snapshot_acked_flags);
+            }
+
+            // Receive DumpSnapshotResponse for unacked edge nodes
+            const uint32_t expected_rspcnt = dump_snapshot_acked_flags.size() - acked_cnt;
+            for (uint32_t i = 0; i < expected_rspcnt; i++)
+            {
+                DynamicArray control_response_msg_payload;
+                bool is_timeout = evaluator_recvmsg_socket_server_ptr_->recv(control_response_msg_payload);
+                if (is_timeout)
+                {
+                    Util::dumpWarnMsg(kClassName, "timeout to wait for DumpSnapshotResponse from " + Util::getAckedStatusStr(dump_snapshot_acked_flags) + "!");
+                    is_stale_response = false; // Reset to re-send request
+                    break; // Wait until all edge nodes have dumped snapshots
+                }
+                else
+                {
+                    MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
+                    assert(control_response_ptr != NULL);
+
+                    // Check if the received message is a stale response
+                    if (control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() != cur_msg_seqnum)
+                    {
+                        is_stale_response = true; // ONLY recv again instead of send if with a stale response
+
+                        std::ostringstream oss_for_stable_response;
+                        oss_for_stable_response << "stale response " << MessageBase::messageTypeToString(control_response_ptr->getMessageType()) << " with seqnum " << control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() << " != " << cur_msg_seqnum;
+                        Util::dumpWarnMsg(kClassName, oss_for_stable_response.str());
+
+                        delete control_response_ptr;
+                        control_response_ptr = NULL;
+                        break; // Jump to while loop
+                    }
+
+                    assert(control_response_ptr->getMessageType() == MessageType::kDumpSnapshotResponse);
+
+                    bool is_first_rsp_for_ack = processMsgForAck_(control_response_ptr, dump_snapshot_acked_flags);
+                    if (is_first_rsp_for_ack)
+                    {
+                        acked_cnt++;
+                    }
+
+                    delete control_response_ptr;
+                    control_response_ptr = NULL;
+                }
+            }
+        }
+
+        Util::dumpNormalMsg(kClassName, "All edge nodes have dumped snapshots!");
+
+        return;
+    }
+
     void EvaluatorWrapper::notifyAllToFinishrun_()
     {
         // Notify all clients to finish running, and update per-slot/stable total aggregated statistics
@@ -990,13 +1117,23 @@ namespace covered
 
     std::unordered_map<NetworkAddr, std::pair<bool, std::string>, NetworkAddrHasher> EvaluatorWrapper::getAckedFlagsForEdgeCloud_() const
     {
-        std::unordered_map<NetworkAddr, std::pair<bool, std::string>, NetworkAddrHasher> acked_flags_for_edgeclout;
+        std::unordered_map<NetworkAddr, std::pair<bool, std::string>, NetworkAddrHasher> acked_flags_for_edgecloud;
         for (uint32_t edge_idx = 0; edge_idx < edgecnt_; edge_idx++)
         {
-            acked_flags_for_edgeclout.insert(std::pair<NetworkAddr, std::pair<bool, std::string>>(peredge_recvmsg_dst_addrs_[edge_idx], std::pair(false, "edge " + std::to_string(edge_idx))));
+            acked_flags_for_edgecloud.insert(std::pair<NetworkAddr, std::pair<bool, std::string>>(peredge_recvmsg_dst_addrs_[edge_idx], std::pair(false, "edge " + std::to_string(edge_idx))));
         }
-        acked_flags_for_edgeclout.insert(std::pair<NetworkAddr, std::pair<bool, std::string>>(cloud_recvmsg_dst_addr_, std::pair(false, "cloud")));
-        return acked_flags_for_edgeclout;
+        acked_flags_for_edgecloud.insert(std::pair<NetworkAddr, std::pair<bool, std::string>>(cloud_recvmsg_dst_addr_, std::pair(false, "cloud")));
+        return acked_flags_for_edgecloud;
+    }
+
+    std::unordered_map<NetworkAddr, std::pair<bool, std::string>, NetworkAddrHasher> EvaluatorWrapper::getAckedFlagsForEdges_() const
+    {
+        std::unordered_map<NetworkAddr, std::pair<bool, std::string>, NetworkAddrHasher> acked_flags_for_edges;
+        for (uint32_t edge_idx = 0; edge_idx < edgecnt_; edge_idx++)
+        {
+            acked_flags_for_edges.insert(std::pair<NetworkAddr, std::pair<bool, std::string>>(peredge_recvmsg_dst_addrs_[edge_idx], std::pair(false, "edge " + std::to_string(edge_idx))));
+        }
+        return acked_flags_for_edges;
     }
 
     void EvaluatorWrapper::issueMsgToUnackedNodes_(MessageBase* message_ptr, const std::unordered_map<NetworkAddr, std::pair<bool, std::string>, NetworkAddrHasher>& acked_flags) const

@@ -48,6 +48,14 @@ namespace covered
         bool is_source_cached = false;
         bool is_global_cached = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->lookupDirectoryTableByCacheServer(key, current_edge_idx, is_being_written, is_valid_directory_exist, directory_info, is_source_cached);
 
+        // TMPDEBUG24
+        if (key.getKeystr() == "vmxbfcudfmgp")
+        {
+            std::ostringstream oss;
+            oss << "CoveredCacheServerWorker::lookupLocalDirectory_ for vmxbfcudfmgp with is_source_cached = " << Util::toString(is_source_cached);
+            Util::dumpNormalMsg(instance_name_, oss.str());
+        }
+
         // Update local/remote beacon access cnt for workload-aware probability tuning (NOTE: lookupLocalDirectory_() is ONLY invoked by CacheServerWorkerBase::fetchDataFromNeighbor_())
         tmp_edge_wrapper_ptr->getWeightTunerRef().incrLocalBeaconAccessCnt(); // Local beacon access (sender is beacon)
 
@@ -943,6 +951,14 @@ namespace covered
             bool is_source_cached = false;
             tmp_cooperation_wrapper_ptr->isGlobalAndSourceCached(key, current_edge_idx, latest_is_global_cached, is_source_cached);
 
+            // TMPDEBUG24
+            if (key.getKeystr() == "vmxbfcudfmgp")
+            {
+                std::ostringstream oss;
+                oss << "CoveredCacheServerWorker::tryToTriggerCachePlacementForGetrspInternal_ for vmxbfcudfmgp with is_source_cached = " << Util::toString(is_source_cached);
+                Util::dumpNormalMsg(instance_name_, oss.str());
+            }
+
             // Selective popularity aggregation
             const bool need_placement_calculation = true;
             const bool sender_is_beacon = true; // Sender and beacon is the same edge node for placement calculation
@@ -1019,6 +1035,11 @@ namespace covered
                 // Trigger local cache placement if local admission benefit is larger than local eviction cost
                 if (local_admission_benefit > local_eviction_cost)
                 {
+                    // TMPDEBUG24
+                    std::ostringstream oss;
+                    oss << "key " << key.getKeyDebugstr() << " with fast placement has local admission benefit " << local_admission_benefit << " and local eviction cost " << local_eviction_cost;
+                    Util::dumpNormalMsg(instance_name_, oss.str());
+
                     // Admit dirinfo into remote beacon edge node
                     bool tmp_is_being_written = false;
                     const bool is_background = false; // Similar as only-sender hybrid data fetching

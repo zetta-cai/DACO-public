@@ -87,8 +87,6 @@ namespace covered
         uint64_t tmp_required_bytes = 0;
         uint64_t tmp_saved_bytes = 0;
 
-        // bool tmp_debug = false; // TMPDEBUG24
-
         if (object_size > cache_margin_bytes_) // Without sufficient cache space
         {
             tmp_required_bytes = object_size - cache_margin_bytes_;
@@ -104,20 +102,6 @@ namespace covered
 
                 // Update per-victim cacheinfos
                 updatePervictimCacheinfos_(pervictim_cacheinfos, tmp_victim_key, tmp_victim_cacheinfo);
-
-                // // TMPDEBUG24
-                // if (tmp_victim_cacheinfo.getKey().getKeystr() == "lahysjuwblwcmspatmjknydkwthdzbybfqhatjttxanrztfxkosquigqalvvph")
-                // {
-                //     if (!tmp_debug)
-                //     {
-                //         Util::dumpNormalMsg(kClassName, "EdgelevelVictimMetadata::findVictimsForObjectSize() for lahysjuwblwcmspatmjknydkwthdzbybfqhatjttxanrztfxkosquigqalvvph");
-                //         tmp_debug = true;
-                //     }
-
-                //     std::ostringstream oss;
-                //     oss << "add victim cacheinfo of lahysjuwblwcmspatmjknydkwthdzbybfqhatjttxanrztfxkosquigqalvvph from synced victims; pervictim_cacheinfos.size(): " << pervictim_cacheinfos.size();
-                //     Util::dumpNormalMsg(kClassName, oss.str());
-                // }
 
                 // Update per-edge victim keyset
                 updatePeredgeVictimset_(peredge_synced_victimset, cur_edge_idx, tmp_victim_key);
@@ -180,12 +164,6 @@ namespace covered
 
                     // Update per-victim cacheinfos
                     updatePervictimCacheinfos_(pervictim_cacheinfos, tmp_victim_key, *extra_victim_cacheinfos_const_iter);
-
-                    // // TMPDEBUG24
-                    // if (tmp_victim_key.getKeystr() == "lahysjuwblwcmspatmjknydkwthdzbybfqhatjttxanrztfxkosquigqalvvph")
-                    // {
-                    //     Util::dumpNormalMsg(kClassName, "add victim cacheinfo of lahysjuwblwcmspatmjknydkwthdzbybfqhatjttxanrztfxkosquigqalvvph from extra victims");
-                    // }
 
                     // Update per-edge victimset
                     updatePeredgeVictimset_(peredge_fetched_victimset, cur_edge_idx, tmp_victim_key);
@@ -309,12 +287,6 @@ namespace covered
             VictimCacheinfo tmp_victim_cacheinfo;
             tmp_victim_cacheinfo.deserialize(fs_ptr);
             victim_cacheinfos_.push_back(tmp_victim_cacheinfo);
-
-            // // TMPDEBUG24
-            // if (tmp_victim_cacheinfo.getKey().getKeystr() == "lahysjuwblwcmspatmjknydkwthdzbybfqhatjttxanrztfxkosquigqalvvph")
-            // {
-            //     Util::dumpNormalMsg(kClassName, "load victim cacheinfo of lahysjuwblwcmspatmjknydkwthdzbybfqhatjttxanrztfxkosquigqalvvph");
-            // }
         }
 
         is_valid_ = true;

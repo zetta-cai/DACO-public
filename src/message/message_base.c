@@ -98,6 +98,16 @@ namespace covered
                 message_type_str = "kFinishrunResponse";
                 break;
             }
+            case MessageType::kDumpSnapshotRequest:
+            {
+                message_type_str = "kDumpSnapshotRequest";
+                break;
+            }
+            case MessageType::kDumpSnapshotResponse:
+            {
+                message_type_str = "kDumpSnapshotResponse";
+                break;
+            }
             case MessageType::kSimpleFinishrunResponse:
             {
                 message_type_str = "kSimpleFinishrunResponse";
@@ -624,6 +634,11 @@ namespace covered
                 message_ptr = new FinishrunRequest(msg_payload);
                 break;
             }
+            case MessageType::kDumpSnapshotRequest:
+            {
+                message_ptr = new DumpSnapshotRequest(msg_payload);
+                break;
+            }
             case MessageType::kAcquireWritelockRequest:
             {
                 message_ptr = new AcquireWritelockRequest(msg_payload);
@@ -882,6 +897,11 @@ namespace covered
             case MessageType::kFinishrunResponse:
             {
                 message_ptr = new FinishrunResponse(msg_payload);
+                break;
+            }
+            case MessageType::kDumpSnapshotResponse:
+            {
+                message_ptr = new DumpSnapshotResponse(msg_payload);
                 break;
             }
             case MessageType::kSimpleFinishrunResponse:
@@ -1767,7 +1787,7 @@ namespace covered
     bool MessageBase::isBenchmarkControlRequest() const
     {
         checkIsValid_();
-        if (message_type_ == MessageType::kInitializationRequest || message_type_ == MessageType::kStartrunRequest || message_type_ == MessageType::kSwitchSlotRequest || message_type_ == MessageType::kFinishWarmupRequest || message_type_ == MessageType::kFinishrunRequest)
+        if (message_type_ == MessageType::kInitializationRequest || message_type_ == MessageType::kStartrunRequest || message_type_ == MessageType::kSwitchSlotRequest || message_type_ == MessageType::kFinishWarmupRequest || message_type_ == MessageType::kFinishrunRequest || message_type_ == MessageType::kDumpSnapshotRequest)
         {
             return true;
         }
@@ -1799,7 +1819,7 @@ namespace covered
     bool MessageBase::isBenchmarkControlResponse() const
     {
         checkIsValid_();
-        if (message_type_ == MessageType::kInitializationResponse || message_type_ == MessageType::kStartrunResponse || message_type_ == MessageType::kSwitchSlotResponse || message_type_ == MessageType::kFinishWarmupResponse || message_type_ == MessageType::kFinishrunResponse || message_type_ == MessageType::kSimpleFinishrunResponse)
+        if (message_type_ == MessageType::kInitializationResponse || message_type_ == MessageType::kStartrunResponse || message_type_ == MessageType::kSwitchSlotResponse || message_type_ == MessageType::kFinishWarmupResponse || message_type_ == MessageType::kFinishrunResponse || message_type_ == MessageType::kDumpSnapshotResponse || message_type_ == MessageType::kSimpleFinishrunResponse)
         {
             return true;
         }

@@ -17,6 +17,8 @@
 #include "message/control/benchmark/finish_warmup_response.h"
 #include "message/control/benchmark/finishrun_request.h"
 #include "message/control/benchmark/finishrun_response.h"
+#include "message/control/benchmark/dump_snapshot_request.h"
+#include "message/control/benchmark/dump_snapshot_response.h"
 #include "message/control/benchmark/simple_finishrun_response.h"
 
 #include "message/control/cooperation/acquire_writelock_request.h"

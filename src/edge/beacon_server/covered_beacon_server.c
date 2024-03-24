@@ -54,6 +54,14 @@ namespace covered
         bool is_source_cached = false;
         bool is_global_cached = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->lookupDirectoryTableByBeaconServer(tmp_key, source_edge_idx, edge_cache_server_worker_recvreq_dst_addr, is_being_written, is_valid_directory_exist, directory_info, is_source_cached);
 
+        // TMPDEBUG24
+        if (tmp_key.getKeystr() == "vmxbfcudfmgp")
+        {
+            std::ostringstream oss;
+            oss << "CoveredBeaconServer::processReqToLookupLocalDirectory_ for vmxbfcudfmgp with is_source_cached = " << Util::toString(is_source_cached);
+            Util::dumpNormalMsg(instance_name_, oss.str());
+        }
+
         // Victim synchronization
         const VictimSyncset& neighbor_victim_syncset = covered_directory_lookup_request_ptr->getVictimSyncsetRef();
         UpdateCacheManagerForNeighborVictimSyncsetFuncParam tmp_param_for_victim_sync(source_edge_idx, neighbor_victim_syncset);

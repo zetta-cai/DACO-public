@@ -307,6 +307,7 @@ namespace covered
         // For lazy victim fetching before non-blocking placement deployment
         bool need_victim_fetching = false;
         DeltaReward best_placement_admission_benefit = 0.0;
+        DeltaReward best_placement_eviction_cost = 0.0; // TMPDEBUG24
         Edgeset tmp_best_placement_edgeset; // For preserved edgeset and placement notifications under non-blocking placement deployment
         std::list<std::pair<uint32_t, std::list<Key>>> tmp_best_placement_peredge_synced_victimset; // For synced victim removal under non-blocking placement deployment
         std::list<std::pair<uint32_t, std::list<Key>>> tmp_best_placement_peredge_fetched_victimset; // For fetched victim removal under non-blocking placement deployment
@@ -355,6 +356,7 @@ namespace covered
                     max_placement_gain = tmp_placement_gain;
 
                     best_placement_admission_benefit = tmp_admission_benefit;
+                    best_placement_eviction_cost = tmp_eviction_cost; // TMPDEBUG24
                     tmp_best_placement_edgeset = tmp_placement_edgeset;
                     tmp_best_placement_peredge_synced_victimset = tmp_placement_peredge_synced_victimset;
                     tmp_best_placement_peredge_fetched_victimset = tmp_placement_peredge_fetched_victimset;
@@ -379,6 +381,11 @@ namespace covered
                 }
             }
         }
+
+        // TMPDEBUG24
+        std::ostringstream oss;
+        oss << "key " << key.getKeyDebugstr() << " with best placement " << best_placement_edgeset.toString() << " has admission benefit " << best_placement_admission_benefit << " and eviction cost " << best_placement_eviction_cost;
+        Util::dumpNormalMsg(instance_name_, oss.str());
 
         // Lazy victim fetching before non-blocking placement deployment
         // NOTE: MINOR cases ONLY if cache margin bytes + size of victims < object size and admission benefit > partial eviction cost (actually, a small per-edge victim cnt is sufficient for most admissions)

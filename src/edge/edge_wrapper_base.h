@@ -143,6 +143,7 @@ namespace covered
         virtual void initialize_() override;
         virtual void processFinishrunRequest_(MessageBase* finishrun_request_ptr) override;
         virtual void processOtherBenchmarkControlRequest_(MessageBase* control_request_ptr) override;
+        void processDumpSnapshotRequest_(MessageBase* dump_snapshot_request_ptr);
         virtual void cleanup_() override;
 
     protected:

@@ -68,6 +68,7 @@ namespace covered
         void notifyClientsToSwitchSlot_(const bool& is_monitored);
         bool checkWarmupStatus_(const struct timespec& start_timestamp, const struct timespec& cur_timestamp);
         void notifyClientsToFinishWarmup_();
+        void notifyEdgesToDumpSnapshot_(); // Only for realnet dump evaluation
         void notifyAllToFinishrun_(); // Finish clients first, and then edge and cloud
         void notifyClientsToFinishrun_(); // Update per-slot/stable total aggregated statistics
         void notifyEdgeCloudToFinishrun_();
@@ -76,6 +77,7 @@ namespace covered
         std::unordered_map<NetworkAddr, std::pair<bool, std::string>, NetworkAddrHasher> getAckedFlagsForAll_() const;
         std::unordered_map<NetworkAddr, std::pair<bool, std::string>, NetworkAddrHasher> getAckedFlagsForClients_() const;
         std::unordered_map<NetworkAddr, std::pair<bool, std::string>, NetworkAddrHasher> getAckedFlagsForEdgeCloud_() const;
+        std::unordered_map<NetworkAddr, std::pair<bool, std::string>, NetworkAddrHasher> getAckedFlagsForEdges_() const;
         void issueMsgToUnackedNodes_(MessageBase* message_ptr, const std::unordered_map<NetworkAddr, std::pair<bool, std::string>, NetworkAddrHasher>& acked_flags) const;
         bool processMsgForAck_(MessageBase* message_ptr, std::unordered_map<NetworkAddr, std::pair<bool, std::string>, NetworkAddrHasher>& acked_flags);
 

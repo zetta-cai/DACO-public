@@ -361,6 +361,14 @@ namespace covered
             }
         }
 
+        // TMPDEBUG24
+        if (tmp_client_wrapper_ptr->isMonitored())
+        {
+            std::ostringstream oss;
+            oss << "key " << tmp_key.getKeyDebugstr() << " with hitflag " << MessageBase::hitflagToString(hitflag);
+            Util::dumpNormalMsg(instance_name_, oss.str());
+        }
+
         // Update latency statistics for the local client
         client_statistics_tracker_ptr_->updateLatency(local_client_worker_idx, rtt_us, is_stresstest_phase);
 

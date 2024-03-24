@@ -885,38 +885,6 @@ namespace covered
         // Mark the current node as NOT running to finish benchmark
         resetNodeRunning_();
 
-        if (realnet_option_ == Util::REALNET_DUMP_OPTION_NAME)
-        {
-            if (!is_dumped_for_realnet_) // The first finish run request
-            {
-                // NOTE: snapshot dirpath/filepath has been checked when initializing the edge node
-                const std::string edge_snapshot_filepath = Util::getEdgeSnapshotFilepath(realnet_expname_, node_idx_);
-                assert(!Util::isFileExist(edge_snapshot_filepath, true)); // Snapshot file MUST NOT exist
-
-                // Open edge snapshot file
-                std::fstream* fs_ptr = Util::openFile(edge_snapshot_filepath, std::ios_base::out | std::ios_base::binary);
-                assert(fs_ptr != NULL);
-
-                // Dump edge snapshot file
-                dumpEdgeSnapshot_(fs_ptr);
-
-                // Close file and release ofstream
-                fs_ptr->close();
-                delete fs_ptr;
-                fs_ptr = NULL;
-
-                is_dumped_for_realnet_ = true;
-            }
-            else // Duplicate finish run requests
-            {
-                // NOTE: snapshot should already be dumped for the first finish run request
-                const std::string edge_snapshot_filepath = Util::getEdgeSnapshotFilepath(realnet_expname_, node_idx_);
-                assert(Util::isFileExist(edge_snapshot_filepath, true)); // Snapshot file MUST exist
-
-                Util::dumpWarnMsg(base_instance_name_, "edge snapshot has already been dumped for previouse finish run request!");
-            }
-        }
-
         // Send back SimpleFinishrunResponse to evaluator
         SimpleFinishrunResponse simple_finishrun_response(node_idx_, node_recvmsg_source_addr_, EventList(), finishrun_request_ptr->getExtraCommonMsghdr().getMsgSeqnum());
         node_sendmsg_socket_client_ptr_->send((MessageBase*)&simple_finishrun_response, evaluator_recvmsg_dst_addr_);
@@ -929,10 +897,61 @@ namespace covered
         checkPointers_();
         assert(control_request_ptr != NULL);
         
-        std::ostringstream oss;
-        oss << "invalid message type " << MessageBase::messageTypeToString(control_request_ptr->getMessageType()) << " for startInternal_()";
-        Util::dumpErrorMsg(base_instance_name_, oss.str());
-        exit(1);
+        const MessageType message_type = control_request_ptr->getMessageType();
+        if (message_type == MessageType::kDumpSnapshotRequest)
+        {
+            processDumpSnapshotRequest_(control_request_ptr);
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "invalid message type " << MessageBase::messageTypeToString(message_type) << " for startInternal_()";
+            Util::dumpErrorMsg(base_instance_name_, oss.str());
+            exit(1);
+        }
+        return;
+    }
+
+    void EdgeWrapperBase::processDumpSnapshotRequest_(MessageBase* dump_snapshot_request_ptr)
+    {
+        checkPointers_();
+        assert(dump_snapshot_request_ptr != NULL);
+
+        assert(realnet_option_ == Util::REALNET_DUMP_OPTION_NAME);
+        
+        if (!is_dumped_for_realnet_) // The first dump snapshot request
+        {
+            // NOTE: snapshot dirpath/filepath has been checked when initializing the edge node
+            const std::string edge_snapshot_filepath = Util::getEdgeSnapshotFilepath(realnet_expname_, node_idx_);
+            assert(!Util::isFileExist(edge_snapshot_filepath, true)); // Snapshot file MUST NOT exist
+
+            // Open edge snapshot file
+            std::fstream* fs_ptr = Util::openFile(edge_snapshot_filepath, std::ios_base::out | std::ios_base::binary);
+            assert(fs_ptr != NULL);
+
+            // Dump edge snapshot file
+            dumpEdgeSnapshot_(fs_ptr);
+
+            // Close file and release ofstream
+            fs_ptr->close();
+            delete fs_ptr;
+            fs_ptr = NULL;
+
+            is_dumped_for_realnet_ = true;
+        }
+        else // Duplicate dump snapshot requests
+        {
+            // NOTE: snapshot should already be dumped for the first dump snapshot request
+            const std::string edge_snapshot_filepath = Util::getEdgeSnapshotFilepath(realnet_expname_, node_idx_);
+            assert(Util::isFileExist(edge_snapshot_filepath, true)); // Snapshot file MUST exist
+
+            Util::dumpWarnMsg(base_instance_name_, "edge snapshot has already been dumped for previouse dump snapshot request!");
+        }
+
+        // Send back DumpSnapshotResponse to evaluator
+        DumpSnapshotResponse dump_snapshot_response(node_idx_, node_recvmsg_source_addr_, EventList(), dump_snapshot_request_ptr->getExtraCommonMsghdr().getMsgSeqnum());
+        node_sendmsg_socket_client_ptr_->send((MessageBase*)&dump_snapshot_response, evaluator_recvmsg_dst_addr_);
+
         return;
     }
 

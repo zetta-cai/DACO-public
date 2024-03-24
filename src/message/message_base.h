@@ -50,6 +50,8 @@ namespace covered
         kFinishWarmupResponse,
         kFinishrunRequest,
         kFinishrunResponse,
+        kDumpSnapshotRequest,
+        kDumpSnapshotResponse,
         kSimpleFinishrunResponse,
         // Cooperation control messages
         kAcquireWritelockRequest,
