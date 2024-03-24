@@ -251,7 +251,7 @@ namespace covered
 
     // (3) Dump/load directory entry for directory table of cooperation snapshot
 
-    void DirectoryEntry::dumpDirectoryEntry(std::fstream* fs_ptr)
+    void DirectoryEntry::dumpDirectoryEntry(std::fstream* fs_ptr) const
     {
         assert(fs_ptr != NULL);
 
