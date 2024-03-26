@@ -85,6 +85,7 @@ namespace covered
 
         // Non-const latency and weight variables (EWMA: Exponentially Weighted Moving Average)
         const uint32_t ewma_propagation_latency_clientedge_us_; // NOTE: client-edge latency does NOT affect weight_info_, as no matter local hit, cooperative hit, or cloud access have such latency
+        const uint32_t propagation_latency_edgecloud_us_; // Used to filter abnormal cross-edge latency
         uint32_t ewma_propagation_latency_crossedge_us_;
         uint32_t ewma_propagation_latency_edgecloud_us_;
         WeightInfo weight_info_;

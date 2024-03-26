@@ -1653,6 +1653,14 @@ namespace covered
         tmp_cache_server_ptr->admitLocalEdgeCache_(key, value, unused_is_neighbor_cached, !is_being_written); // valid if not being written
         UNUSED(unused_is_neighbor_cached);
 
+        // Dump debug information for SIEVE+ to check the reason of unreasonble cache hit ratio issue (may be just due to high-variance nature of SIEVE???)
+        if (tmp_edge_wrapper_ptr->getCacheName() == Util::EXTENDED_SIEVE_CACHE_NAME && !extra_common_msghdr.isSkipPropagationLatency()) // Stresstest phase for SIEVE+
+        {
+            std::ostringstream oss;
+            oss << "admit key " << key.getKeyDebugstr();
+            Util::dumpNormalMsg(base_instance_name_, oss.str());
+        }
+
         struct timespec update_directory_to_admit_end_timestamp = Util::getCurrentTimespec();
         uint32_t update_directory_to_admit_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(update_directory_to_admit_end_timestamp, update_directory_to_admit_start_timestamp));
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_UPDATE_DIRECTORY_TO_ADMIT_EVENT_NAME, update_directory_to_admit_latency_us); // Add intermediate event if with event tracking

@@ -79,7 +79,7 @@ namespace covered
     const double WeightTuner::EWMA_ALPHA = 0.1;
     const std::string WeightTuner::kClassName = "WeightTuner";
 
-    WeightTuner::WeightTuner(const uint32_t& edge_idx, const uint32_t& edgecnt, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us) : rwlock_for_weight_tuner_("rwlock_for_weight_tuner_"), ewma_propagation_latency_clientedge_us_(propagation_latency_clientedge_us)
+    WeightTuner::WeightTuner(const uint32_t& edge_idx, const uint32_t& edgecnt, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us) : rwlock_for_weight_tuner_("rwlock_for_weight_tuner_"), ewma_propagation_latency_clientedge_us_(propagation_latency_clientedge_us), propagation_latency_edgecloud_us_(propagation_latency_edgecloud_us)
     {
         std::ostringstream oss;
         oss << kClassName << " edge" << edge_idx;
@@ -98,7 +98,7 @@ namespace covered
         oss.clear();
         oss.str("");
         oss << "initial local hit weight: " << weight_info_.getLocalHitWeight() << ", cooperative hit weight: " << weight_info_.getCooperativeHitWeight() << ", remote beacon prob: " << ewma_remote_beacon_prob_;
-        Util::dumpDebugMsg(instance_name_, oss.str());
+        Util::dumpNormalMsg(instance_name_, oss.str());
     }
 
     WeightTuner::~WeightTuner() {}
@@ -170,11 +170,21 @@ namespace covered
 
         assert(cur_propagation_latency_crossedge_us > 0);
 
-        // Update cross-edge latency by EWMA
-        ewma_propagation_latency_crossedge_us_ = (1 - EWMA_ALPHA) * ewma_propagation_latency_crossedge_us_ + EWMA_ALPHA * cur_propagation_latency_crossedge_us;
-        assert(ewma_propagation_latency_crossedge_us_ >= 0);
+        // Filter abnormal cross-edge latency which should < edge-cloud latency
+        if (cur_propagation_latency_crossedge_us > propagation_latency_edgecloud_us_)
+        {
+            std::ostringstream oss;
+            oss << "abnormal cross-edge latency: " << cur_propagation_latency_crossedge_us << " us, which should be less than edge-cloud latency: " << propagation_latency_edgecloud_us_ << " us (could be caused by CPU contention)";
+            Util::dumpWarnMsg(instance_name_, oss.str());
+        }
+        else
+        {
+            // Update cross-edge latency by EWMA
+            ewma_propagation_latency_crossedge_us_ = (1 - EWMA_ALPHA) * ewma_propagation_latency_crossedge_us_ + EWMA_ALPHA * cur_propagation_latency_crossedge_us;
+            assert(ewma_propagation_latency_crossedge_us_ >= 0);
 
-        updateWeightInfo_(); // Update weight_info_ for latency-aware weight tuning
+            updateWeightInfo_(); // Update weight_info_ for latency-aware weight tuning
+        }
 
         rwlock_for_weight_tuner_.unlock(context_name);
         #endif
