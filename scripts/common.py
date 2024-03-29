@@ -90,3 +90,10 @@ class Common:
     ## (5) Experiment settings
 
     exp_round_number = 5 # Run each experiment for exp_round_number times
+
+    ## (6) Real-network settings
+
+    # Initialized single-trip time (RTT / 2) (TODO: update based on your real-network testbed)
+    alicloud_avg_clientedge_latency_us = 500
+    alicloud_avg_crossedge_latency_us = 5000
+    alicloud_avg_edgecloud_latency_us = 50000

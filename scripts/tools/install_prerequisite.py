@@ -15,6 +15,10 @@ is_upgrade_gcc = True
 is_link_cpp = True
 is_upgrade_cmake = True
 
+# Variables to control whether to change system settings
+is_update_udpbuffer_size = True
+is_update_swapspace_size = False # NOTE: ONLY set as True for local testbed, yet keep as False for real-network testbed due to limited disk space
+
 # (1) Upgrade python3 if necessary
 
 if is_upgrade_python3:
@@ -209,84 +213,86 @@ if is_upgrade_cmake:
 
 ## (6.1) Set UDP buffer size
 
-LogUtil.prompt(Common.scriptname, "check net.core.rmem_max...")
-target_rmem_max = 16777216
-need_set_rmem_max = False
-check_rmem_max_cmd = "sysctl -a 2>/dev/null | grep net.core.rmem_max"
-check_rmem_max_subprocess = SubprocessUtil.runCmd(check_rmem_max_cmd)
-if check_rmem_max_subprocess.returncode != 0:
-    LogUtil.die(Common.scriptname, "failed to check net.core.rmem_max (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(check_rmem_max_subprocess)))
-else:
-    check_rmem_max_outputstr = SubprocessUtil.getSubprocessOutputstr(check_rmem_max_subprocess)
-    cur_rmem_max = int(check_rmem_max_outputstr.split("=")[-1])
-    if cur_rmem_max < target_rmem_max:
-        LogUtil.dump(Common.scriptname, "current net.core.rmem_max {} < target {}, which needs reset".format(cur_rmem_max, target_rmem_max))
-        need_set_rmem_max = True
+if is_update_udpbuffer_size:
+    LogUtil.prompt(Common.scriptname, "check net.core.rmem_max...")
+    target_rmem_max = 16777216
+    need_set_rmem_max = False
+    check_rmem_max_cmd = "sysctl -a 2>/dev/null | grep net.core.rmem_max"
+    check_rmem_max_subprocess = SubprocessUtil.runCmd(check_rmem_max_cmd)
+    if check_rmem_max_subprocess.returncode != 0:
+        LogUtil.die(Common.scriptname, "failed to check net.core.rmem_max (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(check_rmem_max_subprocess)))
     else:
-        LogUtil.dump(Common.scriptname, "current net.core.rmem_max {} already >= target {}, which does not need reset".format(cur_rmem_max, target_rmem_max))
+        check_rmem_max_outputstr = SubprocessUtil.getSubprocessOutputstr(check_rmem_max_subprocess)
+        cur_rmem_max = int(check_rmem_max_outputstr.split("=")[-1])
+        if cur_rmem_max < target_rmem_max:
+            LogUtil.dump(Common.scriptname, "current net.core.rmem_max {} < target {}, which needs reset".format(cur_rmem_max, target_rmem_max))
+            need_set_rmem_max = True
+        else:
+            LogUtil.dump(Common.scriptname, "current net.core.rmem_max {} already >= target {}, which does not need reset".format(cur_rmem_max, target_rmem_max))
 
-if need_set_rmem_max:
-    LogUtil.prompt(Common.scriptname, "set net.core.rmem_max as {}...".format(target_rmem_max))
-    set_rmem_max_cmd = "sudo sysctl -w net.core.rmem_max={}".format(target_rmem_max)
-    set_rmem_max_subprocess = SubprocessUtil.runCmd(set_rmem_max_cmd)
-    if set_rmem_max_subprocess.returncode != 0:
-        LogUtil.die(Common.scriptname, "failed to set net.core.rmem_max (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(set_rmem_max_subprocess)))
+    if need_set_rmem_max:
+        LogUtil.prompt(Common.scriptname, "set net.core.rmem_max as {}...".format(target_rmem_max))
+        set_rmem_max_cmd = "sudo sysctl -w net.core.rmem_max={}".format(target_rmem_max)
+        set_rmem_max_subprocess = SubprocessUtil.runCmd(set_rmem_max_cmd)
+        if set_rmem_max_subprocess.returncode != 0:
+            LogUtil.die(Common.scriptname, "failed to set net.core.rmem_max (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(set_rmem_max_subprocess)))
 
 ## (6.2) Set swap memory size (to avoid triggering memory usage bugs of some baselines, e.g., SegCache and GL-Cache, which may incur memory leakage in their own source code)
 
 # Related commands include: cat /proc/swaps, df -h, and lsblk to check swap files; fdisk /dev/sda, pvcreate /dev/sda3, vgs, lvscan, lvextend -L +1T /dev/vgname/lvname, and resize2fs /dev/mapper/vgname-lvname to allocate sufficient space for /swapfile.
 
-swapfile_path = "/swapfile"
-swapfile_size_gb = 200 # 200 GiB
+if is_update_swapspace_size:
+    swapfile_path = "/swapfile"
+    swapfile_size_gb = 200 # 200 GiB
 
-# Check file existence
-is_swapfile_exist = False
-check_swapfile_cmd = "sudo ls {}".format(swapfile_path)
-check_swapfile_subprocess = SubprocessUtil.runCmd(check_swapfile_cmd, is_capture_output=False)
-if check_swapfile_subprocess.returncode != 0:
+    # Check file existence
     is_swapfile_exist = False
-    LogUtil.dump(Common.scriptname, "Swap file {} does not exist...".format(swapfile_path))
-else:
-    is_swapfile_exist = True
-
-# Check file size
-is_swapfile_large_enough = False
-if is_swapfile_exist:
-    check_swapfile_size_cmd = "sudo du {} | awk '{{print $1}}'".format(swapfile_path)
-    check_swapfile_size_subprocess = SubprocessUtil.runCmd(check_swapfile_size_cmd)
-    if check_swapfile_size_subprocess.returncode != 0:
-        LogUtil.die(Common.scriptname, "failed to check swap file size (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(check_swapfile_size_subprocess)))
+    check_swapfile_cmd = "sudo ls {}".format(swapfile_path)
+    check_swapfile_subprocess = SubprocessUtil.runCmd(check_swapfile_cmd, is_capture_output=False)
+    if check_swapfile_subprocess.returncode != 0:
+        is_swapfile_exist = False
+        LogUtil.dump(Common.scriptname, "Swap file {} does not exist...".format(swapfile_path))
     else:
-        tmp_swapfile_size_gb = int(SubprocessUtil.getSubprocessOutputstr(check_swapfile_size_subprocess)) / 1024 / 1024
-        if tmp_swapfile_size_gb >= swapfile_size_gb:
-            is_swapfile_large_enough = True
+        is_swapfile_exist = True
+
+    # Check file size
+    is_swapfile_large_enough = False
+    if is_swapfile_exist:
+        check_swapfile_size_cmd = "sudo du {} | awk '{{print $1}}'".format(swapfile_path)
+        check_swapfile_size_subprocess = SubprocessUtil.runCmd(check_swapfile_size_cmd)
+        if check_swapfile_size_subprocess.returncode != 0:
+            LogUtil.die(Common.scriptname, "failed to check swap file size (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(check_swapfile_size_subprocess)))
         else:
-            LogUtil.dump(Common.scriptname, "Swap file {} exists yet not large enough ({} GiB < {} GiB)...".format(swapfile_path, tmp_swapfile_size_gb, swapfile_size_gb))
+            tmp_swapfile_size_gb = int(SubprocessUtil.getSubprocessOutputstr(check_swapfile_size_subprocess)) / 1024 / 1024
+            if tmp_swapfile_size_gb >= swapfile_size_gb:
+                is_swapfile_large_enough = True
+            else:
+                LogUtil.dump(Common.scriptname, "Swap file {} exists yet not large enough ({} GiB < {} GiB)...".format(swapfile_path, tmp_swapfile_size_gb, swapfile_size_gb))
 
-# Create swap file if necessary
-LogUtil.prompt(Common.scriptname, "Set swap size {} as {}G for baselines with memory issues (e.g., GL-Cache and SegCache)...".format(swapfile_path, swapfile_size_gb))
-set_swap_size_cmd = ""
-if not is_swapfile_exist or not is_swapfile_large_enough:
-    set_swap_size_cmd = "sudo swapoff -a && sudo fallocate -l {0}G {1} && sudo mkswap {1} && sudo swapon {1}".format(swapfile_size_gb, swapfile_path)
-else:
-    set_swap_size_cmd = "sudo swapoff -a && sudo swapon {}".format(swapfile_path)
-set_swap_size_subprocess = SubprocessUtil.runCmd(set_swap_size_cmd, is_capture_output=False)
-if set_swap_size_subprocess.returncode != 0:
-    LogUtil.die(Common.scriptname, "failed to set swap size as {}G (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(swapfile_size_gb, set_swap_size_subprocess)))
+    # Create swap file if necessary
+    LogUtil.prompt(Common.scriptname, "Set swap size {} as {}G for baselines with memory issues (e.g., GL-Cache and SegCache)...".format(swapfile_path, swapfile_size_gb))
+    set_swap_size_cmd = ""
+    if not is_swapfile_exist or not is_swapfile_large_enough:
+        set_swap_size_cmd = "sudo swapoff -a && sudo fallocate -l {0}G {1} && sudo mkswap {1} && sudo swapon {1}".format(swapfile_size_gb, swapfile_path)
+    else:
+        set_swap_size_cmd = "sudo swapoff -a && sudo swapon {}".format(swapfile_path)
+    set_swap_size_subprocess = SubprocessUtil.runCmd(set_swap_size_cmd, is_capture_output=False)
+    if set_swap_size_subprocess.returncode != 0:
+        LogUtil.die(Common.scriptname, "failed to set swap size as {}G (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(swapfile_size_gb, set_swap_size_subprocess)))
 
-# NOTE: if you don't have sufficient space for /swapfile, you can also allocate a new logical volume for swap.
-# Suppose that you need to reduce existing logical volume first to allocate a new one for swap -> here is my example:
-# (1) Reduce existing logical volume
-# sudo lsof /home/projects/sysheng/covered-private # Check if any file in the mount point of existing logical volume is open -> kill corresponding processes if any
-# sudo umount -v /home/projects/sysheng/covered-private # Unmount the existing logical volume
-# sudo e2fsck -ff /home/mapper/ubuntu--vg-ubuntu--lg # Verify FS in the existing logibal volume
-# sudo resize2fs /dev/mapper/ubuntu--vg-ubuntu--lg 2200G # Shrink FS from 2.7T to 2.2T in the existing logical volume
-# sudo lvreduce -L 2200G /dev/mapper/ubuntu--vg-ubuntu--lg # Shrink the existing logical volume from 2.7T to 2.2T
-# sudo resize2fs /dev/mapper/ubuntu--vg-ubuntu--lg # Resize FS to use all space of the existing logical volume
-# sudo e2fsck -ff /home/mapper/ubuntu--vg-ubuntu--lg # Verify FS in the existing logibal volume again
-# (2) Create new logical volume for swap
-# sudo swapoff -a # Turn off swap
-# sudo lvs/lvscan/lvdisplay/vgs/vgscan/vgdisplay # Check existing logical volumes and volume groups
-# sudo lvcreate -L 200G -n swap-lv ubuntu-vg # Create a new logical volume for swap
-# sudo mkswap /dev/mapper/ubuntu--vg-swap--lv # Make swap space in the new logical volume (use mkfs.xfs instead of mkswap to install FS if you create a new volume for normal usage)
-# sudo swapon /dev/mapper/ubuntu--vg-swap--lv # Turn on swap
+    # NOTE: if you don't have sufficient space for /swapfile, you can also allocate a new logical volume for swap.
+    # Suppose that you need to reduce existing logical volume first to allocate a new one for swap -> here is my example:
+    # (1) Reduce existing logical volume
+    # sudo lsof /home/projects/sysheng/covered-private # Check if any file in the mount point of existing logical volume is open -> kill corresponding processes if any
+    # sudo umount -v /home/projects/sysheng/covered-private # Unmount the existing logical volume
+    # sudo e2fsck -ff /home/mapper/ubuntu--vg-ubuntu--lg # Verify FS in the existing logibal volume
+    # sudo resize2fs /dev/mapper/ubuntu--vg-ubuntu--lg 2200G # Shrink FS from 2.7T to 2.2T in the existing logical volume
+    # sudo lvreduce -L 2200G /dev/mapper/ubuntu--vg-ubuntu--lg # Shrink the existing logical volume from 2.7T to 2.2T
+    # sudo resize2fs /dev/mapper/ubuntu--vg-ubuntu--lg # Resize FS to use all space of the existing logical volume
+    # sudo e2fsck -ff /home/mapper/ubuntu--vg-ubuntu--lg # Verify FS in the existing logibal volume again
+    # (2) Create new logical volume for swap
+    # sudo swapoff -a # Turn off swap
+    # sudo lvs/lvscan/lvdisplay/vgs/vgscan/vgdisplay # Check existing logical volumes and volume groups
+    # sudo lvcreate -L 200G -n swap-lv ubuntu-vg # Create a new logical volume for swap
+    # sudo mkswap /dev/mapper/ubuntu--vg-swap--lv # Make swap space in the new logical volume (use mkfs.xfs instead of mkswap to install FS if you create a new volume for normal usage)
+    # sudo swapon /dev/mapper/ubuntu--vg-swap--lv # Turn on swap
