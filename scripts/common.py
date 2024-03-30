@@ -69,8 +69,9 @@ class Common:
         elif SubprocessUtil.getSubprocessOutputstr(tmp_is_current_machine_subprocess) != "": # tmp_machine_public_ip is found
             cur_machine_idx = tmp_machine_idx
             break
-    if cur_machine_idx == -1:
-        LogUtil.die(scriptname, "cannot find current machine ip in config.json")
+    # NOTE: comment for real-network testbed, as we install libs before updating the config json file
+    # if cur_machine_idx == -1:
+    #     LogUtil.die(scriptname, "cannot find current machine ip in config.json")
     
     ## (4) Symbol settings
 

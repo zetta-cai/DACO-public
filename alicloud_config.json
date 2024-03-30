@@ -8,7 +8,7 @@
     "cloud_machine_index": 8,
     "cloud_recvmsg_startport": 4300,
     "cloud_recvreq_startport": 4400,
-    "cloud_rocksdb_basedir": "/tmp/cloud",
+    "cloud_rocksdb_basedir": "/essd/cloud",
     "covered_local_uncached_max_mem_usage_ratio": 0.01,
     "covered_popularity_aggregation_max_mem_usage_ratio": 0.01,
     "dataset_loader_sleep_for_compaction_sec": 60,

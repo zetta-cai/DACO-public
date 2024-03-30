@@ -50,7 +50,9 @@ cd ./mongo-cxx-driver/build
 CMAKE_PREFIX_PATH=${libboost_prefix_path}:${lrb_rootpath}/install/mongocdriver # Siyuan: mongo-cxx-driver relies on lib/lrb/install/mongocdriver/lib/cmake/libbson-1.0/libbson-1.0-config.cmake to find libbson installed by mongo-c-driver
 export CMAKE_PREFIX_PATH
 cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${lrb_rootpath}/install/mongocxxdriver ..
-sudo make VERBOSE=1 EP_mnmlstc_core >/home/sysheng/projects/covered-private/tmp.out 2>&1 # TMPDEBG240109
+sudo make VERBOSE=1 EP_mnmlstc_core
+# TODO: replace the previous command with the following one if you want to dump the output to a file
+#sudo make VERBOSE=1 EP_mnmlstc_core >/home/sysheng/projects/covered-private/tmp.out 2>&1
 make -j
 sudo make install
 cd ../..
