@@ -7,17 +7,21 @@ class ExpUtil:
     physical_machines_ = JsonUtil.getValueForKeystr(Common.scriptname, "physical_machines")
 
     @classmethod
-    def getRemoteCmd(cls, remote_machine_idx, internal_cmd, with_background = False):
+    def getRemoteCmd(cls, remote_machine_idx, internal_cmd, with_background = False, specify_sshkey = True):
         remote_cmd = ""
         if remote_machine_idx == Common.cur_machine_idx:
             LogUtil.dieNoExit(Common.scriptname, "remote machine index {} should != current machine index {} in getRemoteCmd".format(remote_machine_idx, Common.cur_machine_idx))
         else:
             ssh_cmd = ""
+            if specify_sshkey:
+                ssh_cmd = "ssh -i {}".format(Common.sshkey_filepath)
+            else:
+                ssh_cmd = "ssh"
             if with_background:
                 # NOTE: use -f to move SSH connection into background in target machine after launching the background command, such that current machine will NOT get stuck
-                ssh_cmd = "ssh -f -i {} {}@{}".format(Common.sshkey_filepath, Common.username, cls.physical_machines_[remote_machine_idx]["public_ipstr"])
+                ssh_cmd = "{} -f {}@{}".format(ssh_cmd, Common.username, cls.physical_machines_[remote_machine_idx]["public_ipstr"])
             else:
-                ssh_cmd = "ssh -i {} {}@{}".format(Common.sshkey_filepath, Common.username, cls.physical_machines_[remote_machine_idx]["public_ipstr"])
+                ssh_cmd = "{} {}@{}".format(ssh_cmd, Common.username, cls.physical_machines_[remote_machine_idx]["public_ipstr"])
             remote_cmd = "{} \"source /home/{}/.bashrc_non_interactive && {}\"".format(ssh_cmd, Common.username, internal_cmd)
         return remote_cmd
 

@@ -36,7 +36,7 @@ LogUtil.prompt(Common.scriptname, "create {} if not exist for preparation".forma
 for tmp_machine_idx in range(len(physical_machines)):
     mkdir_cmd = "mkdir -p {}".format(sshkey_dirpath)
     if tmp_machine_idx != Common.cur_machine_idx:
-        mkdir_cmd = ExpUtil.getRemoteCmd(tmp_machine_idx, mkdir_cmd)
+        mkdir_cmd = ExpUtil.getRemoteCmd(tmp_machine_idx, mkdir_cmd, specify_sshkey = False)
     mkdir_subprocess = SubprocessUtil.runCmd(mkdir_cmd)
     if mkdir_subprocess.returncode != 0:
         LogUtil.die(Common.scriptname, SubprocessUtil.getSubprocessErrstr(mkdir_subprocess))
@@ -90,7 +90,7 @@ for tmp_machine_idx in range(len(physical_machines)):
     LogUtil.dump(Common.scriptname, "check {} in machine {}".format(authorized_keys_filepath, tmp_machine_public_ip))
     check_authorized_keys_filepath_cmd = "ls {}".format(authorized_keys_filepath)
     if tmp_machine_idx != Common.cur_machine_idx:
-        check_authorized_keys_filepath_cmd = ExpUtil.getRemoteCmd(tmp_machine_idx, check_authorized_keys_filepath_cmd)
+        check_authorized_keys_filepath_cmd = ExpUtil.getRemoteCmd(tmp_machine_idx, check_authorized_keys_filepath_cmd, specify_sshkey = False)
     need_create_authorized_keys = False
     check_authorized_keys_filepath_subprocess = SubprocessUtil.runCmd(check_authorized_keys_filepath_cmd)
     if check_authorized_keys_filepath_subprocess.returncode != 0: # authorized_keys_filepath not found
@@ -105,7 +105,7 @@ for tmp_machine_idx in range(len(physical_machines)):
         LogUtil.dump(Common.scriptname, "create {} in machine {}".format(authorized_keys_filepath, tmp_machine_idx))
         create_authorized_keys_cmd = "touch {}".format(authorized_keys_filepath)
         if tmp_machine_idx != Common.cur_machine_idx:
-            create_authorized_keys_cmd = ExpUtil.getRemoteCmd(tmp_machine_idx, create_authorized_keys_cmd)
+            create_authorized_keys_cmd = ExpUtil.getRemoteCmd(tmp_machine_idx, create_authorized_keys_cmd, specify_sshkey = False)
         create_authorized_keys_subprocess = SubprocessUtil.runCmd(create_authorized_keys_cmd)
         if create_authorized_keys_subprocess.returncode != 0:
             LogUtil.die(Common.scriptname, SubprocessUtil.getSubprocessErrstr(create_authorized_keys_subprocess))
@@ -116,7 +116,7 @@ for tmp_machine_idx in range(len(physical_machines)):
         LogUtil.dump(Common.scriptname, "check SSH public key in {} of machine {}".format(authorized_keys_filepath, tmp_machine_idx))
         check_public_sshkey_in_authorized_keys_cmd = "grep -w '{}' {}".format(public_sshkey_content, authorized_keys_filepath)
         if tmp_machine_idx != Common.cur_machine_idx:
-            check_public_sshkey_in_authorized_keys_cmd = ExpUtil.getRemoteCmd(tmp_machine_idx, check_public_sshkey_in_authorized_keys_cmd)
+            check_public_sshkey_in_authorized_keys_cmd = ExpUtil.getRemoteCmd(tmp_machine_idx, check_public_sshkey_in_authorized_keys_cmd, specify_sshkey = False)
         need_append_public_sshkey = False
         check_public_sshkey_in_authorized_keys_subprocess = SubprocessUtil.runCmd(check_public_sshkey_in_authorized_keys_cmd)
         if check_public_sshkey_in_authorized_keys_subprocess.returncode != 0: # Error of public_sshkey_content not found
@@ -134,7 +134,7 @@ for tmp_machine_idx in range(len(physical_machines)):
         LogUtil.dump(Common.scriptname, "append SSH public key to {} of machine {}".format(authorized_keys_filepath, tmp_machine_idx))
         append_public_sshkey_cmd = "echo {} >> {}".format(public_sshkey_content, authorized_keys_filepath)
         if tmp_machine_idx != Common.cur_machine_idx:
-            append_public_sshkey_cmd = ExpUtil.getRemoteCmd(tmp_machine_idx, append_public_sshkey_cmd)
+            append_public_sshkey_cmd = ExpUtil.getRemoteCmd(tmp_machine_idx, append_public_sshkey_cmd, specify_sshkey = False)
         append_public_sshkey_subprocess = SubprocessUtil.runCmd(append_public_sshkey_cmd)
         if append_public_sshkey_subprocess.returncode != 0:
             LogUtil.die(Common.scriptname, SubprocessUtil.getSubprocessErrstr(append_public_sshkey_subprocess))
