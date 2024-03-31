@@ -20,6 +20,21 @@ simple_example_settings = {
     "workload_name": "wikitext"
 }
 
+# # Unreasonable results of GDSF+ of WikiImage and WikiText in AliCloud -> due to unreasonable partition of single-node traces for geo-distributed evaluation
+# simple_example_settings = {
+#     "clientcnt": 4,
+#     "edgecnt": 4,
+#     "keycnt": 1000000,
+#     "capacity_mb": 1778, # 3899 (for wikiimage), 1778 (for wikitext)
+#     "cache_name": "covered", # gdsf+, covered
+#     "workload_name": "wikitext", # wikiimage, wikitext
+#     "realnet_option": "load",
+#     "realnet_expname": "exp_alicloud_round1_covered_wikitext", # exp_alicloud_round0_gdsf+_wikiimage, exp_alicloud_round0_covered_wikiimage, exp_alicloud_round0_gdsf+_wikitext, exp_alicloud_round0_covered_wikitext, exp_alicloud_round1_gdsf+_wikiimage, exp_alicloud_round1_covered_wikiimage, exp_alicloud_round1_gdsf+_wikitext, exp_alicloud_round1_covered_wikitext
+#     "propagation_latency_clientedge_us": 742, # 750 (for round0), 742 (for round1)
+#     "propagation_latency_crossedge_us": 12140, # 10650 (for round0), 12140 (for round1)
+#     "propagation_latency_edgecloud_us": 29985, # 30000 (for round0), 29985 (for round1)
+# }
+
 # # (DONE) Weight tuner update issue of COVERED under wikiimage with 50% memory -> fixed by filtering abnormal cross-edge latency
 # simple_example_settings = {
 #     "clientcnt": 4,
