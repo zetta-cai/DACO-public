@@ -98,7 +98,7 @@ class Common:
 
     ## (5) Experiment settings
 
-    exp_round_number = 2 # Run each experiment for exp_round_number times
+    exp_round_number = 3 # Run each experiment for exp_round_number times
 
     ## (6) Real-network settings
 
@@ -108,6 +108,10 @@ class Common:
     #alicloud_avg_crossedge_latency_us = 10650
     #alicloud_avg_edgecloud_latency_us = 30000
     # NOTE: used for the second round (for round 1)
-    alicloud_avg_clientedge_latency_us = 742
-    alicloud_avg_crossedge_latency_us = 12140
-    alicloud_avg_edgecloud_latency_us = 29985
+    #alicloud_avg_clientedge_latency_us = 742
+    #alicloud_avg_crossedge_latency_us = 12140
+    #alicloud_avg_edgecloud_latency_us = 29985
+    # NOTE: used for the third round (for round 3)
+    alicloud_avg_clientedge_latency_us = 755
+    alicloud_avg_crossedge_latency_us = 10745
+    alicloud_avg_edgecloud_latency_us = 30100
