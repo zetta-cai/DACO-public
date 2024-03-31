@@ -191,7 +191,7 @@ namespace covered
     // For port verification
     std::map<uint16_t, std::string> Config::startport_keystr_map_;
 
-    void Config::loadConfig(const std::string& config_filepath, const std::string& main_class_name, const bool& is_cloud_testbed)
+    void Config::loadConfig(const std::string& config_filepath, const std::string& main_class_name)
     {
         if (!is_valid_) // Invoked at most once
         {
