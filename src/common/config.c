@@ -191,7 +191,7 @@ namespace covered
     // For port verification
     std::map<uint16_t, std::string> Config::startport_keystr_map_;
 
-    void Config::loadConfig(const std::string& config_filepath, const std::string& main_class_name)
+    void Config::loadConfig(const std::string& config_filepath, const std::string& main_class_name, const bool& is_cloud_testbed)
     {
         if (!is_valid_) // Invoked at most once
         {
@@ -471,7 +471,7 @@ namespace covered
                     }
                     assert(physical_machines_.size() == kv_ptr->value().get_array().size());
                 }
-                checkPhysicalMachinesAndSetCuridx_(); // Set current_machine_idx_
+                checkPhysicalMachinesAndSetCuridx_();
 
                 // Integrity verification
                 verifyIntegrity_();
@@ -1353,14 +1353,27 @@ namespace covered
         }
         assert(current_ipstrs.size() > 0);
 
-        // Match public ipstr to set current physical machine index
+        // Match public/private ipstr to set current physical machine index
         bool is_found = false;
         for (uint32_t i = 0; i < physical_machines_.size(); i++)
         {
+            // Match public ipstr
             std::string tmp_public_ipstr = physical_machines_[i].getPublicIpstr();
             for (std::unordered_set<std::string>::const_iterator current_ipstrs_const_iter = current_ipstrs.cbegin(); current_ipstrs_const_iter != current_ipstrs.cend(); current_ipstrs_const_iter++)
             {
                 if (tmp_public_ipstr == *current_ipstrs_const_iter)
+                {
+                    current_machine_idx_ = i;
+                    is_found = true;
+                    break;
+                }
+            }
+
+            // Match privaate ipstr
+            std::string tmp_private_ipstr = physical_machines_[i].getPrivateIpstr();
+            for (std::unordered_set<std::string>::const_iterator current_ipstrs_const_iter = current_ipstrs.cbegin(); current_ipstrs_const_iter != current_ipstrs.cend(); current_ipstrs_const_iter++)
+            {
+                if (tmp_private_ipstr == *current_ipstrs_const_iter)
                 {
                     current_machine_idx_ = i;
                     is_found = true;

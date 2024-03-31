@@ -107,7 +107,7 @@ namespace covered
         // For all physical machines
         static const std::string PHYSICAL_MACHINES_KEYSTR;
 
-        static void loadConfig(const std::string& config_filepath, const std::string& main_class_name);
+        static void loadConfig(const std::string& config_filepath, const std::string& main_class_name, const bool& is_cloud_testbed);
 
         static std::string getMainClassName();
 

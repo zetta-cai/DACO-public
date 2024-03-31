@@ -62,11 +62,17 @@ class Common:
         tmp_is_current_machine_cmd = "ifconfig | grep -w " + tmp_machine_public_ip # -w means whole word matching
         tmp_is_current_machine_subprocess = SubprocessUtil.runCmd(tmp_is_current_machine_cmd)
         if tmp_is_current_machine_subprocess.returncode != 0: # Error or tmp_machine_public_ip not found
-            if SubprocessUtil.getSubprocessErrstr(tmp_is_current_machine_subprocess) != "": # Error
-                LogUtil.die(scriptname, SubprocessUtil.getSubprocessErrstr(tmp_is_current_machine_subprocess))
-            else: # tmp_machine_public_ip not found
-                continue
+            LogUtil.die(scriptname, SubprocessUtil.getSubprocessErrstr(tmp_is_current_machine_subprocess)) # Dump error string
         elif SubprocessUtil.getSubprocessOutputstr(tmp_is_current_machine_subprocess) != "": # tmp_machine_public_ip is found
+            cur_machine_idx = tmp_machine_idx
+            break
+        
+        tmp_machine_private_ip = tmp_physical_machines[tmp_machine_idx]["private_ipstr"]
+        tmp_is_current_machine_cmd = "ifconfig | grep -w " + tmp_machine_private_ip # -w means whole word matching
+        tmp_is_current_machine_subprocess = SubprocessUtil.runCmd(tmp_is_current_machine_cmd)
+        if tmp_is_current_machine_subprocess.returncode != 0: # Error or tmp_machine_private_ip not found
+            LogUtil.die(scriptname, SubprocessUtil.getSubprocessErrstr(tmp_is_current_machine_subprocess)) # Dump error string
+        elif SubprocessUtil.getSubprocessOutputstr(tmp_is_current_machine_subprocess) != "": # tmp_machine_private_ip is found
             cur_machine_idx = tmp_machine_idx
             break
     # NOTE: comment for real-network testbed, as we install libs before updating the config json file
