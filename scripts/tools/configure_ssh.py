@@ -64,7 +64,7 @@ for tmp_machine_idx in range(len(physical_machines)):
     tmp_machine_public_ip = physical_machines[tmp_machine_idx]["public_ipstr"]
     LogUtil.prompt(Common.scriptname, "copy passfree SSH private key to machine {}".format(tmp_machine_idx))
     # NOTE: if Commmon.sshkey_filepath does not exist, scp will go back to other ssh keys or passoword verification
-    copy_private_sshkey_cmd = "scp -i {0} {1} {2}@{3}:{1}".format(Common.sshkey_filepath, Common.sshkey_filepath, Common.username, tmp_machine_public_ip)
+    copy_private_sshkey_cmd = "scp {0} {1}@{2}:{0}".format(Common.sshkey_filepath, Common.username, tmp_machine_public_ip)
     copy_private_sshkey_subprocess = SubprocessUtil.runCmd(copy_private_sshkey_cmd)
     if copy_private_sshkey_subprocess.returncode != 0:
         LogUtil.die(Common.scriptname, SubprocessUtil.getSubprocessErrstr(copy_private_sshkey_subprocess))

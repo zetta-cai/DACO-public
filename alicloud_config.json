@@ -50,56 +50,56 @@
     "version": "1.0",
     "physical_machines": [
         {
-            "private_ipstr": "client0-public-ip",
-            "public_ipstr": "client0-private-ip",
+            "private_ipstr": "client0-private-ip",
+            "public_ipstr": "client0-public-ip",
             "cpu_dedicated_corecnt": 2,
             "cpu_shared_corecnt": 0
         },
         {
-            "private_ipstr": "client1-public-ip",
-            "public_ipstr": "client1-private-ip",
+            "private_ipstr": "client1-private-ip",
+            "public_ipstr": "client1-public-ip",
             "cpu_dedicated_corecnt": 2,
             "cpu_shared_corecnt": 0
         },
         {
-            "private_ipstr": "client2-public-ip",
-            "public_ipstr": "client2-private-ip",
+            "private_ipstr": "client2-private-ip",
+            "public_ipstr": "client2-public-ip",
             "cpu_dedicated_corecnt": 2,
             "cpu_shared_corecnt": 0
         },
         {
-            "private_ipstr": "client3-public-ip",
-            "public_ipstr": "client3-private-ip",
+            "private_ipstr": "client3-private-ip",
+            "public_ipstr": "client3-public-ip",
             "cpu_dedicated_corecnt": 2,
             "cpu_shared_corecnt": 0
         },
         {
-            "private_ipstr": "edge0-public-ip",
-            "public_ipstr": "edge0-private-ip",
+            "private_ipstr": "edge0-private-ip",
+            "public_ipstr": "edge0-public-ip",
             "cpu_dedicated_corecnt": 8,
             "cpu_shared_corecnt": 0
         },
         {
-            "private_ipstr": "edge1-public-ip",
-            "public_ipstr": "edge1-private-ip",
+            "private_ipstr": "edge1-private-ip",
+            "public_ipstr": "edge1-public-ip",
             "cpu_dedicated_corecnt": 8,
             "cpu_shared_corecnt": 0
         },
         {
-            "private_ipstr": "edge2-public-ip",
-            "public_ipstr": "edge2-private-ip",
+            "private_ipstr": "edge2-private-ip",
+            "public_ipstr": "edge2-public-ip",
             "cpu_dedicated_corecnt": 8,
             "cpu_shared_corecnt": 0
         },
         {
-            "private_ipstr": "edge3-public-ip",
-            "public_ipstr": "edge3-private-ip",
+            "private_ipstr": "edge3-private-ip",
+            "public_ipstr": "edge3-public-ip",
             "cpu_dedicated_corecnt": 8,
             "cpu_shared_corecnt": 0
         },
         {
-            "private_ipstr": "cloud-public-ip",
-            "public_ipstr": "cloud-private-ip",
+            "private_ipstr": "cloud-private-ip",
+            "public_ipstr": "cloud-public-ip",
             "cpu_dedicated_corecnt": 8,
             "cpu_shared_corecnt": 4
         }
