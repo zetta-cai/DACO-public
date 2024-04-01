@@ -10,6 +10,8 @@
  * 
  * NOTE: see more notes on source code of cachelib in docs/cachebench.md.
  * 
+ * NOTE: FacebookWorkloadWrapper is for OSDI'20 Facebook CDN trace, while FbphotoWorkloadWrapper is for SOSP'13 Facebook photo caching trace
+ * 
  * By Siyuan Sheng (2023.04.19).
  */
 

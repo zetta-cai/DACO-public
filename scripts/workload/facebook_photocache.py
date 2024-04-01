@@ -84,21 +84,32 @@ for i in range(len(samples)):
     else:
         LogUtil.die(Common.scriptname, "invalid tmp_sample {}".format(tmp_sample))
 
+# Dump dataset value size statistics
+min_value_size = dataset_value_sizes.min()
+max_value_size = dataset_value_sizes.max()
+sum_value_size = dataset_value_sizes.sum()
+avg_value_size = sum_value_size / dataset_size
+dataset_space_usage = dataset_size * 4 + sum_value_size
+print("min_value_size: {} B; max_value_size: {} B; avg_value_size: {} B; dataset_space_usage: {} MiB".format(min_value_size, max_value_size, avg_value_size, dataset_space_usage / 1024 / 1024))
+
 # (5) Dump dataset size, probs, and value sizes
 
 # NOTE: MUST be the same as dataset filepath in src/common/util.c
 dataset_filepath = "{}/fbphoto.dataset".format(Common.trace_dirpath)
 
 # Dump into the binary file
-with open(dataset_filepath, "wb") as f:
-    # Dump dataset size as uint32_t in little endian
-    f.write(struct.pack("<I", dataset_size))
-    # Dump probs as float in little endian
-    for i in range(dataset_size):
-        f.write(struct.pack("<f", dataset_probs[i]))
-    # Dump value sizes as uint32_t in little endian
-    for i in range(dataset_size):
-        f.write(struct.pack("<I", int(dataset_value_sizes[i])))
+if not os.path.exists(dataset_filepath):
+    print("Dump dataset file...")
+    os.makedirs(os.path.dirname(dataset_filepath), exist_ok=True)
+    with open(dataset_filepath, "wb") as f:
+        # Dump dataset size as uint32_t in little endian
+        f.write(struct.pack("<I", dataset_size))
+        # Dump probs as float in little endian
+        for i in range(dataset_size):
+            f.write(struct.pack("<f", dataset_probs[i]))
+        # Dump value sizes as uint32_t in little endian
+        for i in range(dataset_size):
+            f.write(struct.pack("<I", int(dataset_value_sizes[i])))
 
 
 
