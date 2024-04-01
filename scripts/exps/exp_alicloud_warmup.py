@@ -32,7 +32,7 @@ exp_default_settings = {
 #cache_names = ["covered", "shark", "bestguess", "arc+", "cachelib+", "fifo+", "frozenhot+", "gdsf+", "lfu+", "lhd+", "s3fifo+", "sieve+", "wtinylfu+", "lrb+", "glcache+", "segcache+"]
 cache_names = ["covered", "gdsf+", "lhd+"] # TMPDEBUG
 peredge_capacity_list = [1024, 2048, 4096, 8192] # 1G, 2G, 4G, and 8G
-#workload_peredge_capacity_map = {"facebook": 3479, "wikitext": 1778, "wikiimage": 3899} # per-edge capacity = dataset capacity * 50% / 4 edges (OBSOLETE due to single-node traces)
+workload_peredge_capacity_map = {"facebook": 3479, "wikitext": 1778, "wikiimage": 3899} # per-edge capacity = dataset capacity * 50% / 4 edges (OBSOLETE due to single-node traces)
 
 # Run the experiments with multiple rounds
 for tmp_round_index in round_indexes:
@@ -78,29 +78,29 @@ for tmp_round_index in round_indexes:
             prototype_instance = Prototype(evaluator_logfile = tmp_log_filepath, **tmp_exp_settings)
             prototype_instance.run()
         
-        # # (2) Run prototype for each workload (OBSOLETE due to single-node traces)
-        # for tmp_workload, tmp_peredge_capacity in workload_peredge_capacity_map.items():
-        #     tmp_log_filepath = "{}/tmp_evaluator_for_{}_{}.out".format(tmp_log_dirpath, tmp_cache_name, tmp_workload)
-        #     SubprocessUtil.tryToCreateDirectory(Common.scriptname, os.path.dirname(tmp_log_filepath))
+        # (2) Run prototype for each workload (OBSOLETE due to single-node traces)
+        for tmp_workload, tmp_peredge_capacity in workload_peredge_capacity_map.items():
+            tmp_log_filepath = "{}/tmp_evaluator_for_{}_{}.out".format(tmp_log_dirpath, tmp_cache_name, tmp_workload)
+            SubprocessUtil.tryToCreateDirectory(Common.scriptname, os.path.dirname(tmp_log_filepath))
 
-        #     # Check log filepath
-        #     if os.path.exists(tmp_log_filepath):
-        #         LogUtil.prompt(Common.scriptname, "Log filepath {} already exists, skip {} w/ {} for the current round {}...".format(tmp_log_filepath, tmp_cache_name, tmp_workload, tmp_round_index))
-        #         continue
+            # Check log filepath
+            if os.path.exists(tmp_log_filepath):
+                LogUtil.prompt(Common.scriptname, "Log filepath {} already exists, skip {} w/ {} for the current round {}...".format(tmp_log_filepath, tmp_cache_name, tmp_workload, tmp_round_index))
+                continue
 
-        #     # NOTE: Log filepath MUST NOT exist here
+            # NOTE: Log filepath MUST NOT exist here
 
-        #     # Prepare settings for the current cache name
-        #     tmp_exp_settings = exp_default_settings.copy()
-        #     tmp_exp_settings["capacity_mb"] = tmp_peredge_capacity # 50% dataset capacity / 4 edges
-        #     tmp_exp_settings["cache_name"] = tmp_cache_name
-        #     tmp_exp_settings["workload_name"] = tmp_workload
-        #     tmp_exp_settings["realnet_expname"] = "exp_alicloud_round{}_{}_{}".format(tmp_round_index, tmp_cache_name, tmp_workload)
+            # Prepare settings for the current cache name
+            tmp_exp_settings = exp_default_settings.copy()
+            tmp_exp_settings["capacity_mb"] = tmp_peredge_capacity # 50% dataset capacity / 4 edges
+            tmp_exp_settings["cache_name"] = tmp_cache_name
+            tmp_exp_settings["workload_name"] = tmp_workload
+            tmp_exp_settings["realnet_expname"] = "exp_alicloud_round{}_{}_{}".format(tmp_round_index, tmp_cache_name, tmp_workload)
 
-        #     # Launch prototype
-        #     LogUtil.prompt(Common.scriptname, "Run prototype of {} w/ {} for the current round {}...".format(tmp_cache_name, tmp_workload, tmp_round_index))
-        #     prototype_instance = Prototype(evaluator_logfile = tmp_log_filepath, **tmp_exp_settings)
-        #     prototype_instance.run()
+            # Launch prototype
+            LogUtil.prompt(Common.scriptname, "Run prototype of {} w/ {} for the current round {}...".format(tmp_cache_name, tmp_workload, tmp_round_index))
+            prototype_instance = Prototype(evaluator_logfile = tmp_log_filepath, **tmp_exp_settings)
+            prototype_instance.run()
 
 # Hint users to check warmup statistics of cache peformance in log files
 LogUtil.emphasize(Common.scriptname, "Please check cache warmup statistics in log files (at the end of each log file) in the following directories:\n{}".format(log_dirpaths))
