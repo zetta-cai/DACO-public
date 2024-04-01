@@ -6,6 +6,7 @@
 #include "common/dynamic_array.h"
 #include "common/util.h"
 #include "workload/facebook_workload_wrapper.h"
+#include "workload/fbphoto_workload_wrapper.h"
 #include "workload/wikipedia_workload_wrapper.h"
 
 namespace covered
@@ -23,6 +24,10 @@ namespace covered
         if (workload_name == Util::FACEBOOK_WORKLOAD_NAME) // Facebook/Meta CDN
         {
             workload_ptr = new FacebookWorkloadWrapper(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role);
+        }
+        else if (workload_name == Util::FBPHOTO_WORKLOAD_NAME) // Facebook photo caching
+        {
+            workload_ptr = new FbphotoWorkloadWrapper(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role);
         }
         else if (workload_name == Util::WIKIPEDIA_IMAGE_WORKLOAD_NAME || workload_name == Util::WIKIPEDIA_TEXT_WORKLOAD_NAME) // Wiki image/text CDN
         {

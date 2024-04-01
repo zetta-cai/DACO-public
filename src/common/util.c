@@ -34,6 +34,7 @@ namespace covered
     const std::string Util::FACEBOOK_WORKLOAD_NAME("facebook");
     const std::string Util::WIKIPEDIA_IMAGE_WORKLOAD_NAME("wikiimage");
     const std::string Util::WIKIPEDIA_TEXT_WORKLOAD_NAME("wikitext");
+    const std::string Util::FBPHOTO_WORKLOAD_NAME("fbphoto");
 
     // Cloud storage
     const std::string Util::HDD_NAME = "hdd";
