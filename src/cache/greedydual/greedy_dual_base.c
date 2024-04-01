@@ -113,13 +113,17 @@ namespace covered
         while (_currentSize + object_size > _cacheSize)
         {
             // NOTE: NEVER triggered due to over-provisioned capacity bytes for internal cache engine, while we perform cache eviction outside internal cache engine
-            assert(false);
+            std::ostringstream oss;
+            oss << "Cache is full for current size usage " << _currentSize << " bytes under capacity " << _cacheSize << " bytes -> cannot admit new object with size " << object_size << " bytes!";
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
 
-            Key tmp_key;
-            Value tmp_value;
-            evict(tmp_key, tmp_value); // Will update _currentL and reduce _currentSize
-            UNUSED(tmp_key);
-            UNUSED(tmp_value);
+            // NOTE: disable internal cache eviction
+            // Key tmp_key;
+            // Value tmp_value;
+            // evict(tmp_key, tmp_value); // Will update _currentL and reduce _currentSize
+            // UNUSED(tmp_key);
+            // UNUSED(tmp_value);
         }
 
         // Admit new object with new GF value

@@ -39,7 +39,32 @@ for tmp_workload in nonreplayed_workloads:
             dataset_loader_instance = DatasetLoader(dataset_loader_logfile = tmp_log_filepath, **tmp_dataset_loader_settings)
             dataset_loader_instance.run()
 
-# (2) Load dataset into RocksDB for different replayed traces (NOTE: keycnts have already been updated in config.json after trace preprocessing)
+# (2) Load dataset into Rocksdb for Facebook photo caching (non-replayed trace)
+tmp_keycnt = 1300000 # 1.3M
+tmp_workload = "fbphoto"
+
+# Get log file name
+tmp_log_filepath = "{}/tmp_dataset_loader_for_{}_key{}.out".format(Common.output_log_dirpath, tmp_workload, tmp_keycnt)
+SubprocessUtil.tryToCreateDirectory(Common.scriptname, os.path.dirname(tmp_log_filepath))
+log_filepaths.append(tmp_log_filepath)
+
+# Check rocksdb dirpath
+# NOTE: MUST be consistent with getCloudRocksdbDirpath() in src/common/util.c
+tmp_rocksdb_dirpath = "{}/key{}_{}/cloud0.db".format(Common.cloud_rocksdb_basedir, tmp_keycnt, tmp_workload)
+if os.path.exists(tmp_rocksdb_dirpath):
+    LogUtil.prompt(Common.scriptname, "Rocksdb dirpath {} already exists, skip dataset loading for non-replayed trace {} with keycnt {}...".format(tmp_rocksdb_dirpath, tmp_workload, tmp_keycnt))
+else:
+    # Prepare settings for dataset loader
+    tmp_dataset_loader_settings = {
+        "keycnt": tmp_keycnt,
+        "workload_name": tmp_workload
+    }
+
+    # Launch dataset loader
+    dataset_loader_instance = DatasetLoader(dataset_loader_logfile = tmp_log_filepath, **tmp_dataset_loader_settings)
+    dataset_loader_instance.run()
+
+# (3) Load dataset into RocksDB for different replayed traces (NOTE: keycnts have already been updated in config.json after trace preprocessing)
 replayed_workloads = ["wikitext", "wikiimage"]
 for tmp_workload in replayed_workloads:
     # Get keycnt for the replayed trace

@@ -20,6 +20,12 @@ namespace covered
         instance_name_ = oss.str();
         
         // For clients, dataset loader, and cloud
+        average_dataset_keysize_ = 0;
+        min_dataset_keysize_ = 0;
+        max_dataset_keysize_ = 0;
+        average_dataset_valuesize_ = 0;
+        min_dataset_valuesize_ = 0;
+        max_dataset_valuesize_ = 0;
         loadFbphotoDatasetFile_(); // Load dataset file to update dataset keys, probs, value sizes, and dataset statistics
 
         // For clients
@@ -241,7 +247,7 @@ namespace covered
         dataset_probs_.clear();
         dataset_probs_.resize(dataset_size);
         dataset_valsizes_.clear();
-        dataset_valsizes_.resize(dataset_size);
+        dataset_valsizes_.resize(dataset_size, 0);
         for (uint32_t i = 0; i < dataset_size; i++)
         {
             dataset_keys_[i] = i + 1; // From 1 to 1.3M

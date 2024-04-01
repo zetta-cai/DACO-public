@@ -104,11 +104,9 @@ if not os.path.exists(dataset_filepath):
     with open(dataset_filepath, "wb") as f:
         # Dump dataset size as uint32_t in little endian
         f.write(struct.pack("<I", dataset_size))
-        # Dump probs as float in little endian
+        # Dump probs as float and value sizes as uint32_t in little endian
         for i in range(dataset_size):
             f.write(struct.pack("<f", dataset_probs[i]))
-        # Dump value sizes as uint32_t in little endian
-        for i in range(dataset_size):
             f.write(struct.pack("<I", int(dataset_value_sizes[i])))
 
 
