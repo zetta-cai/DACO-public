@@ -107,7 +107,11 @@ class Common:
     # alicloud_avg_clientedge_latency_us = 386
     # alicloud_avg_crossedge_latency_us = 10150
     # alicloud_avg_edgecloud_latency_us = 74750
-    # NOTE: used for the first round (for round 1)
-    alicloud_avg_clientedge_latency_us = 782
-    alicloud_avg_crossedge_latency_us = 11305
-    alicloud_avg_edgecloud_latency_us = 81000
+    # NOTE: used for the second round (for round 1)
+    # alicloud_avg_clientedge_latency_us = 782
+    # alicloud_avg_crossedge_latency_us = 11305
+    # alicloud_avg_edgecloud_latency_us = 81000
+    # NOTE: used for the third round (for round 2)
+    alicloud_avg_clientedge_latency_us = 765
+    alicloud_avg_crossedge_latency_us = 11165
+    alicloud_avg_edgecloud_latency_us = 80875

@@ -32,7 +32,7 @@ exp_default_settings = {
 #cache_names = ["covered", "shark", "bestguess", "arc+", "cachelib+", "fifo+", "frozenhot+", "gdsf+", "lfu+", "lhd+", "s3fifo+", "sieve+", "wtinylfu+", "lrb+", "glcache+", "segcache+"]
 cache_names = ["covered", "gdsf+", "lhd+"] # TMPDEBUG
 peredge_capacity_list = [1024, 2048, 4096, 8192] # 1G, 2G, 4G, and 8G
-workload_peredge_capacity_map = {"facebook": 3479, "wikitext": 1778, "wikiimage": 3899} # per-edge capacity = dataset capacity * 50% / 4 edges (OBSOLETE due to single-node traces)
+# workload_peredge_capacity_map = {"facebook": 3479, "wikitext": 1778, "wikiimage": 3899} # per-edge capacity = dataset capacity * 50% / 4 edges (OBSOLETE due to single-node traces)
 
 # Run the experiments with multiple rounds
 for tmp_round_index in round_indexes:
