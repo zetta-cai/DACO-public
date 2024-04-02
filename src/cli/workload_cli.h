@@ -23,12 +23,14 @@ namespace covered
 
         uint32_t getKeycnt() const;
         std::string getWorkloadName() const;
+        float getZipfAlpha() const;
 
         std::string toCliString(); // NOT virtual for cilutil
         virtual void clearIsToCliString(); // Idempotent operation: clear is_to_cli_string_ for the next toCliString()
     private:
         static const uint32_t DEFAULT_KEYCNT;
         static const std::string DEFAULT_WORKLOAD_NAME;
+        static const float DEFAULT_ZIPF_ALPHA;
 
         static const std::string kClassName;
 
@@ -43,6 +45,7 @@ namespace covered
 
         uint32_t keycnt_;
         std::string workload_name_;
+        float zipf_alpha_;
     protected:
         virtual void addCliParameters_() override;
         virtual void setParamAndConfig_(const std::string& main_class_name) override;

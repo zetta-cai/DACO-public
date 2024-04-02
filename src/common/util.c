@@ -32,6 +32,7 @@ namespace covered
 
     // Workload name
     const std::string Util::FACEBOOK_WORKLOAD_NAME("facebook");
+    const std::string Util::ZIPF_FACEBOOK_WORKLOAD_NAME("zipf_facebook");
     const std::string Util::WIKIPEDIA_IMAGE_WORKLOAD_NAME("wikiimage");
     const std::string Util::WIKIPEDIA_TEXT_WORKLOAD_NAME("wikitext");
     const std::string Util::FBPHOTO_WORKLOAD_NAME("fbphoto");

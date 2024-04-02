@@ -8,6 +8,7 @@
 #include "workload/facebook_workload_wrapper.h"
 #include "workload/fbphoto_workload_wrapper.h"
 #include "workload/wikipedia_workload_wrapper.h"
+#include "workload/zipf_facebook_workload_wrapper.h"
 
 namespace covered
 {
@@ -18,20 +19,25 @@ namespace covered
 
     const std::string WorkloadWrapperBase::kClassName("WorkloadWrapperBase");
 
-    WorkloadWrapperBase* WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role)
+    WorkloadWrapperBase* WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const float& zipf_alpha)
     {
         WorkloadWrapperBase* workload_ptr = NULL;
         if (workload_name == Util::FACEBOOK_WORKLOAD_NAME) // Facebook/Meta CDN
         {
             workload_ptr = new FacebookWorkloadWrapper(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role);
         }
-        else if (workload_name == Util::FBPHOTO_WORKLOAD_NAME) // Facebook photo caching
+        else if (workload_name == Util::FBPHOTO_WORKLOAD_NAME) // Facebook photo caching (OBSOLETE due to too skewed and thus all methods can achieve extremely large hit ratios)
         {
             workload_ptr = new FbphotoWorkloadWrapper(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role);
         }
-        else if (workload_name == Util::WIKIPEDIA_IMAGE_WORKLOAD_NAME || workload_name == Util::WIKIPEDIA_TEXT_WORKLOAD_NAME) // Wiki image/text CDN
+        else if (workload_name == Util::WIKIPEDIA_IMAGE_WORKLOAD_NAME || workload_name == Util::WIKIPEDIA_TEXT_WORKLOAD_NAME) // Wiki image/text CDN (OBSOLETE due to without geographical information)
         {
             workload_ptr = new WikipediaWorkloadWrapper(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role);
+        }
+        else if (workload_name == Util::ZIPF_FACEBOOK_WORKLOAD_NAME) // Zipf-based Facebook CDN
+        {
+            assert(zipf_alpha > 0.0);
+            workload_ptr = new ZipfFacebookWorkloadWrapper(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role, zipf_alpha);
         }
         else
         {

@@ -8,6 +8,7 @@ namespace covered
 {
     const uint32_t WorkloadCLI::DEFAULT_KEYCNT = 1000000; // 1M workload items by default
     const std::string WorkloadCLI::DEFAULT_WORKLOAD_NAME = "facebook"; // NOTE: NOT use UTil::FACEBOOK_WORKLOAD_NAME due to undefined initialization order of C++ static variables
+    const float WorkloadCLI::DEFAULT_ZIPF_ALPHA = 0.0; // Zipfian distribution parameter
 
     const std::string WorkloadCLI::kClassName("WorkloadCLI");
 
@@ -15,6 +16,7 @@ namespace covered
     {
         keycnt_ = 0;
         workload_name_ = "";
+        zipf_alpha_ = 0.0;
     }
 
     WorkloadCLI::~WorkloadCLI() {}
@@ -27,6 +29,11 @@ namespace covered
     std::string WorkloadCLI::getWorkloadName() const
     {
         return workload_name_;
+    }
+
+    float WorkloadCLI::getZipfAlpha() const
+    {
+        return zipf_alpha_;
     }
 
     std::string WorkloadCLI::toCliString()
@@ -47,6 +54,10 @@ namespace covered
             if (workload_name_ != DEFAULT_WORKLOAD_NAME)
             {
                 oss << " --workload_name " << workload_name_;
+            }
+            if (zipf_alpha_ != DEFAULT_ZIPF_ALPHA)
+            {
+                oss << " --zipf_alpha " << zipf_alpha_;
             }
 
             is_to_cli_string_ = true;
@@ -72,12 +83,15 @@ namespace covered
             // (1) Create CLI parameter description
 
             std::string keycnt_descstr = "the number of unique keys (dataset size; NOT affect " + Util::getReplayedWorkloadHintstr() + " and " + Util::FBPHOTO_WORKLOAD_NAME + ")";
-            std::string workload_name_descstr = "workload name (e.g., " + Util::FACEBOOK_WORKLOAD_NAME + ", " + Util::WIKIPEDIA_IMAGE_WORKLOAD_NAME + ", " + Util::WIKIPEDIA_TEXT_WORKLOAD_NAME + ", and " + Util::FBPHOTO_WORKLOAD_NAME + ")";
+            // std::string workload_name_descstr = "workload name (e.g., " + Util::FACEBOOK_WORKLOAD_NAME + ", " + Util::ZIPF_FACEBOOK_WORKLOAD_NAME + ", " + Util::WIKIPEDIA_IMAGE_WORKLOAD_NAME + ", " + Util::WIKIPEDIA_TEXT_WORKLOAD_NAME + ", and " + Util::FBPHOTO_WORKLOAD_NAME + ")";
+            std::string workload_name_descstr = "workload name (e.g., " + Util::FACEBOOK_WORKLOAD_NAME + " and " + Util::ZIPF_FACEBOOK_WORKLOAD_NAME + ")";
+            std::string zipf_alpha_descstr = "Zipf's law alpha (ONLY for the workload of " + Util::ZIPF_FACEBOOK_WORKLOAD_NAME + ")";
 
             // Dynamic configurations for client
             argument_desc_.add_options()
                 ("keycnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_KEYCNT), keycnt_descstr.c_str())
                 ("workload_name", boost::program_options::value<std::string>()->default_value(DEFAULT_WORKLOAD_NAME), workload_name_descstr.c_str())
+                ("zipf_alpha", boost::program_options::value<float>()->default_value(DEFAULT_ZIPF_ALPHA), zipf_alpha_descstr.c_str())
             ;
 
             is_add_cli_parameters_ = true;
@@ -96,6 +110,7 @@ namespace covered
 
             uint32_t keycnt = argument_info_["keycnt"].as<uint32_t>();
             std::string workload_name = argument_info_["workload_name"].as<std::string>();
+            float zipf_alpha = argument_info_["zipf_alpha"].as<float>();
 
             // Store workload CLI parameters for dynamic configurations
             if (main_class_name == Util::TRACE_PREPROCESSOR_MAIN_NAME) // NOT preprocessed yet
@@ -112,6 +127,7 @@ namespace covered
             }
             keycnt_ = keycnt;
             workload_name_ = workload_name;
+            zipf_alpha_ = zipf_alpha;
 
             is_set_param_and_config_ = true;
         }
@@ -134,6 +150,10 @@ namespace covered
             oss << "[Dynamic configurations from CLI parameters in " << kClassName << "]" << std::endl;
             oss << "Key count (dataset size): " << keycnt_ << std::endl;
             oss << "Workload name: " << workload_name_;
+            if (workload_name_ == Util::ZIPF_FACEBOOK_WORKLOAD_NAME)
+            {
+                oss << " (Zipf's law alpha: " << zipf_alpha_ << ")";
+            }
             Util::dumpDebugMsg(kClassName, oss.str());
 
             is_dump_cli_parameters_ = true;
@@ -144,7 +164,9 @@ namespace covered
 
     void WorkloadCLI::checkWorkloadName_() const
     {
-        if (workload_name_ != Util::FACEBOOK_WORKLOAD_NAME && workload_name_ != Util::WIKIPEDIA_IMAGE_WORKLOAD_NAME && workload_name_ != Util::WIKIPEDIA_TEXT_WORKLOAD_NAME && workload_name_ != Util::FBPHOTO_WORKLOAD_NAME)
+        // NOTE: NOT use traces without geographical information; NOT use too skewed workloads
+        // if (workload_name_ != Util::FACEBOOK_WORKLOAD_NAME && workload_name_ != Util::ZIPF_FACEBOOK_WORKLOAD_NAME && workload_name_ != Util::WIKIPEDIA_IMAGE_WORKLOAD_NAME && workload_name_ != Util::WIKIPEDIA_TEXT_WORKLOAD_NAME && workload_name_ != Util::FBPHOTO_WORKLOAD_NAME)
+        if (workload_name_ != Util::FACEBOOK_WORKLOAD_NAME && workload_name_ != Util::ZIPF_FACEBOOK_WORKLOAD_NAME)
         {
             std::ostringstream oss;
             oss << "workload name " << workload_name_ << " is not supported!";

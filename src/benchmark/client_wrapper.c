@@ -61,14 +61,14 @@ namespace covered
         uint32_t client_idx = client_wrapper_param.getClientIdx();
         ClientCLI* client_cli_ptr = client_wrapper_param.getClientCLIPtr();
         
-        ClientWrapper local_client(client_cli_ptr->getCapacityBytes(), client_idx, client_cli_ptr->getClientcnt(), client_cli_ptr->isWarmupSpeedup(), client_cli_ptr->getEdgecnt(), client_cli_ptr->getKeycnt(), client_cli_ptr->getPerclientOpcnt(), client_cli_ptr->getPerclientWorkercnt(), client_cli_ptr->getPropagationLatencyClientedgeUs(), client_cli_ptr->getRealnetOption(), client_cli_ptr->getWarmupReqcntScale(), client_cli_ptr->getWorkloadName());
+        ClientWrapper local_client(client_cli_ptr->getCapacityBytes(), client_idx, client_cli_ptr->getClientcnt(), client_cli_ptr->isWarmupSpeedup(), client_cli_ptr->getEdgecnt(), client_cli_ptr->getKeycnt(), client_cli_ptr->getPerclientOpcnt(), client_cli_ptr->getPerclientWorkercnt(), client_cli_ptr->getPropagationLatencyClientedgeUs(), client_cli_ptr->getRealnetOption(), client_cli_ptr->getWarmupReqcntScale(), client_cli_ptr->getWorkloadName(), client_cli_ptr->getZipfAlpha());
         local_client.start();
         
         pthread_exit(NULL);
         return NULL;
     }
 
-    ClientWrapper::ClientWrapper(const uint64_t& capacity_bytes, const uint32_t& client_idx, const uint32_t& clientcnt, const bool& is_warmup_speedup, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge_us, const std::string& realnet_option, const uint32_t& warmup_reqcnt_scale, const std::string& workload_name) : NodeWrapperBase(NodeWrapperBase::CLIENT_NODE_ROLE, client_idx, clientcnt, false), is_warmup_speedup_(is_warmup_speedup), capacity_bytes_(capacity_bytes), edgecnt_(edgecnt), keycnt_(keycnt), perclient_workercnt_(perclient_workercnt), realnet_option_(realnet_option), warmup_reqcnt_scale_(warmup_reqcnt_scale), is_warmup_phase_(true), is_monitored_(false)
+    ClientWrapper::ClientWrapper(const uint64_t& capacity_bytes, const uint32_t& client_idx, const uint32_t& clientcnt, const bool& is_warmup_speedup, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge_us, const std::string& realnet_option, const uint32_t& warmup_reqcnt_scale, const std::string& workload_name, const float& zipf_alpha) : NodeWrapperBase(NodeWrapperBase::CLIENT_NODE_ROLE, client_idx, clientcnt, false), is_warmup_speedup_(is_warmup_speedup), capacity_bytes_(capacity_bytes), edgecnt_(edgecnt), keycnt_(keycnt), perclient_workercnt_(perclient_workercnt), realnet_option_(realnet_option), warmup_reqcnt_scale_(warmup_reqcnt_scale), is_warmup_phase_(true), is_monitored_(false)
     {
         // Differentiate different clients
         std::ostringstream oss;
@@ -77,8 +77,8 @@ namespace covered
 
         // Create workload generator for the client
         // NOTE: creating workload generator needs time, so we introduce NodeParamBase::node_initialized_
-        // workload_generator_ptr_ = WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(capacity_bytes_, clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, covered::WorkloadWrapperBase::WORKLOAD_USAGE_ROLE_CLIENT); // (OBSOLETE due to already checking objsize in LocalCacheBase)
-        workload_generator_ptr_ = WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, covered::WorkloadWrapperBase::WORKLOAD_USAGE_ROLE_CLIENT); // Track workload items
+        // workload_generator_ptr_ = WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(capacity_bytes_, clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, covered::WorkloadWrapperBase::WORKLOAD_USAGE_ROLE_CLIENT, zipf_alpha); // (OBSOLETE due to already checking objsize in LocalCacheBase)
+        workload_generator_ptr_ = WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, covered::WorkloadWrapperBase::WORKLOAD_USAGE_ROLE_CLIENT, zipf_alpha); // Track workload items
         assert(workload_generator_ptr_ != NULL);
 
         // Create statistics tracker for the client

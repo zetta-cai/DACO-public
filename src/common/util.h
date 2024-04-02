@@ -78,6 +78,7 @@ namespace covered
 
         // Workload name
         static const std::string FACEBOOK_WORKLOAD_NAME; // Workload generator type (Facebook CDN workload)
+        static const std::string ZIPF_FACEBOOK_WORKLOAD_NAME; // Workload generator type (Zipf-based Facebook CDN workload)
         static const std::string WIKIPEDIA_IMAGE_WORKLOAD_NAME;
         static const std::string WIKIPEDIA_TEXT_WORKLOAD_NAME;
         static const std::string FBPHOTO_WORKLOAD_NAME; // Workload generator type (Facebook photo caching workload)

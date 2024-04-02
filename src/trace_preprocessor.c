@@ -31,6 +31,7 @@ int main(int argc, char **argv) {
     assert(keycnt == 0); // keycnt MUST be 0 for trace preprocessor; keycnt will NOT be used by replayed traces
     const std::string workload_name = trace_preprocessor_cli.getWorkloadName();
     assert(covered::Util::isReplayedWorkload(workload_name));
+    const float zipf_alpha = trace_preprocessor_cli.getZipfAlpha(); // NOTE: NOT used as Zipf-based Facebook CDN workload does NOT need trace preprocessing
 
     // (2) Preprocess trace files by workload wrapper
 
@@ -44,7 +45,7 @@ int main(int argc, char **argv) {
     const uint32_t client_idx = 0;
     const uint32_t perclient_workercnt = 1;
     const uint32_t perclient_opcnt = 0; // NOTE: perclient_opcnt will NOT be used by replayed traces
-    covered::WorkloadWrapperBase* workload_generator_ptr = covered::WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, covered::WorkloadWrapperBase::WORKLOAD_USAGE_ROLE_PREPROCESSOR); // Track dataset items
+    covered::WorkloadWrapperBase* workload_generator_ptr = covered::WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, covered::WorkloadWrapperBase::WORKLOAD_USAGE_ROLE_PREPROCESSOR, zipf_alpha); // Track dataset items
     assert(workload_generator_ptr != NULL);
 
     // (3) Dump workload properties

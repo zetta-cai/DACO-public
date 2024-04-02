@@ -93,6 +93,7 @@ int main(int argc, char **argv) {
     const uint32_t dataset_loadercnt = dataset_loader_cli.getDatasetLoadercnt();
     const uint32_t keycnt = dataset_loader_cli.getKeycnt();
     const std::string workload_name = dataset_loader_cli.getWorkloadName();
+    const float zipf_alpha = dataset_loader_cli.getZipfAlpha();
 
     // (2) Prepare dataset loader parameters
 
@@ -112,7 +113,7 @@ int main(int argc, char **argv) {
     //const uint32_t perclient_opcnt = clientcnt * perclient_workercnt; // dataset_loadercnt
     const uint32_t perclient_workercnt = 0; // No need workload items
     const uint32_t perclient_opcnt = 0; // No need workload items
-    covered::WorkloadWrapperBase* workload_generator_ptr = covered::WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, covered::WorkloadWrapperBase::WORKLOAD_USAGE_ROLE_LOADER); // Track dataset items
+    covered::WorkloadWrapperBase* workload_generator_ptr = covered::WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, covered::WorkloadWrapperBase::WORKLOAD_USAGE_ROLE_LOADER, zipf_alpha); // Track dataset items
     assert(workload_generator_ptr != NULL);
 
     // Create dataset loader parameters

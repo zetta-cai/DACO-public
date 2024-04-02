@@ -11,7 +11,7 @@ namespace covered {
 
 const std::string WorkloadGenerator::kClassName("WorkloadGenerator");
 
-WorkloadGenerator::WorkloadGenerator(const StressorConfig& config, const uint32_t& client_idx)
+WorkloadGenerator::WorkloadGenerator(const StressorConfig& config, const uint32_t& client_idx, const bool& is_zipf_generator, const float& zipf_alpha)
     : config_{config}, client_idx_(client_idx) {
   for (const auto& c : config.poolDistributions) {
     if (c.keySizeRange.size() != c.keySizeRangeProbability.size() + 1) {
@@ -27,6 +27,9 @@ WorkloadGenerator::WorkloadGenerator(const StressorConfig& config, const uint32_
     min_dataset_valuesize_ = 0;
     max_dataset_keysize_ = 0;
     max_dataset_valuesize_ = 0;
+
+    is_zipf_generator_ = is_zipf_generator;
+    zipf_alpha_ = zipf_alpha;
   }
 
   if (config_.numKeys > std::numeric_limits<uint32_t>::max()) {
@@ -35,8 +38,8 @@ WorkloadGenerator::WorkloadGenerator(const StressorConfig& config, const uint32_
         config_.numKeys));
   }
 
-  generateReqs();
-  generateKeyDistributions();
+  generateReqs(); // Generate dataset items including key sizes, key chars, and value sizes
+  generateKeyDistributions(); // Generate workload items
 }
 
 // gen is passed by each per-client worker to get different requests
@@ -232,8 +235,8 @@ void WorkloadGenerator::generateKeys() {
 }
 
 void WorkloadGenerator::generateReqs() {
-  generateFirstKeyIndexForPool();
-  generateKeys();
+  generateFirstKeyIndexForPool(); // Siyuan: we only use 1 pool by default (key index ranges from 0 to numkeys - 1)
+  generateKeys(); // Siyuan: follow Facebook distribution to generate key sizes and fill with random characteristics
   //std::mt19937_64 gen(folly::Random::rand64());
   // Siyuan: Util::DATASET_KVPAIR_GENERATION_SEED as the deterministic seed to ensure that multiple clients generate the same set of key-value pairs
   std::mt19937_64 gen(Util::DATASET_KVPAIR_GENERATION_SEED);
@@ -309,50 +312,171 @@ void WorkloadGenerator::generateKeyDistributions() {
   for (uint64_t i = 0; i < config_.opPoolDistribution.size(); i++) {
     auto left = firstKeyIndexForPool_[i];
     auto right = firstKeyIndexForPool_[i + 1] - 1;
-    size_t idx = workloadIdx(i);
+    size_t idx = workloadIdx(i); // Siyuan: must be 0 as workloadDist_.size() is 1 due to a single pool
 
     size_t numOpsForPool = std::min<size_t>(
         facebook::cachelib::util::narrow_cast<size_t>(config_.numOps * config_.numThreads *
                                   config_.opPoolDistribution[i]),
         std::numeric_limits<uint32_t>::max());
+
     // Siyuan: disable unnecessary outputs
     //std::cout << folly::sformat("Generating {:.2f}M sampled accesses",
     //                            numOpsForPool / 1e6)
     //          << std::endl;
-    keyGenForPool_.push_back(std::uniform_int_distribution<uint32_t>(
-        0, facebook::cachelib::util::narrow_cast<uint32_t>(numOpsForPool) - 1));
-    keyIndicesForPool_.push_back(std::vector<uint32_t>(numOpsForPool));
 
-    // Siyuan: use 1 thread to generate workload indices to avoid perclient_workercnt/dataset_loadercnt affecting workloads
-    size_t tmp_num_threads = 1;
-    duration += covered::executeParallel(
-        [&, this](size_t start, size_t end, size_t local_thread_idx) {
-          //std::mt19937_64 gen(folly::Random::rand64());
-          // Siyuan: use global_thread_idx as the deterministic seed to ensure that multiple clients generate different sets of requests/workload-items
-          // (OBSOLETE) Siyuan: we need this->config_.numThreads + 1, as Parallel may create an extra thread to generate remaining requests
-          //uint32_t global_thread_idx = this->client_idx_ * (this->config_.numThreads + 1) + local_thread_idx;
-          if (start < end) // Siyuan: avoid effect of src/workload/cachebench/parallel.h::34
+    keyGenForPool_.push_back(std::uniform_int_distribution<uint32_t>(
+        0, facebook::cachelib::util::narrow_cast<uint32_t>(numOpsForPool) - 1)); // Siyuan: used for randomly selecting one workload item from all workload items online
+
+    // Siyuan: generate all workload items
+    if (!is_zipf_generator_) // Use default workload generator of Facebook CDN
+    {
+      keyIndicesForPool_.push_back(std::vector<uint32_t>(numOpsForPool));
+
+      // Siyuan: use 1 thread to generate workload indices to avoid perclient_workercnt/dataset_loadercnt affecting workloads
+      size_t tmp_num_threads = 1;
+      duration += covered::executeParallel(
+          [&, this](size_t start, size_t end, size_t local_thread_idx) {
+            //std::mt19937_64 gen(folly::Random::rand64());
+            // Siyuan: use global_thread_idx as the deterministic seed to ensure that multiple clients generate different sets of requests/workload-items
+            // (OBSOLETE) Siyuan: we need this->config_.numThreads + 1, as Parallel may create an extra thread to generate remaining requests
+            //uint32_t global_thread_idx = this->client_idx_ * (this->config_.numThreads + 1) + local_thread_idx;
+            if (start < end) // Siyuan: avoid effect of src/workload/cachebench/parallel.h::34
+            {
+              assert(local_thread_idx == 0); // Siyuan: local_thread_idx MUST be 0
+            }
+            uint32_t global_thread_idx = this->client_idx_ + local_thread_idx;
+            // (OBSOLETE: homogeneous cache access patterns is a WRONG assumption -> we should ONLY follow homogeneous workload distribution yet still with heterogeneous cache access patterns) NOTE: we use WORKLOAD_KVPAIR_GENERATION_SEED to generate workload items with homogeneous cache access patterns
+            //uint32_t global_thread_idx = Util::WORKLOAD_KVPAIR_GENERATION_SEED + local_thread_idx;
+            std::mt19937_64 gen(global_thread_idx);
+            auto popDist = workloadDist_[idx].getPopDist(left, right); // FastDiscreteDistribution
+            for (uint64_t j = start; j < end; j++) {
+              keyIndicesForPool_[i][j] =
+                  facebook::cachelib::util::narrow_cast<uint32_t>((*popDist)(gen));
+            }
+          },
+          tmp_num_threads, numOpsForPool);
+          //config_.numThreads, numOpsForPool);
+    }
+    else // Use zipf workload generator to generate "synthetic" workloads
+    {
+      assert(zipf_alpha_ > 0.0);
+
+      // (1) Siyuan: generate default workload items
+      std::vector<uint32_t> tmp_default_key_indices(numOpsForPool);
+      size_t tmp_num_threads = 1;
+      duration += covered::executeParallel(
+          [&, this](size_t start, size_t end, size_t local_thread_idx) {
+            //std::mt19937_64 gen(folly::Random::rand64());
+            // Siyuan: use global_thread_idx as the deterministic seed to ensure that multiple clients generate different sets of requests/workload-items
+            // (OBSOLETE) Siyuan: we need this->config_.numThreads + 1, as Parallel may create an extra thread to generate remaining requests
+            //uint32_t global_thread_idx = this->client_idx_ * (this->config_.numThreads + 1) + local_thread_idx;
+            if (start < end) // Siyuan: avoid effect of src/workload/cachebench/parallel.h::34
+            {
+              assert(local_thread_idx == 0); // Siyuan: local_thread_idx MUST be 0
+            }
+            uint32_t global_thread_idx = this->client_idx_ + local_thread_idx;
+            // (OBSOLETE: homogeneous cache access patterns is a WRONG assumption -> we should ONLY follow homogeneous workload distribution yet still with heterogeneous cache access patterns) NOTE: we use WORKLOAD_KVPAIR_GENERATION_SEED to generate workload items with homogeneous cache access patterns
+            //uint32_t global_thread_idx = Util::WORKLOAD_KVPAIR_GENERATION_SEED + local_thread_idx;
+            std::mt19937_64 gen(global_thread_idx);
+            auto popDist = workloadDist_[idx].getPopDist(left, right); // FastDiscreteDistribution
+            for (uint64_t j = start; j < end; j++) {
+              tmp_default_key_indices[j] =
+                  facebook::cachelib::util::narrow_cast<uint32_t>((*popDist)(gen));
+            }
+          },
+          tmp_num_threads, numOpsForPool);
+
+      // (2) Siyuan: Identify object ranks from default workload distribution
+      std::map<uint32_t, uint32_t> tmp_keyindex_freq_map;
+      for (uint32_t tmp_i = 0; tmp_i < tmp_default_key_indices.size(); tmp_i++)
+      {
+        const uint32_t tmp_keyindex = tmp_default_key_indices[tmp_i];
+        if (tmp_keyindex_freq_map.find(tmp_keyindex) == tmp_keyindex_freq_map.end())
+        {
+          tmp_keyindex_freq_map.insert(std::pair(tmp_keyindex, 1));
+        }
+        else
+        {
+          tmp_keyindex_freq_map[tmp_keyindex]++;
+        }
+      }
+      sort(tmp_keyindex_freq_map.begin(), tmp_keyindex_freq_map.end(), descendingSortByValue);
+      std::vector<uint32_t> descending_sorted_key_indices;
+      uint32_t debug_i = 0; // TMPDEBUG24
+      for (std::map<uint32_t, uint32_t>::iterator tmp_iter = tmp_keyindex_freq_map.begin(); tmp_iter != tmp_keyindex_freq_map.end(); tmp_iter++)
+      {
+        descending_sorted_key_indices.push_back(tmp_iter->first);
+
+        // TMPDEBUG24
+        if (debug_i < 10)
+        {
+          std::ostringstream oss;
+          oss << "key index: " << tmp_iter->first << "; freq: " << tmp_iter->second;
+          Util::dumpNormalMsg(kClassName, oss.str());
+          debug_i++;
+        }
+      }
+
+      // (3) Siyuan: generate probs based on Zipf's law mentioned in CacheLib paper
+      const uint32_t tmp_rank_cnt = descending_sorted_key_indices.size(); // E.g., descending_sorted_key_indices[0] = A for the rank 1
+      std::vector<double> tmp_probs(tmp_rank_cnt, 0.0);
+      double tmp_sum_prob = 0.0;
+      debug_i = 0; // TMPDEBUG24
+      for (uint32_t tmp_rank_idx = 1; tmp_rank_idx <= tmp_rank_cnt; tmp_rank_idx++)
+      {
+        tmp_probs[tmp_rank_idx - 1] = 1.0 / pow(tmp_rank_idx, zipf_alpha_);
+        tmp_sum_prob += tmp_probs[tmp_rank_idx - 1];
+      }
+      for (uint32_t tmp_rank_idx = 0; tmp_rank_idx < tmp_rank_cnt; tmp_rank_idx++)
+      {
+        tmp_probs[tmp_rank_idx] /= tmp_sum_prob;
+
+        // TMPDEBUG24
+        if (debug_i < 10)
+        {
+          std::ostringstream oss;
+          oss << "rank: " << tmp_rank_idx + 1 << "; prob: " << tmp_probs[tmp_rank_idx];
+          Util::dumpNormalMsg(kClassName, oss.str());
+          debug_i++;
+        }
+      }
+      
+      // (4) Siyuan: Use Zipf's law to generate workload items based on the descending_sorted_key_indices
+      // Use client idx as random seed to generate workload items for the current client
+      std::mt19937_64 tmp_randgen(this->client_idx_);
+      std::discrete_distribution<uint32_t> tmp_dist(tmp_probs.begin(), tmp_probs.end());
+      keyIndicesForPool_.push_back(std::vector<uint32_t>(numOpsForPool));
+      for (uint32_t tmp_i = 0; tmp_i < numOpsForPool; tmp_i++)
+      {
+          uint32_t tmp_rank_index_minus_one = tmp_dist(tmp_randgen); // From 0 (the most popular) to rank_cnt - 1 (the least popular)
+          uint32_t tmp_key_index = descending_sorted_key_indices[tmp_rank_index_minus_one]; // E.g., get A for rank 1 at descending_sorted_key_indices[0]
+          assert(tmp_key_index < reqs_.size());
+
+          // TMPDEBUG24
+          if (tmp_rank_index_minus_one < 10)
           {
-            assert(local_thread_idx == 0); // Siyuan: local_thread_idx MUST be 0
+            std::ostringstream oss;
+            oss << "rank index: " << tmp_rank_index_minus_one << "; key index: " << tmp_key_index;
+            Util::dumpNormalMsg(kClassName, oss.str());
           }
-          uint32_t global_thread_idx = this->client_idx_ + local_thread_idx;
-          // (OBSOLETE: homogeneous cache access patterns is a WRONG assumption -> we should ONLY follow homogeneous workload distribution yet still with heterogeneous cache access patterns) NOTE: we use WORKLOAD_KVPAIR_GENERATION_SEED to generate workload items with homogeneous cache access patterns
-          //uint32_t global_thread_idx = Util::WORKLOAD_KVPAIR_GENERATION_SEED + local_thread_idx;
-          std::mt19937_64 gen(global_thread_idx);
-          auto popDist = workloadDist_[idx].getPopDist(left, right); // FastDiscreteDistribution
-          for (uint64_t j = start; j < end; j++) {
-            keyIndicesForPool_[i][j] =
-                facebook::cachelib::util::narrow_cast<uint32_t>((*popDist)(gen));
-          }
-        },
-        tmp_num_threads, numOpsForPool);
-        //config_.numThreads, numOpsForPool);
-  }
+
+          keyIndicesForPool_[i][tmp_i] = tmp_key_index;
+      }
+
+    } // End of else for if(!is_zipf_generator_)
+  } // End of for loop
 
   // Siyuan: disable unnecessary outputs
   //std::cout << folly::sformat("Generated access patterns in {:.2f} mins",
   //                            duration.count() / 60.)
   //          << std::endl;
+}
+
+bool WorkloadGenerator::descendingSortByValue(std::pair<uint32_t, uint32_t>& a, std::pair<uint32_t, uint32_t>& b)
+{
+  const uint32_t a_freq = a.second;
+  const uint32_t b_freq = b.second;
+  return a_freq > b_freq;
 }
 
 } // namespace covered
