@@ -239,7 +239,7 @@ namespace covered
 
         // Update total bandwidth usage for received directory lookup request
         uint32_t cross_edge_directory_lookup_req_bandwidth_bytes = control_request_ptr->getMsgBandwidthSize();
-        total_bandwidth_usage.update(BandwidthUsage(0, cross_edge_directory_lookup_req_bandwidth_bytes, 0, 0, 1, 0));
+        total_bandwidth_usage.update(BandwidthUsage(0, cross_edge_directory_lookup_req_bandwidth_bytes, 0, 0, 1, 0, false));
 
         struct timespec lookup_local_directory_start_timestamp = Util::getCurrentTimespec();
 
@@ -297,7 +297,7 @@ namespace covered
 
         // Update total bandwidth usage for received directory update request
         uint32_t cross_edge_directory_update_req_bandwidth_bytes = control_request_ptr->getMsgBandwidthSize();
-        total_bandwidth_usage.update(BandwidthUsage(0, cross_edge_directory_update_req_bandwidth_bytes, 0, 0, 1, 0));
+        total_bandwidth_usage.update(BandwidthUsage(0, cross_edge_directory_update_req_bandwidth_bytes, 0, 0, 1, 0, false));
 
         struct timespec update_local_directory_start_timestamp = Util::getCurrentTimespec();
 
@@ -357,7 +357,7 @@ namespace covered
 
         // Update total bandwidth usage for received acquire writelock request
         uint32_t cross_edge_acquire_writelock_req_bandwidth_bytes = control_request_ptr->getMsgBandwidthSize();
-        total_bandwidth_usage.update(BandwidthUsage(0, cross_edge_acquire_writelock_req_bandwidth_bytes, 0, 0, 1, 0));
+        total_bandwidth_usage.update(BandwidthUsage(0, cross_edge_acquire_writelock_req_bandwidth_bytes, 0, 0, 1, 0, false));
 
         struct timespec acquire_local_writelock_start_timestamp = Util::getCurrentTimespec();
 
@@ -419,7 +419,7 @@ namespace covered
 
         // Update total bandwidth usage for received release writelock request
         uint32_t cross_edge_release_writelock_req_bandwidth_bytes = control_request_ptr->getMsgBandwidthSize();
-        total_bandwidth_usage.update(BandwidthUsage(0, cross_edge_release_writelock_req_bandwidth_bytes, 0, 0, 1, 0));
+        total_bandwidth_usage.update(BandwidthUsage(0, cross_edge_release_writelock_req_bandwidth_bytes, 0, 0, 1, 0, false));
 
         struct timespec release_local_writelock_start_timestamp = Util::getCurrentTimespec();
 

@@ -21,17 +21,19 @@ namespace covered
     {
     public:
         BandwidthUsage();
-        BandwidthUsage(const uint64_t& client_edge_bandwidth_bytes, const uint64_t& cross_edge_bandwidth_bytes, const uint64_t& edge_cloud_bandwidth_bytes, const uint64_t& client_edge_msgcnt, const uint64_t& cross_edge_msgcnt, const uint64_t& edge_cloud_msgcnt);
+        BandwidthUsage(const uint64_t& client_edge_bandwidth_bytes, const uint64_t& cross_edge_bandwidth_bytes, const uint64_t& edge_cloud_bandwidth_bytes, const uint64_t& client_edge_msgcnt, const uint64_t& cross_edge_msgcnt, const uint64_t& edge_cloud_msgcnt, const bool& is_data_message); // NOTE: is_data_message ONLY works for cross-edge bandwidth usage
         ~BandwidthUsage();
 
         void update(const BandwidthUsage& other); // Add other into *this
 
         uint64_t getClientEdgeBandwidthBytes() const;
-        uint64_t getCrossEdgeBandwidthBytes() const;
+        uint64_t getCrossEdgeControlBandwidthBytes() const;
+        uint64_t getCrossEdgeDataBandwidthBytes() const;
         uint64_t getEdgeCloudBandwidthBytes() const;
 
         uint64_t getClientEdgeMsgcnt() const;
-        uint64_t getCrossEdgeMsgcnt() const;
+        uint64_t getCrossEdgeControlMsgcnt() const;
+        uint64_t getCrossEdgeDataMsgcnt() const;
         uint64_t getEdgeCloudMsgcnt() const;
 
         static uint32_t getBandwidthUsagePayloadSize();
@@ -42,13 +44,15 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        uint64_t client_edge_bandwidth_bytes_;
-        uint64_t cross_edge_bandwidth_bytes_;
-        uint64_t edge_cloud_bandwidth_bytes_;
+        uint64_t client_edge_bandwidth_bytes_; // Must be data messages
+        uint64_t cross_edge_control_bandwidth_bytes_; // Bandwidth cost of cross-edge control messages
+        uint64_t cross_edge_data_bandwidth_bytes_; // Bandwidth cost of cross-edge data messages
+        uint64_t edge_cloud_bandwidth_bytes_; // Must be data messages
 
-        uint64_t client_edge_msgcnt_;
-        uint64_t cross_edge_msgcnt_;
-        uint64_t edge_cloud_msgcnt_;
+        uint64_t client_edge_msgcnt_; // Must be data messages
+        uint64_t cross_edge_control_msgcnt_; // Message count of cross-edge control messages
+        uint64_t cross_edge_data_msgcnt_; // Message count of cross-edge data messages
+        uint64_t edge_cloud_msgcnt_; // Must be data messages
     };
 }
 

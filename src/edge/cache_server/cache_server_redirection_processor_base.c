@@ -140,7 +140,7 @@ namespace covered
 
         // Update total bandwidth usage for received redirected get request
         uint32_t cross_edge_redirected_get_req_bandwidth_bytes = redirected_request_ptr->getMsgBandwidthSize();
-        total_bandwidth_usage.update(BandwidthUsage(0, cross_edge_redirected_get_req_bandwidth_bytes, 0, 0, 1, 0));
+        total_bandwidth_usage.update(BandwidthUsage(0, cross_edge_redirected_get_req_bandwidth_bytes, 0, 0, 1, 0, true));
 
         struct timespec target_get_local_cache_start_timestamp = Util::getCurrentTimespec();
 

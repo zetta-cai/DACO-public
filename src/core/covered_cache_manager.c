@@ -565,7 +565,7 @@ namespace covered
                             // Update total bandwidth usage for received victim fetch response
                             BandwidthUsage victim_fetch_response_bandwidth_usage = control_response_ptr->getBandwidthUsageRef();
                             uint32_t cross_edge_victim_fetch_rsp_bandwidth_bytes = control_response_ptr->getMsgBandwidthSize();
-                            victim_fetch_response_bandwidth_usage.update(BandwidthUsage(0, cross_edge_victim_fetch_rsp_bandwidth_bytes, 0, 0, 1, 0));
+                            victim_fetch_response_bandwidth_usage.update(BandwidthUsage(0, cross_edge_victim_fetch_rsp_bandwidth_bytes, 0, 0, 1, 0, false));
                             total_bandwidth_usage.update(victim_fetch_response_bandwidth_usage);
 
                             // Add the event of intermediate response if with event tracking

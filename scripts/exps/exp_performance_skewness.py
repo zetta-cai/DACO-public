@@ -19,7 +19,7 @@ exp_default_settings = {
     "clientcnt": 4,
     "edgecnt": 4,
     "keycnt": 1000000,
-    "capacity_mb": 3479, # per-edge capacity = dataset capacity * 50% / 4 edges
+    "capacity_mb": 1024,
     "cache_name": "covered",
     "workload_name": "zipf_facebook", # The same dataset as facebook yet different workload distributions
     "zipf_alpha": 0.0

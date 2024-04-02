@@ -223,7 +223,7 @@ namespace covered
 
         // Update total bandwidth usage for received local get request
         uint32_t client_edge_local_req_bandwidth_bytes = local_request_ptr->getMsgBandwidthSize();
-        total_bandwidth_usage.update(BandwidthUsage(client_edge_local_req_bandwidth_bytes, 0, 0, 1, 0, 0));
+        total_bandwidth_usage.update(BandwidthUsage(client_edge_local_req_bandwidth_bytes, 0, 0, 1, 0, 0, true));
 
         // Access local edge cache (current edge node is the closest edge node)
         struct timespec get_local_cache_start_timestamp = Util::getCurrentTimespec();
@@ -585,7 +585,7 @@ namespace covered
                 // Update total bandwidth usage for received directory lookup response
                 BandwidthUsage directory_lookup_response_bandwidth_usage = control_response_ptr->getBandwidthUsageRef();
                 uint32_t cross_edge_directory_lookup_rsp_bandwidth_bytes = control_response_ptr->getMsgBandwidthSize();
-                directory_lookup_response_bandwidth_usage.update(BandwidthUsage(0, cross_edge_directory_lookup_rsp_bandwidth_bytes, 0, 0, 1, 0));
+                directory_lookup_response_bandwidth_usage.update(BandwidthUsage(0, cross_edge_directory_lookup_rsp_bandwidth_bytes, 0, 0, 1, 0, false));
                 total_bandwidth_usage.update(directory_lookup_response_bandwidth_usage);
 
                 // Add events of intermediate response if with event tracking
@@ -726,7 +726,7 @@ namespace covered
                 // Update total bandwidth usage for received redirected get response
                 BandwidthUsage redirected_get_response_bandwidth_usage = redirected_response_ptr->getBandwidthUsageRef();
                 uint32_t cross_edge_redirected_get_rsp_bandwidth_bytes = redirected_response_ptr->getMsgBandwidthSize();
-                redirected_get_response_bandwidth_usage.update(BandwidthUsage(0, cross_edge_redirected_get_rsp_bandwidth_bytes, 0, 0, 1, 0));
+                redirected_get_response_bandwidth_usage.update(BandwidthUsage(0, cross_edge_redirected_get_rsp_bandwidth_bytes, 0, 0, 1, 0, true));
                 total_bandwidth_usage.update(redirected_get_response_bandwidth_usage);
 
                 // Add events of intermediate response if with event tracking
@@ -841,7 +841,7 @@ namespace covered
                 // Update total bandwidth usage for received global get response
                 BandwidthUsage global_response_bandwidth_usage = global_response_ptr->getBandwidthUsageRef();
                 uint32_t edge_cloud_global_rsp_bandwidth_bytes = global_response_ptr->getMsgBandwidthSize();
-                global_response_bandwidth_usage.update(BandwidthUsage(0, 0, edge_cloud_global_rsp_bandwidth_bytes, 0, 0, 1));
+                global_response_bandwidth_usage.update(BandwidthUsage(0, 0, edge_cloud_global_rsp_bandwidth_bytes, 0, 0, 1, true));
                 total_bandwidth_usage.update(global_response_bandwidth_usage);
 
                 // Add events of intermediate response if with event tracking
@@ -914,7 +914,7 @@ namespace covered
         
         // Update total bandwidth usage for received local put/del request
         uint32_t client_edge_local_req_bandwidth_bytes = local_request_ptr->getMsgBandwidthSize();
-        total_bandwidth_usage.update(BandwidthUsage(client_edge_local_req_bandwidth_bytes, 0, 0, 1, 0, 0));
+        total_bandwidth_usage.update(BandwidthUsage(client_edge_local_req_bandwidth_bytes, 0, 0, 1, 0, 0, true));
 
         // Acquire write lock from beacon node no matter the locally cached object is valid or not, where the beacon will invalidate all other cache copies for cache coherence
         struct timespec acquire_writelock_start_timestamp = Util::getCurrentTimespec();
@@ -1192,7 +1192,7 @@ namespace covered
                 // Update total bandwidth usage for received acquire writelock response
                 BandwidthUsage acquire_writelock_response_bandwidth_usage = control_response_ptr->getBandwidthUsageRef();
                 uint32_t cross_edge_acquire_writelock_rsp_bandwidth_bytes = control_response_ptr->getMsgBandwidthSize();
-                acquire_writelock_response_bandwidth_usage.update(BandwidthUsage(0, cross_edge_acquire_writelock_rsp_bandwidth_bytes, 0, 0, 1, 0));
+                acquire_writelock_response_bandwidth_usage.update(BandwidthUsage(0, cross_edge_acquire_writelock_rsp_bandwidth_bytes, 0, 0, 1, 0, false));
                 total_bandwidth_usage.update(acquire_writelock_response_bandwidth_usage);
 
                 // Add events of intermediate response if with event tracking
@@ -1260,7 +1260,7 @@ namespace covered
 
                 // Update tmp bandwidth usage for received finish block request
                 uint32_t cross_edge_finish_block_req_bandwidth_bytes = control_request_ptr->getMsgBandwidthSize();
-                tmp_bandwidth_usage.update(BandwidthUsage(0, cross_edge_finish_block_req_bandwidth_bytes, 0, 0, 1, 0));
+                tmp_bandwidth_usage.update(BandwidthUsage(0, cross_edge_finish_block_req_bandwidth_bytes, 0, 0, 1, 0, false));
 
                 // NOTE: extra_common_msghdr comes from local request A (currently blocked), while finish_block_request_skip_propagation_latency comes from local write request B, where B is processed before A to block A.
                 const bool finish_block_request_skip_propagation_latency = control_request_ptr->getExtraCommonMsghdr().isSkipPropagationLatency();
@@ -1418,7 +1418,7 @@ namespace covered
                 // Update total bandwidth usage for received global put/del response
                 BandwidthUsage global_response_bandwidth_usage = global_response_ptr->getBandwidthUsageRef();
                 uint32_t edge_cloud_global_rsp_bandwidth_bytes = global_response_ptr->getMsgBandwidthSize();
-                global_response_bandwidth_usage.update(BandwidthUsage(0, 0, edge_cloud_global_rsp_bandwidth_bytes, 0, 0, 1));
+                global_response_bandwidth_usage.update(BandwidthUsage(0, 0, edge_cloud_global_rsp_bandwidth_bytes, 0, 0, 1, true));
                 total_bandwidth_usage.update(global_response_bandwidth_usage);
 
                 // Add events of intermediate response if with event tracking
@@ -1576,7 +1576,7 @@ namespace covered
                 // Update total bandwidth usage for received release writelock response
                 BandwidthUsage release_writelock_response_bandwidth_usage = control_response_ptr->getBandwidthUsageRef();
                 uint32_t cross_edge_release_writelock_rsp_bandwidth_bytes = control_response_ptr->getMsgBandwidthSize();
-                release_writelock_response_bandwidth_usage.update(BandwidthUsage(0, cross_edge_release_writelock_rsp_bandwidth_bytes, 0, 0, 1, 0));
+                release_writelock_response_bandwidth_usage.update(BandwidthUsage(0, cross_edge_release_writelock_rsp_bandwidth_bytes, 0, 0, 1, 0, false));
                 total_bandwidth_usage.update(release_writelock_response_bandwidth_usage);
 
                 // Add events of intermediate response if with event tracking

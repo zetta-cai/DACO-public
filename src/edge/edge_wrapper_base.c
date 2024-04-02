@@ -572,7 +572,7 @@ namespace covered
                             // Update total bandwidth usage for received invalidation response
                             BandwidthUsage invalidation_response_bandwidth_usage = control_response_ptr->getBandwidthUsageRef();
                             uint32_t cross_edge_invalidation_rsp_bandwidth_bytes = control_response_ptr->getMsgBandwidthSize();
-                            invalidation_response_bandwidth_usage.update(BandwidthUsage(0, cross_edge_invalidation_rsp_bandwidth_bytes, 0, 0, 1, 0));
+                            invalidation_response_bandwidth_usage.update(BandwidthUsage(0, cross_edge_invalidation_rsp_bandwidth_bytes, 0, 0, 1, 0, false));
                             total_bandwidth_usage.update(invalidation_response_bandwidth_usage);
 
                             // Add the event of intermediate response if with event tracking
@@ -733,7 +733,7 @@ namespace covered
                             // Update total bandwidth usage for received finish block response
                             BandwidthUsage finish_block_response_bandwidth_usage = control_response_ptr->getBandwidthUsageRef();
                             uint32_t cross_edge_finish_block_rsp_bandwidth_bytes = control_response_ptr->getMsgBandwidthSize();
-                            finish_block_response_bandwidth_usage.update(BandwidthUsage(0, cross_edge_finish_block_rsp_bandwidth_bytes, 0, 0, 1, 0));
+                            finish_block_response_bandwidth_usage.update(BandwidthUsage(0, cross_edge_finish_block_rsp_bandwidth_bytes, 0, 0, 1, 0, false));
                             total_bandwidth_usage.update(finish_block_response_bandwidth_usage);
 
                             // Add the event of intermediate response if with event tracking

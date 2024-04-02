@@ -288,20 +288,24 @@ namespace covered
         oss << "average workload value size: " << B2KB(getAvgWorkloadValueSize()) << " KiB" << std::endl;
 
         oss << "[Bandwidth Usage Statistics]" << std::endl;
-        oss << "total client-edge bandwidth usage: " << B2MB(static_cast<double>(total_bandwidth_usage_.getClientEdgeBandwidthBytes())) << " MiB" << std::endl;
-        oss << "total cross-edge bandwidth usage: " << B2MB(static_cast<double>(total_bandwidth_usage_.getCrossEdgeBandwidthBytes())) << " MiB" << std::endl;
-        oss << "total edge-cloud bandwidth usage: " << B2MB(static_cast<double>(total_bandwidth_usage_.getEdgeCloudBandwidthBytes())) << " MiB" << std::endl;
-        oss << "total client-edge message count: " << total_bandwidth_usage_.getClientEdgeMsgcnt() << std::endl;
-        oss << "total cross-edge message count: " << total_bandwidth_usage_.getCrossEdgeMsgcnt() << std::endl;
-        oss << "total edge-cloud message count: " << total_bandwidth_usage_.getEdgeCloudMsgcnt() << std::endl;
+        oss << "total client-edge (must data) bandwidth usage: " << B2MB(static_cast<double>(total_bandwidth_usage_.getClientEdgeBandwidthBytes())) << " MiB" << std::endl;
+        oss << "total cross-edge control bandwidth usage: " << B2MB(static_cast<double>(total_bandwidth_usage_.getCrossEdgeControlBandwidthBytes())) << " MiB" << std::endl;
+        oss << "total cross-edge data bandwidth usage: " << B2MB(static_cast<double>(total_bandwidth_usage_.getCrossEdgeDataBandwidthBytes())) << " MiB" << std::endl;
+        oss << "total edge-cloud (must data) bandwidth usage: " << B2MB(static_cast<double>(total_bandwidth_usage_.getEdgeCloudBandwidthBytes())) << " MiB" << std::endl;
+        oss << "total client-edge (must data) message count: " << total_bandwidth_usage_.getClientEdgeMsgcnt() << std::endl;
+        oss << "total cross-edge control message count: " << total_bandwidth_usage_.getCrossEdgeControlMsgcnt() << std::endl;
+        oss << "total cross-edge data message count: " << total_bandwidth_usage_.getCrossEdgeDataMsgcnt() << std::endl;
+        oss << "total edge-cloud (must data) message count: " << total_bandwidth_usage_.getEdgeCloudMsgcnt() << std::endl;
         if (total_reqcnt_ > 0)
         {
-            oss << "per-request client-edge bandwidth usage: " << B2MB(static_cast<double>(total_bandwidth_usage_.getClientEdgeBandwidthBytes()) / static_cast<double>(total_reqcnt_)) << " MiB/req" << std::endl;
-            oss << "per-request cross-edge bandwidth usage: " << B2MB(static_cast<double>(total_bandwidth_usage_.getCrossEdgeBandwidthBytes()) / static_cast<double>(total_reqcnt_)) << " MiB/req" << std::endl;
-            oss << "per-request edge-cloud bandwidth usage: " << B2MB(static_cast<double>(total_bandwidth_usage_.getEdgeCloudBandwidthBytes()) / static_cast<double>(total_reqcnt_)) << " MiB/req" << std::endl;
-            oss << "per-request client-edge per-request message count: " << static_cast<double>(total_bandwidth_usage_.getClientEdgeMsgcnt()) / static_cast<double>(total_reqcnt_) << std::endl;
-            oss << "per-request cross-edge per-request message count: " << static_cast<double>(total_bandwidth_usage_.getCrossEdgeMsgcnt()) / static_cast<double>(total_reqcnt_) << std::endl;
-            oss << "per-request edge-cloud per-request message count: " << static_cast<double>(total_bandwidth_usage_.getEdgeCloudMsgcnt()) / static_cast<double>(total_reqcnt_) << std::endl;
+            oss << "per-request client-edge (must data) bandwidth usage: " << B2MB(static_cast<double>(total_bandwidth_usage_.getClientEdgeBandwidthBytes()) / static_cast<double>(total_reqcnt_)) << " MiB/req" << std::endl;
+            oss << "per-request cross-edge control bandwidth usage: " << B2MB(static_cast<double>(total_bandwidth_usage_.getCrossEdgeControlBandwidthBytes()) / static_cast<double>(total_reqcnt_)) << " MiB/req" << std::endl;
+            oss << "per-request cross-edge data bandwidth usage: " << B2MB(static_cast<double>(total_bandwidth_usage_.getCrossEdgeDataBandwidthBytes()) / static_cast<double>(total_reqcnt_)) << " MiB/req" << std::endl;
+            oss << "per-request edge-cloud (must data) bandwidth usage: " << B2MB(static_cast<double>(total_bandwidth_usage_.getEdgeCloudBandwidthBytes()) / static_cast<double>(total_reqcnt_)) << " MiB/req" << std::endl;
+            oss << "per-request client-edge (must data) message count: " << static_cast<double>(total_bandwidth_usage_.getClientEdgeMsgcnt()) / static_cast<double>(total_reqcnt_) << std::endl;
+            oss << "per-request cross-edge control message count: " << static_cast<double>(total_bandwidth_usage_.getCrossEdgeControlMsgcnt()) / static_cast<double>(total_reqcnt_) << std::endl;
+            oss << "per-request cross-edge data message count: " << static_cast<double>(total_bandwidth_usage_.getCrossEdgeDataMsgcnt()) / static_cast<double>(total_reqcnt_) << std::endl;
+            oss << "per-request edge-cloud (must data) message count: " << static_cast<double>(total_bandwidth_usage_.getEdgeCloudMsgcnt()) / static_cast<double>(total_reqcnt_) << std::endl;
         }
         
         std::string total_statistics_string = oss.str();
