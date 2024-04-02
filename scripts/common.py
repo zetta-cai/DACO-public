@@ -98,20 +98,12 @@ class Common:
 
     ## (5) Experiment settings
 
-    exp_round_number = 3 # Run each experiment for exp_round_number times
+    exp_round_number = 4 # Run each experiment for exp_round_number times
 
     ## (6) Real-network settings
 
     # (Silicon Valley) Initialized single-trip time (RTT / 2) (TODO: update based on your real-network testbed)
-    # NOTE: used for the first round (for round 0)
-    # alicloud_avg_clientedge_latency_us = 386
-    # alicloud_avg_crossedge_latency_us = 10150
-    # alicloud_avg_edgecloud_latency_us = 74750
-    # NOTE: used for the second round (for round 1)
-    # alicloud_avg_clientedge_latency_us = 782
-    # alicloud_avg_crossedge_latency_us = 11305
-    # alicloud_avg_edgecloud_latency_us = 81000
-    # NOTE: used for the third round (for round 2)
-    alicloud_avg_clientedge_latency_us = 765
-    alicloud_avg_crossedge_latency_us = 11165
-    alicloud_avg_edgecloud_latency_us = 80875
+    # NOTE: used for the five rounds respectively
+    alicloud_avg_clientedge_latency_us_list = [386, 782, 765, 765]
+    alicloud_avg_crossedge_latency_us_list = [10150, 11305, 11165, 10755]
+    alicloud_avg_edgecloud_latency_us_list = [74750, 81000, 80875, 79875]

@@ -22,9 +22,9 @@ exp_default_settings = {
     "capacity_mb": 1024,
     "cache_name": "covered",
     "workload_name": "facebook",
-    "propagation_latency_clientedge_us": Common.alicloud_avg_clientedge_latency_us,
-    "propagation_latency_crossedge_us": Common.alicloud_avg_crossedge_latency_us,
-    "propagation_latency_edgecloud_us": Common.alicloud_avg_edgecloud_latency_us,
+    "propagation_latency_clientedge_us": 500,
+    "propagation_latency_crossedge_us": 5000,
+    "propagation_latency_edgecloud_us": 50000,
     "realnet_option": "load",
     "realnet_expname": "",
 }
@@ -64,6 +64,9 @@ for tmp_round_index in round_indexes:
             tmp_exp_settings["capacity_mb"] = tmp_capacity_mb
             tmp_exp_settings["cache_name"] = tmp_cache_name
             tmp_exp_settings["realnet_expname"] = "exp_alicloud_round{}_{}_{}".format(tmp_round_index, tmp_cache_name, tmp_capacity_mb)
+            tmp_exp_settings["propagation_latency_clientedge_us"] = Common.alicloud_avg_clientedge_latency_us_list[tmp_round_index]
+            tmp_exp_settings["propagation_latency_crossedge_us"] = Common.alicloud_avg_crossedge_latency_us_list[tmp_round_index]
+            tmp_exp_settings["propagation_latency_edgecloud_us"] = Common.alicloud_avg_edgecloud_latency_us_list[tmp_round_index]
 
             # NOTE: you can try the following special cases with 10M warmup requests if you have sufficient memory for SegCache, yet our evaluation results and conclusions should NOT change
             # Special case: for segcache+ under 8 GiB per-edge memory, use 4M instead of 10M requests to warmup to avoid being killed by OS kernel due to using up all memory in cache node, which is acceptable due to the following reasons:
@@ -96,6 +99,9 @@ for tmp_round_index in round_indexes:
         #     tmp_exp_settings["cache_name"] = tmp_cache_name
         #     tmp_exp_settings["workload_name"] = tmp_workload
         #     tmp_exp_settings["realnet_expname"] = "exp_alicloud_round{}_{}_{}".format(tmp_round_index, tmp_cache_name, tmp_workload)
+        #     tmp_exp_settings["propagation_latency_clientedge_us"] = Common.alicloud_avg_clientedge_latency_us_list[tmp_round_index]
+        #     tmp_exp_settings["propagation_latency_crossedge_us"] = Common.alicloud_avg_crossedge_latency_us_list[tmp_round_index]
+        #     tmp_exp_settings["propagation_latency_edgecloud_us"] = Common.alicloud_avg_edgecloud_latency_us_list[tmp_round_index]
 
         #     # Launch prototype
         #     LogUtil.prompt(Common.scriptname, "Run prototype of {} w/ {} for the current round {}...".format(tmp_cache_name, tmp_workload, tmp_round_index))
