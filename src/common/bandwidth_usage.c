@@ -40,9 +40,11 @@ namespace covered
         if (is_data_message)
         {
             cross_edge_data_bandwidth_bytes_ = cross_edge_bandwidth_bytes;
+            cross_edge_control_bandwidth_bytes_ = 0;
         }
         else
         {
+            cross_edge_data_bandwidth_bytes_ = 0;
             cross_edge_control_bandwidth_bytes_ = cross_edge_bandwidth_bytes;
         }
         edge_cloud_bandwidth_bytes_ = edge_cloud_bandwidth_bytes;
@@ -51,9 +53,11 @@ namespace covered
         if (is_data_message)
         {
             cross_edge_data_msgcnt_ = cross_edge_msgcnt;
+            cross_edge_control_msgcnt_ = 0;
         }
         else
         {
+            cross_edge_data_msgcnt_ = 0;
             cross_edge_control_msgcnt_ = cross_edge_msgcnt;
         }
         edge_cloud_msgcnt_ = edge_cloud_msgcnt;
