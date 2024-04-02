@@ -65,7 +65,7 @@ namespace covered
 
         // Const shared variables
         std::string instance_name_;
-        const bool zipf_alpha_;
+        const float zipf_alpha_;
 
         // Const shared variables
         // (1) For clients, dataset loader, and cloud

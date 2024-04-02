@@ -3,9 +3,10 @@
 #include <memory> // std::make_unique
 #include <random> // std::mt19937_64, std::discrete_distribution
 
-#include <cachelib/cachebench/workload/KVReplayGenerator.h>
-#include <cachelib/cachebench/workload/OnlineGenerator.h>
-#include <cachelib/cachebench/workload/PieceWiseReplayGenerator.h>
+// Avoid multiple definitions
+// #include <cachelib/cachebench/workload/KVReplayGenerator.h>
+// #include <cachelib/cachebench/workload/OnlineGenerator.h>
+// #include <cachelib/cachebench/workload/PieceWiseReplayGenerator.h>
 
 #include "common/config.h"
 #include "common/util.h"

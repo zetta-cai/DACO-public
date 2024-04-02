@@ -400,28 +400,22 @@ void WorkloadGenerator::generateKeyDistributions() {
           tmp_keyindex_freq_map[tmp_keyindex]++;
         }
       }
-      sort(tmp_keyindex_freq_map.begin(), tmp_keyindex_freq_map.end(), descendingSortByValue);
-      std::vector<uint32_t> descending_sorted_key_indices;
-      uint32_t debug_i = 0; // TMPDEBUG24
+      std::vector<std::pair<uint32_t, uint32_t>> tmp_keyindex_freq_vec;
       for (std::map<uint32_t, uint32_t>::iterator tmp_iter = tmp_keyindex_freq_map.begin(); tmp_iter != tmp_keyindex_freq_map.end(); tmp_iter++)
       {
-        descending_sorted_key_indices.push_back(tmp_iter->first);
-
-        // TMPDEBUG24
-        if (debug_i < 10)
-        {
-          std::ostringstream oss;
-          oss << "key index: " << tmp_iter->first << "; freq: " << tmp_iter->second;
-          Util::dumpNormalMsg(kClassName, oss.str());
-          debug_i++;
-        }
+        tmp_keyindex_freq_vec.push_back(std::pair(tmp_iter->first, tmp_iter->second));
+      }
+      sort(tmp_keyindex_freq_vec.begin(), tmp_keyindex_freq_vec.end(), descendingSortByValue);
+      std::vector<uint32_t> descending_sorted_key_indices;
+      for (uint32_t tmp_i = 0; tmp_i < tmp_keyindex_freq_vec.size(); tmp_i++)
+      {
+        descending_sorted_key_indices.push_back(tmp_keyindex_freq_vec[tmp_i].first);
       }
 
       // (3) Siyuan: generate probs based on Zipf's law mentioned in CacheLib paper
       const uint32_t tmp_rank_cnt = descending_sorted_key_indices.size(); // E.g., descending_sorted_key_indices[0] = A for the rank 1
       std::vector<double> tmp_probs(tmp_rank_cnt, 0.0);
       double tmp_sum_prob = 0.0;
-      debug_i = 0; // TMPDEBUG24
       for (uint32_t tmp_rank_idx = 1; tmp_rank_idx <= tmp_rank_cnt; tmp_rank_idx++)
       {
         tmp_probs[tmp_rank_idx - 1] = 1.0 / pow(tmp_rank_idx, zipf_alpha_);
@@ -430,15 +424,6 @@ void WorkloadGenerator::generateKeyDistributions() {
       for (uint32_t tmp_rank_idx = 0; tmp_rank_idx < tmp_rank_cnt; tmp_rank_idx++)
       {
         tmp_probs[tmp_rank_idx] /= tmp_sum_prob;
-
-        // TMPDEBUG24
-        if (debug_i < 10)
-        {
-          std::ostringstream oss;
-          oss << "rank: " << tmp_rank_idx + 1 << "; prob: " << tmp_probs[tmp_rank_idx];
-          Util::dumpNormalMsg(kClassName, oss.str());
-          debug_i++;
-        }
       }
       
       // (4) Siyuan: Use Zipf's law to generate workload items based on the descending_sorted_key_indices
@@ -451,14 +436,6 @@ void WorkloadGenerator::generateKeyDistributions() {
           uint32_t tmp_rank_index_minus_one = tmp_dist(tmp_randgen); // From 0 (the most popular) to rank_cnt - 1 (the least popular)
           uint32_t tmp_key_index = descending_sorted_key_indices[tmp_rank_index_minus_one]; // E.g., get A for rank 1 at descending_sorted_key_indices[0]
           assert(tmp_key_index < reqs_.size());
-
-          // TMPDEBUG24
-          if (tmp_rank_index_minus_one < 10)
-          {
-            std::ostringstream oss;
-            oss << "rank index: " << tmp_rank_index_minus_one << "; key index: " << tmp_key_index;
-            Util::dumpNormalMsg(kClassName, oss.str());
-          }
 
           keyIndicesForPool_[i][tmp_i] = tmp_key_index;
       }

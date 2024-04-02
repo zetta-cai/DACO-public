@@ -85,7 +85,8 @@ else:
     # Prepare settings for dataset loader
     tmp_dataset_loader_settings = {
         "keycnt": tmp_keycnt,
-        "workload_name": tmp_workload
+        "workload_name": tmp_workload,
+        "zipf_alpha": 0.7 # NOTE: 0.7 is the default skewness of Facebook CDN workload if with Zipf-based generator; workload skewness does NOT affect dataset keys and value sizes
     }
 
     # Launch dataset loader
