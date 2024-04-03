@@ -24,6 +24,9 @@ namespace covered
 
         const VictimSyncset& getVictimFetchsetRef() const;
         const VictimSyncset& getVictimSyncsetRef() const;
+
+        // Used by BandwidthUsage
+        virtual uint32_t getVictimSyncsetBytes() const;
     private:
         static const std::string kClassName;
 

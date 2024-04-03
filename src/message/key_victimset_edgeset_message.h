@@ -28,6 +28,9 @@ namespace covered
         Key getKey() const;
         const VictimSyncset& getVictimSyncsetRef() const;
         const Edgeset& getEdgesetRef() const;
+
+        // Used by BandwidthUsage
+        virtual uint32_t getVictimSyncsetBytes() const;
     private:
         static const std::string kClassName;
 

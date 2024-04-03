@@ -61,6 +61,12 @@ namespace covered
         return fast_path_hint_;
     }
 
+    uint32_t KeyWriteflagValidityDirectoryVictimsetFphintMessage::getVictimSyncsetBytes() const
+    {
+        checkIsValid_();
+        return victim_syncset_.getVictimSyncsetPayloadSize();
+    }
+
     uint32_t KeyWriteflagValidityDirectoryVictimsetFphintMessage::getMsgPayloadSizeInternal_() const
     {
         // key payload + is being written + is cooperatively cached + directory info (target edge idx) + victim syncset + fast-path hint

@@ -123,7 +123,7 @@ namespace covered
 
         // Update total bandwidth usage for received global get/put/del request
         uint32_t edge_cloud_global_req_bandwidth_bytes = global_request_ptr->getMsgBandwidthSize();
-        total_bandwidth_usage.update(BandwidthUsage(0, 0, edge_cloud_global_req_bandwidth_bytes, 0, 0, 1, true));
+        total_bandwidth_usage.update(BandwidthUsage(0, 0, edge_cloud_global_req_bandwidth_bytes, 0, 0, 1, global_request_ptr->getMessageType(), global_request_ptr->getVictimSyncsetBytes()));
 
         struct timespec access_rocksdb_start_timestamp = Util::getCurrentTimespec();
 

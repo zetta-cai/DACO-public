@@ -63,6 +63,12 @@ namespace covered
         return victim_syncset_;
     }
 
+    uint32_t KeyValidityDirectoryCollectpopVictimsetMessage::getVictimSyncsetBytes() const
+    {
+        checkIsValid_();
+        return victim_syncset_.getVictimSyncsetPayloadSize();
+    }
+
     uint32_t KeyValidityDirectoryCollectpopVictimsetMessage::getMsgPayloadSizeInternal_() const
     {
         uint32_t msg_payload_size = 0;

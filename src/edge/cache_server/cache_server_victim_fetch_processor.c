@@ -107,7 +107,7 @@ namespace covered
         //const bool is_background = true;
 
         const CoveredVictimFetchRequest* const covered_victim_fetch_request_ptr = static_cast<const CoveredVictimFetchRequest*>(control_request_ptr);
-        total_bandwidth_usage.update(BandwidthUsage(0, covered_victim_fetch_request_ptr->getMsgBandwidthSize(), 0, 0, 1, 0, false));
+        total_bandwidth_usage.update(BandwidthUsage(0, covered_victim_fetch_request_ptr->getMsgBandwidthSize(), 0, 0, 1, 0, covered_victim_fetch_request_ptr->getMessageType(), covered_victim_fetch_request_ptr->getVictimSyncsetBytes()));
 
         struct timespec victim_fetch_start_timestamp = Util::getCurrentTimespec();
 

@@ -485,7 +485,7 @@ namespace covered
                 // Update total bandwidth usage for received control response (directory update after hybrid fetching)
                 BandwidthUsage control_response_bandwidth_usage = control_response_ptr->getBandwidthUsageRef();
                 uint32_t cross_edge_control_rsp_bandwidth_bytes = control_response_ptr->getMsgBandwidthSize();
-                control_response_bandwidth_usage.update(BandwidthUsage(0, cross_edge_control_rsp_bandwidth_bytes, 0, 0, 1, 0, false));
+                control_response_bandwidth_usage.update(BandwidthUsage(0, cross_edge_control_rsp_bandwidth_bytes, 0, 0, 1, 0, control_response_ptr->getMessageType(), control_response_ptr->getVictimSyncsetBytes()));
                 total_bandwidth_usage.update(control_response_bandwidth_usage);
 
                 // Add events of intermediate response if with event tracking

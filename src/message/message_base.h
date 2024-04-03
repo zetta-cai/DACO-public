@@ -175,15 +175,30 @@ namespace covered
         bool isLocalDataRequest() const;
         bool isRedirectedDataRequest() const;
         bool isGlobalDataRequest() const;
+        // Used by BandwidthUsgae
+        static bool isDataRequest(const MessageType& message_type);
+        static bool isLocalDataRequest(const MessageType& message_type);
+        static bool isRedirectedDataRequest(const MessageType& message_type);
+        static bool isGlobalDataRequest(const MessageType& message_type);
 
         bool isDataResponse() const;
         bool isLocalDataResponse() const;
         bool isRedirectedDataResponse() const;
         bool isGlobalDataResponse() const;
+        // Used by BandwidthUsgae
+        static bool isDataResponse(const MessageType& message_type);
+        static bool isLocalDataResponse(const MessageType& message_type);
+        static bool isRedirectedDataResponse(const MessageType& message_type);
+        static bool isGlobalDataResponse(const MessageType& message_type);
 
         bool isControlRequest() const;
         bool isCooperationControlRequest() const;
         bool isBenchmarkControlRequest() const;
+
+        // Used by BandwidthUsgae
+        static bool isDirectoryLookupMessage(const MessageType& message_type);
+        static bool isDirectoryUpdateMessage(const MessageType& message_type);
+        virtual uint32_t getVictimSyncsetBytes() const;
 
         bool isControlResponse() const;
         bool isCooperationControlResponse() const;

@@ -37,10 +37,39 @@ namespace covered
         const double throughput = static_cast<double>(total_reqcnt_) / static_cast<double>(sec_);
         oss << "throughput: " << throughput << " OPS" << std::endl;
 
+        // Get coarse-grained bandwidth usage statistics
+
+        //const double perpkt_client_edge_bwcost = B2MB(static_cast<double>(total_bandwidth_usage_.getClientEdgeBandwidthBytes()) / static_cast<double>(total_reqcnt_));
+        const double perpkt_cross_edge_control_total_bwcost = B2MB(static_cast<double>(total_bandwidth_usage_.getCrossEdgeControlTotalBandwidthBytes()) / static_cast<double>(total_reqcnt_));
+        const double perpkt_cross_edge_data_bwcost = B2MB(static_cast<double>(total_bandwidth_usage_.getCrossEdgeDataBandwidthBytes()) / static_cast<double>(total_reqcnt_));
+        const double perpkt_cross_edge_bwcost = perpkt_cross_edge_control_total_bwcost + perpkt_cross_edge_data_bwcost;
+        const double perpkt_edge_cloud_bwcost = B2MB(static_cast<double>(total_bandwidth_usage_.getEdgeCloudBandwidthBytes()) / static_cast<double>(total_reqcnt_));
+
+        //const double perpkt_client_edge_msgcnt = static_cast<double>(total_bandwidth_usage_.getClientEdgeMsgcnt()) / static_cast<double>(total_reqcnt_);
+        const double perpkt_cross_edge_control_total_msgcnt = static_cast<double>(total_bandwidth_usage_.getCrossEdgeControlTotalMsgcnt()) / static_cast<double>(total_reqcnt_);
+        const double perpkt_cross_edge_data_msgcnt = static_cast<double>(total_bandwidth_usage_.getCrossEdgeDataMsgcnt()) / static_cast<double>(total_reqcnt_);
+        const double perpkt_cross_edge_msgcnt = perpkt_cross_edge_control_total_msgcnt + perpkt_cross_edge_data_msgcnt;
+        const double perpkt_edge_cloud_msgcnt = static_cast<double>(total_bandwidth_usage_.getEdgeCloudMsgcnt()) / static_cast<double>(total_reqcnt_);
+
+        // Get fine-grained bandwidth usage statistics
+
+        const double perpkt_cross_edge_control_content_discovery_bwcost = B2MB(static_cast<double>(total_bandwidth_usage_.getCrossEdgeControlContentDiscoveryBandwidthBytes()) / static_cast<double>(total_reqcnt_));
+        const double perpkt_cross_edge_control_directory_update_bwcost = B2MB(static_cast<double>(total_bandwidth_usage_.getCrossEdgeControlDirectoryUpdateBandwidthBytes()) / static_cast<double>(total_reqcnt_));
+        const double perpkt_cross_edge_control_others_bwcost = B2MB(static_cast<double>(total_bandwidth_usage_.getCrossEdgeControlOthersBandwidthBytes()) / static_cast<double>(total_reqcnt_));
+
+        const double perpkt_cross_edge_control_victimsync_bwcost = B2MB(static_cast<double>(total_bandwidth_usage_.getVictimSyncsetBandwidthBytes()) / static_cast<double>(total_reqcnt_));
+
+        const double perpkt_cross_edge_control_content_discovery_msgcnt = static_cast<double>(total_bandwidth_usage_.getCrossEdgeControlContentDiscoveryMsgcnt()) / static_cast<double>(total_reqcnt_);
+        const double perpkt_cross_edge_control_directory_update_msgcnt = static_cast<double>(total_bandwidth_usage_.getCrossEdgeControlDirectoryUpdateMsgcnt()) / static_cast<double>(total_reqcnt_);
+        const double perpkt_cross_edge_control_others_msgcnt = static_cast<double>(total_bandwidth_usage_.getCrossEdgeControlOthersMsgcnt()) / static_cast<double>(total_reqcnt_);
+
         // Dump markdown string to help collect statistics
         oss << "[Markdown Format]" << std::endl;
-        oss << "| Global Hit Ratio (%) (Local + Cooperative) | Avg Latency (ms) | Thpt (OPS) | Per-request Average Bandwidth Cost (MiB/pkt) (cross-edge-control/cross-edge-data/edge-cloud) | Per-request Msgcnt (cross-edge-control/cross-edge-data/edge-cloud) |" << std::endl;
-        oss << "| " << getTotalObjectHitRatio() * 100 << " (" << getLocalObjectHitRatio() * 100 << " + " << getCooperativeObjectHitRatio() * 100 << ")" << " | " << static_cast<double>(avg_latency_) / 1000.0 << " | " << throughput << " | " << B2MB(static_cast<double>(total_bandwidth_usage_.getCrossEdgeControlBandwidthBytes()) / static_cast<double>(total_reqcnt_)) << "/" << B2MB(static_cast<double>(total_bandwidth_usage_.getCrossEdgeDataBandwidthBytes()) / static_cast<double>(total_reqcnt_)) << "/" << B2MB(static_cast<double>(total_bandwidth_usage_.getEdgeCloudBandwidthBytes()) / static_cast<double>(total_reqcnt_)) << " | " << static_cast<double>(total_bandwidth_usage_.getCrossEdgeControlMsgcnt()) / static_cast<double>(total_reqcnt_) << "/" << static_cast<double>(total_bandwidth_usage_.getCrossEdgeDataMsgcnt()) / static_cast<double>(total_reqcnt_) << "/" << static_cast<double>(total_bandwidth_usage_.getEdgeCloudMsgcnt()) / static_cast<double>(total_reqcnt_) << " |" << std::endl;
+        oss << "| Global Hit Ratio (%) (Local + Cooperative) | Avg Latency (ms) | Thpt (OPS) | Per-request Average Bandwidth Cost (MiB/pkt) (cross-edge (control + data) / edge-cloud) | Per-request Msgcnt (cross-edge (control + data) / edge-cloud) |" << std::endl;
+        oss << "| " << getTotalObjectHitRatio() * 100 << " (" << getLocalObjectHitRatio() * 100 << " + " << getCooperativeObjectHitRatio() * 100 << ")" << " | " << static_cast<double>(avg_latency_) / 1000.0 << " | " << throughput << " | " << perpkt_cross_edge_bwcost << "(" << perpkt_cross_edge_control_total_bwcost << " + " << perpkt_cross_edge_data_bwcost << ") / " << perpkt_edge_cloud_bwcost << " | " << perpkt_cross_edge_msgcnt << " (" << perpkt_cross_edge_control_total_msgcnt << " + " << perpkt_cross_edge_data_msgcnt << ") / " << static_cast<double>(total_bandwidth_usage_.getCrossEdgeDataMsgcnt()) / static_cast<double>(total_reqcnt_) << "/" << perpkt_edge_cloud_msgcnt << " |" << std::endl;
+        // NOTE: inclusive means that victimsync bandwidth cost is already included in cross-edge bandwidth cost (e.g., content discovery, directory update, and others), which is not an independent bandwidth cost and NO need to add to total cross-edge bandwidth cost
+        oss << "| Cross-edge Per-request Bandwidth Cost (Content Discovery / Directory Update / Others) (MiB/pkt) | Cross-edge Per-request Msgcnt (Content Discovery / Directory Update / Others) | Cross-edge Per-request Victimsync Bandwidth Cost (MiB/pkt; inclusive) |" << std::endl;
+        oss << "| " << perpkt_cross_edge_control_content_discovery_bwcost << " / " << perpkt_cross_edge_control_directory_update_bwcost << " / " << perpkt_cross_edge_control_others_bwcost << " | " << perpkt_cross_edge_control_content_discovery_msgcnt << " / " << perpkt_cross_edge_control_directory_update_msgcnt << " / " << perpkt_cross_edge_control_others_msgcnt << " | " << perpkt_cross_edge_control_victimsync_bwcost << " |" << std::endl;
 
         return oss.str();
     }

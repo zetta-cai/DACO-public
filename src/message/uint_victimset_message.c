@@ -25,6 +25,12 @@ namespace covered
         return victim_syncset_;
     }
 
+    uint32_t UintVictimsetMessage::getVictimSyncsetBytes() const
+    {
+        checkIsValid_();
+        return victim_syncset_.getVictimSyncsetPayloadSize();
+    }
+
     uint32_t UintVictimsetMessage::getUnsignedInteger_() const
     {
         checkIsValid_();

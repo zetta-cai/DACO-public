@@ -50,6 +50,12 @@ namespace covered
         return edgeset_;
     }
 
+    uint32_t KeyValueHitflagVictimsetEdgesetMessage::getVictimSyncsetBytes() const
+    {
+        checkIsValid_();
+        return victim_syncset_.getVictimSyncsetPayloadSize();
+    }
+
     uint32_t KeyValueHitflagVictimsetEdgesetMessage::getMsgPayloadSizeInternal_() const
     {
         // key payload + value payload + hitflag + victim syncset payload + edgeset payload

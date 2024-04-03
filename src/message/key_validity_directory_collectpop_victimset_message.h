@@ -35,6 +35,9 @@ namespace covered
         DirectoryInfo getDirectoryInfo() const;
         const CollectedPopularity& getCollectedPopularityRef() const; // ONLY if is_valid_directory_exist_ = false
         const VictimSyncset& getVictimSyncsetRef() const;
+
+        // Used by BandwidthUsage
+        virtual uint32_t getVictimSyncsetBytes() const;
     private:
         static const std::string kClassName;
 

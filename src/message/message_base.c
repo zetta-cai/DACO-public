@@ -1678,26 +1678,35 @@ namespace covered
     bool MessageBase::isDataRequest() const
     {
         checkIsValid_();
-        return isLocalDataRequest() || isRedirectedDataRequest() || isGlobalDataRequest();
+        return isDataRequest(message_type_);
     }
 
     bool MessageBase::isLocalDataRequest() const
     {
         checkIsValid_();
-        if (message_type_ == MessageType::kLocalGetRequest || message_type_ == MessageType::kLocalPutRequest || message_type_ == MessageType::kLocalDelRequest)
-        {
-            return true;
-        }
-        else
-        {
-            return false;
-        }
+        return isLocalDataRequest(message_type_);
     }
 
     bool MessageBase::isRedirectedDataRequest() const
     {
         checkIsValid_();
-        if (message_type_ == MessageType::kRedirectedGetRequest || message_type_ == MessageType::kCoveredRedirectedGetRequest || message_type_ == MessageType::kCoveredBgfetchRedirectedGetRequest || message_type_ == MessageType::kBestGuessRedirectedGetRequest)
+        return isRedirectedDataRequest(message_type_);
+    }
+
+    bool MessageBase::isGlobalDataRequest() const
+    {
+        checkIsValid_();
+        return isGlobalDataRequest(message_type_);
+    }
+
+    bool MessageBase::isDataRequest(const MessageType& message_type)
+    {
+        return isLocalDataRequest(message_type) || isRedirectedDataRequest(message_type) || isGlobalDataRequest(message_type);
+    }
+
+    bool MessageBase::isLocalDataRequest(const MessageType& message_type)
+    {
+        if (message_type == MessageType::kLocalGetRequest || message_type == MessageType::kLocalPutRequest || message_type == MessageType::kLocalDelRequest)
         {
             return true;
         }
@@ -1707,10 +1716,21 @@ namespace covered
         }
     }
 
-    bool MessageBase::isGlobalDataRequest() const
+    bool MessageBase::isRedirectedDataRequest(const MessageType& message_type)
     {
-        checkIsValid_();
-        if (message_type_ == MessageType::kGlobalGetRequest || message_type_ == MessageType::kGlobalPutRequest || message_type_ == MessageType::kGlobalDelRequest || message_type_ == MessageType::kCoveredBgfetchGlobalGetRequest)
+        if (message_type == MessageType::kRedirectedGetRequest || message_type == MessageType::kCoveredRedirectedGetRequest || message_type == MessageType::kCoveredBgfetchRedirectedGetRequest || message_type == MessageType::kBestGuessRedirectedGetRequest)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    bool MessageBase::isGlobalDataRequest(const MessageType& message_type)
+    {
+        if (message_type == MessageType::kGlobalGetRequest || message_type == MessageType::kGlobalPutRequest || message_type == MessageType::kGlobalDelRequest || message_type == MessageType::kCoveredBgfetchGlobalGetRequest)
         {
             return true;
         }
@@ -1723,26 +1743,35 @@ namespace covered
     bool MessageBase::isDataResponse() const
     {
         checkIsValid_();
-        return isLocalDataResponse() || isRedirectedDataResponse() || isGlobalDataResponse();
+        return isDataResponse(message_type_);
     }
 
     bool MessageBase::isLocalDataResponse() const
     {
         checkIsValid_();
-        if (message_type_ == MessageType::kLocalGetResponse || message_type_ == MessageType::kLocalPutResponse || message_type_ == MessageType::kLocalDelResponse)
-        {
-            return true;
-        }
-        else
-        {
-            return false;
-        }
+        return isLocalDataResponse(message_type_);
     }
 
     bool MessageBase::isRedirectedDataResponse() const
     {
         checkIsValid_();
-        if (message_type_ == MessageType::kRedirectedGetResponse || message_type_ == MessageType::kCoveredRedirectedGetResponse || message_type_ == MessageType::kCoveredBgfetchRedirectedGetResponse || message_type_ == MessageType::kBestGuessRedirectedGetResponse)
+        return isRedirectedDataResponse(message_type_);
+    }
+
+    bool MessageBase::isGlobalDataResponse() const
+    {
+        checkIsValid_();
+        return isGlobalDataResponse(message_type_);
+    }
+
+    bool MessageBase::isDataResponse(const MessageType& message_type)
+    {
+        return isLocalDataResponse(message_type) || isRedirectedDataResponse(message_type) || isGlobalDataResponse(message_type);
+    }
+
+    bool MessageBase::isLocalDataResponse(const MessageType& message_type)
+    {
+        if (message_type == MessageType::kLocalGetResponse || message_type == MessageType::kLocalPutResponse || message_type == MessageType::kLocalDelResponse)
         {
             return true;
         }
@@ -1752,10 +1781,21 @@ namespace covered
         }
     }
 
-    bool MessageBase::isGlobalDataResponse() const
+    bool MessageBase::isRedirectedDataResponse(const MessageType& message_type)
     {
-        checkIsValid_();
-        if (message_type_ == MessageType::kGlobalGetResponse || message_type_ == MessageType::kGlobalPutResponse || message_type_ == MessageType::kGlobalDelResponse || message_type_ == MessageType::kCoveredBgfetchGlobalGetResponse)
+        if (message_type == MessageType::kRedirectedGetResponse || message_type == MessageType::kCoveredRedirectedGetResponse || message_type == MessageType::kCoveredBgfetchRedirectedGetResponse || message_type == MessageType::kBestGuessRedirectedGetResponse)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    bool MessageBase::isGlobalDataResponse(const MessageType& message_type)
+    {
+        if (message_type == MessageType::kGlobalGetResponse || message_type == MessageType::kGlobalPutResponse || message_type == MessageType::kGlobalDelResponse || message_type == MessageType::kCoveredBgfetchGlobalGetResponse)
         {
             return true;
         }
@@ -1795,6 +1835,38 @@ namespace covered
         {
             return false;
         }
+    }
+
+    bool MessageBase::isDirectoryLookupMessage(const MessageType& message_type)
+    {
+        if (message_type == MessageType::kDirectoryLookupRequest || message_type == MessageType::kDirectoryLookupResponse || message_type == kCoveredDirectoryLookupRequest || message_type == kCoveredDirectoryLookupResponse || message_type == MessageType::kCoveredFghybridDirectoryLookupResponse || message_type == MessageType::kCoveredFastpathDirectoryLookupResponse || message_type == MessageType::kBestGuessDirectoryLookupRequest || message_type == MessageType::kBestGuessDirectoryLookupResponse)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    bool MessageBase::isDirectoryUpdateMessage(const MessageType& message_type)
+    {
+        if (message_type == MessageType::kDirectoryUpdateRequest || message_type == MessageType::kDirectoryUpdateResponse || message_type == MessageType::kCoveredDirectoryUpdateRequest || message_type == MessageType::kCoveredDirectoryUpdateResponse || message_type == MessageType::kCoveredBgplaceDirectoryUpdateRequest || message_type == MessageType::kCoveredBgplaceDirectoryUpdateResponse || message_type == MessageType::kCoveredFghybridDirectoryEvictResponse || message_type == MessageType::kCoveredFghybridDirectoryAdmitRequest || message_type == MessageType::kCoveredFghybridDirectoryAdmitResponse || message_type == MessageType::kBestGuessDirectoryUpdateRequest || message_type == MessageType::kBestGuessDirectoryUpdateResponse || message_type == MessageType::kBestGuessBgplaceDirectoryUpdateRequest || message_type == MessageType::kBestGuessBgplaceDirectoryUpdateResponse)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    uint32_t MessageBase::getVictimSyncsetBytes() const
+    {
+        checkIsValid_();
+
+        // NOTE: return 0 by default, as most baselines messages do NOT have synced victimset (ONLY for COVERED, which will override this function)
+        return 0;
     }
 
     bool MessageBase::isControlResponse() const

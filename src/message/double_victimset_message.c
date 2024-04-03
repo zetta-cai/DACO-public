@@ -29,6 +29,11 @@ namespace covered
         return victim_syncset_;
     }
 
+    uint32_t DoubleVictimsetMessage::getVictimSyncsetBytes() const
+    {
+        return victim_syncset_.getVictimSyncsetPayloadSize();
+    }
+
     uint32_t DoubleVictimsetMessage::getMsgPayloadSizeInternal_() const
     {
         // victim fetchset + victim syncset

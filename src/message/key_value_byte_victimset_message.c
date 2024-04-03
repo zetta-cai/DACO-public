@@ -43,6 +43,11 @@ namespace covered
         return victim_syncset_;
     }
 
+    uint32_t KeyValueByteVictimsetMessage::getVictimSyncsetBytes() const
+    {
+        return victim_syncset_.getVictimSyncsetPayloadSize();
+    }
+
     uint32_t KeyValueByteVictimsetMessage::getMsgPayloadSizeInternal_() const
     {
         // key payload + value payload + byte + victim syncset payload

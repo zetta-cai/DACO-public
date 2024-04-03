@@ -108,7 +108,7 @@ namespace covered
         EventList event_list;
 
         const CoveredMetadataUpdateRequest* const covered_metadata_update_request_ptr = static_cast<const CoveredMetadataUpdateRequest*>(control_request_ptr);
-        total_bandwidth_usage.update(BandwidthUsage(0, covered_metadata_update_request_ptr->getMsgBandwidthSize(), 0, 0, 1, 0, false));
+        total_bandwidth_usage.update(BandwidthUsage(0, covered_metadata_update_request_ptr->getMsgBandwidthSize(), 0, 0, 1, 0, covered_metadata_update_request_ptr->getMessageType(), covered_metadata_update_request_ptr->getVictimSyncsetBytes()));
 
         struct timespec metadata_update_start_timestamp = Util::getCurrentTimespec();
 
