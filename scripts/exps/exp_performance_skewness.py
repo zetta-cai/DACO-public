@@ -27,7 +27,7 @@ exp_default_settings = {
 # NOTE: run lrb, glcache, and segcache at last due to slow warmup issue of lrb (may be caused by model retraining), and memory usage issue of segcache and glcache (may be caused by bugs on segment-level memory management) -> TODO: if no results of the above baselines due to program crashes, please provide more DRAM memory (or swap memory), and run them again with sufficient time (may be in units of hours or days) for warmup and cache stable performance
 #cache_names = ["covered", "shark", "bestguess", "arc+", "cachelib+", "fifo+", "frozenhot+", "gdsf+", "lfu+", "lhd+", "s3fifo+", "sieve+", "wtinylfu+", "lrb+", "glcache+", "segcache+"]
 cache_names = ["covered", "gdsf+", "lhd+"] # TMPDEBUG
-zipf_alpha_list = {0.5, 0.6, 0.7, 0.8, 0.9, 1.0}
+zipf_alpha_list = {0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0}
 
 # Run the experiments with multiple rounds
 for tmp_round_index in round_indexes:
