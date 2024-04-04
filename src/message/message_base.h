@@ -16,114 +16,11 @@
 #include "event/event_list.h"
 #include "workload/workload_item.h"
 #include "message/extra_common_msghdr.h"
+#include "message/message_type.h"
 #include "network/network_addr.h"
 
 namespace covered
 {
-    enum MessageType
-    {
-        // Local data messages
-        kLocalGetRequest = 1,
-        kLocalPutRequest,
-        kLocalDelRequest,
-        kLocalGetResponse,
-        kLocalPutResponse,
-        kLocalDelResponse,
-        // Global data messages
-        kGlobalGetRequest,
-        kGlobalPutRequest,
-        kGlobalDelRequest,
-        kGlobalGetResponse,
-        kGlobalPutResponse,
-        kGlobalDelResponse,
-        // Redirected data messages
-        kRedirectedGetRequest,
-        kRedirectedGetResponse,
-        // Benchmark control message
-        kInitializationRequest,
-        kInitializationResponse,
-        kStartrunRequest,
-        kStartrunResponse,
-        kSwitchSlotRequest,
-        kSwitchSlotResponse,
-        kFinishWarmupRequest,
-        kFinishWarmupResponse,
-        kFinishrunRequest,
-        kFinishrunResponse,
-        kDumpSnapshotRequest,
-        kDumpSnapshotResponse,
-        kSimpleFinishrunResponse,
-        // Cooperation control messages
-        kAcquireWritelockRequest,
-        kAcquireWritelockResponse,
-        kDirectoryLookupRequest,
-        kDirectoryUpdateRequest,
-        kDirectoryLookupResponse,
-        kDirectoryUpdateResponse,
-        kFinishBlockRequest,
-        kFinishBlockResponse,
-        kInvalidationRequest,
-        kInvalidationResponse,
-        kReleaseWritelockRequest,
-        kReleaseWritelockResponse,
-        // ONLY used by COVERED
-        kCoveredDirectoryLookupRequest,
-        kCoveredDirectoryLookupResponse,
-        kCoveredDirectoryUpdateRequest,
-        kCoveredDirectoryUpdateResponse,
-        kCoveredAcquireWritelockRequest,
-        kCoveredAcquireWritelockResponse,
-        kCoveredReleaseWritelockRequest,
-        kCoveredReleaseWritelockResponse,
-        kCoveredRedirectedGetRequest,
-        kCoveredRedirectedGetResponse,
-        kCoveredBgfetchRedirectedGetRequest,
-        kCoveredBgfetchRedirectedGetResponse,
-        kCoveredBgfetchGlobalGetRequest,
-        kCoveredBgfetchGlobalGetResponse,
-        kCoveredBgplacePlacementNotifyRequest,
-        kCoveredBgplaceDirectoryUpdateRequest,
-        kCoveredBgplaceDirectoryUpdateResponse,
-        kCoveredVictimFetchRequest,
-        kCoveredVictimFetchResponse,
-        kCoveredFghybridDirectoryLookupResponse,
-        kCoveredFghybridDirectoryEvictResponse,
-        kCoveredFghybridReleaseWritelockResponse,
-        kCoveredFghybridHybridFetchedRequest,
-        kCoveredFghybridHybridFetchedResponse,
-        kCoveredFghybridDirectoryAdmitRequest,
-        kCoveredFghybridDirectoryAdmitResponse,
-        kCoveredInvalidationRequest,
-        kCoveredInvalidationResponse,
-        kCoveredFinishBlockRequest,
-        kCoveredFinishBlockResponse,
-        kCoveredFastpathDirectoryLookupResponse,
-        kCoveredMetadataUpdateRequest,
-        kCoveredPlacementTriggerRequest,
-        kCoveredPlacementTriggerResponse,
-        kCoveredFghybridPlacementTriggerResponse,
-        // ONLY used by BestGuess
-        kBestGuessPlacementTriggerRequest,
-        kBestGuessPlacementTriggerResponse,
-        kBestGuessDirectoryUpdateRequest,
-        kBestGuessDirectoryUpdateResponse,
-        kBestGuessBgplaceDirectoryUpdateRequest,
-        kBestGuessBgplaceDirectoryUpdateResponse,
-        kBestGuessBgplacePlacementNotifyRequest,
-        kBestGuessDirectoryLookupRequest,
-        kBestGuessDirectoryLookupResponse,
-        kBestGuessFinishBlockRequest,
-        kBestGuessFinishBlockResponse,
-        kBestGuessAcquireWritelockRequest,
-        kBestGuessAcquireWritelockResponse,
-        kBestGuessInvalidationRequest,
-        kBestGuessInvalidationResponse,
-        kBestGuessReleaseWritelockRequest,
-        kBestGuessReleaseWritelockResponse,
-        kBestGuessRedirectedGetRequest,
-        kBestGuessRedirectedGetResponse,
-    };
-
     enum Hitflag
     {
         kLocalHit = 1, // Hit local edge cache of closest edge node

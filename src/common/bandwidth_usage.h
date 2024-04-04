@@ -14,7 +14,7 @@
 #include <string>
 
 #include "common/dynamic_array.h"
-#include "message/message_base.h"
+#include "message/message_type.h"
 
 namespace covered
 {

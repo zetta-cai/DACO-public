@@ -3,6 +3,8 @@
 //#include <arpa/inet.h> // htonl ntohl
 #include <assert.h>
 
+#include "message/message_base.h"
+
 namespace covered
 {
     BandwidthUsage::BandwidthUsage()
@@ -10,7 +12,7 @@ namespace covered
         reset_();
     }
 
-    BandwidthUsage::BandwidthUsage(const uint64_t& client_edge_bandwidth_bytes, const uint64_t& cross_edge_bandwidth_bytes, const uint64_t& edge_cloud_bandwidth_bytes, const uint64_t& client_edge_msgcnt, const uint64_t& cross_edge_msgcnt, const uint64_t& edge_cloud_msgcnt, const MessageType& message_type, const uint32_t& victim_syncset_bandwidth_bytes = 0)
+    BandwidthUsage::BandwidthUsage(const uint64_t& client_edge_bandwidth_bytes, const uint64_t& cross_edge_bandwidth_bytes, const uint64_t& edge_cloud_bandwidth_bytes, const uint64_t& client_edge_msgcnt, const uint64_t& cross_edge_msgcnt, const uint64_t& edge_cloud_msgcnt, const MessageType& message_type, const uint32_t& victim_syncset_bandwidth_bytes)
     {
         if (client_edge_bandwidth_bytes == 0 || client_edge_msgcnt == 0)
         {

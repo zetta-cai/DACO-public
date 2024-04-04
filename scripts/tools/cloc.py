@@ -65,8 +65,8 @@ countLOC(cloud_c_dirs, "cloud")
 
 # (4) Count LOC for cache C/C++ source code
 
-# "src/cli", "src/event", "src/statistics", "src/cliutil.c", "src/evaluator.c", "src/simulator.c", "src/total_statistics_loader.c", "src/trace_preprocessor.c"
-cache_c_dirs = ["src/cache", "src/common", "src/concurrency", "src/cooperation", "src/core", "src/edge", "src/hash", "src/message", "src/nework", "src/workload", "src/dataset_loader.c", "src/edge.c"]
+# "src/cli", "src/event", "src/statistics", "src/cliutil.c", "src/evaluator.c", "src/simulator.c", "src/total_statistics_loader.c", "src/trace_preprocessor.c", "src/message"
+cache_c_dirs = ["src/cache", "src/common", "src/concurrency", "src/cooperation", "src/core", "src/edge", "src/hash", "src/nework", "src/workload", "src/dataset_loader.c", "src/edge.c"]
 countLOC(cache_c_dirs, "cache")
 
 # (5) Count LOC for COVERED C/C++ source code
