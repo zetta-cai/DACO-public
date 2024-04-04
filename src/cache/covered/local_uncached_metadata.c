@@ -125,7 +125,8 @@ namespace covered
         const bool is_global_cached = perkey_metadata_list_iter->second.isGlobalCached();
 
         // Calculte local reward (i.e., min admission benefit, as the local edge node does NOT know cache miss status of all other edge nodes and conservatively treat it as a local single placement)
-        CalcLocalUncachedRewardFuncParam tmp_param(local_uncached_popularity, is_global_cached);
+        const Popularity redirected_uncached_popularity = 0.0; // NOTE: local cache node does not have the view of redirected uncached popularity -> set it to 0.0
+        CalcLocalUncachedRewardFuncParam tmp_param(local_uncached_popularity, is_global_cached, redirected_uncached_popularity);
         edge_wrapper_ptr->constCustomFunc(CalcLocalUncachedRewardFuncParam::FUNCNAME, &tmp_param);
         Reward local_reward = tmp_param.getRewardConstRef();
 

@@ -122,19 +122,10 @@ namespace covered
             } // End of (is_timeout == true)
             else
             {
-                // TMPDEBUG24
-                Util::dumpNormalMsg(base_instance_name_, "receive a msg payload");
-                usleep(1);
-
                 MessageBase* control_request_ptr = MessageBase::getRequestFromMsgPayload(control_request_msg_payload);
                 assert(control_request_ptr != NULL);
 
                 NetworkAddr edge_cache_server_worker_recvrsp_dst_addr = control_request_ptr->getSourceAddr();
-
-                // TMPDEBUG24
-                std::ostringstream tmposs;
-                tmposs << "receive a message " << MessageBase::messageTypeToString(control_request_ptr->getMessageType());
-                Util::dumpNormalMsg(base_instance_name_, tmposs.str());
 
                 if (control_request_ptr->isControlRequest()) // Control requests (e.g., invalidation and cache admission/eviction requests)
                 {
@@ -189,11 +180,6 @@ namespace covered
 
         bool is_finish = false; // Mark if edge node is finished
 
-        // TMPDEBUG24
-        std::ostringstream tmposs;
-        tmposs << "receive control request " << MessageBase::messageTypeToString(control_request_ptr->getMessageType());
-        Util::dumpNormalMsg(base_instance_name_, tmposs.str());
-
         MessageType message_type = control_request_ptr->getMessageType();
         if (message_type == MessageType::kDirectoryLookupRequest || message_type == MessageType::kCoveredDirectoryLookupRequest || message_type == MessageType::kBestGuessDirectoryLookupRequest)
         {
@@ -233,11 +219,6 @@ namespace covered
             // NOTE: only COVERED has other control requests to process
             is_finish = processOtherControlRequest_(control_request_ptr, edge_cache_server_worker_recvrsp_dst_addr);
         }
-
-        // TMPDEBUG24
-        std::ostringstream tmposs1;
-        tmposs1 << "after processing control request " << MessageBase::messageTypeToString(control_request_ptr->getMessageType());
-        Util::dumpNormalMsg(base_instance_name_, tmposs1.str());
 
         // TODO: invalidation and cache admission/eviction requests for control message
         // TODO: reply control response message to a beacon node

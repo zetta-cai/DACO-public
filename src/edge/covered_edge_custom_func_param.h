@@ -334,7 +334,7 @@ namespace covered
     public:
         static const std::string FUNCNAME; // Calculate local uncached reward
 
-        CalcLocalUncachedRewardFuncParam(const Popularity& local_uncached_popularity, const bool& is_global_cached, const Popularity& redirected_uncached_popularity = 0.0);
+        CalcLocalUncachedRewardFuncParam(const Popularity& local_uncached_popularity, const bool& is_global_cached, const Popularity& redirected_uncached_popularity);
         ~CalcLocalUncachedRewardFuncParam();
 
         const Popularity& getLocalUncachedPopularityConstRef() const;
