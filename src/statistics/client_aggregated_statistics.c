@@ -119,7 +119,13 @@ namespace covered
         // Aggregate per-client-worker workload key-value size statistics
         for (uint32_t local_worker_idx = 0; local_worker_idx < perclient_workercnt; local_worker_idx++)
         {
+            localhit_workload_key_size_ += client_raw_statistics_ptr->perclientworker_localhit_workload_key_sizes_[local_worker_idx];
+            cooperativehit_workload_key_size_ += client_raw_statistics_ptr->perclientworker_cooperativehit_workload_key_sizes_[local_worker_idx];
+            globalmiss_workload_key_size_ += client_raw_statistics_ptr->perclientworker_globalmiss_workload_key_sizes_[local_worker_idx];
             total_workload_key_size_ += client_raw_statistics_ptr->perclientworker_total_workload_key_sizes_[local_worker_idx];
+            localhit_workload_value_size_ += client_raw_statistics_ptr->perclientworker_localhit_workload_value_sizes_[local_worker_idx];
+            cooperativehit_workload_value_size_ += client_raw_statistics_ptr->perclientworker_cooperativehit_workload_value_sizes_[local_worker_idx];
+            globalmiss_workload_value_size_ += client_raw_statistics_ptr->perclientworker_globalmiss_workload_value_sizes_[local_worker_idx];
             total_workload_value_size_ += client_raw_statistics_ptr->perclientworker_total_workload_value_sizes_[local_worker_idx];
         }
 

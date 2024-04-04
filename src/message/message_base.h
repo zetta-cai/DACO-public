@@ -16,19 +16,12 @@
 #include "event/event_list.h"
 #include "workload/workload_item.h"
 #include "message/extra_common_msghdr.h"
+#include "message/hitflag.h"
 #include "message/message_type.h"
 #include "network/network_addr.h"
 
 namespace covered
 {
-    enum Hitflag
-    {
-        kLocalHit = 1, // Hit local edge cache of closest edge node
-        kCooperativeHit, // Hit cooperative edge cache of some target edge node with valid object
-        kCooperativeInvalid, // Hit cooperative edge cache of some target edge node yet with invalid object (only used in edge nodes)
-        kGlobalMiss // Miss all edge nodes
-    };
-
     enum LockResult
     {
         kSuccess = 1, // Acquire write lock successfully for a cooperatively cached key

@@ -60,9 +60,21 @@ namespace covered
         double getTotalCacheUtilization() const;
 
         // Get aggregated statistics related with workload key-value size
+        double getLocalHitWorkloadKeySize() const;
+        double getCooperativeHitWorkloadKeySize() const;
+        double getGlobalMissWorkloadKeySize() const;
         double getTotalWorkloadKeySize() const;
+        double getLocalHitWorkloadValueSize() const;
+        double getCooperativeHitWorkloadValueSize() const;
+        double getGlobalMissWorkloadValueSize() const;
         double getTotalWorkloadValueSize() const;
+        double getAvgLocalHitWorkloadKeySize() const;
+        double getAvgCooperativeHitWorkloadKeySize() const;
+        double getAvgGlobalMissWorkloadKeySize() const;
         double getAvgWorkloadKeySize() const;
+        double getAvgLocalHitWorkloadValueSize() const;
+        double getAvgCooperativeHitWorkloadValueSize() const;
+        double getAvgGlobalMissWorkloadValueSize() const;
         double getAvgWorkloadValueSize() const;
 
         // Get aggregated statistics related with bandwidth usage
@@ -108,7 +120,13 @@ namespace covered
         uint64_t total_cache_capacity_bytes_;
 
         // Aggregated statistics related with workload key-value size
+        double localhit_workload_key_size_;
+        double cooperativehit_workload_key_size_;
+        double globalmiss_workload_key_size_;
         double total_workload_key_size_;
+        double localhit_workload_value_size_;
+        double cooperativehit_workload_value_size_;
+        double globalmiss_workload_value_size_;
         double total_workload_value_size_;
 
         // Aggregated statistics related with bandwidth usage

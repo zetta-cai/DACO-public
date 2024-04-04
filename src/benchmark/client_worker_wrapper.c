@@ -383,7 +383,7 @@ namespace covered
         {
             value_size = workload_item.getValue().getValuesize();
         }
-        client_statistics_tracker_ptr_->updateWorkloadKeyValueSize(local_client_worker_idx, tmp_key.getKeyLength(), value_size, is_stresstest_phase);
+        client_statistics_tracker_ptr_->updateWorkloadKeyValueSize(local_client_worker_idx, tmp_key.getKeyLength(), value_size, hitflag, is_stresstest_phase);
 
         // Update bandwidth usage statistics for the local client
         BandwidthUsage local_response_bandwidth_usage = local_response_ptr->getBandwidthUsageRef();

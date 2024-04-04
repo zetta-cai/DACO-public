@@ -159,7 +159,13 @@ namespace covered
             total_cache_capacity_bytes_ += tmp_client_aggregated_statistics.total_cache_capacity_bytes_;
 
             // Aggregate workload key-value size statistics
+            localhit_workload_key_size_ += tmp_client_aggregated_statistics.localhit_workload_key_size_;
+            cooperativehit_workload_key_size_ += tmp_client_aggregated_statistics.cooperativehit_workload_key_size_;
+            globalmiss_workload_key_size_ += tmp_client_aggregated_statistics.globalmiss_workload_key_size_;
             total_workload_key_size_ += tmp_client_aggregated_statistics.total_workload_key_size_;
+            localhit_workload_value_size_ += tmp_client_aggregated_statistics.localhit_workload_value_size_;
+            cooperativehit_workload_value_size_ += tmp_client_aggregated_statistics.cooperativehit_workload_value_size_;
+            globalmiss_workload_value_size_ += tmp_client_aggregated_statistics.globalmiss_workload_value_size_;
             total_workload_value_size_ += tmp_client_aggregated_statistics.total_workload_value_size_;
 
             // Aggregate bandwidth usage statistics

@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "common/bandwidth_usage.h"
+#include "message/hitflag.h"
 
 namespace covered
 {
@@ -54,7 +55,7 @@ namespace covered
         void updateCacheUtilization_(const uint64_t& closest_edge_cache_size_bytes, const uint64_t& closest_edge_cache_capacity_bytes);
 
         // Update key-value size statistics
-        void updateTotalWorkloadKeyValueSize_(const uint32_t& local_client_worker_idx, const uint32_t& key_size, const uint32_t& value_size);
+        void updateWorkloadKeyValueSize_(const uint32_t& local_client_worker_idx, const uint32_t& key_size, const uint32_t& value_size, const Hitflag& hitflag);
 
         // Update bandwidth usage statistics
         void updateBandwidthUsage_(const uint32_t& local_client_worker_idx, const BandwidthUsage& bandwidth_usage);
@@ -89,7 +90,13 @@ namespace covered
         uint64_t closest_edge_cache_capacity_bytes_;
 
         // Key-value size statistics
+        std::vector<double> perclientworker_localhit_workload_key_sizes_; // Size of all accessed keys (including duplicate keys) in workload for local hit objects of closest edge node
+        std::vector<double> perclientworker_cooperativehit_workload_key_sizes_; // Size of all accessed keys (including duplicate keys) in workload for cooperative hit objects of some target edge node
+        std::vector<double> perclientworker_globalmiss_workload_key_sizes_; // Size of all accessed keys (including duplicate keys) in workload for global miss objects
         std::vector<double> perclientworker_total_workload_key_sizes_; // Total size of all accessed keys (including duplicate keys) in workload for each client worker
+        std::vector<double> perclientworker_localhit_workload_value_sizes_; // Size of all accessed values (including duplicate values) in workload for local hit objects of closest edge node
+        std::vector<double> perclientworker_cooperativehit_workload_value_sizes_; // Size of all accessed values (including duplicate values) in workload for cooperative hit objects of some target edge node
+        std::vector<double> perclientworker_globalmiss_workload_value_sizes_; // Size of all accessed values (including duplicate values) in workload for global miss objects
         std::vector<double> perclientworker_total_workload_value_sizes_; // Total size of all accessed values (including duplicate values) in workload for each client worker
 
         // Bandwidth usage statistics

@@ -2,6 +2,7 @@
 
 #include "common/config.h"
 #include "common/util.h"
+#include "message/message_base.h"
 
 namespace covered
 {
@@ -43,7 +44,13 @@ namespace covered
         closest_edge_cache_size_bytes_ = 0;
         closest_edge_cache_capacity_bytes_ = 0;
 
+        perclientworker_localhit_workload_key_sizes_.resize(perclient_workercnt, double(0.0));
+        perclientworker_cooperativehit_workload_key_sizes_.resize(perclient_workercnt, double(0.0));
+        perclientworker_globalmiss_workload_key_sizes_.resize(perclient_workercnt, double(0.0));
         perclientworker_total_workload_key_sizes_.resize(perclient_workercnt, double(0.0));
+        perclientworker_localhit_workload_value_sizes_.resize(perclient_workercnt, double(0.0));
+        perclientworker_cooperativehit_workload_value_sizes_.resize(perclient_workercnt, double(0.0));
+        perclientworker_globalmiss_workload_value_sizes_.resize(perclient_workercnt, double(0.0));
         perclientworker_total_workload_value_sizes_.resize(perclient_workercnt, double(0.0));
 
         perclientworker_bandwidth_usages_.resize(perclient_workercnt, BandwidthUsage());
@@ -106,8 +113,26 @@ namespace covered
         closest_edge_cache_size_bytes_ = 0;
         closest_edge_cache_capacity_bytes_ = 0;
 
+        perclientworker_localhit_workload_key_sizes_.clear();
+        perclientworker_localhit_workload_key_sizes_.resize(perclient_workercnt_, double(0.0));
+
+        perclientworker_cooperativehit_workload_key_sizes_.clear();
+        perclientworker_cooperativehit_workload_key_sizes_.resize(perclient_workercnt_, double(0.0));
+
+        perclientworker_globalmiss_workload_key_sizes_.clear();
+        perclientworker_globalmiss_workload_key_sizes_.resize(perclient_workercnt_, double(0.0));
+
         perclientworker_total_workload_key_sizes_.clear();
         perclientworker_total_workload_key_sizes_.resize(perclient_workercnt_, double(0.0));
+
+        perclientworker_localhit_workload_value_sizes_.clear();
+        perclientworker_localhit_workload_value_sizes_.resize(perclient_workercnt_, double(0.0));
+
+        perclientworker_cooperativehit_workload_value_sizes_.clear();
+        perclientworker_cooperativehit_workload_value_sizes_.resize(perclient_workercnt_, double(0.0));
+
+        perclientworker_globalmiss_workload_value_sizes_.clear();
+        perclientworker_globalmiss_workload_value_sizes_.resize(perclient_workercnt_, double(0.0));
 
         perclientworker_total_workload_value_sizes_.clear();
         perclientworker_total_workload_value_sizes_.resize(perclient_workercnt_, double(0.0));
@@ -228,9 +253,32 @@ namespace covered
         return;
     }
 
-    void ClientRawStatistics::updateTotalWorkloadKeyValueSize_(const uint32_t& local_client_worker_idx, const uint32_t& key_size, const uint32_t& value_size)
+    void ClientRawStatistics::updateWorkloadKeyValueSize_(const uint32_t& local_client_worker_idx, const uint32_t& key_size, const uint32_t& value_size, const Hitflag& hitflag)
     {
         assert(local_client_worker_idx < perclient_workercnt_);
+
+        if (hitflag == Hitflag::kLocalHit)
+        {
+            perclientworker_localhit_workload_key_sizes_[local_client_worker_idx] += static_cast<double>(key_size);
+            perclientworker_localhit_workload_value_sizes_[local_client_worker_idx] += static_cast<double>(value_size);
+        }
+        else if (hitflag == Hitflag::kCooperativeHit)
+        {
+            perclientworker_cooperativehit_workload_key_sizes_[local_client_worker_idx] += static_cast<double>(key_size);
+            perclientworker_cooperativehit_workload_value_sizes_[local_client_worker_idx] += static_cast<double>(value_size);
+        }
+        else if (hitflag == Hitflag::kGlobalMiss)
+        {
+            perclientworker_globalmiss_workload_key_sizes_[local_client_worker_idx] += static_cast<double>(key_size);
+            perclientworker_globalmiss_workload_value_sizes_[local_client_worker_idx] += static_cast<double>(value_size);
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "invalid hitflag " << MessageBase::hitflagToString(hitflag) << " for updateWorkloadKeyValueSize_()!";
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
 
         perclientworker_total_workload_key_sizes_[local_client_worker_idx] += static_cast<double>(key_size);
         perclientworker_total_workload_value_sizes_[local_client_worker_idx] += static_cast<double>(value_size);

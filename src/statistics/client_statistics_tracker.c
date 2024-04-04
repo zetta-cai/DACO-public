@@ -348,7 +348,7 @@ namespace covered
 
     // Update cur-slot/stable client raw statistics for value size
     
-    void ClientStatisticsTracker::updateWorkloadKeyValueSize(const uint32_t& local_client_worker_idx, const uint32_t& key_size, const uint32_t& value_size, const bool& is_stresstest_phase)
+    void ClientStatisticsTracker::updateWorkloadKeyValueSize(const uint32_t& local_client_worker_idx, const uint32_t& key_size, const uint32_t& value_size, const Hitflag& hitflag, const bool& is_stresstest_phase)
     {
         checkPointers_();
 
@@ -357,7 +357,7 @@ namespace covered
         // Update cur-slot client raw statistics
         ClientRawStatistics* tmp_curslot_client_raw_statistics_ptr = getCurslotClientRawStatisticsPtr_(cur_slot_idx_.load(Util::LOAD_CONCURRENCY_ORDER));
         assert(tmp_curslot_client_raw_statistics_ptr != NULL);
-        tmp_curslot_client_raw_statistics_ptr->updateTotalWorkloadKeyValueSize_(local_client_worker_idx, key_size, value_size);
+        tmp_curslot_client_raw_statistics_ptr->updateWorkloadKeyValueSize_(local_client_worker_idx, key_size, value_size, hitflag);
 
         perclientworker_curslot_update_flags_[local_client_worker_idx].store(false, Util::STORE_CONCURRENCY_ORDER);
         perclientworker_curslot_update_statuses_[local_client_worker_idx]++;
@@ -365,7 +365,7 @@ namespace covered
         // Update stable client raw statistics for stresstest phase
         if (is_stresstest_phase)
         {
-            stable_client_raw_statistics_ptr_->updateTotalWorkloadKeyValueSize_(local_client_worker_idx, key_size, value_size);
+            stable_client_raw_statistics_ptr_->updateWorkloadKeyValueSize_(local_client_worker_idx, key_size, value_size, hitflag);
         }
 
         return;

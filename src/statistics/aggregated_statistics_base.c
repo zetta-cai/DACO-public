@@ -32,7 +32,13 @@ namespace covered
         total_cache_size_bytes_ = 0;
         total_cache_capacity_bytes_ = 0;
 
+        localhit_workload_key_size_ = double(0.0);
+        cooperativehit_workload_key_size_ = double(0.0);
+        globalmiss_workload_key_size_ = double(0.0);
         total_workload_key_size_ = double(0.0);
+        localhit_workload_value_size_ = double(0.0);
+        cooperativehit_workload_value_size_ = double(0.0);
+        globalmiss_workload_value_size_ = double(0.0);
         total_workload_value_size_ = double(0.0);
 
         total_bandwidth_usage_ = BandwidthUsage();
@@ -197,14 +203,74 @@ namespace covered
 
     // Get aggregated statistics related with workload key-value size
 
+    double AggregatedStatisticsBase::getLocalHitWorkloadKeySize() const
+    {
+        return localhit_workload_key_size_;
+    }
+
+    double AggregatedStatisticsBase::getCooperativeHitWorkloadKeySize() const
+    {
+        return cooperativehit_workload_key_size_;
+    }
+
+    double AggregatedStatisticsBase::getGlobalMissWorkloadKeySize() const
+    {
+        return globalmiss_workload_key_size_;
+    }
+
     double AggregatedStatisticsBase::getTotalWorkloadKeySize() const
     {
         return total_workload_key_size_;
+    }
+
+    double AggregatedStatisticsBase::getLocalHitWorkloadValueSize() const
+    {
+        return localhit_workload_value_size_;
+    }
+
+    double AggregatedStatisticsBase::getCooperativeHitWorkloadValueSize() const
+    {
+        return cooperativehit_workload_value_size_;
+    }
+
+    double AggregatedStatisticsBase::getGlobalMissWorkloadValueSize() const
+    {
+        return globalmiss_workload_value_size_;
     }
     
     double AggregatedStatisticsBase::getTotalWorkloadValueSize() const
     {
         return total_workload_value_size_;
+    }
+
+    double AggregatedStatisticsBase::getAvgLocalHitWorkloadKeySize() const
+    {
+        double avg_local_hit_workload_key_size = double(0.0);
+        if (localhit_workload_key_size_ > double(0.0))
+        {
+            avg_local_hit_workload_key_size = localhit_workload_key_size_ / static_cast<double>(total_local_hitcnt_);
+        }
+        return avg_local_hit_workload_key_size;
+    }
+
+    double AggregatedStatisticsBase::getAvgCooperativeHitWorkloadKeySize() const
+    {
+        double avg_cooperative_hit_workload_key_size = double(0.0);
+        if (cooperativehit_workload_key_size_ > double(0.0))
+        {
+            avg_cooperative_hit_workload_key_size = cooperativehit_workload_key_size_ / static_cast<double>(total_cooperative_hitcnt_);
+        }
+        return avg_cooperative_hit_workload_key_size;
+    }
+
+    double AggregatedStatisticsBase::getAvgGlobalMissWorkloadKeySize() const
+    {
+        double avg_global_miss_workload_key_size = double(0.0);
+        if (globalmiss_workload_key_size_ > double(0.0))
+        {
+            avg_global_miss_workload_key_size = globalmiss_workload_key_size_ / static_cast<double>(total_reqcnt_ - total_local_hitcnt_ - total_cooperative_hitcnt_);
+        }
+        return avg_global_miss_workload_key_size;
     }
 
     double AggregatedStatisticsBase::getAvgWorkloadKeySize() const
@@ -215,6 +281,36 @@ namespace covered
             avg_workload_key_size = total_workload_key_size_ / static_cast<double>(total_reqcnt_);
         }
         return avg_workload_key_size;
+    }
+
+    double AggregatedStatisticsBase::getAvgLocalHitWorkloadValueSize() const
+    {
+        double avg_local_hit_workload_value_size = double(0.0);
+        if (localhit_workload_value_size_ > double(0.0))
+        {
+            avg_local_hit_workload_value_size = localhit_workload_value_size_ / static_cast<double>(total_local_hitcnt_);
+        }
+        return avg_local_hit_workload_value_size;
+    }
+
+    double AggregatedStatisticsBase::getAvgCooperativeHitWorkloadValueSize() const
+    {
+        double avg_cooperative_hit_workload_value_size = double(0.0);
+        if (cooperativehit_workload_value_size_ > double(0.0))
+        {
+            avg_cooperative_hit_workload_value_size = cooperativehit_workload_value_size_ / static_cast<double>(total_cooperative_hitcnt_);
+        }
+        return avg_cooperative_hit_workload_value_size;
+    }
+
+    double AggregatedStatisticsBase::getAvgGlobalMissWorkloadValueSize() const
+    {
+        double avg_global_miss_workload_value_size = double(0.0);
+        if (globalmiss_workload_value_size_ > double(0.0))
+        {
+            avg_global_miss_workload_value_size = globalmiss_workload_value_size_ / static_cast<double>(total_reqcnt_ - total_local_hitcnt_ - total_cooperative_hitcnt_);
+        }
+        return avg_global_miss_workload_value_size;
     }
 
     double AggregatedStatisticsBase::getAvgWorkloadValueSize() const
@@ -282,9 +378,21 @@ namespace covered
         oss << "total cache utilization: " << getTotalCacheUtilization() << std::endl;
 
         oss << "[Workload key-value Size Statistics]" << std::endl;
+        oss << "local hit workload key size: " << B2MB(localhit_workload_key_size_) << " MiB" << std::endl;
+        oss << "cooperative hit workload key size: " << B2MB(cooperativehit_workload_key_size_) << " MiB" << std::endl;
+        oss << "global miss workload key size: " << B2MB(globalmiss_workload_key_size_) << " MiB" << std::endl;
         oss << "total workload key size: " << B2MB(total_workload_key_size_) << " MiB" << std::endl;
+        oss << "local hit workload value size: " << B2MB(localhit_workload_value_size_) << " MiB" << std::endl;
+        oss << "cooperative hit workload value size: " << B2MB(cooperativehit_workload_value_size_) << " MiB" << std::endl;
+        oss << "global miss workload value size: " << B2MB(globalmiss_workload_value_size_) << " MiB" << std::endl;
         oss << "total workload value size: " << B2MB(total_workload_value_size_) << " MiB" << std::endl;
+        oss << "average local hit workload key size: " << getAvgLocalHitWorkloadKeySize() << " bytes" << std::endl;
+        oss << "average cooperative hit workload key size: " << getAvgCooperativeHitWorkloadKeySize() << " bytes" << std::endl;
+        oss << "average global miss workload key size: " << getAvgGlobalMissWorkloadKeySize() << " bytes" << std::endl;
         oss << "average workload key size: " << getAvgWorkloadKeySize() << " bytes" << std::endl;
+        oss << "average local hit workload value size: " << B2KB(getAvgLocalHitWorkloadValueSize()) << " KiB" << std::endl;
+        oss << "average cooperative hit workload value size: " << B2KB(getAvgCooperativeHitWorkloadValueSize()) << " KiB" << std::endl;
+        oss << "average global miss workload value size: " << B2KB(getAvgGlobalMissWorkloadValueSize()) << " KiB" << std::endl;
         oss << "average workload value size: " << B2KB(getAvgWorkloadValueSize()) << " KiB" << std::endl;
 
         oss << "[Bandwidth Usage Statistics]" << std::endl;
@@ -390,7 +498,19 @@ namespace covered
         size += sizeof(uint64_t);
 
         // Serialize aggregated statistics for workload key-value size
+        dynamic_array.deserialize(size, (const char*)&localhit_workload_key_size_, sizeof(double));
+        size += sizeof(double);
+        dynamic_array.deserialize(size, (const char*)&cooperativehit_workload_key_size_, sizeof(double));
+        size += sizeof(double);
+        dynamic_array.deserialize(size, (const char*)&globalmiss_workload_key_size_, sizeof(double));
+        size += sizeof(double);
         dynamic_array.deserialize(size, (const char*)&total_workload_key_size_, sizeof(double));
+        size += sizeof(double);
+        dynamic_array.deserialize(size, (const char*)&localhit_workload_value_size_, sizeof(double));
+        size += sizeof(double);
+        dynamic_array.deserialize(size, (const char*)&cooperativehit_workload_value_size_, sizeof(double));
+        size += sizeof(double);
+        dynamic_array.deserialize(size, (const char*)&globalmiss_workload_value_size_, sizeof(double));
         size += sizeof(double);
         dynamic_array.deserialize(size, (const char*)&total_workload_value_size_, sizeof(double));
         size += sizeof(double);
@@ -451,7 +571,19 @@ namespace covered
         size += sizeof(uint64_t);
 
         // Deserialize aggregated statistics for workload key-value size
+        dynamic_array.serialize(size, (char*)&localhit_workload_key_size_, sizeof(double));
+        size += sizeof(double);
+        dynamic_array.serialize(size, (char*)&cooperativehit_workload_key_size_, sizeof(double));
+        size += sizeof(double);
+        dynamic_array.serialize(size, (char*)&globalmiss_workload_key_size_, sizeof(double));
+        size += sizeof(double);
         dynamic_array.serialize(size, (char*)&total_workload_key_size_, sizeof(double));
+        size += sizeof(double);
+        dynamic_array.serialize(size, (char*)&localhit_workload_value_size_, sizeof(double));
+        size += sizeof(double);
+        dynamic_array.serialize(size, (char*)&cooperativehit_workload_value_size_, sizeof(double));
+        size += sizeof(double);
+        dynamic_array.serialize(size, (char*)&globalmiss_workload_value_size_, sizeof(double));
         size += sizeof(double);
         dynamic_array.serialize(size, (char*)&total_workload_value_size_, sizeof(double));
         size += sizeof(double);
@@ -493,7 +625,13 @@ namespace covered
         total_cache_capacity_bytes_ = other.total_cache_capacity_bytes_;
 
         // Aggregated statistics related with workload key-value size
+        localhit_workload_key_size_ = other.localhit_workload_key_size_;
+        cooperativehit_workload_key_size_ = other.cooperativehit_workload_key_size_;
+        globalmiss_workload_key_size_ = other.globalmiss_workload_key_size_;
         total_workload_key_size_ = other.total_workload_key_size_;
+        localhit_workload_value_size_ = other.localhit_workload_value_size_;
+        cooperativehit_workload_value_size_ = other.cooperativehit_workload_value_size_;
+        globalmiss_workload_value_size_ = other.globalmiss_workload_value_size_;
         total_workload_value_size_ = other.total_workload_value_size_;
 
         // Aggregated statistics related with bandwidth usage
