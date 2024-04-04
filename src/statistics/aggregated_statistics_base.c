@@ -446,7 +446,7 @@ namespace covered
     uint32_t AggregatedStatisticsBase::getAggregatedStatisticsIOSize()
     {
         // Aggregated statistics for object hit ratio + byte hit ratio + latency + read-write ratio + cache utilization + workload key-value size + bandwidth usgae
-        return sizeof(uint32_t) * 3 + sizeof(double) * 3 + sizeof(uint32_t) * 7 + sizeof(uint32_t) * 2 + sizeof(uint64_t) * 2 + 2 * sizeof(double) + BandwidthUsage::getBandwidthUsagePayloadSize();
+        return sizeof(uint32_t) * 3 + sizeof(double) * 3 + sizeof(uint32_t) * 7 + sizeof(uint32_t) * 2 + sizeof(uint64_t) * 2 + 8 * sizeof(double) + BandwidthUsage::getBandwidthUsagePayloadSize();
     }
 
     uint32_t AggregatedStatisticsBase::serialize(DynamicArray& dynamic_array, const uint32_t& position) const
