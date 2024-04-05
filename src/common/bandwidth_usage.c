@@ -96,6 +96,8 @@ namespace covered
         cross_edge_control_others_bandwidth_bytes_ += other.cross_edge_control_others_bandwidth_bytes_;
         edge_cloud_bandwidth_bytes_ += other.edge_cloud_bandwidth_bytes_;
 
+        victim_syncset_bandwidth_bytes_ += other.victim_syncset_bandwidth_bytes_;
+
         client_edge_msgcnt_ += other.client_edge_msgcnt_;
         cross_edge_data_msgcnt_ += other.cross_edge_data_msgcnt_;
         cross_edge_control_content_discovery_msgcnt_ += other.cross_edge_control_content_discovery_msgcnt_;
