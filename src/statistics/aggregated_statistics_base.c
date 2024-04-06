@@ -429,7 +429,7 @@ namespace covered
             oss << "per-request cross-edge control directory update bandwidth usage: " << cross_edge_control_directory_update_bwusage / static_cast<double>(total_reqcnt_) << " MiB/req" << std::endl;
             oss << "per-request cross-edge control others bandwidth usage: " << cross_edge_control_others_bwusage / static_cast<double>(total_reqcnt_) << " MiB/req" << std::endl;
             oss << "per-request cross-edge data bandwidth usage: " << cross_edge_data_bwusage / static_cast<double>(total_reqcnt_) << " MiB/req" << std::endl;
-            oss << "per-request edge-cloud (must data) bandwidth usage: " << edge_cloud_bwusage << " MiB/req" << std::endl;
+            oss << "per-request edge-cloud (must data) bandwidth usage: " << edge_cloud_bwusage / static_cast<double>(total_reqcnt_) << " MiB/req" << std::endl;
             oss << "per-request cross-edge victimsync bandwidth usage: " << cross_edge_victimsync_bwusage / static_cast<double>(total_reqcnt_) << " MiB/req" << std::endl;
             oss << "per-request client-edge (must data) message count: " << static_cast<double>(client_edge_msgcnt) / static_cast<double>(total_reqcnt_) << std::endl;
             oss << "per-request cross-edge control content discovery message count: " << static_cast<double>(cross_edge_content_discovery_msgcnt) / static_cast<double>(total_reqcnt_) << std::endl;
