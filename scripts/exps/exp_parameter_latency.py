@@ -34,9 +34,9 @@ crossedge_latency_list = [1000, 25000] # 1ms and 25ms of 1/2 RTT
 edgecloud_latency_list = [10000, 250000] # 10ms and 250ms of 1/2 RTT
 
 # NOTE: due to the same conclusions for all the latency settings, we ONLY show the results of cross-cache latency for limited space in paper
-test_clientedge_latency = False
+test_clientedge_latency = True
 test_crossedge_latency = True
-test_edgecloud_latency = False
+test_edgecloud_latency = True
 
 # Run the experiments with multiple rounds
 for tmp_round_index in round_indexes:
