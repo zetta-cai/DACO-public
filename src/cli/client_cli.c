@@ -115,7 +115,7 @@ namespace covered
 
             // (1) Create CLI parameter description
 
-            std::string perclient_opcnt_descstr = "the number of per-client operations (per-client workload size; NOT affect " + Util::getReplayedWorkloadHintstr() + ")";
+            std::string perclient_opcnt_descstr = "the number of operations used to represent workload distribution (NOT affect workload sequence size; NOT affect " + Util::getReplayedWorkloadHintstr() + ")";
 
             // Dynamic configurations for client
             argument_desc_.add_options()
@@ -191,7 +191,7 @@ namespace covered
             oss << "[Dynamic configurations from CLI parameters in " << kClassName << "]" << std::endl;
             // oss << "Client count: " << clientcnt_ << std::endl;
             oss << "Warmup speedup flag: " << (is_warmup_speedup_?"true":"false") << std::endl;
-            oss << "Per-client operation count (workload size): " << perclient_opcnt_ << std::endl;
+            oss << "Per-client operation count (just an impl trick for distribution precision, yet not affect workload sequence size): " << perclient_opcnt_ << std::endl;
             oss << "Per-client worker count: " << perclient_workercnt_ << std::endl;
             oss << "Warmup request count scale: " << warmup_reqcnt_scale_;
             Util::dumpDebugMsg(kClassName, oss.str());
