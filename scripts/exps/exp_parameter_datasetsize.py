@@ -24,9 +24,12 @@ exp_default_settings = {
     "workload_name": "facebook"
 }
 # NOTE: run lrb, glcache, and segcache at last due to slow warmup issue of lrb (may be caused by model retraining), and memory usage issue of segcache and glcache (may be caused by bugs on segment-level memory management) -> TODO: if no results of the above baselines due to program crashes, please provide more DRAM memory (or swap memory), and run them again with sufficient time (may be in units of hours or days) for warmup and cache stable performance
-cache_names = ["covered", "shark", "bestguess", "arc+", "cachelib+", "fifo+", "frozenhot+", "gdsf+", "lfu+", "lhd+", "s3fifo+", "sieve+", "wtinylfu+", "lrb+", "glcache+", "segcache+"]
-# NOTE: NO need to run 1M, which is the same as previous experiment (performance against different workloads)
-keycnt_peredge_capacity_map = {"2000000": 6887, "4000000": 13675} # 2M and 4M dataset size; per-edge capacity = dataset capacity * 50% / 4 edges
+#cache_names = ["covered", "shark", "bestguess", "arc+", "cachelib+", "fifo+", "frozenhot+", "gdsf+", "lfu+", "lhd+", "s3fifo+", "sieve+", "wtinylfu+", "lrb+", "glcache+", "segcache+"]
+cache_names = ["covered", "gdsf+", "lhd+"] # TMPDEBUG
+# # NOTE: NO need to run 1M, which is the same as previous experiment (performance against different workloads)
+# keycnt_peredge_capacity_map = {"2000000": 6887, "4000000": 13675} # 2M and 4M dataset size; per-edge capacity = dataset capacity * 50% / 4 edges
+# NOTE: NO need to run 1M, which is the same as previous experiment (performance on existing methods)
+keycnt_peredge_capacity_map = {"2000000": 1024, "4000000": 1024} # 2M and 4M dataset size; per-edge capacity = 1 GiB by default
 
 # Run the experiments with multiple rounds
 for tmp_round_index in round_indexes:
@@ -44,12 +47,12 @@ for tmp_round_index in round_indexes:
         # Run prototype for each dataset size
         for tmp_keycnt, tmp_peredge_capacity in keycnt_peredge_capacity_map.items():
             tmp_keycnt = int(tmp_keycnt) # Conert string to integer
-            tmp_log_filepath = "{}/tmp_evaluator_for_{}_{}.out".format(tmp_log_dirpath, tmp_cache_name, tmp_keycnt)
+            tmp_log_filepath = "{}/tmp_evaluator_for_{}_{}_{}.out".format(tmp_log_dirpath, tmp_cache_name, tmp_keycnt, tmp_peredge_capacity)
             SubprocessUtil.tryToCreateDirectory(Common.scriptname, os.path.dirname(tmp_log_filepath))
 
             # Check log filepath
             if os.path.exists(tmp_log_filepath):
-                LogUtil.prompt(Common.scriptname, "Log filepath {} already exists, skip {} w/ {} dataset size for the current round {}...".format(tmp_log_filepath, tmp_cache_name, tmp_keycnt, tmp_round_index))
+                LogUtil.prompt(Common.scriptname, "Log filepath {} already exists, skip {} w/ {} dataset size ({} GiB cache space) for the current round {}...".format(tmp_log_filepath, tmp_cache_name, tmp_keycnt, tmp_peredge_capacity, tmp_round_index))
                 continue
 
             # NOTE: Log filepath MUST NOT exist here
@@ -76,7 +79,7 @@ for tmp_round_index in round_indexes:
                 tmp_exp_settings["warmup_reqcnt_scale"] = 2 # 8M warmup reqcnt
 
             # Launch prototype
-            LogUtil.prompt(Common.scriptname, "Run prototype of {} w/ {} dataset size for the current round {}...".format(tmp_cache_name, tmp_keycnt, tmp_round_index))
+            LogUtil.prompt(Common.scriptname, "Run prototype of {} w/ {} dataset size ({} GiB cache space) for the current round {}...".format(tmp_cache_name, tmp_keycnt, tmp_peredge_capacity, tmp_round_index))
             prototype_instance = Prototype(evaluator_logfile = tmp_log_filepath, **tmp_exp_settings)
             prototype_instance.run()
 
