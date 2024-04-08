@@ -24,8 +24,7 @@ exp_default_settings = {
     "workload_name": "facebook"
 }
 # NOTE: run lrb, glcache, and segcache at last due to slow warmup issue of lrb (may be caused by model retraining), and memory usage issue of segcache and glcache (may be caused by bugs on segment-level memory management) -> TODO: if no results of the above baselines due to program crashes, please provide more DRAM memory (or swap memory), and run them again with sufficient time (may be in units of hours or days) for warmup and cache stable performance
-#cache_names = ["covered", "shark", "bestguess", "arc+", "cachelib+", "fifo+", "frozenhot+", "gdsf+", "lfu+", "lhd+", "s3fifo+", "sieve+", "wtinylfu+", "lrb+", "glcache+", "segcache+"]
-cache_names = ["covered", "gdsf+", "lhd+"] # TMPDEBUG
+cache_names = ["covered", "shark", "bestguess", "arc+", "cachelib+", "fifo+", "frozenhot+", "gdsf+", "lfu+", "lhd+", "s3fifo+", "sieve+", "wtinylfu+", "lrb+", "glcache+", "segcache+"]
 # # NOTE: NO need to run 1M, which is the same as previous experiment (performance against different workloads)
 # keycnt_peredge_capacity_map = {"2000000": 6887, "4000000": 13675} # 2M and 4M dataset size; per-edge capacity = dataset capacity * 50% / 4 edges
 # NOTE: NO need to run 1M, which is the same as previous experiment (performance on existing methods)
