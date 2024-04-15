@@ -25,6 +25,9 @@ for tmp_cache_cpp_file in cache_cpp_files:
 funcparam_cpp_files = ["cache/basic_cache_custom_func_param", "cache/covered_cache_custom_func_param", "cache/cache_custom_func_param_base", "cooperation/basic_cooperation_custom_func_param", "cooperation/covered_cooperation_custom_func_param", "cooperation/cooperation_custom_func_param_base", "edge/basic_edge_custom_func_param", "edge/covered_edge_custom_func_param", "edge/edge_custom_func_param_base"]
 for tmp_funcparam_cpp_file in funcparam_cpp_files:
     exclude_files += "|src/{0}.c|src/{0}.h".format(tmp_funcparam_cpp_file) # Function parameters
+thirdparty_cpp_files = ["common/cbf", "workload/fbphoto_workload_wrapper", "workload/replayed_workload_wrapper_base", "workload/wikipedia_workload_wrapper"]
+for tmp_thirdparty_cpp_file in thirdparty_cpp_files:
+    exclude_files += "|src/{0}.h|src/{0}.c".format(tmp_thirdparty_cpp_file) # Third-party code
 exclude_files += ")\""
 
 # --fullpath add the current working directory (pwd) ahead of --not-match-d and --not-match-f
@@ -65,8 +68,9 @@ countLOC(cloud_c_dirs, "cloud")
 
 # (4) Count LOC for cache C/C++ source code
 
-# "src/cli", "src/event", "src/statistics", "src/cliutil.c", "src/evaluator.c", "src/simulator.c", "src/total_statistics_loader.c", "src/trace_preprocessor.c", "src/message"
-cache_c_dirs = ["src/cache", "src/common", "src/concurrency", "src/cooperation", "src/core", "src/edge", "src/hash", "src/nework", "src/workload", "src/dataset_loader.c", "src/edge.c"]
+# "src/cli", "src/event", "src/statistics", "src/cliutil.c", "src/evaluator.c", "src/simulator.c", "src/total_statistics_loader.c", "src/trace_preprocessor.c", "src/message", "src/dataset_loader.c" # NOT count due to used for debugging and redundant
+
+cache_c_dirs = ["src/cache", "src/common", "src/concurrency", "src/cooperation", "src/core", "src/edge", "src/hash", "src/nework", "src/workload", "src/edge.c"]
 countLOC(cache_c_dirs, "cache")
 
 # (5) Count LOC for COVERED C/C++ source code
