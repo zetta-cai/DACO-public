@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# download_traces: download replayed traces used in evaluation
+# download_traces: download replayed traces used to extract statistical characteristics for evaluation.
 
 import os
 

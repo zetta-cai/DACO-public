@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# (OBSOLETE due to unused) facebook_photocache: generate Facebook photo cache workload
+
 import numpy as np
 import struct
 from scipy.optimize import curve_fit

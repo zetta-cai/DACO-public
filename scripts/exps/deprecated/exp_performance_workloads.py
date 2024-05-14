@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# exp_performance_workloads: performance evaluation for workloads methods.
+# (OBSOLETE due to unused) exp_performance_workloads: performance evaluation for workloads methods.
 
 from .utils.prototype import *
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # load_dataset: perform loading phase for all datasets (non-replayed and replayed) used in evaluation.
+# NOTE: replayed traces are not directly used in evaluation, instead we use Zipfian distribution to extract statistics for geo-distributed evaluation.
 
 from .utils.dataset_loader import *
 
@@ -41,7 +42,7 @@ for tmp_workload in nonreplayed_workloads:
 
 
 # NOTE: NOT use fbphoto which is too skewed -> GDSF+ can achieve 99% global cache hit ratio even if only with 1% memory of 4 edges
-# # (2) Load dataset into Rocksdb for Facebook photo caching (non-replayed trace)
+# # (2) (OBSOLETE due to unused) Load dataset into Rocksdb for Facebook photo caching (non-replayed trace)
 # tmp_keycnt = 1300000 # 1.3M
 # tmp_workload = "fbphoto"
 
@@ -67,7 +68,7 @@ for tmp_workload in nonreplayed_workloads:
 #     dataset_loader_instance.run()
 
 
-# # (2) Load dataset into Rocksdb for Zipf-based Facebook CDN workload (non-replayed trace)
+# (2) Load dataset into Rocksdb for Zipf-based Facebook CDN workload (non-replayed trace)
 tmp_keycnt = 1000000 # 1M by default
 tmp_workload = "zipf_facebook"
 
@@ -94,34 +95,35 @@ else:
     dataset_loader_instance.run()
 
 
-# (3) Load dataset into RocksDB for different replayed traces (NOTE: keycnts have already been updated in config.json after trace preprocessing)
-replayed_workloads = ["wikitext", "wikiimage"]
-for tmp_workload in replayed_workloads:
-    # Get keycnt for the replayed trace
-    tmp_keycnt = JsonUtil.getValueForKeystr(Common.scriptname, "trace_{}_keycnt".format(tmp_workload))
-    if tmp_keycnt <= 0:
-        LogUtil.die(Common.scriptname, "Invalid keycnt {} for replayed trace {}, please preprocess the trace before loading!".format(tmp_keycnt, tmp_workload))
+# NOTE: NOT simply reply trace files of Wikipedia CDN traces due to incorrect trace partitioning
+# # (3) (OBSOLETE due to unused) Load dataset into RocksDB for different replayed traces (NOTE: keycnts have already been updated in config.json after trace preprocessing)
+# replayed_workloads = ["wikitext", "wikiimage"]
+# for tmp_workload in replayed_workloads:
+#     # Get keycnt for the replayed trace
+#     tmp_keycnt = JsonUtil.getValueForKeystr(Common.scriptname, "trace_{}_keycnt".format(tmp_workload))
+#     if tmp_keycnt <= 0:
+#         LogUtil.die(Common.scriptname, "Invalid keycnt {} for replayed trace {}, please preprocess the trace before loading!".format(tmp_keycnt, tmp_workload))
 
-    # Get log file name
-    tmp_log_filepath = "{}/tmp_dataset_loader_for_{}_key{}.out".format(Common.output_log_dirpath, tmp_workload, tmp_keycnt)
-    SubprocessUtil.tryToCreateDirectory(Common.scriptname, os.path.dirname(tmp_log_filepath))
-    log_filepaths.append(tmp_log_filepath)
+#     # Get log file name
+#     tmp_log_filepath = "{}/tmp_dataset_loader_for_{}_key{}.out".format(Common.output_log_dirpath, tmp_workload, tmp_keycnt)
+#     SubprocessUtil.tryToCreateDirectory(Common.scriptname, os.path.dirname(tmp_log_filepath))
+#     log_filepaths.append(tmp_log_filepath)
 
-    # Check rocksdb dirpath
-    # NOTE: MUST be consistent with getCloudRocksdbDirpath() in src/common/util.c
-    tmp_rocksdb_dirpath = "{}/key{}_{}/cloud0.db".format(Common.cloud_rocksdb_basedir, tmp_keycnt, tmp_workload)
-    if os.path.exists(tmp_rocksdb_dirpath):
-        LogUtil.prompt(Common.scriptname, "Rocksdb dirpath {} already exists, skip dataset loading for eplayed trace {} with keycnt {}...".format(tmp_rocksdb_dirpath, tmp_workload, tmp_keycnt))
-    else:
-        # Prepare settings for dataset loader
-        tmp_dataset_loader_settings = {
-            "keycnt": tmp_keycnt, # NOT used by CLI module in C++
-            "workload_name": tmp_workload
-        }
+#     # Check rocksdb dirpath
+#     # NOTE: MUST be consistent with getCloudRocksdbDirpath() in src/common/util.c
+#     tmp_rocksdb_dirpath = "{}/key{}_{}/cloud0.db".format(Common.cloud_rocksdb_basedir, tmp_keycnt, tmp_workload)
+#     if os.path.exists(tmp_rocksdb_dirpath):
+#         LogUtil.prompt(Common.scriptname, "Rocksdb dirpath {} already exists, skip dataset loading for eplayed trace {} with keycnt {}...".format(tmp_rocksdb_dirpath, tmp_workload, tmp_keycnt))
+#     else:
+#         # Prepare settings for dataset loader
+#         tmp_dataset_loader_settings = {
+#             "keycnt": tmp_keycnt, # NOT used by CLI module in C++
+#             "workload_name": tmp_workload
+#         }
 
-        # Launch dataset loader
-        dataset_loader_instance = DatasetLoader(dataset_loader_logfile = tmp_log_filepath, **tmp_dataset_loader_settings)
-        dataset_loader_instance.run()
+#         # Launch dataset loader
+#         dataset_loader_instance = DatasetLoader(dataset_loader_logfile = tmp_log_filepath, **tmp_dataset_loader_settings)
+#         dataset_loader_instance.run()
 
 
 # (3) Hint users to check keycnt and dataset size in log files, and update keycnt in config.json if necessary

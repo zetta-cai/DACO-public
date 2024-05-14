@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# cleanup_testbed: kill all related threads launched in testbed.
+# (OBSOLETE due to unused) proprocess_traces: preprocess trace files to dump partial workload and dataset items.
 
 from ..common import *
 from .utils.exputil import *
