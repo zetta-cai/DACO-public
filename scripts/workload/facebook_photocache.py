@@ -36,11 +36,11 @@ def zipf_func(x, a):
 # (3) For popularity distribution
 
 # Curve fitting by Zipfian distribution
-pop_x = np.array([10**0, 10**1, 10**2, 10**3, 10**4, 10**5, 10**6])
+pop_x = np.array([10**0, 10**1, 10**2, 10**3, 10**4, 10**5, 10**6]) # NOTE: rank >= 1 for Zipfian distribution (no matter power low (alpha >= 0) or zeta (alpha > 1))
 pop_y = np.array([10**6, 10**5, 10**4, 10**3.1, 10**2.2, 10**1.2, 10**0])
 pop_y = pop_y/pop_y.sum()
 result = curve_fit(zipf_func, pop_x, pop_y, p0=[1.1])
-zipf_a = result[0][0]
+zipf_a = result[0][0] # 1.67
 
 # (4) Generate dataset
 

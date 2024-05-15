@@ -43,6 +43,17 @@ class TraceLoader:
                 self.loadFileOfWikiImage_(tmp_filepath)
             else:
                 LogUtil.die(Common.scriptname, "unknown workload {}!".format(workload_name))
+
+    # Get sorted frequency list (sorted in descending order of frequencies in order to get ranks)
+    # NOTE: rank (i.e., sorted index + 1) >= 1 for Zipfian distribution (no matter power low (alpha >= 0) or zeta (alpha > 1))
+    # NOTE: we can NOT sample frequencies before sorting, as it will change the object ranks and hence NOT vs. the entire trace
+    def getSortedFrequencyList(self):
+        frequency_list = []
+        for tmp_key in self.statistics_:
+            tmp_frequency = self.statistics_[tmp_key][1]
+            frequency_list.append(tmp_frequency)
+        frequency_list.sort(reverse=True)
+        return frequency_list
     
     # Get key size histogram
     def getKeySizeHistogram(self):
@@ -89,6 +100,7 @@ class TraceLoader:
             tmp_valsize = tmp_columns[WIKITEXT_VALSIZE_COLUMNIDX]
             self.updateStatistics_(tmp_key, tmp_valsize)
         f.close()
+        return
     
     # Load Wikipedia Image trace files
     # Format: relative_unix,hashed_path_query,image_type,response_size,time_firstbyte
@@ -113,6 +125,7 @@ class TraceLoader:
             tmp_valsize = tmp_columns[WIKIIMAGE_VALSIZE_COLUMNIDX]
             self.updateStatistics_(tmp_key, tmp_valsize)
         f.close()
+        return
 
     def updateStatistics_(self, key, valsize):
         if key not in self.statistics_:
