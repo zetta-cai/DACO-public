@@ -7,10 +7,12 @@ class TraceLoader:
 
     TSV_DELIMITER = "\t" # Tab-separated values used by Wikipedia Text/Image trace files
     # For Wikipedia Text trace files
+    WIKITEXT_WORKLOADNAME = "zipf_wikitext"
     WIKITEXT_COLUMNCNT = 4
     WIKITEXT_KEY_COLUMNIDX = 1
     WIKITEXT_VALSIZE_COLUMNIDX = 2
     # For Wikipedia Image trace files
+    WIKIIMAGE_WORKLOADNAME = "zipf_wikiimage"
     WIKIIMAGE_COLUMNCNT = 5
     WIKIIMAGE_KEY_COLUMNIDX = 1
     WIKIIMAGE_VALSIZE_COLUMNIDX = 3
@@ -37,9 +39,9 @@ class TraceLoader:
             if not os.path.exists(tmp_filepath):
                 LogUtil.die(Common.scriptname, "file {} does not exist for workload {}!".format(tmp_filepath, workload_name))
 
-            if workload_name == "zipf_wikitext":
+            if workload_name == WIKITEXT_WORKLOADNAME:
                 self.loadFileOfWikiText_(tmp_filepath)
-            elif workload_name == "zipf_wikiimage":
+            elif workload_name == WIKIIMAGE_WORKLOADNAME:
                 self.loadFileOfWikiImage_(tmp_filepath)
             else:
                 LogUtil.die(Common.scriptname, "unknown workload {}!".format(workload_name))
@@ -52,6 +54,7 @@ class TraceLoader:
         for tmp_key in self.statistics_:
             tmp_frequency = self.statistics_[tmp_key][1]
             frequency_list.append(tmp_frequency)
+        LogUtil.prompt(Common.scriptname, "sorting frequency list for workload {}...".format(self.workload_name_))
         frequency_list.sort(reverse=True)
         return frequency_list
     
@@ -80,7 +83,7 @@ class TraceLoader:
     # Load Wikipedia Text trace files
     # Format: relative_unix,hashed_host_path_query,response_size,time_firstbyte
     def loadFileOfWikiText_(self, filepath):
-        LogUtil.prompt(Common.scriptname, "loading trace file {} for workload {}...".format(filepath, self.workload_name_)
+        LogUtil.prompt(Common.scriptname, "loading trace file {} for workload {}...".format(filepath, self.workload_name_))
 
         is_first_line = True
         f = open(filepath, mode="r")
@@ -105,7 +108,7 @@ class TraceLoader:
     # Load Wikipedia Image trace files
     # Format: relative_unix,hashed_path_query,image_type,response_size,time_firstbyte
     def loadFileOfWikiImage_(self, filepath):
-        LogUtil.prompt(Common.scriptname, "loading trace file {} for workload {}...".format(filepath, self.workload_name_)
+        LogUtil.prompt(Common.scriptname, "loading trace file {} for workload {}...".format(filepath, self.workload_name_))
 
         is_first_line = True
         f = open(filepath, mode="r")

@@ -98,13 +98,13 @@ print("min_value_size: {} B; max_value_size: {} B; avg_value_size: {} B; dataset
 # (5) Dump dataset size, probs, and value sizes
 
 # NOTE: MUST be the same as dataset filepath in src/common/util.c
-dataset_filepath = "{}/fbphoto.dataset".format(Common.trace_dirpath)
+characteristics_filepath = "{}/fbphoto.characteristics".format(Common.trace_dirpath)
 
 # Dump into the binary file
-if not os.path.exists(dataset_filepath):
+if not os.path.exists(characteristics_filepath):
     print("Dump dataset file...")
-    os.makedirs(os.path.dirname(dataset_filepath), exist_ok=True)
-    with open(dataset_filepath, "wb") as f:
+    os.makedirs(os.path.dirname(characteristics_filepath), exist_ok=True)
+    with open(characteristics_filepath, "wb") as f:
         # Dump dataset size as uint32_t in little endian
         f.write(struct.pack("<I", dataset_size))
         # Dump probs as float and value sizes as uint32_t in little endian

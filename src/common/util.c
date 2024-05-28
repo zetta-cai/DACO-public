@@ -31,11 +31,11 @@ namespace covered
     const std::string Util::TRACE_PREPROCESSOR_MAIN_NAME("trace_preprocessor");
 
     // Workload name
-    const std::string Util::FACEBOOK_WORKLOAD_NAME("facebook");
-    const std::string Util::ZIPF_FACEBOOK_WORKLOAD_NAME("zipf_facebook");
-    const std::string Util::WIKIPEDIA_IMAGE_WORKLOAD_NAME("wikiimage");
-    const std::string Util::WIKIPEDIA_TEXT_WORKLOAD_NAME("wikitext");
-    const std::string Util::FBPHOTO_WORKLOAD_NAME("fbphoto");
+    const std::string Util::FACEBOOK_WORKLOAD_NAME("facebook"); // Original Facebook CDN workload generator
+    const std::string Util::ZIPF_FACEBOOK_WORKLOAD_NAME("zipf_facebook"); // Zipfian Facebook CDN workload generator (based on power-law distribution)
+    const std::string Util::WIKIPEDIA_IMAGE_WORKLOAD_NAME("wikiimage"); // (OBSOLETE) Replayed wikipedia image traces
+    const std::string Util::WIKIPEDIA_TEXT_WORKLOAD_NAME("wikitext"); // (OBSOLETE) Replayed wikipedian text traces
+    const std::string Util::FBPHOTO_WORKLOAD_NAME("fbphoto"); // (OBSOLETE) Zipfian Facebook photo caching workload generator (based on Zeta distribution)
 
     // Cloud storage
     const std::string Util::HDD_NAME = "hdd";

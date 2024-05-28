@@ -22,7 +22,10 @@ class ZipfCurvefit:
 
         # Generate sampled indices
         sorted_indices_array = np.arange(len(sorted_frequency_list))
-        sampled_indices_array = np.random.choice(sorted_indices_array, CURVEFIT_SAMPLE_COUNT, replace=False) # Each indice can only be sampled once
+        if len(sorted_indices_array) > CURVEFIT_SAMPLE_COUNT:
+            sampled_indices_array = np.random.choice(sorted_indices_array, CURVEFIT_SAMPLE_COUNT, replace=False) # Each indice can only be sampled once
+        else:
+            sampled_indices_array = sorted_indices_array
 
         # NOTE: NO need to sort sampled indices, as curvefit does NOT require ordered input, i.e., <(x0, y0), <x1, y1>> has the same curve as <(x1, y1), (x0, y0)>
         sampled_ranks_array = sampled_indices_array + 1

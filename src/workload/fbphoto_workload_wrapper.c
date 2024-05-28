@@ -221,19 +221,19 @@ namespace covered
     void FbphotoWorkloadWrapper::loadFbphotoDatasetFile_()
     {
         // NOTE: MUST be the same as dataset filepath in scripts/workload/facebook_photocache.py
-        const std::string fbphoto_dataset_filepath = Config::getTraceDirpath() + "/fbphoto.dataset";
+        const std::string fbphoto_characteristics_filepath = Config::getTraceDirpath() + "/fbphoto.characteristics";
 
         // Check existance of dataset file
-        if (!Util::isFileExist(fbphoto_dataset_filepath, true))
+        if (!Util::isFileExist(fbphoto_characteristics_filepath, true))
         {
             std::ostringstream oss;
-            oss << "failed to find Facebook photo caching dataset file " << fbphoto_dataset_filepath << "!";
+            oss << "failed to find Facebook photo caching dataset file " << fbphoto_characteristics_filepath << "!";
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }
 
         // Load dataset file including dataset size, probs, and value sizes
-        std::fstream* fs_ptr = Util::openFile(fbphoto_dataset_filepath, std::ios_base::in | std::ios_base::binary);
+        std::fstream* fs_ptr = Util::openFile(fbphoto_characteristics_filepath, std::ios_base::in | std::ios_base::binary);
         assert(fs_ptr != NULL);
 
         // Load dataset size
