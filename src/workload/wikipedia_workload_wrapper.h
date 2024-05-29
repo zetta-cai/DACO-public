@@ -1,5 +1,7 @@
 /*
- * WikipediaWorkloadWrapper: encapsulate TSV file readers for Wiki CDN trace (https://analytics.wikimedia.org/published/datasets/caching/2019/) (thread safe).
+ * (OBSOLETE) WikipediaWorkloadWrapper: encapsulate TSV file readers for Wiki CDN trace (https://analytics.wikimedia.org/published/datasets/caching/2019/) (thread safe).
+ *
+ * OBSOLETE reason: unreasonable results due to incorrect trace partitioning if without geographical information.
  *
  * NOTE: Wiki TSV (Tag-Separated-Value) files have the following formats:
  * -> Image TSV: relative_unix hashed_path_query image_type response_size time_firstbyte

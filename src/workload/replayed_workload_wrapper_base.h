@@ -1,5 +1,7 @@
 /*
- * ReplayedWorkloadWrapperBase: the base class ONLY for replayed workload wrappers.
+ * (OBSOLETE) ReplayedWorkloadWrapperBase: the base class ONLY for replayed workload wrappers.
+ *
+ * OBSOLETE reason: unreasonable results due to incorrect trace partitioning without geographical information.
  *
  * NOTE: basically follow WorkloadWrapperBase, yet with some variables and functions specific for replayed workloads.
  * 
