@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # trace_loader: load statistics (including key, value size, and frequency) from replayed trace files, which will be characterized by Zipfian distribution for geo-distributed evaluation later.
 
+import numpy as np
+
 from ...common import *
 
 class TraceLoader:
@@ -39,9 +41,9 @@ class TraceLoader:
             if not os.path.exists(tmp_filepath):
                 LogUtil.die(Common.scriptname, "file {} does not exist for workload {}!".format(tmp_filepath, workload_name))
 
-            if workload_name == WIKITEXT_WORKLOADNAME:
+            if workload_name == TraceLoader.WIKITEXT_WORKLOADNAME:
                 self.loadFileOfWikiText_(tmp_filepath)
-            elif workload_name == WIKIIMAGE_WORKLOADNAME:
+            elif workload_name == TraceLoader.WIKIIMAGE_WORKLOADNAME:
                 self.loadFileOfWikiImage_(tmp_filepath)
             else:
                 LogUtil.die(Common.scriptname, "unknown workload {}!".format(workload_name))
@@ -56,28 +58,28 @@ class TraceLoader:
             frequency_list.append(tmp_frequency)
         LogUtil.prompt(Common.scriptname, "sorting frequency list for workload {}...".format(self.workload_name_))
         frequency_list.sort(reverse=True)
-        return frequency_list
+        return np.array(frequency_list)
     
     # Get key size histogram
     def getKeySizeHistogram(self):
-        keysize_histogram = [0] * KEYSIZE_HISTOGRAM_SIZE
+        keysize_histogram = [0] * TraceLoader.KEYSIZE_HISTOGRAM_SIZE
         for tmp_key in self.statistics_:
             tmp_keysize = len(tmp_key)
-            if tmp_keysize < KEYSIZE_HISTOGRAM_SIZE:
+            if tmp_keysize < TraceLoader.KEYSIZE_HISTOGRAM_SIZE:
                 keysize_histogram[tmp_keysize] += 1
             else:
-                keysize_histogram[KEYSIZE_HISTOGRAM_SIZE - 1] += 1
+                keysize_histogram[TraceLoader.KEYSIZE_HISTOGRAM_SIZE - 1] += 1
         return keysize_histogram
 
     # Get value size histogram
     def getValueSizeHistogram(self):
-        valsize_histogram = [0] * VALSIZE_HISTOGRAM_SIZE
+        valsize_histogram = [0] * TraceLoader.VALSIZE_HISTOGRAM_SIZE
         for tmp_key in self.statistics_:
             tmp_valsize = self.statistics_[tmp_key][0]
-            if tmp_valsize < VALSIZE_HISTOGRAM_SIZE:
+            if tmp_valsize < TraceLoader.VALSIZE_HISTOGRAM_SIZE:
                 valsize_histogram[tmp_valsize] += 1
             else:
-                valsize_histogram[VALSIZE_HISTOGRAM_SIZE - 1] += 1
+                valsize_histogram[TraceLoader.VALSIZE_HISTOGRAM_SIZE - 1] += 1
         return valsize_histogram
     
     # Load Wikipedia Text trace files
@@ -96,11 +98,11 @@ class TraceLoader:
                 continue
 
             # Process each non-first line
-            tmp_columns = tmp_line.strip().split(TSV_DELIMITER)
-            if len(tmp_columns) != WIKITEXT_COLUMNCNT:
+            tmp_columns = tmp_line.strip().split(TraceLoader.TSV_DELIMITER)
+            if len(tmp_columns) != TraceLoader.WIKITEXT_COLUMNCNT:
                 LogUtil.die(Common.scriptname, "invalid column count {} in trace file {} for workload {}!".format(len(tmp_columns), filepath, self.workload_name_))
-            tmp_key = tmp_columns[WIKITEXT_KEY_COLUMNIDX]
-            tmp_valsize = tmp_columns[WIKITEXT_VALSIZE_COLUMNIDX]
+            tmp_key = tmp_columns[TraceLoader.WIKITEXT_KEY_COLUMNIDX]
+            tmp_valsize = int(tmp_columns[TraceLoader.WIKITEXT_VALSIZE_COLUMNIDX])
             self.updateStatistics_(tmp_key, tmp_valsize)
         f.close()
         return
@@ -121,11 +123,11 @@ class TraceLoader:
                 continue
 
             # Process each non-first line
-            tmp_columns = tmp_line.strip().split(TSV_DELIMITER)
-            if len(tmp_columns) != WIKIIMAGE_COLUMNCNT:
+            tmp_columns = tmp_line.strip().split(TraceLoader.TSV_DELIMITER)
+            if len(tmp_columns) != TraceLoader.WIKIIMAGE_COLUMNCNT:
                 LogUtil.die(Common.scriptname, "invalid column count {} in trace file {} for workload {}!".format(len(tmp_columns), filepath, self.workload_name_))
-            tmp_key = tmp_columns[WIKIIMAGE_KEY_COLUMNIDX]
-            tmp_valsize = tmp_columns[WIKIIMAGE_VALSIZE_COLUMNIDX]
+            tmp_key = tmp_columns[TraceLoader.WIKIIMAGE_KEY_COLUMNIDX]
+            tmp_valsize = int(tmp_columns[TraceLoader.WIKIIMAGE_VALSIZE_COLUMNIDX])
             self.updateStatistics_(tmp_key, tmp_valsize)
         f.close()
         return

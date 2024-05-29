@@ -41,7 +41,7 @@ for tmp_workload_name in workload_names:
     tmp_keysize_histogram = tmp_trace_loader.getKeySizeHistogram()
     tmp_valuesize_histogram = tmp_trace_loader.getValueSizeHistogram()
     os.makedirs(os.path.dirname(tmp_workload_characteristic_filepath), exist_ok=True)
-    with open(characteristics_filepath, "wb") as f:
+    with open(tmp_workload_characteristic_filepath, "wb") as f:
         # Dump Zipfian constant as float in little endian
         f.write(struct.pack("<f", tmp_zipf_constant))
         # Dump key size histogram as uint32_t in little endian
