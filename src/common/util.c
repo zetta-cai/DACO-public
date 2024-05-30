@@ -33,6 +33,8 @@ namespace covered
     // Workload name
     const std::string Util::FACEBOOK_WORKLOAD_NAME("facebook"); // Original Facebook CDN workload generator
     const std::string Util::ZIPF_FACEBOOK_WORKLOAD_NAME("zipf_facebook"); // Zipfian Facebook CDN workload generator (based on power-law distribution)
+    const std::string Util::ZIPF_WIKIPEDIA_IMAGE_WORKLOAD_NAME("zipf_wikiimage"); // Zipfian Wikipedia image workload generator (based on Zeta distribution)
+    const std::string Util::ZIPF_WIKIPEDIA_TEXT_WORKLOAD_NAME("zipf_wikitext"); // Zipfian Wikipedia text workload generator (based on Zeta distribution)
     const std::string Util::WIKIPEDIA_IMAGE_WORKLOAD_NAME("wikiimage"); // (OBSOLETE) Replayed wikipedia image traces
     const std::string Util::WIKIPEDIA_TEXT_WORKLOAD_NAME("wikitext"); // (OBSOLETE) Replayed wikipedian text traces
     const std::string Util::FBPHOTO_WORKLOAD_NAME("fbphoto"); // (OBSOLETE) Zipfian Facebook photo caching workload generator (based on Zeta distribution)

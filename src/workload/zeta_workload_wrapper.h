@@ -1,0 +1,69 @@
+/*
+ * ZetaWorkloadWrapper: use Zeta distribution to reproduce replayed traces with geographical information based on Zipfian constant and key/value size distributions (thread safe).
+ * 
+ * By Siyuan Sheng (2024.05.30).
+ */
+
+#ifndef ZETA_WORKLOAD_WRAPPER_H
+#define ZETA_WORKLOAD_WRAPPER_H
+
+#include <string>
+#include <unordered_map>
+#include <vector>
+#include <random> // std::mt19937_64, std::discrete_distribution
+
+#include "workload/workload_item.h"
+#include "workload/workload_wrapper_base.h"
+
+namespace covered
+{
+    class ZetaWorkloadWrapper : public WorkloadWrapperBase
+    {
+    public:
+        ZetaWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const float& zipf_alpha);
+        virtual ~ZetaWorkloadWrapper();
+
+        virtual WorkloadItem generateWorkloadItem(const uint32_t& local_client_worker_idx) override; // NOTE: randomly select an item without modifying any variable -> thread safe
+        virtual uint32_t getPracticalKeycnt() const override;
+        virtual WorkloadItem getDatasetItem(const uint32_t itemidx) override; // Get a dataset key-value pair item with the index of itemidx
+
+        // Get average/min/max dataset key/value size
+        virtual double getAvgDatasetKeysize() const override;
+        virtual double getAvgDatasetValuesize() const override;
+        virtual uint32_t getMinDatasetKeysize() const override;
+        virtual uint32_t getMinDatasetValuesize() const override;
+        virtual uint32_t getMaxDatasetKeysize() const override;
+        virtual uint32_t getMaxDatasetValuesize() const override;
+
+        // For warmup speedup
+        virtual void quickDatasetGet(const Key& key, Value& value) const override;
+        virtual void quickDatasetPut(const Key& key, const Value& value) override;
+        virtual void quickDatasetDel(const Key& key) override;
+    private:
+        static const std::string kClassName;
+
+        virtual void initWorkloadParameters_() override;
+        virtual void overwriteWorkloadParameters_() override;
+        virtual void createWorkloadGenerator_() override;
+
+        // Facebook-specific helper functions
+
+        // (1) For role of clients, dataset loader, and cloud
+
+        // (2) Common utilities
+
+        void checkPointers_() const;
+
+        // Const shared variables
+        std::string instance_name_;
+        // const float zipf_alpha_;
+
+        // Const shared variables
+        // (1) For clients, dataset loader, and cloud
+        // (2) For clients
+        std::vector<std::mt19937_64*> client_worker_item_randgen_ptrs_;
+        std::optional<uint64_t> last_reqid_; // NOT thread safe yet UNUSED in Facebook CDN workload
+    };
+}
+
+#endif
