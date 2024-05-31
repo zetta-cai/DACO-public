@@ -42,6 +42,8 @@ namespace covered
     private:
         static const std::string kClassName;
 
+        void loadZetaCharacteristicsFile_(); // Load Zipfian constant, key size histogram, and value size histogram
+
         virtual void initWorkloadParameters_() override;
         virtual void overwriteWorkloadParameters_() override;
         virtual void createWorkloadGenerator_() override;
@@ -49,6 +51,12 @@ namespace covered
         // Facebook-specific helper functions
 
         // (1) For role of clients, dataset loader, and cloud
+        double average_dataset_keysize_; // Average dataset key size
+        double average_dataset_valuesize_; // Average dataset value size
+        uint32_t min_dataset_keysize_; // Minimum dataset key size
+        uint32_t min_dataset_valuesize_; // Minimum dataset value size
+        uint32_t max_dataset_keysize_; // Maximum dataset key size
+        uint32_t max_dataset_valuesize_; // Maximum dataset value size
 
         // (2) Common utilities
 
@@ -56,13 +64,17 @@ namespace covered
 
         // Const shared variables
         std::string instance_name_;
-        // const float zipf_alpha_;
+        // const float zipf_alpha_; // NOTE: we use the Zipfian constant loaded from the characteristics file, while that from CLI is ONLY used for Zipfian Facebook CDN workload to tune workload skewness
 
         // Const shared variables
         // (1) For clients, dataset loader, and cloud
+        std::vector<uint32_t> dataset_keys_;
+        std::vector<double> dataset_probs_;
+        std::vector<uint32_t> dataset_valsizes_;
         // (2) For clients
         std::vector<std::mt19937_64*> client_worker_item_randgen_ptrs_;
-        std::optional<uint64_t> last_reqid_; // NOT thread safe yet UNUSED in Facebook CDN workload
+        std::vector<std::uniform_int_distribution<uint32_t>*> client_worker_reqdist_ptrs_; // randomly select request index from workload indices of each client
+        // std::vector<uint32_t> workload_key_indices_; // workload indices for each client (NOTE: NO need due to directly generating workload items by Zeta distribution)
     };
 }
 

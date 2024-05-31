@@ -9,29 +9,38 @@ namespace covered
 {
     const std::string ZetaWorkloadWrapper::kClassName("ZetaWorkloadWrapper");
 
-    ZetaWorkloadWrapper::ZetaWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const float& zipf_alpha) : WorkloadWrapperBase(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role), zipf_alpha_(zipf_alpha)
+    //, zipf_alpha_(zipf_alpha)
+    ZetaWorkloadWrapper::ZetaWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const float& zipf_alpha) : WorkloadWrapperBase(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role)
     {
-        // TODO: END HERE
-        // TODO: Get filename based on workload name for workload characteristics
-        // TODO: Load workload characteristics from the file
-        // TODO: Generate dataset items based on key/value size distributions for all roles
-        // TODO: Generate workload items based on Zeta distribution with the given Zipfian constant for clients
+        // NOTE: perclient_opcnt is ONLY used by Zipfian/original Facebook CDN workload and Facebook photo caching workload (OBSOLETE) to represent workload distribution by pre-generated workload items (see src/workload/cachebench/workload_generator.* and src/workload/fbphoto_workload_wrapper.*), yet NOT used by others including Zipfian Wikipedia traces with Zeta workload distribution (NO need to pre-generate workload items for approximate workload distribution representation) and replayed Wikipedia traces with fixed number of sampled requests (OBSOLETE)
 
-        // NOTE: Facebook CDN is not replayed trace and NO need for trace preprocessing (also NO need to dump dataset file)
+        // The way similar to cachelib: 0 to generate the same dataset items shared by different clients, client idx to pre-generate workload items in each client for approximate workload distribution, and global worker idx to select pre-generated workload items uniformly as workloads of each worker
+        // Here we use another way:  0 to generate the same dataset items shared by different clients and global worker idx to select dataset items based on Zeta workload distribution as workloads of each worker
+        // TODO: Maybe change to the way similar to cachelib for consistent implementation, yet this is just impl trick and should NOT affect evaluation results
+
+        UNUSED(perclient_opcnt);
+
+        // NOTE: Zeta-based Zipfian workloads are not replayed traces and NO need for trace preprocessing (also NO need to dump dataset file)
         assert(!needAllTraceFiles_()); // Must NOT trace preprocessor
 
         // Differentiate facebook workload generator in different clients
         std::ostringstream oss;
         oss << kClassName << " client" << client_idx;
         instance_name_ = oss.str();
-        
+
         // For clients, dataset loader, and cloud
-        op_pool_dist_ptr_ = NULL;
-        workload_generator_ = nullptr;
+        average_dataset_keysize_ = 0;
+        min_dataset_keysize_ = 0;
+        max_dataset_keysize_ = 0;
+        average_dataset_valuesize_ = 0;
+        min_dataset_valuesize_ = 0;
+        max_dataset_valuesize_ = 0;
+        // TODO: END HERE
+        loadZetaCharacteristicsFile_(); // Load characteristics file to update dataset keys, probs, value sizes, and dataset statistics
 
         // For clients
         client_worker_item_randgen_ptrs_.resize(perclient_workercnt, NULL);
-        last_reqid_ = std::nullopt; // Not used by WorkloadGenerator for Facebook CDN trace
+        client_worker_reqdist_ptrs_.resize(perclient_workercnt, NULL);
     }
 
     ZipfFacebookWorkloadWrapper::~ZipfFacebookWorkloadWrapper()

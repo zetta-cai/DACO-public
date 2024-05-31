@@ -18,7 +18,7 @@ namespace covered
         std::ostringstream oss;
         oss << kClassName << " client" << client_idx;
         instance_name_ = oss.str();
-        
+
         // For clients, dataset loader, and cloud
         average_dataset_keysize_ = 0;
         min_dataset_keysize_ = 0;
@@ -26,7 +26,7 @@ namespace covered
         average_dataset_valuesize_ = 0;
         min_dataset_valuesize_ = 0;
         max_dataset_valuesize_ = 0;
-        loadFbphotoDatasetFile_(); // Load dataset file to update dataset keys, probs, value sizes, and dataset statistics
+        loadFbphotoPropertiesFile_(); // Load properties file to update dataset keys, probs, value sizes, and dataset statistics
 
         // For clients
         client_worker_item_randgen_ptrs_.resize(perclient_workercnt, NULL);
@@ -218,22 +218,22 @@ namespace covered
         return;
     }
 
-    void FbphotoWorkloadWrapper::loadFbphotoDatasetFile_()
+    void FbphotoWorkloadWrapper::loadFbphotoPropertiesFile_()
     {
         // NOTE: MUST be the same as dataset filepath in scripts/workload/facebook_photocache.py
-        const std::string fbphoto_characteristics_filepath = Config::getTraceDirpath() + "/fbphoto.characteristics";
+        const std::string fbphoto_properties_filepath = Config::getTraceDirpath() + "/fbphoto.properties";
 
         // Check existance of dataset file
-        if (!Util::isFileExist(fbphoto_characteristics_filepath, true))
+        if (!Util::isFileExist(fbphoto_properties_filepath, true))
         {
             std::ostringstream oss;
-            oss << "failed to find Facebook photo caching dataset file " << fbphoto_characteristics_filepath << "!";
+            oss << "failed to find Facebook photo caching dataset file " << fbphoto_properties_filepath << "!";
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }
 
         // Load dataset file including dataset size, probs, and value sizes
-        std::fstream* fs_ptr = Util::openFile(fbphoto_characteristics_filepath, std::ios_base::in | std::ios_base::binary);
+        std::fstream* fs_ptr = Util::openFile(fbphoto_properties_filepath, std::ios_base::in | std::ios_base::binary);
         assert(fs_ptr != NULL);
 
         // Load dataset size

@@ -49,7 +49,7 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        void loadFbphotoDatasetFile_();
+        void loadFbphotoPropertiesFile_(); // Load dataset size, per-rank probability, and per-rank value size
 
         virtual void initWorkloadParameters_() override;
         virtual void overwriteWorkloadParameters_() override;
@@ -75,7 +75,7 @@ namespace covered
         // Const shared variables
         // (1) For clients, dataset loader, and cloud
         std::vector<uint32_t> dataset_keys_;
-        std::vector<double> dataset_probs_;
+        std::vector<double> dataset_probs_; // Per-key probability following Zeta distribution
         std::vector<uint32_t> dataset_valsizes_;
         // (2) For clients
         std::vector<std::mt19937_64*> client_worker_item_randgen_ptrs_;
