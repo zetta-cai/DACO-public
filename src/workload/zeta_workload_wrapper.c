@@ -1,5 +1,6 @@
 #include "workload/zeta_workload_wrapper.h"
 
+#include <assert.h>
 #include <memory> // std::make_unique
 
 #include "common/config.h"
@@ -35,7 +36,6 @@ namespace covered
         average_dataset_valuesize_ = 0;
         min_dataset_valuesize_ = 0;
         max_dataset_valuesize_ = 0;
-        // TODO: END HERE
         loadZetaCharacteristicsFile_(); // Load characteristics file to update dataset keys, probs, value sizes, and dataset statistics
 
         // For clients
@@ -247,6 +247,201 @@ namespace covered
     void ZipfFacebookWorkloadWrapper::quickDatasetDel(const Key& key)
     {
         quickDatasetPut(key, Value()); // Use default value with is_deleted = true and value size = 0 as delete operation
+
+        return;
+    }
+
+    void ZetaWorkloadWrapper::loadZetaCharacteristicsFile_()
+    {
+        // NOTE: MUST be the same as characteristics filepath in scripts/workload/characterize_traces.py
+        const std::string zeta_characteristics_filepath = Config::getTraceDirpath() + "/" + getWorkloadName_() + ".characteristics";
+
+        // Check existance of characteristics file
+        if (!Util::isFileExist(zeta_characteristics_filepath, true))
+        {
+            std::ostringstream oss;
+            oss << "failed to find the characteristics file " << zeta_characteristics_filepath << "!";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+
+        // (1) Load characteristics file including Zipfian constant, key size histogram, and value size histogram
+        std::fstream* fs_ptr = Util::openFile(zeta_characteristics_filepath, std::ios_base::in | std::ios_base::binary);
+        assert(fs_ptr != NULL);
+
+        // Load Zipfian constant
+        float zipf_constant = 0.0;
+        fs_ptr->read((char *)&zipf_constant, sizeof(float));
+        assert(zipf_constant > 1.0); // Zeta-based Zipfian constant must be larger than 1.0
+
+        // Load key size histogram
+        uint32_t keysize_histogram_size = 0;
+        fs_ptr->read((char *)&keysize_histogram_size, sizeof(uint32_t));
+        assert(keysize_histogram_size > 0);
+        std::vector<uint32_t> keysize_histogram(keysize_histogram_size, 0);
+        for (uint32_t tmp_keysize = 0; tmp_keysize < keysize_histogram_size; tmp_keysize++)
+        {
+            uint32_t tmp_keysize_freq = 0;
+            fs_ptr->read((char *)&tmp_keysize_freq, sizeof(uint32_t));
+            keysize_histogram[tmp_keysize] = tmp_keysize_freq;
+        }
+
+        // Load value size histogram
+        uint32_t valuesize_histogram_size = 0;
+        fs_ptr->read((char *)&valuesize_histogram_size, sizeof(uint32_t));
+        assert(valuesize_histogram_size > 0);
+        std::vector<uint32_t> valuesize_histogram(valuesize_histogram_size, 0);
+        for (uint32_t tmp_valuesize = 0; tmp_valuesize < valuesize_histogram_size; tmp_valuesize++)
+        {
+            uint32_t tmp_valuesize_freq = 0;
+            fs_ptr->read((char *)&tmp_valuesize_freq, sizeof(uint32_t));
+            valuesize_histogram[tmp_valuesize] = tmp_valuesize_freq;
+        }
+
+        // (2) Convert characteristics into key/value size distribution
+        
+        // Get dataset key size distribution
+        std::vector<uint32_t> existing_keysizes(0); // existing key sizes (i.e., with positive freqs)
+        std::vector<uint32_t> positive_freqs(0); // positive freqs of existing key sizes
+        uint32_t total_keysize_freq = 0;
+        for (uint32_t tmp_keysize = 0; tmp_keysize < keysize_histogram_size; tmp_keysize++)
+        {
+            uint32_t tmp_keysize_freq = keysize_histogram[tmp_keysize];
+            if (tmp_keysize_freq > 0)
+            {
+                existing_keysizes.push_back(tmp_keysize);
+                positive_freqs.push_back(tmp_keysize_freq);
+                total_keysize_freq += tmp_keysize_freq;
+            }
+        }
+
+        assert(existing_keysizes.size() > 0);
+        bool is_fixed_keysize = (existing_keysizes.size() == 1);
+        uint32_t fixed_keysize = 0;
+        std::discrete_distribution<uint32_t>* variable_keysize_dist = NULL;
+        if (is_fixed_keysize)
+        {
+            fixed_keysize = existing_keysizes[0];
+            assert(positive_freqs[0] == total_keysize_freq);
+        }
+        else
+        {
+            std::vector<double> keysize_probs(positive_freqs.size(), 0.0);
+            for (uint32_t i = 0; i < positive_freqs.size(); i++)
+            {
+                keysize_probs[i] = static_cast<double>(positive_freqs[i]) / static_cast<double>(total_keysize_freq);
+            }
+            variable_keysize_dist = new std::discrete_distribution<uint32_t>(keysize_probs.begin(), keysize_probs.end());
+            assert(variable_keysize_dist != NULL);
+        }
+
+        // Get dataset value size distribution
+        std::vector<uint32_t> existing_valuesizes(0); // existing value sizes (i.e., with positive freqs)
+        std::vector<uint32_t> positive_valuesize_freqs(0); // positive freqs of existing value sizes
+        uint32_t total_valuesize_freq = 0;
+        for (uint32_t tmp_valuesize = 0; tmp_valuesize < valuesize_histogram_size; tmp_valuesize++)
+        {
+            uint32_t tmp_valuesize_freq = valuesize_histogram[tmp_valuesize];
+            if (tmp_valuesize_freq > 0)
+            {
+                existing_valuesizes.push_back(tmp_valuesize);
+                positive_valuesize_freqs.push_back(tmp_valuesize_freq);
+                total_valuesize_freq += tmp_valuesize_freq;
+            }
+        }
+
+        assert(existing_valuesizes.size() > 0);
+        bool is_fixed_valuesize = (existing_valuesizes.size() == 1);
+        uint32_t fixed_valuesize = 0;
+        std::discrete_distribution<uint32_t>* variable_valuesize_dist = NULL;
+        if (is_fixed_valuesize)
+        {
+            fixed_valuesize = existing_valuesizes[0];
+            assert(positive_valuesize_freqs[0] == total_valuesize_freq);
+        }
+        else
+        {
+            std::vector<double> valuesize_probs(positive_valuesize_freqs.size(), 0.0);
+            for (uint32_t i = 0; i < positive_valuesize_freqs.size(); i++)
+            {
+                valuesize_probs[i] = static_cast<double>(positive_valuesize_freqs[i]) / static_cast<double>(total_valuesize_freq);
+            }
+            variable_valuesize_dist = new std::discrete_distribution<uint32_t>(valuesize_probs.begin(), valuesize_probs.end());
+            assert(variable_valuesize_dist != NULL);
+        }
+
+        // (3) Use Zipfian constant and key/value size distribution to generate keys, probs, and value sizes
+
+        // Initialize dataset keys, probs, and value sizes
+        const uint32_t dataset_size = getKeycnt_();
+        dataset_keys_.clear();
+        dataset_keys_.resize(dataset_size, "");
+        dataset_probs_.clear();
+        dataset_probs_.resize(dataset_size, 0.0);
+        dataset_valsizes_.clear();
+        dataset_valsizes_.resize(dataset_size, 0);
+
+        // Generate per-rank key, prob, and value size
+        std::mt19937_64 tmp_dataset_randgen(Util::DATASET_KVPAIR_GENERATION_SEED);
+        for (uint32_t i = 0; i < dataset_size; i++)
+        {
+            uint32_t tmp_rank = i + 1;
+        }
+
+        // TODO: END HERE
+
+        if (!is_fixed_keysize) // Release key size distribution if necessary
+        {
+            assert(variable_keysize_dist != NULL);
+            delete variable_keysize_dist;
+            variable_keysize_dist = NULL;
+        }
+
+        if (!is_fixed_valuesize) // Release value size distribution if necessary
+        {
+            assert(variable_valuesize_dist != NULL);
+            delete variable_valuesize_dist;
+            variable_valuesize_dist = NULL;
+        }
+
+        // TODO: print key, prob, and value size of dataset[0] and dataset[1] to verify the same dataset across different clients and the same Zeta distribution between C++ and python
+
+        // Load dataset probs and value sizes
+        for (uint32_t i = 0; i < dataset_size; i++)
+        {
+            dataset_keys_[i] = i + 1; // From 1 to 1.3M
+
+            // Load prob
+            float tmp_prob = 0.0;
+            fs_ptr->read((char *)&tmp_prob, sizeof(float));
+            dataset_probs_[i] = static_cast<double>(tmp_prob);
+
+            // Load value size
+            uint32_t tmp_valsize = 0;
+            fs_ptr->read((char *)&tmp_valsize, sizeof(uint32_t));
+            dataset_valsizes_[i] = tmp_valsize;
+        }
+        
+        // Update dataset statistics
+        average_dataset_keysize_ = sizeof(uint32_t);
+        min_dataset_keysize_ = sizeof(uint32_t);
+        max_dataset_keysize_ = sizeof(uint32_t);
+        for (uint32_t i = 0; i < dataset_size; i++)
+        {
+            uint32_t tmp_valsize = dataset_valsizes_[i];
+            average_dataset_valuesize_ += tmp_valsize;
+
+            if (i == 0 || tmp_valsize < min_dataset_valuesize_)
+            {
+                min_dataset_valuesize_ = tmp_valsize;
+            }
+
+            if (i == 0 || tmp_valsize > max_dataset_valuesize_)
+            {
+                max_dataset_valuesize_ = tmp_valsize;
+            }
+        }
+        average_dataset_valuesize_ /= dataset_size;
 
         return;
     }

@@ -220,10 +220,10 @@ namespace covered
 
     void FbphotoWorkloadWrapper::loadFbphotoPropertiesFile_()
     {
-        // NOTE: MUST be the same as dataset filepath in scripts/workload/facebook_photocache.py
+        // NOTE: MUST be the same as properties filepath in scripts/workload/facebook_photocache.py
         const std::string fbphoto_properties_filepath = Config::getTraceDirpath() + "/fbphoto.properties";
 
-        // Check existance of dataset file
+        // Check existance of properties file
         if (!Util::isFileExist(fbphoto_properties_filepath, true))
         {
             std::ostringstream oss;
@@ -232,7 +232,7 @@ namespace covered
             exit(1);
         }
 
-        // Load dataset file including dataset size, probs, and value sizes
+        // Load properties file including dataset size, probs, and value sizes
         std::fstream* fs_ptr = Util::openFile(fbphoto_properties_filepath, std::ios_base::in | std::ios_base::binary);
         assert(fs_ptr != NULL);
 

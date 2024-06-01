@@ -68,7 +68,7 @@ namespace covered
 
         // Const shared variables
         // (1) For clients, dataset loader, and cloud
-        std::vector<uint32_t> dataset_keys_;
+        std::vector<std::string> dataset_keys_;
         std::vector<double> dataset_probs_;
         std::vector<uint32_t> dataset_valsizes_;
         // (2) For clients
