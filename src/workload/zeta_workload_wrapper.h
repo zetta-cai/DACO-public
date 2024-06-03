@@ -20,6 +20,8 @@ namespace covered
     class ZetaWorkloadWrapper : public WorkloadWrapperBase
     {
     public:
+        static const uint32_t RIEMANN_ZETA_PRECISION; // Precision for Riemann Zeta function calculation
+
         ZetaWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const float& zipf_alpha);
         virtual ~ZetaWorkloadWrapper();
 
@@ -43,6 +45,8 @@ namespace covered
         static const std::string kClassName;
 
         void loadZetaCharacteristicsFile_(); // Load Zipfian constant, key size histogram, and value size histogram
+        static std::string generateKeystr_(const uint32_t& keyrank, const uint32_t& keysize); // Generate a key string based on the key rank with key size bytes
+        static double calcRiemannZeta_(const double& zipf_constant); // Calculate the Riemann Zeta function for the Zipfian constant
 
         virtual void initWorkloadParameters_() override;
         virtual void overwriteWorkloadParameters_() override;

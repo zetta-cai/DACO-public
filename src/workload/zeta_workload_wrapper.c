@@ -10,6 +10,8 @@ namespace covered
 {
     const std::string ZetaWorkloadWrapper::kClassName("ZetaWorkloadWrapper");
 
+    const uint32_t ZetaWorkloadWrapper::RIEMANN_ZETA_PRECISION = 1000000; // Precision for Riemann Zeta function calculation
+
     //, zipf_alpha_(zipf_alpha)
     ZetaWorkloadWrapper::ZetaWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const float& zipf_alpha) : WorkloadWrapperBase(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role)
     {
@@ -270,8 +272,8 @@ namespace covered
         assert(fs_ptr != NULL);
 
         // Load Zipfian constant
-        float zipf_constant = 0.0;
-        fs_ptr->read((char *)&zipf_constant, sizeof(float));
+        double zipf_constant = 0.0;
+        fs_ptr->read((char *)&zipf_constant, sizeof(double));
         assert(zipf_constant > 1.0); // Zeta-based Zipfian constant must be larger than 1.0
 
         // Load key size histogram
@@ -383,10 +385,39 @@ namespace covered
 
         // Generate per-rank key, prob, and value size
         std::mt19937_64 tmp_dataset_randgen(Util::DATASET_KVPAIR_GENERATION_SEED);
+        const double riemann_zeta_value = calcRiemannZeta_(zipf_constant);
+        double total_prob = 0.0;
         for (uint32_t i = 0; i < dataset_size; i++)
         {
             uint32_t tmp_rank = i + 1;
+
+            // Generate key
+            uint32_t tmp_keysize = fixed_keysize;
+            if (!is_fixed_keysize)
+            {
+                uint32_t tmp_keysize_idx = (*variable_keysize_dist)(tmp_dataset_randgen);
+                assert(tmp_keysize_idx < existing_keysizes.size());
+                tmp_keysize = existing_keysizes[tmp_keysize_idx];
+            }
+            dataset_keys_[i] = generateKeystr_(tmp_rank, tmp_keysize);
+
+            // Generate prob
+            double tmp_prob = 1.0 / std::pow(static_cast<double>(tmp_rank), zipf_constant) / riemann_zeta_value;
+            dataset_probs_[i] = tmp_prob;
+            total_prob += tmp_prob;
+
+            // Generate value size
+            uint32_t tmp_valuesize = fixed_valuesize;
+            if (!is_fixed_valuesize)
+            {
+                uint32_t tmp_valuesize_idx = (*variable_valuesize_dist)(tmp_dataset_randgen);
+                assert(tmp_valuesize_idx < existing_valuesizes.size());
+                tmp_valuesize = existing_valuesizes[tmp_valuesize_idx];
+            }
+            dataset_valsizes_[i] = tmp_valuesize;
         }
+
+        // TODO: Normalize dataset probs to sum to 1.0
 
         // TODO: END HERE
 
@@ -444,6 +475,38 @@ namespace covered
         average_dataset_valuesize_ /= dataset_size;
 
         return;
+    }
+
+    std::string ZetaWorkloadWrapepr::generateKeystr_(const uint32_t& keyrank, const uint32_t& keysize)
+    {
+        const uint32_t keyrank_bytecnt = sizeof(uint32_t); // 4B
+
+        // Create keystr (>= 4B)
+        uint32_t tmp_keysize = keysize;
+        if (keysize < keyrank_bytecnt)
+        {
+            tmp_keysize = keyrank_bytecnt;
+        }
+        std::string tmp_keystr(tmp_keysize, '0');
+
+        // Copy keyrank str to the first 4B
+        std::string keyrank_str((const char*)&keyrank, keyrank_bytecnt); // 4B
+        for (uint32_t i = 0; i < keyrank_bytecnt; i++)
+        {
+            tmp_keystr[i] = keyrank_str[i];
+        }
+
+        return tmp_keystr;
+    }
+
+    double ZetaWorkloadWrapepr::calcRiemannZeta_(const double& zipf_constant)
+    {
+        double riemann_zeta_value = 0.0;
+        for (uint32_t i = 1; i <= RIEMANN_ZETA_PRECISION; i++)
+        {
+            riemann_zeta_value += 1.0 / std::pow(static_cast<double>(i), zipf_constant);
+        }
+        return riemann_zeta_value;
     }
 
     void ZipfFacebookWorkloadWrapper::initWorkloadParameters_()
