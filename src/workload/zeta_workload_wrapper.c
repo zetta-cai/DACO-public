@@ -45,18 +45,9 @@ namespace covered
         client_worker_reqdist_ptrs_.resize(perclient_workercnt, NULL);
     }
 
-    ZipfFacebookWorkloadWrapper::~ZipfFacebookWorkloadWrapper()
+    ZetaWorkloadWrapper::~ZetaWorkloadWrapper()
     {
         // For clients, dataset loader, and cloud
-        if (op_pool_dist_ptr_ != NULL)
-        {
-            delete op_pool_dist_ptr_;
-            op_pool_dist_ptr_ = NULL;
-        }
-
-        assert(workload_generator_ != nullptr);
-        workload_generator_->markFinish();
-        workload_generator_->markShutdown();
 
         if (needWorkloadItems_()) // Clients
         {
@@ -67,10 +58,18 @@ namespace covered
                 delete client_worker_item_randgen_ptrs_[i];
                 client_worker_item_randgen_ptrs_[i] = NULL;
             }
+
+            // Release request distribution for each client worker
+            for (uint32_t i = 0; i < client_worker_reqdist_ptrs_.size(); i++)
+            {
+                assert(client_worker_reqdist_ptrs_[i] != NULL);
+                delete client_worker_reqdist_ptrs_[i];
+                client_worker_reqdist_ptrs_[i] = NULL;
+            }
         }
     }
 
-    WorkloadItem ZipfFacebookWorkloadWrapper::generateWorkloadItem(const uint32_t& local_client_worker_idx)
+    WorkloadItem ZetaWorkloadWrapper::generateWorkloadItem(const uint32_t& local_client_worker_idx)
     {
         checkIsValid_();
         checkPointers_();
@@ -78,51 +77,21 @@ namespace covered
         assert(needWorkloadItems_()); // Must be clients for evaluation
         assert(local_client_worker_idx < client_worker_item_randgen_ptrs_.size());
 
+        // Get a workload index randomly
         std::mt19937_64* request_randgen_ptr = client_worker_item_randgen_ptrs_[local_client_worker_idx];
         assert(request_randgen_ptr != NULL);
+        std::discrete_distribution<uint32_t>* request_dist_ptr = client_worker_reqdist_ptrs_[local_client_worker_idx];
+        assert(request_dist_ptr != NULL);
+        const uint32_t tmp_key_index = (*request_dist_ptr)(*request_randgen_ptr); // NOTE: here we directly use Zeta distribution to select item from dataset as workload item, instead of selecting item from pre-generated workload items (approximate workload distribution as in src/workload/fbphoto_workload_wrapper.c)
+        assert(tmp_key_index < dataset_keys_.size());
 
-        // Must be 0 for Facebook CDN trace due to only a single operation pool (cachelib::PoolId = int8_t)
-        const uint8_t tmp_poolid = static_cast<uint8_t>((*op_pool_dist_ptr_)(*request_randgen_ptr));
-
-        const facebook::cachelib::cachebench::Request& tmp_facebook_req(workload_generator_->getReq(tmp_poolid, *request_randgen_ptr, last_reqid_));
-
-        // Convert facebook::cachelib::cachebench::Request to covered::Request
-        const Key tmp_covered_key(tmp_facebook_req.key);
-        const Value tmp_covered_value(static_cast<uint32_t>(*(tmp_facebook_req.sizeBegin)));
-        WorkloadItemType tmp_item_type;
-        facebook::cachelib::cachebench::OpType tmp_op_type = tmp_facebook_req.getOp();
-        switch (tmp_op_type)
-        {
-            case facebook::cachelib::cachebench::OpType::kGet:
-            case facebook::cachelib::cachebench::OpType::kLoneGet:
-            {
-                tmp_item_type = WorkloadItemType::kWorkloadItemGet;
-                break;
-            }
-            case facebook::cachelib::cachebench::OpType::kSet:
-            case facebook::cachelib::cachebench::OpType::kLoneSet:
-            case facebook::cachelib::cachebench::OpType::kUpdate:
-            {
-                tmp_item_type = WorkloadItemType::kWorkloadItemPut;
-                break;
-            }
-            case facebook::cachelib::cachebench::OpType::kDel:
-            {
-                tmp_item_type = WorkloadItemType::kWorkloadItemDel;
-                break;
-            }
-            default:
-            {
-                std::ostringstream oss;
-                oss << "facebook::cachelib::cachebench::OpType " << static_cast<uint32_t>(tmp_op_type) << " is not supported now (please refer to lib/CacheLib/cachelib/cachebench/util/Request.h for OpType)!";
-                Util::dumpErrorMsg(instance_name_, oss.str());
-                exit(1);
-            }
-        }
-
-        last_reqid_ = tmp_facebook_req.requestId;
-        return WorkloadItem(tmp_covered_key, tmp_covered_value, tmp_item_type);
+        // Get key
+        Key tmp_key(dataset_keys_[tmp_key_index]);
+        
+        return WorkloadItem(tmp_key, Value(dataset_valsizes_[tmp_key_index]), WorkloadItemType::kWorkloadItemGet); // NOT found read-write ratio in the paper -> treat as read-only for all methods with fair comparisons
     }
+
+    // TODO: END HERE
 
     uint32_t ZipfFacebookWorkloadWrapper::getPracticalKeycnt() const
     {
@@ -417,9 +386,48 @@ namespace covered
             dataset_valsizes_[i] = tmp_valuesize;
         }
 
-        // TODO: Normalize dataset probs to sum to 1.0
+        // Normalize dataset probs to sum to 1.0
+        for (uint32_t i = 0; i < dataset_size; i++)
+        {
+            dataset_probs_[i] /= total_prob;
+        }
 
-        // TODO: END HERE
+        // Update dataset statistics
+        for (uint32_t i = 0; i < dataset_size; i++)
+        {
+            uint32_t tmp_keysize = dataset_keys_[i].length();
+            average_dataset_keysize_ += tmp_keysize;
+
+            if (i == 0 || tmp_keysize < min_dataset_keysize_)
+            {
+                min_dataset_keysize_ = tmp_keysize;
+            }
+
+            if (i == 0 || tmp_keysize > max_dataset_keysize_)
+            {
+                max_dataset_keysize_ = tmp_keysize;
+            }
+
+            uint32_t tmp_valsize = dataset_valsizes_[i];
+            average_dataset_valuesize_ += tmp_valsize;
+
+            if (i == 0 || tmp_valsize < min_dataset_valuesize_)
+            {
+                min_dataset_valuesize_ = tmp_valsize;
+            }
+
+            if (i == 0 || tmp_valsize > max_dataset_valuesize_)
+            {
+                max_dataset_valuesize_ = tmp_valsize;
+            }
+        }
+        average_dataset_keysize_ /= dataset_size;
+        average_dataset_valuesize_ /= dataset_size;
+
+        // TODO: Print debug info (to verify the same dataset across different clients and the same Zeta distribution between C++ and python)
+        std::ostringstream oss;
+        oss << "dataset_keys_[0]: " << dataset_keys_[0].getKeyDebugstr() << "; dataset_probs_[0]: " << dataset_probs_[0] << "; dataset_valsizes_[0]: " << dataset_valsizes_[0] << std::endl;
+        oss << "dataset_keys_[1]: " << dataset_keys_[1].getKeyDebugstr() << "; dataset_probs_[1]: " << dataset_probs_[1] << "; dataset_valsizes_[1]: " << dataset_valsizes_[1];
 
         if (!is_fixed_keysize) // Release key size distribution if necessary
         {
@@ -434,45 +442,6 @@ namespace covered
             delete variable_valuesize_dist;
             variable_valuesize_dist = NULL;
         }
-
-        // TODO: print key, prob, and value size of dataset[0] and dataset[1] to verify the same dataset across different clients and the same Zeta distribution between C++ and python
-
-        // Load dataset probs and value sizes
-        for (uint32_t i = 0; i < dataset_size; i++)
-        {
-            dataset_keys_[i] = i + 1; // From 1 to 1.3M
-
-            // Load prob
-            float tmp_prob = 0.0;
-            fs_ptr->read((char *)&tmp_prob, sizeof(float));
-            dataset_probs_[i] = static_cast<double>(tmp_prob);
-
-            // Load value size
-            uint32_t tmp_valsize = 0;
-            fs_ptr->read((char *)&tmp_valsize, sizeof(uint32_t));
-            dataset_valsizes_[i] = tmp_valsize;
-        }
-        
-        // Update dataset statistics
-        average_dataset_keysize_ = sizeof(uint32_t);
-        min_dataset_keysize_ = sizeof(uint32_t);
-        max_dataset_keysize_ = sizeof(uint32_t);
-        for (uint32_t i = 0; i < dataset_size; i++)
-        {
-            uint32_t tmp_valsize = dataset_valsizes_[i];
-            average_dataset_valuesize_ += tmp_valsize;
-
-            if (i == 0 || tmp_valsize < min_dataset_valuesize_)
-            {
-                min_dataset_valuesize_ = tmp_valsize;
-            }
-
-            if (i == 0 || tmp_valsize > max_dataset_valuesize_)
-            {
-                max_dataset_valuesize_ = tmp_valsize;
-            }
-        }
-        average_dataset_valuesize_ /= dataset_size;
 
         return;
     }

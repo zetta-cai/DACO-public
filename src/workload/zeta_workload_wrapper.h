@@ -77,7 +77,7 @@ namespace covered
         std::vector<uint32_t> dataset_valsizes_;
         // (2) For clients
         std::vector<std::mt19937_64*> client_worker_item_randgen_ptrs_;
-        std::vector<std::uniform_int_distribution<uint32_t>*> client_worker_reqdist_ptrs_; // randomly select request index from workload indices of each client
+        std::vector<std::discrete_distribution<uint32_t>*> client_worker_reqdist_ptrs_; // randomly select request index from workload indices of each client
         // std::vector<uint32_t> workload_key_indices_; // workload indices for each client (NOTE: NO need due to directly generating workload items by Zeta distribution)
     };
 }

@@ -70,7 +70,7 @@ namespace covered
         assert(request_randgen_ptr != NULL);
         std::uniform_int_distribution<uint32_t>* request_dist_ptr = client_worker_reqdist_ptrs_[local_client_worker_idx];
         assert(request_dist_ptr != NULL);
-        const uint32_t tmp_workload_index = (*client_worker_reqdist_ptrs_[local_client_worker_idx])(*request_randgen_ptr);
+        const uint32_t tmp_workload_index = (*request_dist_ptr)(*request_randgen_ptr);
 
         // Get the key index
         const uint32_t tmp_key_index = workload_key_indices_[tmp_workload_index];
