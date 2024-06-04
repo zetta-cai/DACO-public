@@ -91,131 +91,135 @@ namespace covered
         return WorkloadItem(tmp_key, Value(dataset_valsizes_[tmp_key_index]), WorkloadItemType::kWorkloadItemGet); // NOT found read-write ratio in the paper -> treat as read-only for all methods with fair comparisons
     }
 
-    // TODO: END HERE
-
-    uint32_t ZipfFacebookWorkloadWrapper::getPracticalKeycnt() const
+    uint32_t ZetaWorkloadWrapper::getPracticalKeycnt() const
     {
         checkIsValid_();
         checkPointers_();
 
         assert(needDatasetItems_()); // Dataset loader and cloud
 
-        // NOTE: CacheLib CDN generator will remove redundant keys, so the number of generated key-value pairs will be slightly smaller than keycnt -> we do NOT fix CacheLib as the keycnt gap is very limited and we aim to avoid changing its workload distribution.
-        int64_t dataset_size = workload_generator_->getAllKeys().size();
-        return Util::toUint32(dataset_size);
+        return dataset_keys_.size();
     }
 
-    WorkloadItem ZipfFacebookWorkloadWrapper::getDatasetItem(const uint32_t itemidx)
+    WorkloadItem ZetaWorkloadWrapper::getDatasetItem(const uint32_t itemidx)
     {
         checkIsValid_();
         checkPointers_();
 
         assert(needDatasetItems_()); // Dataset loader and cloud
         assert(itemidx < getPracticalKeycnt());
-        
-        // Must be 0 for Facebook CDN trace due to only a single operation pool (cachelib::PoolId = int8_t)
-        assert(facebook_stressor_config_.opPoolDistribution.size() == 1 && facebook_stressor_config_.opPoolDistribution[0] == double(1.0));
-        const uint8_t tmp_poolid = 0;
 
-        const facebook::cachelib::cachebench::Request& tmp_facebook_req(workload_generator_->getReq(tmp_poolid, itemidx));
+        Key tmp_key(dataset_keys_[itemidx]);
 
-        const Key tmp_covered_key(tmp_facebook_req.key);
-        const Value tmp_covered_value(static_cast<uint32_t>(*(tmp_facebook_req.sizeBegin)));
-
-        return WorkloadItem(tmp_covered_key, tmp_covered_value, WorkloadItemType::kWorkloadItemPut);
+        return WorkloadItem(tmp_key, Value(dataset_valsizes_[itemidx]), WorkloadItemType::kWorkloadItemPut);
     }
 
     // Get average/min/max dataset key/value size
 
-    double ZipfFacebookWorkloadWrapper::getAvgDatasetKeysize() const
+    double ZetaWorkloadWrapper::getAvgDatasetKeysize() const
     {
         checkIsValid_();
         checkPointers_();
 
         assert(needDatasetItems_()); // Dataset loader and cloud
 
-        return workload_generator_->getAvgDatasetKeysize();
+        return average_dataset_keysize_;
     }
     
-    double ZipfFacebookWorkloadWrapper::getAvgDatasetValuesize() const
+    double ZetaWorkloadWrapper::getAvgDatasetValuesize() const
     {
         checkIsValid_();
         checkPointers_();
 
         assert(needDatasetItems_()); // Dataset loader and cloud
 
-        return workload_generator_->getAvgDatasetValuesize();
+        return average_dataset_valuesize_;
     }
 
-    uint32_t ZipfFacebookWorkloadWrapper::getMinDatasetKeysize() const
+    uint32_t ZetaWorkloadWrapper::getMinDatasetKeysize() const
     {
         checkIsValid_();
         checkPointers_();
 
         assert(needDatasetItems_()); // Dataset loader and cloud
 
-        return workload_generator_->getMinDatasetKeysize();
+        return min_dataset_keysize_;
     }
 
-    uint32_t ZipfFacebookWorkloadWrapper::getMinDatasetValuesize() const
+    uint32_t ZetaWorkloadWrapper::getMinDatasetValuesize() const
     {
         checkIsValid_();
         checkPointers_();
 
         assert(needDatasetItems_()); // Dataset loader and cloud
 
-        return workload_generator_->getMinDatasetValuesize();
+        return min_dataset_valuesize_;
     }
 
-    uint32_t ZipfFacebookWorkloadWrapper::getMaxDatasetKeysize() const
+    uint32_t ZetaWorkloadWrapper::getMaxDatasetKeysize() const
     {
         checkIsValid_();
         checkPointers_();
 
         assert(needDatasetItems_()); // Dataset loader and cloud
 
-        return workload_generator_->getMaxDatasetKeysize();
+        return max_dataset_keysize_;
     }
 
-    uint32_t ZipfFacebookWorkloadWrapper::getMaxDatasetValuesize() const
+    uint32_t ZetaWorkloadWrapper::getMaxDatasetValuesize() const
     {
         checkIsValid_();
         checkPointers_();
 
         assert(needDatasetItems_()); // Dataset loader and cloud
 
-        return workload_generator_->getMaxDatasetValuesize();
+        return max_dataset_valuesize_;
     }
 
     // For warmup speedup
 
-    void ZipfFacebookWorkloadWrapper::quickDatasetGet(const Key& key, Value& value) const
+    void ZetaWorkloadWrapper::quickDatasetGet(const Key& key, Value& value) const
     {
         checkIsValid_();
         checkPointers_();
 
         assert(getWorkloadUsageRole_() == WorkloadWrapperBase::WORKLOAD_USAGE_ROLE_CLOUD);
 
-        uint32_t value_size = 0;
-        workload_generator_->quickDatasetGet(key.getKeystr(), value_size);
+        // Get index
+        const std::string tmp_keystr = key.getKeystr();
+        uint32_t tmp_keyrank = getKeyrankFromKeystr_(tmp_keystr);
+        assert(tmp_keyrank >= 1);
+        uint32_t tmp_key_index = tmp_keyrank - 1;
+        assert(tmp_key_index < dataset_keys_.size()); // Should not access an unexisting key during warmup
+        assert(dataset_keys_[tmp_key_index] == tmp_keystr);
+
+        uint32_t value_size = dataset_valsizes_[tmp_key_index];
         value = Value(value_size);
 
         return;
     }
 
-    void ZipfFacebookWorkloadWrapper::quickDatasetPut(const Key& key, const Value& value)
+    void ZetaWorkloadWrapper::quickDatasetPut(const Key& key, const Value& value)
     {
         checkIsValid_();
         checkPointers_();
 
         assert(getWorkloadUsageRole_() == WorkloadWrapperBase::WORKLOAD_USAGE_ROLE_CLOUD);
 
-        workload_generator_->quickDatasetPut(key.getKeystr(), value.getValuesize());
+        // Get index
+        const std::string tmp_keystr = key.getKeystr();
+        uint32_t tmp_keyrank = getKeyrankFromKeystr_(tmp_keystr);
+        assert(tmp_keyrank >= 1);
+        uint32_t tmp_key_index = tmp_keyrank - 1;
+        assert(tmp_key_index < dataset_keys_.size()); // Should not access an unexisting key during warmup
+        assert(dataset_keys_[tmp_key_index] == tmp_keystr);
+
+        dataset_valsizes_[tmp_key_index] = value.getValuesize();
 
         return;
     }
 
-    void ZipfFacebookWorkloadWrapper::quickDatasetDel(const Key& key)
+    void ZetaWorkloadWrapper::quickDatasetDel(const Key& key)
     {
         quickDatasetPut(key, Value()); // Use default value with is_deleted = true and value size = 0 as delete operation
 
@@ -368,7 +372,7 @@ namespace covered
                 assert(tmp_keysize_idx < existing_keysizes.size());
                 tmp_keysize = existing_keysizes[tmp_keysize_idx];
             }
-            dataset_keys_[i] = generateKeystr_(tmp_rank, tmp_keysize);
+            dataset_keys_[i] = getKeystrFromKeyrank_(tmp_rank, tmp_keysize);
 
             // Generate prob
             double tmp_prob = 1.0 / std::pow(static_cast<double>(tmp_rank), zipf_constant) / riemann_zeta_value;
@@ -426,8 +430,8 @@ namespace covered
 
         // TODO: Print debug info (to verify the same dataset across different clients and the same Zeta distribution between C++ and python)
         std::ostringstream oss;
-        oss << "dataset_keys_[0]: " << dataset_keys_[0].getKeyDebugstr() << "; dataset_probs_[0]: " << dataset_probs_[0] << "; dataset_valsizes_[0]: " << dataset_valsizes_[0] << std::endl;
-        oss << "dataset_keys_[1]: " << dataset_keys_[1].getKeyDebugstr() << "; dataset_probs_[1]: " << dataset_probs_[1] << "; dataset_valsizes_[1]: " << dataset_valsizes_[1];
+        oss << "dataset_keys_[0]: " << Key(dataset_keys_[0]).getKeyDebugstr() << "; dataset_probs_[0]: " << dataset_probs_[0] << "; dataset_valsizes_[0]: " << dataset_valsizes_[0] << std::endl;
+        oss << "dataset_keys_[1]: " << Key(dataset_keys_[1]).getKeyDebugstr() << "; dataset_probs_[1]: " << dataset_probs_[1] << "; dataset_valsizes_[1]: " << dataset_valsizes_[1];
 
         if (!is_fixed_keysize) // Release key size distribution if necessary
         {
@@ -446,7 +450,7 @@ namespace covered
         return;
     }
 
-    std::string ZetaWorkloadWrapepr::generateKeystr_(const uint32_t& keyrank, const uint32_t& keysize)
+    std::string ZetaWorkloadWrapper::getKeystrFromKeyrank_(const uint32_t& keyrank, const uint32_t& keysize)
     {
         const uint32_t keyrank_bytecnt = sizeof(uint32_t); // 4B
 
@@ -468,7 +472,7 @@ namespace covered
         return tmp_keystr;
     }
 
-    double ZetaWorkloadWrapepr::calcRiemannZeta_(const double& zipf_constant)
+    double ZetaWorkloadWrapper::calcRiemannZeta_(const double& zipf_constant)
     {
         double riemann_zeta_value = 0.0;
         for (uint32_t i = 1; i <= RIEMANN_ZETA_PRECISION; i++)
@@ -478,15 +482,24 @@ namespace covered
         return riemann_zeta_value;
     }
 
-    void ZipfFacebookWorkloadWrapper::initWorkloadParameters_()
+    uint32_t ZetaWorkloadWrapper::getKeyrankFromKeystr_(const std::string& keystr)
     {
-        // Load workload config file for Facebook CDN trace
-        CacheBenchConfig facebook_config(Config::getFacebookConfigFilepath());
-        //facebook_cache_config_ = facebook_config.getCacheConfig();
-        facebook_stressor_config_ = facebook_config.getStressorConfig();
+        const uint32_t keyrank_bytecnt = sizeof(uint32_t); // 4B
+        assert(keystr.length() >= keyrank_bytecnt);
 
+        // Copy the first 4B to keyrank
+        uint32_t tmp_keyrank = 0;
+        memcpy((char *)&tmp_keyrank, keystr.c_str(), keyrank_bytecnt);
+        assert(tmp_keyrank >= 1);
+
+        return tmp_keyrank;
+    }
+
+    void ZetaWorkloadWrapper::initWorkloadParameters_()
+    {
         if (needWorkloadItems_()) // Clients
         {
+            // Create workload generator for each client
             for (uint32_t tmp_local_client_worker_idx = 0; tmp_local_client_worker_idx < getPerclientWorkercnt_(); tmp_local_client_worker_idx++)
             {
                 uint32_t tmp_global_client_worker_idx = Util::getGlobalClientWorkerIdx(getClientIdx_(), tmp_local_client_worker_idx, getPerclientWorkercnt_());
@@ -503,93 +516,45 @@ namespace covered
                 }
 
                 client_worker_item_randgen_ptrs_[tmp_local_client_worker_idx] = tmp_client_worker_item_randgen_ptr_;
+
+                client_worker_reqdist_ptrs_[tmp_local_client_worker_idx] = new std::discrete_distribution<uint32_t>(dataset_probs_.begin(), dataset_probs_.end());
+                assert(client_worker_reqdist_ptrs_[tmp_local_client_worker_idx] != NULL);
             }
         }
 
         return;
     }
 
-    void ZipfFacebookWorkloadWrapper::overwriteWorkloadParameters_()
+    void ZetaWorkloadWrapper::overwriteWorkloadParameters_()
     {
-        uint32_t tmp_perclientworker_opcnt = 0;
-        uint32_t tmp_perclient_workercnt = 0;
-        if (needWorkloadItems_())
-        {
-            tmp_perclient_workercnt = getPerclientWorkercnt_();
-            tmp_perclientworker_opcnt = getPerclientOpcnt_() / tmp_perclient_workercnt;
-        }
+        // Do nothing
 
-        facebook_stressor_config_.numOps = static_cast<uint64_t>(tmp_perclientworker_opcnt);
-        facebook_stressor_config_.numThreads = static_cast<uint64_t>(tmp_perclient_workercnt);
-        facebook_stressor_config_.numKeys = static_cast<uint64_t>(getKeycnt_());
-
-        // NOTE: opPoolDistribution is {1.0}, which generates 0 with a probability of 1.0
-        op_pool_dist_ptr_ = new std::discrete_distribution<>(facebook_stressor_config_.opPoolDistribution.begin(), facebook_stressor_config_.opPoolDistribution.end());
-        if (op_pool_dist_ptr_ == NULL)
-        {
-            Util::dumpErrorMsg(instance_name_, "failed to create operation pool distribution!");
-            exit(1);
-        }
+        return;
     }
 
-    void ZipfFacebookWorkloadWrapper::createWorkloadGenerator_()
+    void ZetaWorkloadWrapper::createWorkloadGenerator_()
     {
-        // facebook::cachelib::cachebench::WorkloadGenerator will generate keycnt key-value pairs by generateReqs() and generate perclient_opcnt_ requests by generateKeyDistributions() in constructor
-        uint32_t tmp_client_idx = 0;
-        if (needWorkloadItems_()) // Clients
-        {
-            tmp_client_idx = getClientIdx_(); // Use client idx as random seed to generate workload items for the current client
-        }
-        else // Dataset loader and cloud
-        {
-            tmp_client_idx = 0; // NOTE: ONLY need dataset items, yet NOT use workload items -> client idx makes no sense
-        }
-        workload_generator_ = makeGenerator_(facebook_stressor_config_, tmp_client_idx);
-    }
+        // NOT need pre-generated workload items for approximate workload distribution due to directly generating workload items by Zeta distribution
 
-    // (1) For the role of clients, dataset loader, and cloud
-
-    // The same makeGenerator as in lib/CacheLib/cachelib/cachebench/runner/Stressor.cpp
-    std::unique_ptr<covered::GeneratorBase> ZipfFacebookWorkloadWrapper::makeGenerator_(const StressorConfig& config, const uint32_t& client_idx)
-    {
-        if (config.generator == "piecewise-replay") {
-            Util::dumpErrorMsg(instance_name_, "piecewise-replay generator is not supported now!");
-            exit(1);
-            // TODO: copy PieceWiseReplayGenerator into namespace covered to support covered::StressorConfig
-            //return std::make_unique<facebook::cachelib::cachebench::PieceWiseReplayGenerator>(config);
-        } else if (config.generator == "replay") {
-            Util::dumpErrorMsg(instance_name_, "replay generator is not supported now!");
-            exit(1);
-            // TODO: copy KVReplayGenerator into namespace covered to support covered::StressorConfig
-            //return std::make_unique<facebook::cachelib::cachebench::KVReplayGenerator>(config);
-        } else if (config.generator.empty() || config.generator == "workload") {
-            // TODO: Remove the empty() check once we label workload-based configs
-            // properly
-            const bool is_zipf_generator = true;
-            return std::make_unique<covered::WorkloadGenerator>(config, client_idx, is_zipf_generator, zipf_alpha_);
-        } else if (config.generator == "online") {
-            Util::dumpErrorMsg(instance_name_, "online generator is not supported now!");
-            exit(1);
-            // TODO: copy OnlineGenerator into namespace covered to support covered::StressorConfig
-            //return std::make_unique<facebook::cachelib::cachebench::OnlineGenerator>(config);
-        } else {
-            throw std::invalid_argument("Invalid config");
-        }
+        return;
     }
 
     // (2) Common utilities
 
-    void ZipfFacebookWorkloadWrapper::checkPointers_() const
+    void ZetaWorkloadWrapper::checkPointers_() const
     {
-        assert(op_pool_dist_ptr_ != NULL);
-        assert(workload_generator_ != nullptr);  
-
         if (needWorkloadItems_()) // Clients
         {
             assert(client_worker_item_randgen_ptrs_.size() > 0);
             for (uint32_t i = 0; i < client_worker_item_randgen_ptrs_.size(); i++)
             {
                 assert(client_worker_item_randgen_ptrs_[i] != NULL);
+            }
+
+            assert(client_worker_reqdist_ptrs_.size() > 0);
+            for (uint32_t i = 0; i < client_worker_reqdist_ptrs_.size(); i++)
+            {
+                assert(client_worker_reqdist_ptrs_[i] != NULL);
             }
         }
     }

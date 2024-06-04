@@ -45,8 +45,9 @@ namespace covered
         static const std::string kClassName;
 
         void loadZetaCharacteristicsFile_(); // Load Zipfian constant, key size histogram, and value size histogram
-        static std::string generateKeystr_(const uint32_t& keyrank, const uint32_t& keysize); // Generate a key string based on the key rank with key size bytes
+        static std::string getKeystrFromKeyrank_(const uint32_t& keyrank, const uint32_t& keysize); // Generate a key string based on the key rank with key size bytes
         static double calcRiemannZeta_(const double& zipf_constant); // Calculate the Riemann Zeta function for the Zipfian constant
+        static uint32_t getKeyrankFromKeystr_(const std::string& keystr); // Generate a key rank based on the key string
 
         virtual void initWorkloadParameters_() override;
         virtual void overwriteWorkloadParameters_() override;
