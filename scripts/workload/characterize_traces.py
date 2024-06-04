@@ -6,6 +6,7 @@ import struct
 from .utils.trace_loader import *
 from .utils.zipf_curvefit import *
 
+# Zipfian constant: [1.012, 1.029]
 workload_names = [TraceLoader.WIKITEXT_WORKLOADNAME, TraceLoader.WIKIIMAGE_WORKLOADNAME]
 
 # Get dirpath of trace files
