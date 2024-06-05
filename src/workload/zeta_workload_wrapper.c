@@ -430,6 +430,7 @@ namespace covered
 
         // TODO: Print debug info (to verify the same dataset across different clients and the same Zeta distribution between C++ and python)
         std::ostringstream oss;
+        oss << "riemann_zeta_value: " << riemann_zeta_value << std::endl;
         oss << "dataset_keys_[0]: " << Key(dataset_keys_[0]).getKeyDebugstr() << "; dataset_probs_[0]: " << dataset_probs_[0] << "; dataset_valsizes_[0]: " << dataset_valsizes_[0] << std::endl;
         oss << "dataset_keys_[1]: " << Key(dataset_keys_[1]).getKeyDebugstr() << "; dataset_probs_[1]: " << dataset_probs_[1] << "; dataset_valsizes_[1]: " << dataset_valsizes_[1];
 
