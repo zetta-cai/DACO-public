@@ -26,3 +26,13 @@ for i in range(wikiimage_datasetcnt):
 wikiimage_perrank_probs = np.array(wikiimage_perrank_probs)
 wikiimage_perrank_probs = wikiimage_perrank_probs / wikiimage_perrank_probs.sum()
 print("wikiimage rank-1 prob: {}; rank-2 prob: {}".format(wikiimage_perrank_probs[0], wikiimage_perrank_probs[1]))
+
+# # (OBSOLETE due to too skewed) For Facebook photo caching workload
+# fbphoto_datasetcnt = 1000000
+# fbphoto_zipf_constant = 1.67
+# fbphoto_perrank_probs = []
+# for i in range(fbphoto_datasetcnt):
+#     fbphoto_perrank_probs.append(zipf_func(i+1, fbphoto_zipf_constant))
+# fbphoto_perrank_probs = np.array(fbphoto_perrank_probs)
+# fbphoto_perrank_probs = fbphoto_perrank_probs / fbphoto_perrank_probs.sum()
+# print("fbphoto rank-1 prob: {}; rank-2 prob: {}".format(fbphoto_perrank_probs[0], fbphoto_perrank_probs[1]))
