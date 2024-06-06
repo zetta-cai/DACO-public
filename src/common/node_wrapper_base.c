@@ -125,6 +125,8 @@ namespace covered
 
     void NodeWrapperBase::finishInitialization_() const
     {
+        Util::dumpNormalMsg(base_instance_name_, "issue initialization request to finish initialization...");
+
         // Prepare InitializationRequest
         const uint64_t cur_msg_seqnum = getAndIncrNodeMsgSeqnum();
         InitializationRequest initialization_request(node_idx_, node_recvmsg_source_addr_, cur_msg_seqnum);
@@ -174,6 +176,8 @@ namespace covered
                 break;
             }
         }
+
+        Util::dumpNormalMsg(base_instance_name_, "receive initialization response!");
 
         return;
     }

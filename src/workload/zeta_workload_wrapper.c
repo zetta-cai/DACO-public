@@ -387,7 +387,8 @@ namespace covered
                 assert(tmp_valuesize_idx < existing_valuesizes.size());
                 tmp_valuesize = existing_valuesizes[tmp_valuesize_idx];
             }
-            dataset_valsizes_[i] = tmp_valuesize;
+            // NOTE: make sure that scripts/workload/utils/trace_loader.py also treats per bucket as 1024B
+            dataset_valsizes_[i] = tmp_valuesize * 1024; // Each bucket of value size histogram is 1024B
         }
 
         // Normalize dataset probs to sum to 1.0

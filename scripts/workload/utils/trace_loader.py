@@ -81,8 +81,10 @@ class TraceLoader:
         valsize_histogram = [0] * TraceLoader.VALSIZE_HISTOGRAM_SIZE
         for tmp_key in self.statistics_:
             tmp_valsize = self.statistics_[tmp_key][0]
-            if tmp_valsize < TraceLoader.VALSIZE_HISTOGRAM_SIZE:
-                valsize_histogram[tmp_valsize] += 1
+            # NOTE: make sure that src/workload/zeta_workload_wrapper.c also treats per bucket as 1024B
+            tmp_valsize_bktidx = tmp_valsize / 1024 # Each bucket of value size histogram is 1024B
+            if tmp_valsize_bktidx < TraceLoader.VALSIZE_HISTOGRAM_SIZE:
+                valsize_histogram[tmp_valsize_bktidx] += 1
             else:
                 valsize_histogram[TraceLoader.VALSIZE_HISTOGRAM_SIZE - 1] += 1
         return valsize_histogram
