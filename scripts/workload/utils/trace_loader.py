@@ -9,12 +9,12 @@ class TraceLoader:
 
     TSV_DELIMITER = "\t" # Tab-separated values used by Wikipedia Text/Image trace files
     # For Wikipedia Text trace files
-    WIKITEXT_WORKLOADNAME = "zipf_wikitext"
+    WIKITEXT_WORKLOADNAME = "zeta_wikitext"
     WIKITEXT_COLUMNCNT = 4
     WIKITEXT_KEY_COLUMNIDX = 1
     WIKITEXT_VALSIZE_COLUMNIDX = 2
     # For Wikipedia Image trace files
-    WIKIIMAGE_WORKLOADNAME = "zipf_wikiimage"
+    WIKIIMAGE_WORKLOADNAME = "zeta_wikiimage"
     WIKIIMAGE_COLUMNCNT = 5
     WIKIIMAGE_KEY_COLUMNIDX = 1
     WIKIIMAGE_VALSIZE_COLUMNIDX = 3

@@ -10,15 +10,25 @@ from .utils.prototype import *
 
 # (2) Define the settings for the experiment
 
-# Extremely large cache hit ratio issue of SIEVE+ under wikitext with 50% memory
+# Test Zeta workload generator to reproduce public traces w/o geographical information
 simple_example_settings = {
     "clientcnt": 4,
     "edgecnt": 4,
     "keycnt": 1000000,
-    "capacity_mb": 1778,
-    "cache_name": "sieve+",
-    "workload_name": "wikitext"
+    "capacity_mb": 1024,
+    "cache_name": "covered", # covered, gdsf+, lhd+
+    "workload_name": "zeta_wikitext" # zeta_wikitext, zeta_wikiimage
 }
+
+# # Extremely large cache hit ratio issue of SIEVE+ under wikitext with 50% memory
+# simple_example_settings = {
+#     "clientcnt": 4,
+#     "edgecnt": 4,
+#     "keycnt": 1000000,
+#     "capacity_mb": 1778,
+#     "cache_name": "sieve+",
+#     "workload_name": "wikitext"
+# }
 
 # # Unreasonable results of GDSF+ of WikiImage and WikiText in AliCloud -> due to unreasonable partition of single-node traces for geo-distributed evaluation
 # simple_example_settings = {

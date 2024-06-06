@@ -85,8 +85,8 @@ namespace covered
             std::string keycnt_descstr = "the number of unique keys (dataset size; NOT affect " + Util::getReplayedWorkloadHintstr() + " and " + Util::FBPHOTO_WORKLOAD_NAME + ")";
             // OBSOLETE: self-reproduced Facebook photo caching trace is too skewed to be realistic; replayed traces cannot get reasonable results due to incorrect trace partitioning without geographical information
             // Util::WIKIPEDIA_IMAGE_WORKLOAD_NAME + ", " + Util::WIKIPEDIA_TEXT_WORKLOAD_NAME + ", " + Util::FBPHOTO_WORKLOAD_NAME
-            std::string workload_name_descstr = "workload name (e.g., " + Util::FACEBOOK_WORKLOAD_NAME + ", " + Util::ZIPF_FACEBOOK_WORKLOAD_NAME + ", " + Util::ZIPF_WIKIPEDIA_IMAGE_WORKLOAD_NAME + ", and " + Util::ZIPF_WIKIPEDIA_TEXT_WORKLOAD_NAME + ")";
-            std::string zipf_alpha_descstr = "Zipf's law alpha (ONLY for the workload of " + Util::ZIPF_FACEBOOK_WORKLOAD_NAME + ")"; // NOTE: zipf_alpha does NOT affect zifp_wikiimage and zipf_wikitext, whose Zipfian constants are fixed
+            std::string workload_name_descstr = "workload name (e.g., " + Util::FACEBOOK_WORKLOAD_NAME + ", " + Util::ZIPF_FACEBOOK_WORKLOAD_NAME + ", " + Util::ZETA_WIKIPEDIA_IMAGE_WORKLOAD_NAME + ", and " + Util::ZETA_WIKIPEDIA_TEXT_WORKLOAD_NAME + ")";
+            std::string zipf_alpha_descstr = "Zipf's law alpha (ONLY for the workload of " + Util::ZIPF_FACEBOOK_WORKLOAD_NAME + ")"; // NOTE: zipf_alpha does NOT affect zeta_wikiimage and zeta_wikitext, whose Zipfian constants are fixed
 
             // Dynamic configurations for client
             argument_desc_.add_options()
@@ -167,7 +167,7 @@ namespace covered
     {
         // OBSOLETE: self-reproduced Facebook photo caching trace is too skewed to be realistic; replayed traces cannot get reasonable results due to incorrect trace partitioning without geographical information
         // workload_name_ != Util::WIKIPEDIA_IMAGE_WORKLOAD_NAME && workload_name_ != Util::WIKIPEDIA_TEXT_WORKLOAD_NAME && workload_name_ != Util::FBPHOTO_WORKLOAD_NAME
-        if (workload_name_ != Util::FACEBOOK_WORKLOAD_NAME && workload_name_ != Util::ZIPF_FACEBOOK_WORKLOAD_NAME && workload_name_ != Util::ZIPF_WIKIPEDIA_IMAGE_WORKLOAD_NAME && workload_name_ != Util::ZIPF_WIKIPEDIA_TEXT_WORKLOAD_NAME)
+        if (workload_name_ != Util::FACEBOOK_WORKLOAD_NAME && workload_name_ != Util::ZIPF_FACEBOOK_WORKLOAD_NAME && workload_name_ != Util::ZETA_WIKIPEDIA_IMAGE_WORKLOAD_NAME && workload_name_ != Util::ZETA_WIKIPEDIA_TEXT_WORKLOAD_NAME)
         {
             std::ostringstream oss;
             oss << "workload name " << workload_name_ << " is not supported!";

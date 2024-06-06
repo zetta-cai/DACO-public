@@ -1,5 +1,5 @@
 /*
- * ZipfFacebookWorkloadWrapper: use Zipf-based distribution as mentioned in CacheLib paper to tune skewness of Facebook CDN workload, yet still follow the original key size and value size distribution (thread safe).
+ * ZipfFacebookWorkloadWrapper: use Zipfian power law distribution as mentioned in CacheLib paper to tune skewness of Facebook CDN workload, yet still follow the original key size and value size distribution (thread safe).
  * 
  * See more notes in src/workload/facebook_workload_wrapper.h.
  * 
