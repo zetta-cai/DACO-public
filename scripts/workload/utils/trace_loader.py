@@ -64,7 +64,12 @@ class TraceLoader:
     def getKeySizeHistogram(self):
         keysize_histogram = [0] * TraceLoader.KEYSIZE_HISTOGRAM_SIZE
         for tmp_key in self.statistics_:
-            tmp_keysize = len(tmp_key)
+            if self.workload_name_ == TraceLoader.WIKITEXT_WORKLOADNAME:
+                tmp_keysize = 8 # Wikipedia Text uses bigint
+            elif self.workload_name_ == TraceLoader.WIKIIMAGE_WORKLOADNAME:
+                tmp_keysize = 8 # Wikipedia Image uses bigint
+            else:
+                tmp_keysize = len(tmp_key)
             if tmp_keysize < TraceLoader.KEYSIZE_HISTOGRAM_SIZE:
                 keysize_histogram[tmp_keysize] += 1
             else:
@@ -101,7 +106,7 @@ class TraceLoader:
             tmp_columns = tmp_line.strip().split(TraceLoader.TSV_DELIMITER)
             if len(tmp_columns) != TraceLoader.WIKITEXT_COLUMNCNT:
                 LogUtil.die(Common.scriptname, "invalid column count {} in trace file {} for workload {}!".format(len(tmp_columns), filepath, self.workload_name_))
-            tmp_key = tmp_columns[TraceLoader.WIKITEXT_KEY_COLUMNIDX]
+            tmp_key = int(tmp_columns[TraceLoader.WIKITEXT_KEY_COLUMNIDX])
             tmp_valsize = int(tmp_columns[TraceLoader.WIKITEXT_VALSIZE_COLUMNIDX])
             self.updateStatistics_(tmp_key, tmp_valsize)
         f.close()
@@ -126,7 +131,7 @@ class TraceLoader:
             tmp_columns = tmp_line.strip().split(TraceLoader.TSV_DELIMITER)
             if len(tmp_columns) != TraceLoader.WIKIIMAGE_COLUMNCNT:
                 LogUtil.die(Common.scriptname, "invalid column count {} in trace file {} for workload {}!".format(len(tmp_columns), filepath, self.workload_name_))
-            tmp_key = tmp_columns[TraceLoader.WIKIIMAGE_KEY_COLUMNIDX]
+            tmp_key = int(tmp_columns[TraceLoader.WIKIIMAGE_KEY_COLUMNIDX])
             tmp_valsize = int(tmp_columns[TraceLoader.WIKIIMAGE_VALSIZE_COLUMNIDX])
             self.updateStatistics_(tmp_key, tmp_valsize)
         f.close()

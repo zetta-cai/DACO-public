@@ -430,9 +430,10 @@ namespace covered
 
         // TODO: Print debug info (to verify the same dataset across different clients and the same Zeta distribution between C++ and python)
         std::ostringstream oss;
-        oss << "riemann_zeta_value: " << riemann_zeta_value << std::endl;
+        oss << "zipf_constant: " << zipf_constant << std::endl;
         oss << "dataset_keys_[0]: " << Key(dataset_keys_[0]).getKeyDebugstr() << "; dataset_probs_[0]: " << dataset_probs_[0] << "; dataset_valsizes_[0]: " << dataset_valsizes_[0] << std::endl;
         oss << "dataset_keys_[1]: " << Key(dataset_keys_[1]).getKeyDebugstr() << "; dataset_probs_[1]: " << dataset_probs_[1] << "; dataset_valsizes_[1]: " << dataset_valsizes_[1];
+        Util::dumpNormalMsg(instance_name_, oss.str());
 
         if (!is_fixed_keysize) // Release key size distribution if necessary
         {
@@ -451,9 +452,10 @@ namespace covered
         return;
     }
 
-    std::string ZetaWorkloadWrapper::getKeystrFromKeyrank_(const uint32_t& keyrank, const uint32_t& keysize)
+    std::string ZetaWorkloadWrapper::getKeystrFromKeyrank_(const int64_t& keyrank, const uint32_t& keysize)
     {
-        const uint32_t keyrank_bytecnt = sizeof(uint32_t); // 4B
+        assert(keyrank >= 1);
+        const uint32_t keyrank_bytecnt = sizeof(int64_t); // 8B
 
         // Create keystr (>= 4B)
         uint32_t tmp_keysize = keysize;
@@ -463,8 +465,8 @@ namespace covered
         }
         std::string tmp_keystr(tmp_keysize, '0');
 
-        // Copy keyrank str to the first 4B
-        std::string keyrank_str((const char*)&keyrank, keyrank_bytecnt); // 4B
+        // Copy keyrank str to the first 8B
+        std::string keyrank_str((const char*)&keyrank, keyrank_bytecnt); // 8B
         for (uint32_t i = 0; i < keyrank_bytecnt; i++)
         {
             tmp_keystr[i] = keyrank_str[i];
@@ -483,13 +485,13 @@ namespace covered
         return riemann_zeta_value;
     }
 
-    uint32_t ZetaWorkloadWrapper::getKeyrankFromKeystr_(const std::string& keystr)
+    int64_t ZetaWorkloadWrapper::getKeyrankFromKeystr_(const std::string& keystr)
     {
-        const uint32_t keyrank_bytecnt = sizeof(uint32_t); // 4B
+        const uint32_t keyrank_bytecnt = sizeof(int64_t); // 8B
         assert(keystr.length() >= keyrank_bytecnt);
 
-        // Copy the first 4B to keyrank
-        uint32_t tmp_keyrank = 0;
+        // Copy the first 8B to keyrank
+        int64_t tmp_keyrank = 0;
         memcpy((char *)&tmp_keyrank, keystr.c_str(), keyrank_bytecnt);
         assert(tmp_keyrank >= 1);
 
