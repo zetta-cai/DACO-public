@@ -59,7 +59,7 @@ class TraceLoader:
         LogUtil.prompt(Common.scriptname, "sorting frequency list for workload {}...".format(self.workload_name_))
         frequency_list.sort(reverse=True)
         return np.array(frequency_list)
-    
+
     # Get key size histogram
     def getKeySizeHistogram(self):
         keysize_histogram = [0] * TraceLoader.KEYSIZE_HISTOGRAM_SIZE
@@ -92,7 +92,7 @@ class TraceLoader:
             if tmp_valsize < 1: # Treat all small values (including empty values) as 1KiB
                 tmp_valsize_bktidx = 0
             else:
-                tmp_valsize_bktidx = int(tmp_valsize - 1 / 1024) # Each bucket of value size histogram is 1KiB
+                tmp_valsize_bktidx = int((tmp_valsize - 1) / 1024) # Each bucket of value size histogram is 1KiB
             
             if tmp_valsize_bktidx < TraceLoader.VALSIZE_HISTOGRAM_SIZE: # 1KiB - 10240KiB
                 valsize_histogram[tmp_valsize_bktidx] += 1
