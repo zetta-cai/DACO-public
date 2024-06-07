@@ -279,12 +279,13 @@ namespace covered
         std::vector<uint32_t> existing_keysizes(0); // existing key sizes (i.e., with positive freqs)
         std::vector<uint32_t> positive_freqs(0); // positive freqs of existing key sizes
         uint32_t total_keysize_freq = 0;
-        for (uint32_t tmp_keysize = 0; tmp_keysize < keysize_histogram_size; tmp_keysize++)
+        for (uint32_t tmp_keysize_idx = 0; tmp_keysize_idx < keysize_histogram_size; tmp_keysize_idx++)
         {
-            uint32_t tmp_keysize_freq = keysize_histogram[tmp_keysize];
+            uint32_t tmp_keysize_freq = keysize_histogram[tmp_keysize_idx];
             if (tmp_keysize_freq > 0)
             {
-                existing_keysizes.push_back(tmp_keysize);
+                // NOTE: make sure that scripts/workload/utils/trace_loader.py also treats per bucket as 1B and key size histogram ranges from 1B to 1024B
+                existing_keysizes.push_back(tmp_keysize_idx + 1);
                 positive_freqs.push_back(tmp_keysize_freq);
                 total_keysize_freq += tmp_keysize_freq;
             }
@@ -314,12 +315,13 @@ namespace covered
         std::vector<uint32_t> existing_valuesizes(0); // existing value sizes (i.e., with positive freqs)
         std::vector<uint32_t> positive_valuesize_freqs(0); // positive freqs of existing value sizes
         uint32_t total_valuesize_freq = 0;
-        for (uint32_t tmp_valuesize = 0; tmp_valuesize < valuesize_histogram_size; tmp_valuesize++)
+        for (uint32_t tmp_valuesize_idx = 0; tmp_valuesize_idx < valuesize_histogram_size; tmp_valuesize_idx++)
         {
-            uint32_t tmp_valuesize_freq = valuesize_histogram[tmp_valuesize];
+            uint32_t tmp_valuesize_freq = valuesize_histogram[tmp_valuesize_idx];
             if (tmp_valuesize_freq > 0)
             {
-                existing_valuesizes.push_back(tmp_valuesize);
+                // NOTE: make sure that scripts/workload/utils/trace_loader.py also treats per bucket as 1KiB and key size histogram ranges from 1KiB to 10240KiB
+                existing_valuesizes.push_back((tmp_valuesize_idx + 1) * 1024);
                 positive_valuesize_freqs.push_back(tmp_valuesize_freq);
                 total_valuesize_freq += tmp_valuesize_freq;
             }
@@ -387,8 +389,7 @@ namespace covered
                 assert(tmp_valuesize_idx < existing_valuesizes.size());
                 tmp_valuesize = existing_valuesizes[tmp_valuesize_idx];
             }
-            // NOTE: make sure that scripts/workload/utils/trace_loader.py also treats per bucket as 1024B
-            dataset_valsizes_[i] = tmp_valuesize * 1024; // Each bucket of value size histogram is 1024B
+            dataset_valsizes_[i] = tmp_valuesize;
         }
 
         // Normalize dataset probs to sum to 1.0

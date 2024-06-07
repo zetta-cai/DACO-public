@@ -20,7 +20,7 @@ class TraceLoader:
     WIKIIMAGE_VALSIZE_COLUMNIDX = 3
     # For key size histogram (from 1B to 1KiB; each bucket is 1B)
     KEYSIZE_HISTOGRAM_SIZE = 1024
-    # For value size histogram (from 1KiB to 10MiB; each bucket is 1KiB)
+    # For value size histogram (from 1KiB to 10240KiB; each bucket is 1KiB)
     VALSIZE_HISTOGRAM_SIZE = 10240
 
     # Open trace files based on dirpath + filename list
@@ -70,8 +70,14 @@ class TraceLoader:
                 tmp_keysize = 8 # Wikipedia Image uses bigint
             else:
                 tmp_keysize = len(tmp_key)
-            if tmp_keysize < TraceLoader.KEYSIZE_HISTOGRAM_SIZE:
-                keysize_histogram[tmp_keysize] += 1
+
+            # NOTE: make sure that src/workload/zeta_workload_wrapper.c also treats per bucket as 1B and the histogram ranges from 1B to 1024B
+            if tmp_keysize < 1: # Empty key makes no sense
+                LogUtil.die(Common.scriptname, "invalid key size {} for workload {}!".format(tmp_keysize, self.workload_name_))
+            tmp_keysize_bktidx = tmp_keysize - 1
+
+            if tmp_keysize_bktidx < TraceLoader.KEYSIZE_HISTOGRAM_SIZE: # 1B - 1024B
+                keysize_histogram[tmp_keysize_bktidx] += 1
             else:
                 keysize_histogram[TraceLoader.KEYSIZE_HISTOGRAM_SIZE - 1] += 1
         return keysize_histogram
@@ -81,9 +87,14 @@ class TraceLoader:
         valsize_histogram = [0] * TraceLoader.VALSIZE_HISTOGRAM_SIZE
         for tmp_key in self.statistics_:
             tmp_valsize = self.statistics_[tmp_key][0]
-            # NOTE: make sure that src/workload/zeta_workload_wrapper.c also treats per bucket as 1024B
-            tmp_valsize_bktidx = tmp_valsize / 1024 # Each bucket of value size histogram is 1024B
-            if tmp_valsize_bktidx < TraceLoader.VALSIZE_HISTOGRAM_SIZE:
+            
+            # NOTE: make sure that src/workload/zeta_workload_wrapper.c also treats per bucket as 1KiB and the histogram ranges from 1KiB to 10240KiB
+            if tmp_valsize < 1: # Treat all small values (including empty values) as 1KiB
+                tmp_valsize_bktidx = 0
+            else:
+                tmp_valsize_bktidx = int(tmp_valsize - 1 / 1024) # Each bucket of value size histogram is 1KiB
+            
+            if tmp_valsize_bktidx < TraceLoader.VALSIZE_HISTOGRAM_SIZE: # 1KiB - 10240KiB
                 valsize_histogram[tmp_valsize_bktidx] += 1
             else:
                 valsize_histogram[TraceLoader.VALSIZE_HISTOGRAM_SIZE - 1] += 1
