@@ -16,8 +16,8 @@ simple_example_settings = {
     "edgecnt": 4,
     "keycnt": 1000000,
     "capacity_mb": 1024,
-    "cache_name": "covered", # covered, gdsf+, lhd+
-    "workload_name": "zeta_wikitext" # zeta_wikitext, zeta_wikiimage
+    "cache_name": "lhd+", # covered, gdsf+, lhd+
+    "workload_name": "zeta_wikiimage" # zeta_wikitext, zeta_wikiimage
 }
 
 # # Extremely large cache hit ratio issue of SIEVE+ under wikitext with 50% memory

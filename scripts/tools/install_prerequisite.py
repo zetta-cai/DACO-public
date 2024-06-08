@@ -239,7 +239,7 @@ if is_update_udpbuffer_size:
 
 ## (6.2) Set swap memory size (to avoid triggering memory usage bugs of some baselines, e.g., SegCache and GL-Cache, which may incur memory leakage in their own source code)
 
-# Related commands include: cat /proc/swaps, df -h, and lsblk to check swap files; fdisk /dev/sda, pvcreate /dev/sda3, vgs, lvscan, lvextend -L +1T /dev/vgname/lvname, and resize2fs /dev/mapper/vgname-lvname to allocate sufficient space for /swapfile.
+# Related commands include: cat /proc/swaps, df -h, and lsblk to check swap files; fdisk /dev/sda, pvcreate /dev/sda3, vgextend vgname /dev/sda3, vgs, lvscan, lvextend -L +1T /dev/vgname/lvname, and resize2fs /dev/mapper/vgname-lvname to allocate sufficient space for /swapfile.
 
 if is_update_swapspace_size:
     swapfile_path = "/swapfile"

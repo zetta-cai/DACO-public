@@ -56,6 +56,18 @@ class SubprocessUtil:
             tmp_mkdirs_subprocess = SubprocessUtil.runCmd(tmp_mkdirs_cmd)
             if tmp_mkdirs_subprocess.returncode != 0:
                 LogUtil.die(Common.scriptname, "failed to create directory {} (errmsg: {})".format(dirpath, SubprocessUtil.getSubprocessErrstr(tmp_mkdirs_subprocess)))
+    
+    @staticmethod
+    def moveSrcToTarget(scriptname, srcpath, targetpath, keep_silent=False):
+        if not os.path.exists(srcpath):
+            if not keep_silent:
+                LogUtil.prompt(scriptname, "move {} to {}...".format(srcpath, targetpath))
+            tmp_move_cmd = "mv {} {}".format(srcpath, targetpath)
+            tmp_move_subprocess = SubprocessUtil.runCmd(tmp_move_cmd)
+            if tmp_move_subprocess.returncode != 0:
+                LogUtil.die(Common.scriptname, "failed to move {} to {} (errmsg: {})".format(srcpath, targetpath, SubprocessUtil.getSubprocessErrstr(tmp_move_subprocess)))
+        else:
+            LogUtil.die(Common.scriptname, "The source path {} does not exist".format(srcpath))
 
     ## (2) For softwares from tarball or apt
 
