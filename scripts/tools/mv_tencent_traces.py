@@ -7,7 +7,7 @@ import sys
 from ..common import *
 
 tencent_dirname = "tencent"
-tmp_tencent_dirpath = os.path.join(Common.proj_dirpath, tencent_dirname) # tencent/
+tmp_tencent_dirpath = os.path.join(Common.proj_dirname, tencent_dirname) # tencent/
 
 # (1) Move Tencent photo caching dataset 1
 
