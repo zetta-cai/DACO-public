@@ -7,6 +7,7 @@ from ...common import *
 
 class TraceLoader:
 
+    # For Wikipedia CDN traces
     TSV_DELIMITER = "\t" # Tab-separated values used by Wikipedia Text/Image trace files
     # For Wikipedia Text trace files
     WIKITEXT_WORKLOADNAME = "zeta_wikitext"
@@ -18,8 +19,20 @@ class TraceLoader:
     WIKIIMAGE_COLUMNCNT = 5
     WIKIIMAGE_KEY_COLUMNIDX = 1
     WIKIIMAGE_VALSIZE_COLUMNIDX = 3
+
+    # For Tencent photo caching trace
+    TBZ2_DELIMITER = " " # Space-separated values used by Tencent photo caching trace files
+    TENCENT_WORKLOADNAME = "zeta_tencent"
+    TENCENT_COLUMNCNT = 8
+    TENCENT_KEY_COLUMNIDX = 1
+    TENCENT_IMGFORMAT_COLUMNIDX = 2
+    TENCENT_IMGFORMAT_JPG = 0
+    TENCENT_IMGFORMAT_WEB = 5
+    TENCENT_VALSIZE_COLUMNIDX = 4
+
     # For key size histogram (from 1B to 1KiB; each bucket is 1B)
     KEYSIZE_HISTOGRAM_SIZE = 1024
+
     # For value size histogram (from 1KiB to 10240KiB; each bucket is 1KiB)
     VALSIZE_HISTOGRAM_SIZE = 10240
 
