@@ -8,7 +8,8 @@ from .utils.zipf_curvefit import *
 from ..exps.utils.exputil import *
 
 # Zipfian constant: [1.012, 1.029]
-workload_names = [TraceLoader.WIKITEXT_WORKLOADNAME, TraceLoader.WIKIIMAGE_WORKLOADNAME, TraceLoader.TENCENTPHOTO1_WORKLOADNAME, TraceLoader.TENCENTPHOTO2_WORKLOADNAME]
+# workload_names = [TraceLoader.WIKITEXT_WORKLOADNAME, TraceLoader.WIKIIMAGE_WORKLOADNAME, TraceLoader.TENCENTPHOTO1_WORKLOADNAME, TraceLoader.TENCENTPHOTO2_WORKLOADNAME]
+workload_names = [TraceLoader.WIKITEXT_WORKLOADNAME] # TODO
 
 # Get dirpath of trace files
 client_machine_idxes = JsonUtil.getValueForKeystr(Common.scriptname, "client_machine_indexes")

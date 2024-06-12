@@ -74,11 +74,15 @@ class TraceLoader:
             frequency_list.append(tmp_frequency)
         LogUtil.prompt(Common.scriptname, "sorting frequency list for workload {}...".format(self.workload_name_))
         frequency_list.sort(reverse=True)
+        LogUtil.dump(Common.scriptname, "total opcnt: {}".format(frequency_list.sum()))
         return np.array(frequency_list)
 
     # Get key size histogram
     def getKeySizeHistogram(self):
         keysize_histogram = [0] * TraceLoader.KEYSIZE_HISTOGRAM_SIZE
+        min_keysize = -1
+        max_keysize = -1
+        avg_keysize = 0
         for tmp_key in self.statistics_:
             if self.workload_name_ == TraceLoader.WIKITEXT_WORKLOADNAME:
                 tmp_keysize = 8 # Wikipedia Text uses bigint
@@ -88,6 +92,12 @@ class TraceLoader:
                 tmp_keysize = 20 # Tencent Photo uses 20B checksum
             else:
                 tmp_keysize = len(tmp_key)
+            
+            if min_keysize == -1 or tmp_keysize < min_keysize:
+                min_keysize = tmp_keysize
+            if max_keysize == -1 or tmp_keysize > max_keysize:
+                max_keysize = tmp_keysize
+            avg_keysize += tmp_keysize
 
             # NOTE: make sure that src/workload/zeta_workload_wrapper.c also treats per bucket as 1B and the histogram ranges from 1B to 1024B
             if tmp_keysize < 1: # Empty key makes no sense
@@ -98,13 +108,24 @@ class TraceLoader:
                 keysize_histogram[tmp_keysize_bktidx] += 1
             else:
                 keysize_histogram[TraceLoader.KEYSIZE_HISTOGRAM_SIZE - 1] += 1
+        avg_keysize /= len(self.statistics_)
+        LogUtil.dump(Common.scriptname, "keycnt: {}; keysize min/max/avg: {}/{}/{}".format(len(self.statistics_), min_keysize, max_keysize, avg_keysize))
         return keysize_histogram
 
     # Get value size histogram
     def getValueSizeHistogram(self):
         valsize_histogram = [0] * TraceLoader.VALSIZE_HISTOGRAM_SIZE
+        min_valsize = -1
+        max_valsize = -1
+        avg_valsize = 0
         for tmp_key in self.statistics_:
             tmp_valsize = self.statistics_[tmp_key][0]
+
+            if min_valsize == -1 or tmp_valsize < min_valsize:
+                min_valsize = tmp_valsize
+            if max_valsize == -1 or tmp_valsize > max_valsize:
+                max_valsize = tmp_valsize
+            avg_valsize += tmp_valsize
             
             # NOTE: make sure that src/workload/zeta_workload_wrapper.c also treats per bucket as 1KiB and the histogram ranges from 1KiB to 10240KiB
             if tmp_valsize < 1: # Treat all small values (including empty values) as 1KiB
@@ -116,6 +137,8 @@ class TraceLoader:
                 valsize_histogram[tmp_valsize_bktidx] += 1
             else:
                 valsize_histogram[TraceLoader.VALSIZE_HISTOGRAM_SIZE - 1] += 1
+        avg_valsize /= len(self.statistics_)
+        LogUtil.dump(Common.scriptname, "keycnt: {}; valsize min/max/avg: {}/{}/{}".format(len(self.statistics_), min_valsize, max_valsize, avg_valsize))
         return valsize_histogram
     
     # Load Wikipedia Text trace files
