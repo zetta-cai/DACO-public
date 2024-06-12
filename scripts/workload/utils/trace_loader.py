@@ -21,14 +21,15 @@ class TraceLoader:
     WIKIIMAGE_VALSIZE_COLUMNIDX = 3
 
     # For Tencent photo caching trace
-    TBZ2_DELIMITER = " " # Space-separated values used by Tencent photo caching trace files
-    TENCENT_WORKLOADNAME = "zeta_tencent"
-    TENCENT_COLUMNCNT = 8
-    TENCENT_KEY_COLUMNIDX = 1
-    TENCENT_IMGFORMAT_COLUMNIDX = 2
-    TENCENT_IMGFORMAT_JPG = 0
-    TENCENT_IMGFORMAT_WEB = 5
-    TENCENT_VALSIZE_COLUMNIDX = 4
+    LOG_DELIMITER = " " # Space-separated values used by Tencent photo caching trace files
+    TENCENTPHOTO1_WORKLOADNAME = "zeta_tencentphoto1"
+    TENCENTPHOTO2_WORKLOADNAME = "zeta_tencentphoto2"
+    TENCENTPHOTO_COLUMNCNT = 8
+    TENCENTPHOTO_KEY_COLUMNIDX = 1
+    TENCENTPHOTO_IMGFORMAT_COLUMNIDX = 2
+    TENCENTPHOTO_IMGFORMAT_JPG = 0
+    TENCENTPHOTO_IMGFORMAT_WEB = 5
+    TENCENTPHOTO_VALSIZE_COLUMNIDX = 4
 
     # For key size histogram (from 1B to 1KiB; each bucket is 1B)
     KEYSIZE_HISTOGRAM_SIZE = 1024
@@ -58,6 +59,8 @@ class TraceLoader:
                 self.loadFileOfWikiText_(tmp_filepath)
             elif workload_name == TraceLoader.WIKIIMAGE_WORKLOADNAME:
                 self.loadFileOfWikiImage_(tmp_filepath)
+            elif workload_name == TraceLoader.TENCENTPHOTO1_WORKLOADNAME or workload_name == TraceLoader.TENCENTPHOTO2_WORKLOADNAME:
+                self.loadFileOfTencentPhoto_(tmp_filepath)
             else:
                 LogUtil.die(Common.scriptname, "unknown workload {}!".format(workload_name))
 
@@ -81,6 +84,8 @@ class TraceLoader:
                 tmp_keysize = 8 # Wikipedia Text uses bigint
             elif self.workload_name_ == TraceLoader.WIKIIMAGE_WORKLOADNAME:
                 tmp_keysize = 8 # Wikipedia Image uses bigint
+            elif self.workload_name_ == TraceLoader.TENCENTPHOTO1_WORKLOADNAME or self.workload_name_ == TraceLoader.TENCENTPHOTO2_WORKLOADNAME:
+                tmp_keysize = 20 # Tencent Photo uses 20B checksum
             else:
                 tmp_keysize = len(tmp_key)
 
@@ -162,6 +167,28 @@ class TraceLoader:
             self.updateStatistics_(tmp_key, tmp_valsize)
         f.close()
         return
+    
+    # Load Tencent Photo Caching trace files
+    # Format: timestamp photoID(20B-checksum) imgFormat sizeSpecification size hitOrMiss terminalType responseTime(ms)
+    def loadFileOfTencentPhoto_(self, filepath):
+        LogUtil.prompt(Common.scriptname, "loading trace file {} for workload {}...".format(filepath, self.workload_name_))
+
+        f = open(filepath, mode="r")
+        while True:
+            tmp_line = f.readline()
+            if tmp_line == "": # End of file
+                break
+            
+            # Process each line
+            tmp_columns = tmp_line.strip().split(TraceLoader.LOG_DELIMITER)
+            if len(tmp_columns) != TraceLoader.TENCENTPHOTO_COLUMNCNT:
+                LogUtil.die(Common.scriptname, "invalid column count {} in trace file {} for workload {}!".format(len(tmp_columns), filepath, self.workload_name_))
+            tmp_key = tmp_columns[TraceLoader.TENCENTPHOTO_KEY_COLUMNIDX]
+            tmp_imgformat = int(tmp_columns[TraceLoader.TENCENTPHOTO_IMGFORMAT_COLUMNIDX])
+            tmp_valsize = int(tmp_columns[TraceLoader.TENCENTPHOTO_VALSIZE_COLUMNIDX])
+
+            if tmp_imgformat == TraceLoader.TENCENTPHOTO_IMGFORMAT_JPG or tmp_imgformat == TraceLoader.TENCENTPHOTO_IMGFORMAT_WEB:
+                self.updateStatistics_(tmp_key, tmp_valsize)
 
     def updateStatistics_(self, key, valsize):
         if key not in self.statistics_:

@@ -8,7 +8,7 @@ from .utils.zipf_curvefit import *
 from ..exps.utils.exputil import *
 
 # Zipfian constant: [1.012, 1.029]
-workload_names = [TraceLoader.WIKITEXT_WORKLOADNAME, TraceLoader.WIKIIMAGE_WORKLOADNAME]
+workload_names = [TraceLoader.WIKITEXT_WORKLOADNAME, TraceLoader.WIKIIMAGE_WORKLOADNAME, TraceLoader.TENCENTPHOTO1_WORKLOADNAME, TraceLoader.TENCENTPHOTO2_WORKLOADNAME]
 
 # Get dirpath of trace files
 client_machine_idxes = JsonUtil.getValueForKeystr(Common.scriptname, "client_machine_indexes")
@@ -38,6 +38,10 @@ for tmp_workload_name in workload_names:
             tmp_filename_list = JsonUtil.getValueForKeystr(Common.scriptname, "trace_dirpath_relative_wikitext_trace_filepaths")
         elif tmp_workload_name == TraceLoader.WIKIIMAGE_WORKLOADNAME:
             tmp_filename_list = JsonUtil.getValueForKeystr(Common.scriptname, "trace_dirpath_relative_wikiimage_trace_filepaths")
+        elif tmp_workload_name == TraceLoader.TENCENTPHOTO1_WORKLOADNAME:
+            tmp_filename_list = JsonUtil.getValueForKeystr(Common.scriptname, "trace_dirpath_relative_tencentphoto1_trace_filepaths")
+        elif tmp_workload_name == TraceLoader.TENCENTPHOTO2_WORKLOADNAME:
+            tmp_filename_list = JsonUtil.getValueForKeystr(Common.scriptname, "trace_dirpath_relative_tencentphoto2_trace_filepaths")
         else:
             LogUtil.die(Common.scriptname, "unknown workload {}!".format(workload_name))
 
