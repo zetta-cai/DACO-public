@@ -70,13 +70,17 @@ else: # Decompress datasets
             dataset2_filepaths.append(os.path.join(tmp_dirpath, tmp_filename))
     
     # Move trace files to corresponding dataset dirpaths
-    for tmp_dataset1_filepath in dataset1_filepaths:
-        tmp_filename = os.path.basename(tmp_dataset1_filepath)
-        tmp_target_filepath = os.path.join(dataset1_dirpath, tmp_filename)
+    for tmp_dataset1_filepath in dataset1_filepaths: # data/tencent/hust-Tencent_Cloud_Photo_Storage_Cache_Trace/hust-Tencent_Cloud_Photo_Storage_Cache_Trace_1/2016020118/http_thread1_normal.log.17
+        tmp_filename = os.path.basename(tmp_dataset1_filepath) # http_thread1_normal.log.17
+        tmp_date_dirname = os.path.basename(os.path.dirname(tmp_dataset1_filepath)) # 2016020118
+        tmp_target_filename = "{}_{}".format(tmp_date_dirname, tmp_filename) # 2016020118_http_thread1_normal.log.17
+        tmp_target_filepath = os.path.join(dataset1_dirpath, tmp_target_filename) # data/tencent/dataset1/2016020118_http_thread1_normal.log.17
         SubprocessUtil.moveSrcToTarget(Common.scriptname, tmp_dataset1_filepath, tmp_target_filepath, keep_silent = False)
-    for tmp_dataset2_filepath in dataset2_filepaths:
-        tmp_filename = os.path.basename(tmp_dataset2_filepath)
-        tmp_target_filepath = os.path.join(dataset2_dirpath, tmp_filename)
+    for tmp_dataset2_filepath in dataset2_filepaths: # data/tencent/hust-Tencent_Cloud_Photo_Storage_Cache_Trace/hust-Tencent_Cloud_Photo_Storage_Cache_Trace_2/2016020118/http_thread1_normal.log.17
+        tmp_filename = os.path.basename(tmp_dataset2_filepath) # http_thread1_normal.log.17
+        tmp_date_dirname = os.path.basename(os.path.dirname(tmp_dataset2_filepath)) # 2016020118
+        tmp_target_filename = "{}_{}".format(tmp_date_dirname, tmp_filename) # 2016020118_http_thread1_normal.log.17
+        tmp_target_filepath = os.path.join(dataset2_dirpath, tmp_target_filename) # data/tencent/dataset2/2016020118_http_thread1_normal.log.17
         SubprocessUtil.moveSrcToTarget(Common.scriptname, tmp_dataset2_filepath, tmp_target_filepath, keep_silent = False)
 
     # Remove directory hust-Tencent_Cloud_Photo_Storage_Cache_Trace/
