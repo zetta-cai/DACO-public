@@ -74,8 +74,9 @@ class TraceLoader:
             frequency_list.append(tmp_frequency)
         LogUtil.prompt(Common.scriptname, "sorting frequency list for workload {}...".format(self.workload_name_))
         frequency_list.sort(reverse=True)
+        frequency_list = np.array(frequency_list)
         LogUtil.dump(Common.scriptname, "total opcnt: {}".format(frequency_list.sum()))
-        return np.array(frequency_list)
+        return frequency_list
 
     # Get key size histogram
     def getKeySizeHistogram(self):
