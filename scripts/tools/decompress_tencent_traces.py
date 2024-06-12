@@ -43,8 +43,8 @@ else: # Decompress datasets
             LogUtil.die(scriptname, "failed to decompress file {} (errmsg: {})".format(tmp_tbgz_filepath, SubprocessUtil.getSubprocessErrstr(tmp_decompress_subprocess)))
         
         # Delete current tbgz file to save space
-        # LogUtil.prompt(Common.scriptname, "Delete file {}...".format(tmp_tbgz_filepath))
-        # os.remove(tmp_tbgz_filepath)
+        LogUtil.prompt(Common.scriptname, "Delete tarball file {}...".format(tmp_tbgz_filepath))
+        os.remove(tmp_tbgz_filepath)
 
     # (3) Move trace files to corresponding dataset dirpaths
 
