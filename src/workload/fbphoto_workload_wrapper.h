@@ -1,7 +1,7 @@
 /*
  * (OBSOLETE) FbphotoWorkloadWrapper: reproduce the workload of Facebook photo caching based on distributions mentioned in the paper (https://dl.acm.org/doi/pdf/10.1145/2517349.2522722) (thread safe).
  *
- * OBSOLETE reason: Facebook photo caching trace is NOT open sourced; while self-reproduced trace based on the figures in the paper is too skewed to be realistic.
+ * OBSOLETE reason: Facebook photo caching trace is NOT open-sourced and hence NO total frequency information for probability calculation and curvefitting
  * 
  * NOTE: you should run scripts/workload/facebook_photocache.py first to generate the dataset of Facebook photo caching.
  * 

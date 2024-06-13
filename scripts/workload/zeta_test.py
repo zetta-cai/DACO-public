@@ -27,7 +27,7 @@ wikiimage_perrank_probs = np.array(wikiimage_perrank_probs)
 wikiimage_perrank_probs = wikiimage_perrank_probs / wikiimage_perrank_probs.sum()
 print("wikiimage rank-1 prob: {}; rank-2 prob: {}".format(wikiimage_perrank_probs[0], wikiimage_perrank_probs[1]))
 
-# # (OBSOLETE due to too skewed) For Facebook photo caching workload
+# # (OBSOLETE due to NOT open-sourced and hence NO total frequency information for probability calculation and curvefitting) For Facebook photo caching workload
 # fbphoto_datasetcnt = 1000000
 # fbphoto_zipf_constant = 1.67
 # fbphoto_perrank_probs = []

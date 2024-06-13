@@ -83,7 +83,7 @@ namespace covered
         static const std::string ZETA_WIKIPEDIA_TEXT_WORKLOAD_NAME; // Workload generator type (Zipf-based Wikipedia text workload; using Zeta distribution)
         static const std::string WIKIPEDIA_IMAGE_WORKLOAD_NAME; // (OBSOLETE due to no geographical information) Wikipedia image replayed traces
         static const std::string WIKIPEDIA_TEXT_WORKLOAD_NAME; // (OBSOLETE due to no geographical information) WIkipedia text replayed
-        static const std::string FBPHOTO_WORKLOAD_NAME; // (OBSOLETE due to not open-sourced and too skewed) Workload generator type (Facebook photo caching workload)
+        static const std::string FBPHOTO_WORKLOAD_NAME; // (OBSOLETE due to not open-sourced and hence NO total frequency information for probability calculation and curvefitting) Workload generator type (Facebook photo caching workload)
 
         // Cloud storage
         static const std::string HDD_NAME; // NOTE: a single RocksDB size on HDD should NOT exceed 500 GiB

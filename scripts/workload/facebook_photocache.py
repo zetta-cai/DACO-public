@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# (OBSOLETE due to unused) facebook_photocache: generate Facebook photo cache workload
+# (OBSOLETE due to NO open-sourced traces and hence NO total frequency information -> cannot calculate probabilities for curvefitting and hence NOT used; directly using pop_y.sum() as total frequency is WRONG, which overestimate the skewness!!!) facebook_photocache: generate Facebook photo cache workload
 
 import numpy as np
 import struct
@@ -38,6 +38,7 @@ def zipf_func(x, a):
 # Curve fitting by Zipfian distribution
 pop_x = np.array([10**0, 10**1, 10**2, 10**3, 10**4, 10**5, 10**6]) # NOTE: rank >= 1 for Zipfian distribution (no matter power low (alpha >= 0) or zeta (alpha > 1))
 pop_y = np.array([10**6, 10**5, 10**4, 10**3.1, 10**2.2, 10**1.2, 10**0])
+# NOTE: [ERROR] we should NOT use pop_y.sum() as the total frequency information to get probabilities for curvefitting!!!
 pop_y = pop_y/pop_y.sum()
 result = curve_fit(zipf_func, pop_x, pop_y, p0=[1.1])
 zipf_a = result[0][0] # 1.67

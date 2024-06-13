@@ -27,7 +27,7 @@ namespace covered
         {
             workload_ptr = new FacebookWorkloadWrapper(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role);
         }
-        else if (workload_name == Util::FBPHOTO_WORKLOAD_NAME) // (OBSOLETE due to not open-sourced and too skewed and thus all methods can achieve extremely large hit ratios) Facebook photo caching
+        else if (workload_name == Util::FBPHOTO_WORKLOAD_NAME) // (OBSOLETE due to not open-sourced and hence NO total frequency information for probability calculation and curvefitting) Facebook photo caching
         {
             workload_ptr = new FbphotoWorkloadWrapper(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role);
         }

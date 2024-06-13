@@ -83,7 +83,7 @@ namespace covered
             // (1) Create CLI parameter description
 
             std::string keycnt_descstr = "the number of unique keys (dataset size; NOT affect " + Util::getReplayedWorkloadHintstr() + " and " + Util::FBPHOTO_WORKLOAD_NAME + ")";
-            // OBSOLETE: self-reproduced Facebook photo caching trace is too skewed to be realistic; replayed traces cannot get reasonable results due to incorrect trace partitioning without geographical information
+            // OBSOLETE: self-reproduced Facebook photo caching trace is NOT open-sourced and NO probabilities for curvefitting; replayed traces cannot get reasonable results due to incorrect trace partitioning without geographical information
             // Util::WIKIPEDIA_IMAGE_WORKLOAD_NAME + ", " + Util::WIKIPEDIA_TEXT_WORKLOAD_NAME + ", " + Util::FBPHOTO_WORKLOAD_NAME
             std::string workload_name_descstr = "workload name (e.g., " + Util::FACEBOOK_WORKLOAD_NAME + ", " + Util::ZIPF_FACEBOOK_WORKLOAD_NAME + ", " + Util::ZETA_WIKIPEDIA_IMAGE_WORKLOAD_NAME + ", and " + Util::ZETA_WIKIPEDIA_TEXT_WORKLOAD_NAME + ")";
             std::string zipf_alpha_descstr = "Zipf's law alpha (ONLY for the workload of " + Util::ZIPF_FACEBOOK_WORKLOAD_NAME + ")"; // NOTE: zipf_alpha does NOT affect zeta_wikiimage and zeta_wikitext, whose Zipfian constants are fixed
@@ -122,7 +122,7 @@ namespace covered
             {
                 keycnt = Config::getTraceKeycnt(workload_name);
             }
-            else if (workload_name == Util::FBPHOTO_WORKLOAD_NAME) // (OBSOLETE due to not open-sourced and too skewed)
+            else if (workload_name == Util::FBPHOTO_WORKLOAD_NAME) // (OBSOLETE due to not open-sourced and and hence NO total frequency information for probability calculation and curvefitting)
             {
                 keycnt = FbphotoWorkloadWrapper::FBPHOTO_WORKLOAD_DATASET_KEYCNT;
             }
@@ -165,7 +165,7 @@ namespace covered
 
     void WorkloadCLI::checkWorkloadName_() const
     {
-        // OBSOLETE: self-reproduced Facebook photo caching trace is too skewed to be realistic; replayed traces cannot get reasonable results due to incorrect trace partitioning without geographical information
+        // OBSOLETE: self-reproduced Facebook photo caching trace is NOT open-sourced and NO probabilities for curvefitting; replayed traces cannot get reasonable results due to incorrect trace partitioning without geographical information
         // workload_name_ != Util::WIKIPEDIA_IMAGE_WORKLOAD_NAME && workload_name_ != Util::WIKIPEDIA_TEXT_WORKLOAD_NAME && workload_name_ != Util::FBPHOTO_WORKLOAD_NAME
         if (workload_name_ != Util::FACEBOOK_WORKLOAD_NAME && workload_name_ != Util::ZIPF_FACEBOOK_WORKLOAD_NAME && workload_name_ != Util::ZETA_WIKIPEDIA_IMAGE_WORKLOAD_NAME && workload_name_ != Util::ZETA_WIKIPEDIA_TEXT_WORKLOAD_NAME)
         {

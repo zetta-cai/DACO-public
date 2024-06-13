@@ -2,12 +2,13 @@
 # characterize_traces: characterize replayed trace files by Zipfian distribution to extract characteristics (including Zipfian constant, key size distribution, and value size distribution) for geo-distributed evaluation.
 
 import struct
+import gc
 
 from .utils.trace_loader import *
 from .utils.zipf_curvefit import *
 from ..exps.utils.exputil import *
 
-# Zipfian constant: [1.012, 1.029]
+# Zipfian constant: [1.012, 1.029, 1.0095, TODO]
 workload_names = [TraceLoader.WIKITEXT_WORKLOADNAME, TraceLoader.WIKIIMAGE_WORKLOADNAME, TraceLoader.TENCENTPHOTO1_WORKLOADNAME, TraceLoader.TENCENTPHOTO2_WORKLOADNAME]
 
 # Get dirpath of trace files
@@ -69,6 +70,11 @@ for tmp_workload_name in workload_names:
             f.write(struct.pack("<I", len(tmp_valuesize_histogram)))
             for i in range(len(tmp_valuesize_histogram)):
                 f.write(struct.pack("<I", tmp_valuesize_histogram[i]))
+        
+        # Avoid memory overflow
+        del tmp_trace_loader
+        del tmp_sorted_frequency_list
+        del tmp_zipf_curvefit
 
     # (2) Copy characteristics file to cloud machine if not exist
     if Common.cur_machine_idx == client_machine_idxes[0]: # NOTE: ONLY copy if the current machine is the first client machine to avoid duplicate copying
@@ -111,3 +117,5 @@ for tmp_workload_name in workload_names:
                 copy_characteristic_file_subprocess = SubprocessUtil.runCmd(copy_characteristic_file_remote_cmd, is_capture_output=False) # Copy characteristics file may be time-consuming
                 if copy_characteristic_file_subprocess.returncode != 0:
                     LogUtil.die(Common.scriptname, SubprocessUtil.getSubprocessErrstr(copy_characteristic_file_subprocess))
+    
+    gc.collect() # Avoid memory overflow

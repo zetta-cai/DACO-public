@@ -67,7 +67,7 @@ for tmp_workload in zeta_workloads:
 
 
 
-# NOTE: NOT use fbphoto which is too skewed -> GDSF+ can achieve 99% global cache hit ratio even if only with 1% memory of 4 edges
+# NOTE: NOT use fbphoto which is NOT open-sourced and hence NO total frequency information for probability calculation and curvefitting -> GDSF+ can achieve 99% global cache hit ratio even if only with 1% memory of 4 edges
 # # (2) (OBSOLETE due to unused) Load dataset into Rocksdb for Facebook photo caching (non-replayed trace)
 # tmp_keycnt = 1300000 # 1.3M
 # tmp_workload = "fbphoto"
