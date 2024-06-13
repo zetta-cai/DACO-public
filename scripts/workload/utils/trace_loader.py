@@ -213,6 +213,8 @@ class TraceLoader:
 
             if tmp_imgformat == TraceLoader.TENCENTPHOTO_IMGFORMAT_JPG or tmp_imgformat == TraceLoader.TENCENTPHOTO_IMGFORMAT_WEB:
                 self.updateStatistics_(tmp_key, tmp_valsize)
+        f.close()
+        return
 
     def updateStatistics_(self, key, valsize):
         if key not in self.statistics_:
