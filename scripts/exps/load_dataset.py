@@ -53,7 +53,7 @@ tmp_zipf_alpha = 0.7 # NOTE: 0.7 is the default skewness of Facebook CDN workloa
 load_dataset(tmp_workload, tmp_keycnt, tmp_zipf_alpha)
 
 # (3) Load dataset into Rocksdb for Zeta-based workloads (non-replayed traces; statistics are extracted from trace files)
-zeta_workloads = ["zeta_wikitext", "zeta_wikiimage"]
+zeta_workloads = ["zeta_wikitext", "zeta_wikiimage", "zeta_tencentphoto1", "zeta_tencentphoto2"]
 for tmp_workload in zeta_workloads:
     tmp_keycnt = 1000000 # 1M by default
     load_dataset(tmp_workload, tmp_keycnt)

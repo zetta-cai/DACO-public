@@ -297,7 +297,9 @@ namespace covered
         bool is_error = bool(boost_errcode); // boost_errcode.m_val != 0
         if (is_error && boost_errcode.value() != ENOENT)
         {
-            dumpErrorMsg(kClassName, boost_errcode.message());
+            std::ostringstream oss;
+            oss << "failed to check status of file " << path << " (error code: " << boost_errcode.value() << "; error msg: " << boost_errcode.message() << ") !";
+            dumpErrorMsg(kClassName, oss.str());
             exit(1);
         }
 
@@ -1133,8 +1135,14 @@ namespace covered
         // (i) Config variables from JSON, e.g., is_debug and is_track_event
         // (ii) Config variables from CLI, e.g., main_class_name and --config_filepath
         // (iii) Unchanged CLI parameters, e.g., --cloud_storage
-        // Example: covered_capacitymb1000_clientcnt1_warmupspeedup1_edgecnt1_hashnamemmh3_keycnt1000000_perclientopcnt1000000_percacheserverworkercnt1_perclientworkercnt1_propagationus100010000100000_warmupscale5_warmupmaxdurationsec0_stresstestdurationsec10_facebook
-        oss << cache_name << "_capacitymb" << B2MB(capacity_bytes) << "_clientcnt" << clientcnt << "_warmupspeedup" << (is_warmup_speedup?"1":"0") << "_edgecnt" << edgecnt << "_hashname" << hash_name << "_keycnt" << keycnt << "_perclientopcnt" << perclient_opcnt << "_percacheserverworkercnt" << percacheserver_workercnt << "_perclientworkercnt" << perclient_workercnt << "_propagationus" << propagation_latency_clientedge_us << propagation_latency_crossedge_us << propagation_latency_edgecloud_us << "_warmupscale" << warmup_reqcnt_scale << "_warmupmaxdurationsec" << warmup_max_duration_sec << "_stresstestdurationsec" << stresstest_duration_sec << "_" << workload_name;
+        // Example (tuned params/rarely changed params/covered params):
+        // Tunable params: covered_capacitymb1000_clientcnt1_edgecnt1_keycnt1000000_propagationus100010000100000_stresstestdurationsec10_facebook
+        // Rarely changed params: /warmupspeedup1_hashnamemmh3_perclientopcnt1000000_percacheserverworkercnt1_perclientworkercnt1_warmupscale10_warmupmaxdurationsec0
+        // 
+        oss << cache_name << "_capacitymb" << B2MB(capacity_bytes) << "_clientcnt" << clientcnt << "_edgecnt" << edgecnt << "_keycnt" << keycnt << "_propagationus" << propagation_latency_clientedge_us << propagation_latency_crossedge_us << propagation_latency_edgecloud_us << "_stresstestdurationsec" << stresstest_duration_sec << "_" << workload_name;
+        oss << "/warmupspeedup" << (is_warmup_speedup?"1":"0")  << "_hashname" << hash_name << "_perclientopcnt" << perclient_opcnt << "_percacheserverworkercnt" << percacheserver_workercnt << "_perclientworkercnt" << perclient_workercnt << "_warmupscale" << warmup_reqcnt_scale << "_warmupmaxdurationsec" << warmup_max_duration_sec;
+        // // (OBSOLETE due to too long filename) Example: covered_capacitymb1000_clientcnt1_warmupspeedup1_edgecnt1_hashnamemmh3_keycnt1000000_perclientopcnt1000000_percacheserverworkercnt1_perclientworkercnt1_propagationus100010000100000_warmupscale5_warmupmaxdurationsec0_stresstestdurationsec10_facebook
+        // oss << cache_name << "_capacitymb" << B2MB(capacity_bytes) << "_clientcnt" << clientcnt << "_warmupspeedup" << (is_warmup_speedup?"1":"0") << "_edgecnt" << edgecnt << "_hashname" << hash_name << "_keycnt" << keycnt << "_perclientopcnt" << perclient_opcnt << "_percacheserverworkercnt" << percacheserver_workercnt << "_perclientworkercnt" << perclient_workercnt << "_propagationus" << propagation_latency_clientedge_us << propagation_latency_crossedge_us << propagation_latency_edgecloud_us << "_warmupscale" << warmup_reqcnt_scale << "_warmupmaxdurationsec" << warmup_max_duration_sec << "_stresstestdurationsec" << stresstest_duration_sec << "_" << workload_name;
         if (cache_name == "covered")
         {
             // Example: XXX/localuncachedcapacitymb1_peredgesyncedvictimcnt3_peredgemonitoredsetcnt3_popaggregationcapacitymb1_popcollectchangeratio0.0_topkedgecnt3
