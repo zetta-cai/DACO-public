@@ -81,6 +81,8 @@ namespace covered
         static const std::string ZIPF_FACEBOOK_WORKLOAD_NAME; // Workload generator type (Zipf-based Facebook CDN workload; using Zipfian power law)
         static const std::string ZETA_WIKIPEDIA_IMAGE_WORKLOAD_NAME; // Workload generator type (Zipf-based Wikipedia image workload; using Zeta distribution)
         static const std::string ZETA_WIKIPEDIA_TEXT_WORKLOAD_NAME; // Workload generator type (Zipf-based Wikipedia text workload; using Zeta distribution)
+        static const std::string ZETA_TENCENT_PHOTO1_WORKLOAD_NAME; // Workload generator type (Zipf-based Tencent photo1 workload; using Zeta distribution)
+        static const std::string ZETA_TENCENT_PHOTO2_WORKLOAD_NAME; // Workload generator type (Zipf-based Tencent photo2 workload; using Zeta distribution)
         static const std::string WIKIPEDIA_IMAGE_WORKLOAD_NAME; // (OBSOLETE due to no geographical information) Wikipedia image replayed traces
         static const std::string WIKIPEDIA_TEXT_WORKLOAD_NAME; // (OBSOLETE due to no geographical information) WIkipedia text replayed
         static const std::string FBPHOTO_WORKLOAD_NAME; // (OBSOLETE due to not open-sourced and hence NO total frequency information for probability calculation and curvefitting) Workload generator type (Facebook photo caching workload)
