@@ -24,6 +24,7 @@ is_install_s3fifo = True # Completely use hacked version (also including SIEVE)
 is_install_glcache = True # Completely used hacked version
 is_install_lrb = True
 is_install_frozenhot = True
+is_install_tragen = True
 
 # Check input CLI parameters
 if len(sys.argv) != 2:
@@ -323,9 +324,22 @@ if is_install_frozenhot:
     SubprocessUtil.installFromRepoIfNot(Common.scriptname, frozenhot_install_dirpath, frozenhot_software_name, frozenhot_clone_dirpath, frozenhot_install_tool, pre_install_tool = frozenhot_preinstall_tool)
     print("")
 
-# (14) Others: chown of libraries and update LD_LIBRARY_PATH
+# (14) Install TRAGEN (commit ID: 70cd5bb)
 
-## (14.1) Chown of libraries
+if is_install_tragen:
+    tragen_clone_dirpath = "{}/tragen".format(Common.lib_dirpath)
+    tragen_software_name = "TRAGEN"
+    tragen_repo_url = "https://github.com/UMass-LIDS/Tragen.git"
+    SubprocessUtil.cloneRepo(Common.scriptname, tragen_clone_dirpath, tragen_software_name, tragen_repo_url)
+
+    tragen_target_commit = "70cd5bb"
+    SubprocessUtil.checkoutCommit(Common.scriptname, tragen_clone_dirpath, tragen_software_name, tragen_target_commit)
+
+    # NOTE: TRAGEN is based on python, which does not need compilation and installation
+
+# (15) Others: chown of libraries and update LD_LIBRARY_PATH
+
+## (15.1) Chown of libraries
 
 LogUtil.prompt(Common.scriptname, "chown of libraries...")
 chown_cmd = "sudo chown -R {0}:{0} {1}".format(Common.username, Common.lib_dirpath)
@@ -334,7 +348,7 @@ if chown_subprocess.returncode != 0:
     chown_errstr = SubprocessUtil.getSubprocessErrstr(chown_subprocess)
     LogUtil.die(Common.scriptname, "failed to chown of libraries (errmsg: {})".format(chown_errstr))
 
-## (14.2) Update LD_LIBRARY_PATH for interactive and non-interactive shells
+## (15.2) Update LD_LIBRARY_PATH for interactive and non-interactive shells
 
 target_ld_libs = ["webcachesim", "libbf", "mongocxxdriver", "lightgbm", "glcache", "segcache", "cachelib", "boost", "x86_64-linux-gnu"]
 target_ld_lib_dirpaths = ["{}/lrb/install/webcachesim/lib".format(Common.lib_dirpath), "{}/lrb/install/libbf/lib".format(Common.lib_dirpath), "{}/lrb/install/mongocxxdriver/lib".format(Common.lib_dirpath), "{}/lrb/install/lightgbm/lib".format(Common.lib_dirpath), "{}/src/cache/glcache/micro-implementation/build/lib".format(Common.proj_dirname), "{}/src/cache/segcache/build/ccommon/lib".format(Common.proj_dirname), "{}/CacheLib/opt/cachelib/lib".format(Common.lib_dirpath), "{}/boost_1_81_0/install/lib".format(Common.lib_dirpath), "/usr/lib/x86_64-linux-gnu"]
@@ -355,7 +369,7 @@ for i in range(len(target_ld_lib_dirpaths)):
     else:
         update_bash_source_grepstr = "{}:{}".format(update_bash_source_grepstr, target_ld_lib_dirpaths[i])
 
-### (14.3) Update LD_LIBRARY_PATH for non-interactive shells
+### (15.3) Update LD_LIBRARY_PATH for non-interactive shells
 
 noninteractive_bash_source_filepath = "/home/{}/.bashrc_non_interactive".format(Common.username)
 
@@ -388,7 +402,7 @@ if need_update_noninteractive_bash_source_file:
         create_noninteractive_bash_source_file_errstr = SubprocessUtil.getSubprocessErrstr(create_noninteractive_bash_source_file_subprocess)
         LogUtil.die(Common.scriptname, "failed to create non-interactive bash source file {} (errmsg: {})".format(noninteractive_bash_source_filepath, create_noninteractive_bash_source_file_errstr))
 
-### (14.4) Update LD_LIBRARY_PATH for interactive shells
+### (15.4) Update LD_LIBRARY_PATH for interactive shells
 
 LogUtil.prompt(Common.scriptname, "check if need to update LD_LIBRARY_PATH for interactive shells...")
 need_update_ld_library_path = False
