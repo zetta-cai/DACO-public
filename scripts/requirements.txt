@@ -1,1 +1,2 @@
 colorama >= 0.4.3 # Specify color of stdout
+matplotlib # Required by TRAGEN
