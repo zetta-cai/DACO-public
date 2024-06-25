@@ -27,6 +27,10 @@ class TraceGenerator():
         self.trafficClasses = self.trafficMixer.trafficClasses        
         self.fd.setupSampling(self.args.hitrate_type, 0, TB)
         self.MAX_SD = self.fd.sd_keys[-1]
+
+        # Siyuan: use 1M dataset objects to generate workloads for fair comparison
+        # dataset_objcnt = 70*MIL # Original settings of TRAGEN
+        self.dataset_objcnt = 70*MIL # TODO: move to 1M
         
 
     ## Generate a synthetic trace
@@ -34,10 +38,6 @@ class TraceGenerator():
         # Siyuan: use a fixed random seed for dataset generation, so that all clients access the same application in geo-distributed settings
         random.seed(0)
         np.random.seed(0)
-
-        # Siyuan: use 1M dataset objects to generate workloads for fair comparison
-        # dataset_objcnt = 70*MIL # Original settings of TRAGEN
-        dataset_objcnt = 70*MIL # TODO: move to 1M
 
         ## sample 70 million objects
         print("Sampling the object sizes that will be assigned to the initial objects in the LRU stack ...")
@@ -52,15 +52,15 @@ class TraceGenerator():
         i = -1
         for i in range(len(self.OWV)-1):
             SZ = self.sz_dsts[self.trafficClasses[i]]
-            n_sizes.extend(SZ.sample_keys(int(dataset_objcnt * self.OWV[i])))
+            n_sizes.extend(SZ.sample_keys(int(self.dataset_objcnt * self.OWV[i])))
 
             P = self.popularity_dsts[self.trafficClasses[i]]
-            n_popularities.extend(P.sample_keys(int(dataset_objcnt * self.OWV[i])))
+            n_popularities.extend(P.sample_keys(int(self.dataset_objcnt * self.OWV[i])))
             
         SZ = self.sz_dsts[self.trafficClasses[i+1]]
-        n_sizes.extend(SZ.sample_keys(int(dataset_objcnt) - len(n_sizes)))
+        n_sizes.extend(SZ.sample_keys(int(self.dataset_objcnt) - len(n_sizes)))
         P = self.popularity_dsts[self.trafficClasses[i+1]]
-        n_popularities.extend(P.sample_keys(int(dataset_objcnt) - len(n_popularities)))
+        n_popularities.extend(P.sample_keys(int(self.dataset_objcnt) - len(n_popularities)))
         
         random.shuffle(n_sizes)
         random.shuffle(n_popularities)        
@@ -82,17 +82,17 @@ class TraceGenerator():
         print("Generate trace for client worker {}".format(client_worker_ridx))
 
         # Siyuan: use a unique random seed for each client worker, so that all clients have different workload sequences in geo-distributed settings (yet still access the same dataset)
-        workload_rng = random.Random(client_worker_ridx) # Determine the sampled stack distances and hence the nodes deleted from st_tree
+        workload_rng = random.Random(client_worker_ridx) # Determine the sampled stack distances, which affects the workload items by pctile and the nodes deleted from st_tree
 
         # Siyuan: we continuously generate workload items based on the same dataset into total_trace
         total_trace   = []
 
         # Siyuan: generate until achieving required trace length
-        # TODO: Use while loop tp combine tmp_trace
-        # TODO: Pass remaining trace length
-        # TODO: Return c_trace
-        # TODO: END HERE
-        tmp_trace = self.generate_helper(workload_rng)
+        while len(total_trace) < int(self.args.length):
+            remaining_trace_length = int(self.args.length) - len(total_trace)
+            # Siyuan: generate different workload sequences under the same dataset
+            tmp_trace = self.generate_helper(workload_rng, remaining_trace_length, sizes, popularities, debug)
+            total_trace.extend(tmp_trace)
 
         tm_now = int(time.time())
         os.mkdir("OUTPUT/" + str(tm_now))
@@ -102,13 +102,13 @@ class TraceGenerator():
             fp.write('\n'.join(sys.argv[1:]))
             
         ## Assign timestamp based on the byte-rate of the FD
-        self.assign_timestamps(c_trace, sizes, self.fd.byte_rate, f)
+        self.assign_timestamps(total_trace, sizes, self.fd.byte_rate, f)
 
         ## We are done!
         if self.printBox != None:
             self.printBox.setText("Done! Ready again ...")
     
-    def generate_helper(self, workload_rng):
+    def generate_helper(self, workload_rng, remaining_trace_length, sizes, popularities, debug):
         ## Now fill the objects such that the stack is 10TB
         total_sz = 0
         total_objects = 0
@@ -150,7 +150,7 @@ class TraceGenerator():
         sz_removed = 0
         evicted_   = 0
 
-        reqs_seen   = [0] * 70 * MIL
+        reqs_seen   = [0] * self.dataset_objcnt # Siyuan: track # of seen requests for each dataset object
         sizes_seen  = []
         sds_seen    = []
         sampled_fds = []
@@ -158,7 +158,8 @@ class TraceGenerator():
         if self.printBox != None:
             self.printBox.setText("Generating synthetic trace ...")
         
-        while curr != None and i <= int(self.args.length):
+        # Siyuan: generate remaining_trace_length workload items for the same dataset items (yet different sequences)
+        while curr != None and i <= int(remaining_trace_length):
 
             ## Generate 1000 samples -- makes the computation faster
             if k >= 1000:
@@ -237,33 +238,37 @@ class TraceGenerator():
                 
                 ## As we remove objects from the top of the list, add objects towards the end of the list
                 ## so that the we have enough objects in the list i.e., size of the list is greater than MAX_SD
+                is_stop = False # Siyuan: used to directly return c_trace for stop condition
                 while root.s < self.MAX_SD:
 
                     ## Require more objects
-                    if (total_objects + 1) % (dataset_objcnt) == 0:
+                    if (total_objects + 1) % (self.dataset_objcnt) == 0:
+                        # Siyuan: directly return c_trace instead of generating more dataset objects, such that we can continuously generate remaining workload items for the same dataset objects
+                        is_stop = True
+                        break
 
-                        n_sizes        = []
-                        n_popularities = []
-                        i = -1
-                        for i in range(len(self.OWV)-1):
-                            SZ = self.sz_dsts[self.trafficClasses[i]]
-                            n_sizes.extend(SZ.sample_keys(int(dataset_objcnt * self.OWV[i])))
+                        # n_sizes        = []
+                        # n_popularities = []
+                        # i = -1
+                        # for i in range(len(self.OWV)-1):
+                        #     SZ = self.sz_dsts[self.trafficClasses[i]]
+                        #     n_sizes.extend(SZ.sample_keys(int(self.dataset_objcnt * self.OWV[i])))
 
-                            P = self.popularity_dsts[self.trafficClasses[i]]
-                            n_popularities.extend(P.sample_keys(int(dataset_objcnt * self.OWV[i])))
+                        #     P = self.popularity_dsts[self.trafficClasses[i]]
+                        #     n_popularities.extend(P.sample_keys(int(self.dataset_objcnt * self.OWV[i])))
             
-                        SZ = self.sz_dsts[self.trafficClasses[i+1]]
-                        n_sizes.extend(SZ.sample_keys(int(dataset_objcnt) - len(n_sizes)))
-                        P = self.popularity_dsts[self.trafficClasses[i+1]]
-                        n_popularities.extend(P.sample_keys(int(dataset_objcnt) - len(n_popularities)))
+                        # SZ = self.sz_dsts[self.trafficClasses[i+1]]
+                        # n_sizes.extend(SZ.sample_keys(int(self.dataset_objcnt) - len(n_sizes)))
+                        # P = self.popularity_dsts[self.trafficClasses[i+1]]
+                        # n_popularities.extend(P.sample_keys(int(self.dataset_objcnt) - len(n_popularities)))
         
-                        random.shuffle(n_sizes)
-                        random.shuffle(n_popularities)        
-                        sizes.extend(n_sizes)        
-                        popularities.extend(n_popularities)
+                        # random.shuffle(n_sizes)
+                        # random.shuffle(n_popularities)        
+                        # sizes.extend(n_sizes)        
+                        # popularities.extend(n_popularities)
                         
-                        reqs_seen_n = [0]*dataset_objcnt
-                        reqs_seen.extend(reqs_seen_n)
+                        # reqs_seen_n = [0]*self.dataset_objcnt
+                        # reqs_seen.extend(reqs_seen_n)
 
                         
                     total_objects += 1
@@ -277,6 +282,10 @@ class TraceGenerator():
             
                     if n.parent != None:
                         root = n.parent.rebalance(debug)
+                
+                # Siyuan: break to return c_trace for stop condition
+                if is_stop:
+                    break
 
             if curr.obj_id == req_obj.obj_id:
                 next, success = curr.findNext()
@@ -296,6 +305,12 @@ class TraceGenerator():
 
             reqs_seen[req_obj.obj_id] += 1
             i += 1
+        
+        # TODO: Comment debug information
+        print("c_trace[0] (objid: {}, objsize: {}) for remaining_trace_length {}".format(c_trace[0], sizes[c_trace[0]], remaining_trace_length))
+        
+        # Siyuan: return c_trace for total_trace.extend()
+        return c_trace
 
     ## Assign timestamp based on the byte-rate of the FD
     def assign_timestamps(self, c_trace, sizes, byte_rate, f):
