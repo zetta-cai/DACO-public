@@ -12,7 +12,9 @@ import numpy as np
 
 ## A class that defines the functions and objects required to generate a synthetic trace
 class TraceGenerator():
-    def __init__(self, trafficMixer, args, printBox=None):
+    # Siyuan: pass output_dir and client_worker_count to dump multi-client-worker workload sequences into the given output directory
+    def __init__(self, trafficMixer, args, output_dir, client_worker_count, printBox=None):
+        # TODO: END HERE
         self.trafficMixer = trafficMixer
         self.args = args
         self.log_file = open("OUTPUT/logfile.txt" , "w")
