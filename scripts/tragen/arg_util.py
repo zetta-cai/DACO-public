@@ -14,10 +14,11 @@ def define_arguments():
 
     parser.add_argument('-c', '--config_file',   action='store',  help="enter the full path to a json config file, example can be found in OUTPUT/config.json")
 
-    parser.add_argument('-d', '--output_dir',   action='store',  help="enter path to output directory")
+    parser.add_argument('-o', '--output_dir',   action='store',  help="enter path to output directory")
 
-    # Siyuan: generate multi-client-worker workload sequences
+    # Siyuan: generate multi-client-worker workload sequences and dataset file
     parser.add_argument('-w', '--client_worker_count', action='store', help="enter the number of client workers in geo-distributed caching")
+    parser.add_argument('-d', '--dataset_objcnt', action='store', help="enther the number of dataset objects")
     
     return parser
 
@@ -35,7 +36,7 @@ def show_available_fds():
     
 
 def show_example():
-    print("Here's an example command : python3 tragen_cli.py -c <config_file> -d <output_directory> -w <client_worker_count>")
+    print("Here's an example command : python3 tragen_cli.py -c <config_file> -o <output_directory> -w <client_worker_count> -d <dataset_objcnt>")
 
     
 ## Fill the arguments as entered by the user.

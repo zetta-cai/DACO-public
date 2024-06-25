@@ -12,9 +12,8 @@ import numpy as np
 
 ## A class that defines the functions and objects required to generate a synthetic trace
 class TraceGenerator():
-    # Siyuan: pass output_dir and client_worker_count to dump multi-client-worker workload sequences into the given output directory
-    def __init__(self, trafficMixer, args, output_dir, client_worker_count, printBox=None):
-        # TODO: END HERE
+    # Siyuan: pass output_dir and client_worker_count to dump multi-client-worker workload sequences and dataset file into the given output directory
+    def __init__(self, trafficMixer, args, output_dir, client_worker_count, dataset_objcnt, printBox=None):
         self.trafficMixer = trafficMixer
         self.args = args
         self.log_file = open("OUTPUT/logfile.txt" , "w")
@@ -31,8 +30,12 @@ class TraceGenerator():
         self.MAX_SD = self.fd.sd_keys[-1]
 
         # Siyuan: use 1M dataset objects to generate workloads for fair comparison
-        # dataset_objcnt = 70*MIL # Original settings of TRAGEN
-        self.dataset_objcnt = 70*MIL # TODO: move to 1M
+        # self.dataset_objcnt = 70*MIL # Original settings of TRAGEN
+        self.dataset_objcnt = dataset_objcnt # Use 1M by default (see scripts/tools/gen_akamai_traces.py)
+
+        # Siyuan: save output directory and client worker count to dump multi-client-worker workload sequences into the given output directory
+        self.output_dir = output_dir
+        self.client_worker_count = client_worker_count
         
 
     ## Generate a synthetic trace
@@ -73,18 +76,29 @@ class TraceGenerator():
         debug = open("OUTPUT/debug.txt", "w") ## debug file
         
         # Siyuan: generate trace for each client worker
-        self.generate_for_client_worker(0, sizes, popularities, debug)
+        for client_worker_idx in range(int(self.client_worker_count)):
+            self.generate_for_client_worker(client_worker_idx, sizes, popularities, debug)
+        
+        # Siyuan: dump dataset file
+        dataset_filepath = os.path.join(self.output_dir, "dataset{}.txt".format(self.dataset_objcnt)) # E.g., data/akamai/dataset1000000.txt
+        if os.path.exists(dataset_filepath):
+            print("dataset file {} already exists!".format(dataset_filepath))
+        else:
+            dataset_filedesc = open(dataset_filepath, "w")
+            for tmp_objid in range(self.dataset_objcnt):
+                dataset_filedesc.write(str(tmp_objid) + "," + str(sizes[tmp_objid]) + "\n")
+            dataset_filedesc.close()
 
         # Siyuan: close intermediate files after workload generation
         debug.close()
 
 
     # Siyuan: encapsulate for multi-client-worker traces
-    def generate_for_client_worker(self, client_worker_ridx, sizes, popularities, debug):
-        print("Generate trace for client worker {}".format(client_worker_ridx))
+    def generate_for_client_worker(self, client_worker_idx, sizes, popularities, debug):
+        print("Generate trace for client worker {}".format(client_worker_idx))
 
         # Siyuan: use a unique random seed for each client worker, so that all clients have different workload sequences in geo-distributed settings (yet still access the same dataset)
-        workload_rng = random.Random(client_worker_ridx) # Determine the sampled stack distances, which affects the workload items by pctile and the nodes deleted from st_tree
+        workload_rng = random.Random(client_worker_idx) # Determine the sampled stack distances, which affects the workload items by pctile and the nodes deleted from st_tree
 
         # Siyuan: we continuously generate workload items based on the same dataset into total_trace
         total_trace   = []
@@ -97,18 +111,27 @@ class TraceGenerator():
             total_trace.extend(tmp_trace)
 
         tm_now = int(time.time())
-        os.mkdir("OUTPUT/" + str(tm_now))
-        f = open("OUTPUT/" + str(tm_now) + "/gen_sequence.txt", "w")
+
+        # Siyuan: dump workload trace file of current client worker into output_dir instead of random directory
+        #os.mkdir("OUTPUT/" + str(tm_now))
+        #f = open("OUTPUT/" + str(tm_now) + "/gen_sequence.txt", "w")
+        workload_filename = "worker{}_sequence.txt".format(client_worker_idxs)
+        workload_dirpath = os.path.join(self.output_dir, "dataset{}_workercnt{}".format(self.dataset_objcnt, self.client_worker_count)) # E.g., data/akamai/dataset1000000_workercnt4/
+        workload_filepath = os.path.join(workload_dirpath, workload_filename)
+        f = open(workload_filepath, "w")
 
         with open("OUTPUT/" + str(tm_now) + "/command.txt", 'w') as fp:
             fp.write('\n'.join(sys.argv[1:]))
             
         ## Assign timestamp based on the byte-rate of the FD
-        self.assign_timestamps(total_trace, sizes, self.fd.byte_rate, f)
+        self.assign_timestamps(total_trace, sizes, self.fd.byte_rate, f) # Siyuan: this function will dump workload trace file of the current client worker
 
         ## We are done!
         if self.printBox != None:
             self.printBox.setText("Done! Ready again ...")
+        
+        # Siyuan: close the dumped file
+        f.close()
     
     def generate_helper(self, workload_rng, remaining_trace_length, sizes, popularities, debug):
         ## Now fill the objects such that the stack is 10TB
