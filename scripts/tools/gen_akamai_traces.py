@@ -28,4 +28,4 @@ for tmp_client_worker_count in client_worker_count_list:
     generate_akamai_trace_cmd = "cd {} && python3 {} -c {} -o {} -w {} -d {}".format(tragen_dirpath, tragen_cli_filename, akamai_web_trace_config_filepath, akamai_traces_dirpath, tmp_client_worker_count, dataset_objcnt)
     generate_akamai_trace_subprocess = SubprocessUtil.runCmd(generate_akamai_trace_cmd, is_capture_output=False)
     if generate_akamai_trace_subprocess.returncode != 0:
-        LogUtil.die(Common.scriptname, "failed to generate Akamai web trace of {} client workers (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(tmp_client_worker_count, generate_akamai_trace_subprocess)))
+        LogUtil.die(Common.scriptname, "failed to generate Akamai web trace of {} client workers (errmsg: {})".format(tmp_client_worker_count, SubprocessUtil.getSubprocessErrstr(generate_akamai_trace_subprocess)))

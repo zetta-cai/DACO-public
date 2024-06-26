@@ -26,8 +26,6 @@ class TraceGenerator():
         self.fd = self.trafficMixer.FD_mix
         self.OWV = self.trafficMixer.weight_vector ## object weight vector
         self.trafficClasses = self.trafficMixer.trafficClasses        
-        self.fd.setupSampling(self.args.hitrate_type, 0, TB)
-        self.MAX_SD = self.fd.sd_keys[-1]
 
         # Siyuan: use 1M dataset objects to generate workloads for fair comparison
         # self.dataset_objcnt = 70*MIL # Original settings of TRAGEN
@@ -72,6 +70,14 @@ class TraceGenerator():
         sizes.extend(n_sizes)        
         popularities.extend(n_popularities)
 
+        # Siyuan: add dataset_total_size to remove stack distances exceeding dataset_total_size of all dataset objects (reasonable as stack distance will never exceed dataset total size in practice)
+        dataset_total_size = 0
+        for tmp_size in sizes:
+            dataset_total_size += tmp_size
+        print("dataset_total_size: {}".format(dataset_total_size))
+        self.fd.setupSampling(self.args.hitrate_type, 0, TB, dataset_total_size, int(self.dataset_objcnt))
+        self.MAX_SD = self.fd.sd_keys[-1]
+
         # Siyuan: move intermediate files here to avoid overwriting
         debug = open("OUTPUT/debug.txt", "w") ## debug file
         
@@ -85,7 +91,7 @@ class TraceGenerator():
             print("dataset file {} already exists!".format(dataset_filepath))
         else:
             dataset_filedesc = open(dataset_filepath, "w")
-            for tmp_objid in range(self.dataset_objcnt):
+            for tmp_objid in range(int(self.dataset_objcnt)):
                 dataset_filedesc.write(str(tmp_objid) + "," + str(sizes[tmp_objid]) + "\n")
             dataset_filedesc.close()
 
@@ -138,7 +144,7 @@ class TraceGenerator():
         total_sz = 0
         total_objects = 0
         #i = 0 # Siyuan: NO need
-        while total_sz < self.MAX_SD:
+        while total_sz < self.MAX_SD: # Siyuan: self.MAX_SD must < dataset_total_size
             total_sz += sizes[total_objects]
             total_objects += 1
             if total_objects % 100000 == 0:
@@ -175,7 +181,7 @@ class TraceGenerator():
         sz_removed = 0
         evicted_   = 0
 
-        reqs_seen   = [0] * self.dataset_objcnt # Siyuan: track # of seen requests for each dataset object
+        reqs_seen   = [0] * int(self.dataset_objcnt) # Siyuan: track # of seen requests for each dataset object
         sizes_seen  = []
         sds_seen    = []
         sampled_fds = []
@@ -264,10 +270,10 @@ class TraceGenerator():
                 ## As we remove objects from the top of the list, add objects towards the end of the list
                 ## so that the we have enough objects in the list i.e., size of the list is greater than MAX_SD
                 is_stop = False # Siyuan: used to directly return c_trace for stop condition
-                while root.s < self.MAX_SD:
+                while root.s < self.MAX_SD: # Siyuan: self.MAX_SD must < dataset_total_size
 
                     ## Require more objects
-                    if (total_objects + 1) % (self.dataset_objcnt) == 0:
+                    if (total_objects + 1) % (int(self.dataset_objcnt)) == 0:
                         # Siyuan: directly return c_trace instead of generating more dataset objects, such that we can continuously generate remaining workload items for the same dataset objects
                         is_stop = True
                         break
@@ -292,7 +298,7 @@ class TraceGenerator():
                         # sizes.extend(n_sizes)        
                         # popularities.extend(n_popularities)
                         
-                        # reqs_seen_n = [0]*self.dataset_objcnt
+                        # reqs_seen_n = [0]*int(self.dataset_objcnt)
                         # reqs_seen.extend(reqs_seen_n)
 
                         

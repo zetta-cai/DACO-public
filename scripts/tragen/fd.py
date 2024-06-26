@@ -105,8 +105,8 @@ class FD():
                 st_sub[t][sd] += self.st[iat][sd]
         self.st = st_sub
 
-    
-    def setupSampling(self, hr_type, min_val, max_val):
+    # Siyuan: add dataset_total_size to avoid sampling stack distance exceeding dataset_total_size of all dataset objects (reasonable as stack distance will never exceed dataset total size in practice)
+    def setupSampling(self, hr_type, min_val, max_val, dataset_total_size, dataset_objcnt):
         self.sd_keys = []
         self.sd_vals = []
 
@@ -123,13 +123,61 @@ class FD():
         self.sd_keys = list(SD.keys())
         self.sd_keys.sort()
 
+        # Siyuan: choose the smaller one
+        original_maxsd = self.sd_keys[-1] # max sd for 70M dataset
+        scaled_maxsd = original_maxsd * dataset_objcnt / (70 * 1000 * 1000)
+        if scaled_maxsd > original_maxsd:
+            scaled_maxsd = original_maxsd
+        sd_limitation = scaled_maxsd
+        if dataset_total_size < scaled_maxsd:
+            sd_limitation = dataset_total_size
+        print("sd_limitation: {}".format(sd_limitation))
+
+        # Siyuan: delay self.sd_pr later
+        #self.sd_pr = defaultdict()
+        #curr_pr    = 0 
+        for sd in self.sd_keys:
+            self.sd_vals.append(SD[sd])
+            #curr_pr += SD[sd]
+            #if sd >= 0:
+            #    self.sd_pr[sd] = float(curr_pr - SD[-1])/(1 - SD[-1])
+
+        # Siyuan: remove sd > sd_limitation and scale probabilities
+        # Remove sd > sd_limitation
+        last_sd_idx = len(self.sd_keys) - 1
+        for i in range(len(self.sd_keys)):
+            if self.sd_keys[i] > sd_limitation:
+                last_sd_idx = i - 1
+                break
+        if last_sd_idx < 0:
+            print("Error: NO stack distance < sd_limitation {}".format(sd_limitation))
+            exit(-1)
+        elif last_sd_idx < (len(self.sd_keys) - 1):
+            self.sd_keys = self.sd_keys[0:last_sd_idx]
+            if self.sd_keys[0] != -1:
+                print("Error: self.sd_keys[0] {} != -1".format(self.sd_keys[0]))
+            # Scale per-sd probability
+            self.sd_vals = self.sd_vals[0:last_sd_idx]
+            if self.sd_vals[0] != SD[-1]:
+                print("Error: self.sd_vals[0] {} != SD[-1] {}".format(self.sd_vals[0], SD[-1]))
+            sd_val_sum = 0
+            for i in range(1, len(self.sd_vals)): # NOTE: NOT consider SD[-1], i.e., one-hit-wonder without reuse subsequence
+                sd_val_sum += self.sd_vals[i]
+            for i in range(1, len(self.sd_vals)): # NOTE: NOT consider SD[-1], i.e., one-hit-wonder without reuse subsequence
+                self.sd_vals[i] /= sd_val_sum
+        # Calculate cumulative probabilities
         self.sd_pr = defaultdict()
         curr_pr    = 0 
         for sd in self.sd_keys:
-            self.sd_vals.append(SD[sd])
             curr_pr += SD[sd]
-            if sd >= 0:
+            if sd >= 0: # NOTE: NOT consider SD[-1], i.e., one-hit-wonder without reuse subsequence
                 self.sd_pr[sd] = float(curr_pr - SD[-1])/(1 - SD[-1])
+        
+        # Dump debug information
+        print("# of sds: {}".format(len(self.sd_keys)))
+        for i in range(len(self.sd_keys)):
+            print("sd {} with probability {}".format(self.sd_keys[i], self.sd_vals[i]))
+        exit(-1)
             
         print("Finished reading the input models")
 
