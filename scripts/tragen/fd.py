@@ -173,13 +173,14 @@ class FD():
             if sd >= 0: # NOTE: NOT consider SD[-1], i.e., one-hit-wonder without reuse subsequence
                 self.sd_pr[sd] = float(curr_pr - SD[-1])/(1 - SD[-1])
         
-        # Dump debug information
         print("# of sds: {}".format(len(self.sd_keys)))
-        for i in range(len(self.sd_keys)):
-            print("sd {} with probability {}".format(self.sd_keys[i], self.sd_vals[i]))
-        exit(-1)
+        
+        # # Dump debug information
+        # for i in range(len(self.sd_keys)):
+        #     print("sd {} with probability {}".format(self.sd_keys[i], self.sd_vals[i]))
+        # exit(-1)
             
-        print("Finished reading the input models")
+        # print("Finished reading the input models")
 
             
     def sample(self, n, rng = None):

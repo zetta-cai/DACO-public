@@ -20,10 +20,8 @@ if __name__ == "__main__":
     # Siyuan: check Akamai's trace existence for current client worker count
     current_akamai_trace_dirpath = os.path.join(params.output_dir, "dataset{}_workercnt{}".format(params.dataset_objcnt, params.client_worker_count)) # E.g., data/akamai/dataset1000000_workercnt4/
     if os.path.exists(current_akamai_trace_dirpath):
-        # TODO: Uncomment and remove pass
-        # print("Akamai's CDN trace of {} client workers has been generated into {}!".format(tmp_client_worker_count, current_akamai_trace_dirpath))
-        # sys.exit()
-        pass
+        print("Akamai's CDN trace of {} client workers has been generated into {}!".format(params.client_worker_count, current_akamai_trace_dirpath))
+        sys.exit()
     else:
         os.makedirs(current_akamai_trace_dirpath)
 

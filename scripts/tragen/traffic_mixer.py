@@ -25,7 +25,7 @@ class TrafficMixer():
         ## and 200MB for Stack distance.
         self.iat_gran = 200
         #self.sd_gran  = 200000
-        self.sd_gran  = 2000 # Siyuan: use fine-grained stack distance distribution
+        self.sd_gran  = 2000 # Siyuan: use fine-grained stack distance distribution (NOTE: no difference with sd_gran of 200000, as the minimum sd unit in each TRAGEN's fd.txt is 200000 * KiB)
 
         ## Recompute the traffic ratios based on the available traffic rate
         trafficRatios  = []

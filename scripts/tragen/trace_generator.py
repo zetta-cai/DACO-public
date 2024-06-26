@@ -86,6 +86,7 @@ class TraceGenerator():
             self.generate_for_client_worker(client_worker_idx, sizes, popularities, debug)
         
         # Siyuan: dump dataset file
+        # NOTE: TRAGEN's sz.txt and fd.txt use KiB as the unit for object sizes (e.g., 1.0 represents 1KiB instead of 1B)
         dataset_filepath = os.path.join(self.output_dir, "dataset{}.txt".format(self.dataset_objcnt)) # E.g., data/akamai/dataset1000000.txt
         if os.path.exists(dataset_filepath):
             print("dataset file {} already exists!".format(dataset_filepath))
@@ -116,18 +117,19 @@ class TraceGenerator():
             tmp_trace = self.generate_helper(workload_rng, remaining_trace_length, sizes, popularities, debug)
             total_trace.extend(tmp_trace)
 
-        tm_now = int(time.time())
+        # tm_now = int(time.time()) # Siyuan: NO need time-related intermediate files
 
         # Siyuan: dump workload trace file of current client worker into output_dir instead of random directory
         #os.mkdir("OUTPUT/" + str(tm_now))
         #f = open("OUTPUT/" + str(tm_now) + "/gen_sequence.txt", "w")
-        workload_filename = "worker{}_sequence.txt".format(client_worker_idxs)
+        workload_filename = "worker{}_sequence.txt".format(client_worker_idx)
         workload_dirpath = os.path.join(self.output_dir, "dataset{}_workercnt{}".format(self.dataset_objcnt, self.client_worker_count)) # E.g., data/akamai/dataset1000000_workercnt4/
         workload_filepath = os.path.join(workload_dirpath, workload_filename)
         f = open(workload_filepath, "w")
 
-        with open("OUTPUT/" + str(tm_now) + "/command.txt", 'w') as fp:
-            fp.write('\n'.join(sys.argv[1:]))
+        # Siyuan: NO need time-related intermediate files
+        # with open("OUTPUT/" + str(tm_now) + "/command.txt", 'w') as fp:
+        #     fp.write('\n'.join(sys.argv[1:]))
             
         ## Assign timestamp based on the byte-rate of the FD
         self.assign_timestamps(total_trace, sizes, self.fd.byte_rate, f) # Siyuan: this function will dump workload trace file of the current client worker

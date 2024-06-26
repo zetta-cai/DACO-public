@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # gen_akamai_traces: invoke TRAGEN to generate Akamai CDN traces.
+# NOTE: we hack some parts of TRAGEN (see scripts/tragen/) to (i) scale stack distances for the given dataset object count (original stack distances is fixed for 70M); and (ii) continuously generate workload requests for the given trace length under a fixed set of dataset objects (original generation dynamically adds dataset objects).
 
 import os
 import sys
