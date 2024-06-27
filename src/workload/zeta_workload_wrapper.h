@@ -76,7 +76,7 @@ namespace covered
         // For clients, dataset loader, and cloud
         std::vector<std::string> dataset_keys_; // Client needs dataset_keys_ to sample for workload items
         std::vector<double> dataset_probs_;
-        std::vector<uint32_t> dataset_valsizes_;
+        std::vector<uint32_t> dataset_valsizes_; // Client needs dataset_valsizes_ to generate workload items (although NOT used by client workers due to GET requests)
         // For clients
         std::vector<std::mt19937_64*> client_worker_item_randgen_ptrs_;
         std::vector<std::discrete_distribution<uint32_t>*> client_worker_reqdist_ptrs_; // randomly select request index from workload indices of each client

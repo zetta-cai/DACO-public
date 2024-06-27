@@ -9,23 +9,14 @@ namespace covered
 {
     const std::string AkamaiWorkloadWrapper::kClassName("AkamaiWorkloadWrapper");
 
-    // TODO: END HERE
-
-    //, zipf_alpha_(zipf_alpha)
-    ZetaWorkloadWrapper::ZetaWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const float& zipf_alpha) : WorkloadWrapperBase(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role)
+    AkamaiWorkloadWrapper::AkamaiWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const float& zipf_alpha) : WorkloadWrapperBase(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role)
     {
-        // NOTE: perclient_opcnt is ONLY used by Zipfian/original Facebook CDN workload and Facebook photo caching workload (OBSOLETE) to represent workload distribution by pre-generated workload items (see src/workload/cachebench/workload_generator.* and src/workload/fbphoto_workload_wrapper.*), yet NOT used by others including Zipfian Wikipedia traces with Zeta workload distribution (NO need to pre-generate workload items for approximate workload distribution representation) and replayed Wikipedia traces with fixed number of sampled requests (OBSOLETE)
+        UNUSED(perclient_opcnt); // NO need to pre-generate workload items for approximate workload distribution, as Akamai traces have workload files
 
-        // The way similar to cachelib: 0 to generate the same dataset items shared by different clients, client idx to pre-generate workload items in each client for approximate workload distribution, and global worker idx to select pre-generated workload items uniformly as workloads of each worker
-        // Here we use another way:  0 to generate the same dataset items shared by different clients and global worker idx to select dataset items based on Zeta workload distribution as workloads of each worker
-        // TODO: Maybe change to the way similar to cachelib for consistent implementation, yet this is just impl trick and should NOT affect evaluation results
-
-        UNUSED(perclient_opcnt);
-
-        // NOTE: Zeta-based Zipfian workloads are not replayed traces and NO need for trace preprocessing (also NO need to dump dataset file)
+        // NOTE: Akamai workloads are not replayed single-node traces and NO need to load all single-node trace files (also NO such files) for sampling-based trace preprocessing
         assert(!needAllTraceFiles_()); // Must NOT trace preprocessor
 
-        // Differentiate facebook workload generator in different clients
+        // Differentiate Akamai workload wrapper in different clients
         std::ostringstream oss;
         oss << kClassName << " client" << client_idx;
         instance_name_ = oss.str();
@@ -37,12 +28,14 @@ namespace covered
         average_dataset_valuesize_ = 0;
         min_dataset_valuesize_ = 0;
         max_dataset_valuesize_ = 0;
-        loadZetaCharacteristicsFile_(); // Load characteristics file to update dataset keys, probs, value sizes, and dataset statistics
+        dataset_valsizes_.clear();
+        loadDatasetFile_(); // Load dataset file to update dataset_valsizes_ and dataset statistics (required by all roles including clients, dataset loader, and cloud); clients use value sizes to generate workload items (yet not used due to GET requests)
 
         // For clients
-        client_worker_item_randgen_ptrs_.resize(perclient_workercnt, NULL);
-        client_worker_reqdist_ptrs_.resize(perclient_workercnt, NULL);
+        curclient_perworker_workload_objids_.clear();
     }
+
+    // TODO: END HERE
 
     ZetaWorkloadWrapper::~ZetaWorkloadWrapper()
     {

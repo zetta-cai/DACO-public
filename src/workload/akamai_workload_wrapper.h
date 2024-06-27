@@ -50,8 +50,8 @@ namespace covered
 
         // (1) Akamai-specific helper functions
 
-        // For role of dataset loader and cloud
-        void loadDatasetFile_(); // Load dataset file (key-valsize pairs for dataset objects)
+        // For role of clients, dataset loader, and cloud
+        void loadDatasetFile_(); // Load dataset file (objid-valsize pairs for dataset objects); clients use value sizes to generate workload items (yet not used due to GET requests)
 
         // For role of clients
         void loadWorkloadFile_();
@@ -71,11 +71,10 @@ namespace covered
 
         // (3) Const shared variables
         std::string instance_name_;
-        // const float zipf_alpha_; // NOTE: we use the Zipfian constant loaded from the characteristics file, while that from CLI is ONLY used for Zipfian Facebook CDN workload to tune workload skewness
 
         // (4) Other shared variables
-        // For role of dataset loader and cloud
-        std::vector<Value> dataset_values_; // Values of dataset objects (indexed by object ID)
+        // For role of clients, dataset loader, and cloud
+        std::vector<Value> dataset_valsizes_; // Value sizes of dataset objects (indexed by object ID); client needs dataset_valsizes_ to generate workload items (although NOT used by client workers due to GET requests)
         // For role of clients during evaluation
         std::vector<std::vector<int64_t>> curclient_perworker_workload_objids_; // Object IDs of workload sequence for each client worker in the current client
     };

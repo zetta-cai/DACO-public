@@ -88,7 +88,7 @@ namespace covered
 
         // (2) Other common utilities
 
-        bool needAllTraceFiles_() const;
+        bool needAllTraceFiles_() const; // Whether need all single-node trace files or not to sample workload and dataset items for trace preprocessing
         bool needDatasetItems_() const;
         bool needWorkloadItems_() const;
 

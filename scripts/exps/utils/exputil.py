@@ -84,7 +84,7 @@ class ExpUtil:
             # Check if cloud machine has the given file
             # NOTE: cloud machine may already have the given file (the given file has been copied before or generated before, e.g., cloud machine is one of client machines yet not the first client to generate the given file)
             LogUtil.prompt(Common.scriptname, "check if the given file {} exists in cloud machine...".format(given_filepath))
-            check_cloud_given_filepath_remote_cmd = ExpUtil.getRemoteCmd(cloud_machine_idx, "ls {}".format(given_filepath))
+            check_cloud_given_filepath_remote_cmd = ExpUtil.getRemoteCmd(cls.cloud_machine_idx_, "ls {}".format(given_filepath))
             need_copy_given_file = False
             check_cloud_given_filepath_subprocess = SubprocessUtil.runCmd(check_cloud_given_filepath_remote_cmd)
             if check_cloud_given_filepath_subprocess.returncode != 0: # given file not found in cloud
@@ -99,14 +99,14 @@ class ExpUtil:
                 # Mkdir for the given filepath if not exist
                 given_dirpath = os.path.dirname(given_filepath)
                 LogUtil.prompt(Common.scriptname, "create directory {} if not exist in cloud machine...".format(given_dirpath))
-                try_to_create_given_dirpath_remote_cmd = ExpUtil.getRemoteCmd(cloud_machine_idx, "mkdir -p {}".format(given_dirpath))
+                try_to_create_given_dirpath_remote_cmd = ExpUtil.getRemoteCmd(cls.cloud_machine_idx_, "mkdir -p {}".format(given_dirpath))
                 try_to_create_given_dirpath_subprocess = SubprocessUtil.runCmd(try_to_create_given_dirpath_remote_cmd)
                 if try_to_create_given_dirpath_subprocess.returncode != 0:
                     LogUtil.die(Common.scriptname, SubprocessUtil.getSubprocessErrstr(try_to_create_given_dirpath_subprocess))
 
                 # Copy the given file to cloud machine
                 LogUtil.prompt(Common.scriptname, "copy given file {} to cloud machine...".format(given_filepath))
-                cloud_machine_public_ip = physical_machines[cloud_machine_idx]["public_ipstr"]
+                cloud_machine_public_ip = cls.physical_machines_[cls.cloud_machine_idx_]["public_ipstr"]
                 copy_given_file_remote_cmd = "scp -i {0} {1} {2}@{3}:{1}".format(Common.sshkey_filepath, given_filepath, Common.username, cloud_machine_public_ip)
                 copy_given_file_subprocess = SubprocessUtil.runCmd(copy_given_file_remote_cmd, is_capture_output=False) # Copy given file may be time-consuming
                 if copy_given_file_subprocess.returncode != 0:
