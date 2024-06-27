@@ -1,5 +1,5 @@
 /*
- * ZetaWorkloadWrapper: use Zeta distribution to reproduce replayed traces with geographical information based on Zipfian constant and key/value size distributions (thread safe).
+ * ZetaWorkloadWrapper: use Zeta distribution to reproduce replayed (single-node) traces with geographical information based on Zipfian constant and key/value size distributions (thread safe).
  * 
  * By Siyuan Sheng (2024.05.30).
  */
@@ -44,7 +44,7 @@ namespace covered
     private:
         static const std::string kClassName;
 
-        void loadZetaCharacteristicsFile_(); // Load Zipfian constant, key size histogram, and value size histogram
+        void loadZetaCharacteristicsFile_(); // Load Zipfian constant, key size histogram, and value size histogram (required by all roles including clients, dataset loader, and cloud)
         static std::string getKeystrFromKeyrank_(const int64_t& keyrank, const uint32_t& keysize); // Generate a key string based on the key rank with key size bytes
         static double calcRiemannZeta_(const double& zipf_constant); // Calculate the Riemann Zeta function for the Zipfian constant
         static int64_t getKeyrankFromKeystr_(const std::string& keystr); // Generate a key rank based on the key string
@@ -53,9 +53,14 @@ namespace covered
         virtual void overwriteWorkloadParameters_() override;
         virtual void createWorkloadGenerator_() override;
 
-        // Facebook-specific helper functions
+        // (1) Zeta-specific helper functions
 
-        // (1) For role of clients, dataset loader, and cloud
+        // Common utilities
+        void checkPointers_() const;
+
+        // (2) Statistics variables
+        
+        // For role of clients, dataset loader, and cloud
         double average_dataset_keysize_; // Average dataset key size
         double average_dataset_valuesize_; // Average dataset value size
         uint32_t min_dataset_keysize_; // Minimum dataset key size
@@ -63,20 +68,16 @@ namespace covered
         uint32_t max_dataset_keysize_; // Maximum dataset key size
         uint32_t max_dataset_valuesize_; // Maximum dataset value size
 
-        // (2) Common utilities
-
-        void checkPointers_() const;
-
-        // Const shared variables
+        // (3) Const shared variables
         std::string instance_name_;
         // const float zipf_alpha_; // NOTE: we use the Zipfian constant loaded from the characteristics file, while that from CLI is ONLY used for Zipfian Facebook CDN workload to tune workload skewness
 
-        // Const shared variables
-        // (1) For clients, dataset loader, and cloud
-        std::vector<std::string> dataset_keys_;
+        // (4) Other shared variables
+        // For clients, dataset loader, and cloud
+        std::vector<std::string> dataset_keys_; // Client needs dataset_keys_ to sample for workload items
         std::vector<double> dataset_probs_;
         std::vector<uint32_t> dataset_valsizes_;
-        // (2) For clients
+        // For clients
         std::vector<std::mt19937_64*> client_worker_item_randgen_ptrs_;
         std::vector<std::discrete_distribution<uint32_t>*> client_worker_reqdist_ptrs_; // randomly select request index from workload indices of each client
         // std::vector<uint32_t> workload_key_indices_; // workload indices for each client (NOTE: NO need due to directly generating workload items by Zeta distribution)

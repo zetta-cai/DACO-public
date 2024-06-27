@@ -77,14 +77,16 @@ namespace covered
         static const std::string TRACE_PREPROCESSOR_MAIN_NAME;
 
         // Workload name
+        static const std::string AKAMAI_WEB_WORKLOAD_NAME; // TRAGEN-generated Akamai's web CDN trace (geo-distributed)
+        static const std::string AKAMAI_VIDEO_WORKLOAD_NAME; // TRAGEN-generated Akamai's video CDN trace (geo-distributed)
         static const std::string FACEBOOK_WORKLOAD_NAME; // Workload generator type (Facebook CDN workload)
         static const std::string ZIPF_FACEBOOK_WORKLOAD_NAME; // Workload generator type (Zipf-based Facebook CDN workload; using Zipfian power law)
         static const std::string ZETA_WIKIPEDIA_IMAGE_WORKLOAD_NAME; // Workload generator type (Zipf-based Wikipedia image workload; using Zeta distribution)
         static const std::string ZETA_WIKIPEDIA_TEXT_WORKLOAD_NAME; // Workload generator type (Zipf-based Wikipedia text workload; using Zeta distribution)
         static const std::string ZETA_TENCENT_PHOTO1_WORKLOAD_NAME; // Workload generator type (Zipf-based Tencent photo1 workload; using Zeta distribution)
         static const std::string ZETA_TENCENT_PHOTO2_WORKLOAD_NAME; // Workload generator type (Zipf-based Tencent photo2 workload; using Zeta distribution)
-        static const std::string WIKIPEDIA_IMAGE_WORKLOAD_NAME; // (OBSOLETE due to no geographical information) Wikipedia image replayed traces
-        static const std::string WIKIPEDIA_TEXT_WORKLOAD_NAME; // (OBSOLETE due to no geographical information) WIkipedia text replayed
+        static const std::string WIKIPEDIA_IMAGE_WORKLOAD_NAME; // (OBSOLETE due to no geographical information) Wikipedia image replayed traces (single-node)
+        static const std::string WIKIPEDIA_TEXT_WORKLOAD_NAME; // (OBSOLETE due to no geographical information) WIkipedia text replayed traces (single-node)
         static const std::string FBPHOTO_WORKLOAD_NAME; // (OBSOLETE due to not open-sourced and hence NO total frequency information for probability calculation and curvefitting) Workload generator type (Facebook photo caching workload)
 
         // Cloud storage
@@ -185,6 +187,8 @@ namespace covered
 
         static bool isSingleNodeCache(const std::string cache_name); // Will disable cooperative caching for single-node caches
 
+        // OBSOLETE: single-node does NOT have geo-graphical information and cannot be simply partitioned for geo-distributed access
+        // Replay single-node trace files by sampling and partitioning for geo-distributed caching
         static bool isReplayedWorkload(const std::string workload_name); // Will disable effects of keycnt/opcnt for replayed workloads (NO tunable workload parameters)
         static std::string getReplayedWorkloadHintstr(); // Used by CLI module to dump hint information
 

@@ -5,6 +5,7 @@
 
 #include "common/dynamic_array.h"
 #include "common/util.h"
+#include "workload/akamai_workload_wrapper.h"
 #include "workload/facebook_workload_wrapper.h"
 #include "workload/fbphoto_workload_wrapper.h"
 #include "workload/wikipedia_workload_wrapper.h"
@@ -23,7 +24,11 @@ namespace covered
     WorkloadWrapperBase* WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const float& zipf_alpha)
     {
         WorkloadWrapperBase* workload_ptr = NULL;
-        if (workload_name == Util::FACEBOOK_WORKLOAD_NAME) // Facebook/Meta CDN
+        if (workload_name == Util::AKAMAI_WEB_WORKLOAD_NAME || workload_name == Util::AKAMAI_VIDEO_WORKLOAD_NAME) // Akamai's web/video trace
+        {
+            workload_ptr = new AkamaiWorkloadWrapper(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role);
+        }
+        else if (workload_name == Util::FACEBOOK_WORKLOAD_NAME) // Facebook/Meta CDN
         {
             workload_ptr = new FacebookWorkloadWrapper(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role);
         }

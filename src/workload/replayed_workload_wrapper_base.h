@@ -1,5 +1,5 @@
 /*
- * (OBSOLETE) ReplayedWorkloadWrapperBase: the base class ONLY for replayed workload wrappers.
+ * (OBSOLETE) ReplayedWorkloadWrapperBase: the base class ONLY for replayed workload wrappers (replay single-node traces by sampling and partitioning).
  *
  * OBSOLETE reason: unreasonable results due to incorrect trace partitioning without geographical information.
  *
@@ -79,14 +79,14 @@ namespace covered
         std::string base_instance_name_;
 
         // Const shared variables (ONLY for replayed traces)
-        // (1) For role of preprocessor
+        // (A) For role of preprocessor
         uint32_t total_workload_opcnt_; // Total opcnt of workloads in all clients before sampling (used to calculate workload sample ratio)
         double workload_sample_ratio_; // Sample ratio for workload items (calculated by trace sample opcnt / toatl workload opcnt)
         std::vector<Key> sample_workload_keys_; // Keys of total workload in all clients after sampling
         std::vector<int> sample_workload_value_sizes_; // Value sizes of workload in all clients after sampling (< 0: read; = 0: delete; > 0: write)
         std::mt19937* workload_sample_randgen_ptr_; // Random number generator for sampling workload items
         std::bernoulli_distribution* workload_sample_dist_ptr_; // Bernoulli distribution for sampling workload items
-        // (2) For role of preprocessor, dataset loader, and cloud
+        // (B) For role of preprocessor, dataset loader, and cloud
         // NOTE: non-replayed traces can generate all information (dataset items, workload items, dataset statistics) by workload generator
         double average_dataset_keysize_; // Average dataset key size
         double average_dataset_valuesize_; // Average dataset value size
@@ -96,7 +96,7 @@ namespace covered
         uint32_t max_dataset_valuesize_; // Maximum dataset value size
         std::unordered_map<Key, uint32_t, KeyHasher> dataset_lookup_table_; // Fast indexing for dataset key-value pairs after sampling
         std::vector<std::pair<Key, Value>> dataset_kvpairs_; // Key-value pairs of dataset after sampling
-        // (3) For role of clients during evaluation
+        // (C) For role of clients during evaluation
         std::vector<Key> curclient_workload_keys_; // Keys of workload in the current client
         std::vector<int> curclient_workload_value_sizes_; // Value sizes of workload in the current client (< 0: read; = 0: delete; > 0: write)
 
