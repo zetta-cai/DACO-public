@@ -79,7 +79,7 @@ class ExpUtil:
         # Copy given file to cloud machine if not exist
         if cls.cloud_machine_idx_ == Common.cur_machine_idx: # NOTE: clients and cloud may co-locate in the same physical machine
             # NOTE: NO need to check and copy, as current physical machine MUST have the given file
-            continue
+            return
         else: # Remote cloud machine
             # Check if cloud machine has the given file
             # NOTE: cloud machine may already have the given file (the given file has been copied before or generated before, e.g., cloud machine is one of client machines yet not the first client to generate the given file)
