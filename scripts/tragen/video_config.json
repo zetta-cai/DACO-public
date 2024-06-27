@@ -1,0 +1,11 @@
+{
+    "Trace_length": "10000000",
+    "Hitrate_type": "rhr",
+    "Input_unit"  : "reqs/s",
+    "Traffic_classes" : [
+	    {
+            "traffic_class": "v",
+            "traffic_volume": "1000"
+        }
+    ]
+}

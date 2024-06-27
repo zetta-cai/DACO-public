@@ -337,6 +337,13 @@ if is_install_tragen:
 
     # NOTE: TRAGEN is based on python, which does not need compilation and installation
 
+    # Overwrite hacked part into tragen repo to generate geo-distributed caching workloads
+    tragen_overwrite_cmd = "cp {}/scripts/tragen/*.py {}/".format(Common.proj_dirname, tragen_clone_dirpath)
+    tragen_overwrite_subprocess = SubprocessUtil.runCmd(tragen_overwrite_cmd)
+    if tragen_overwrite_subprocess.returncode != 0:
+        tragen_overwrite_errstr = SubprocessUtil.getSubprocessErrstr(tragen_overwrite_subprocess)
+        LogUtil.die(Common.scriptname, "failed to overwrite hacked part into tragen repo (errmsg: {})".format(tragen_overwrite_errstr))
+
 # (15) Others: chown of libraries and update LD_LIBRARY_PATH
 
 ## (15.1) Chown of libraries
