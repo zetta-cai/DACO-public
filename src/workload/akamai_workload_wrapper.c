@@ -13,7 +13,7 @@ namespace covered
     {
         UNUSED(perclient_opcnt); // NO need to pre-generate workload items for approximate workload distribution, as Akamai traces have workload files
 
-        // NOTE: Akamai workloads are not replayed single-node traces and NO need to load all single-node trace files (also NO such files) for sampling-based trace preprocessing
+        // NOTE: Akamai workloads are not replayed single-node traces and NO need to preprocess all single-node trace files (also NO such files) to sample workload and dataset items
         assert(!needAllTraceFiles_()); // Must NOT trace preprocessor
 
         // Differentiate Akamai workload wrapper in different clients
@@ -35,31 +35,15 @@ namespace covered
         curclient_perworker_workload_objids_.clear();
     }
 
-    // TODO: END HERE
-
-    ZetaWorkloadWrapper::~ZetaWorkloadWrapper()
+    AkamaiWorkloadWrapper::~AkamaiWorkloadWrapper()
     {
         // For clients, dataset loader, and cloud
 
-        if (needWorkloadItems_()) // Clients
-        {
-            // Release random generator for each client worker
-            for (uint32_t i = 0; i < client_worker_item_randgen_ptrs_.size(); i++)
-            {
-                assert(client_worker_item_randgen_ptrs_[i] != NULL);
-                delete client_worker_item_randgen_ptrs_[i];
-                client_worker_item_randgen_ptrs_[i] = NULL;
-            }
-
-            // Release request distribution for each client worker
-            for (uint32_t i = 0; i < client_worker_reqdist_ptrs_.size(); i++)
-            {
-                assert(client_worker_reqdist_ptrs_[i] != NULL);
-                delete client_worker_reqdist_ptrs_[i];
-                client_worker_reqdist_ptrs_[i] = NULL;
-            }
-        }
+        // Nothing to release
+        return;
     }
+
+    // TODO: END HERE
 
     WorkloadItem ZetaWorkloadWrapper::generateWorkloadItem(const uint32_t& local_client_worker_idx)
     {

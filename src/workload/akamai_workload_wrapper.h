@@ -74,6 +74,7 @@ namespace covered
 
         // (4) Other shared variables
         // For role of clients, dataset loader, and cloud
+        // NOTE: NO need to track object IDs, which range from 0 to keycnt-1
         std::vector<Value> dataset_valsizes_; // Value sizes of dataset objects (indexed by object ID); client needs dataset_valsizes_ to generate workload items (although NOT used by client workers due to GET requests)
         // For role of clients during evaluation
         std::vector<std::vector<int64_t>> curclient_perworker_workload_objids_; // Object IDs of workload sequence for each client worker in the current client
