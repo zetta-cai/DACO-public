@@ -51,10 +51,10 @@ namespace covered
         // (1) Akamai-specific helper functions
 
         // For role of clients, dataset loader, and cloud
-        void loadDatasetFile_(); // Load dataset file (objid-valsize pairs for dataset objects); clients use value sizes to generate workload items (yet not used due to GET requests)
+        void loadDatasetFile_(const std::string& dataset_filepath); // Load dataset file (objid-valsize pairs for dataset objects); clients use value sizes to generate workload items (yet not used due to GET requests)
 
         // For role of clients
-        void loadWorkloadFile_();
+        void loadWorkloadFile_(const std::string& workload_filepath, const uint32_t& local_client_worker_index);
 
         // Common utilities
         void checkPointers_() const;
@@ -78,6 +78,7 @@ namespace covered
         std::vector<Value> dataset_valsizes_; // Value sizes of dataset objects (indexed by object ID); client needs dataset_valsizes_ to generate workload items (although NOT used by client workers due to GET requests)
         // For role of clients during evaluation
         std::vector<std::vector<int64_t>> curclient_perworker_workload_objids_; // Object IDs of workload sequence for each client worker in the current client
+        std::vector<uint32_t> curclient_perworker_workloadidx_; // To-be-accessed workload index for each client worker in the current client
     };
 }
 
