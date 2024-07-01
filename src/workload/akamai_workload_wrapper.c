@@ -8,6 +8,7 @@
 namespace covered
 {
     const std::string AkamaiWorkloadWrapper::kClassName("AkamaiWorkloadWrapper");
+    static const uint32_t TRAGEN_VALSIZE_UNIT = 1024; // 1KiB
 
     AkamaiWorkloadWrapper::AkamaiWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const float& zipf_alpha) : WorkloadWrapperBase(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role)
     {
@@ -287,23 +288,24 @@ namespace covered
         // Read dataset file line by line
         std::fstream* fs_ptr = Util::openFile(tmp_dataset_filepath, std::ios_base::in);
         assert(fs_ptr != NULL);
-        uint32_t line_count = 0;
         std::string cur_line = "";
         while (true)
         {
             // Read the current line
+            // NOTE: NO need to use mmap and traditional read/write or even direct I/O is sufficient, as we ONLY need to enumerate the dataset file once!
             std::getline(*fs_ptr, cur_line);
-            line_count += 1;
 
-            // Load object ID and value size
+            // Load object ID and value size (format: objid,valsize)
             uint32_t delim_pos = cur_line.find(",");
             const std::string objid_str = cur_line.substr(0, delim_pos);
             int64_t objid = std::stoll(objid_str);
             assert(objid >= 0);
             const std::string valsize_str = cur_line.substr(delim_pos + 1, cur_line.size() - delim_pos - 1);
-            uint32_t valsize = static_cast<uint32_t>(std::stoul(valsize_str));
+            uint32_t valsize = static_cast<uint32_t>(std::stoul(valsize_str)) * TRAGEN_VALSIZE_UNIT; // NOTE: the unit of object sizes in Akamai's traces is KiB instead of bytes
 
-            // TODO: Update dataset_valsizes_ and dataset statistics
+            // Update dataset_valsizes_
+            // NOTE: NO need to track object IDs, which are the indexes of dataset_valsizes_
+            dataset_valsizes_.push_back(valsize);
 
             // Check if achieving the end of the file
             if (fs_ptr->eof())
@@ -312,9 +314,35 @@ namespace covered
             }
         }
 
+        // Close file and release ifstream
+        fs_ptr->close();
+        delete fs_ptr;
+        fs_ptr = NULL;
+
+        // Update dataset statistics
+        average_dataset_keysize_ = sizeof(int64_t); // 8B
+        min_dataset_keysize_ = sizeof(int64_t); // 8B
+        max_dataset_keysize_ = sizeof(int64_t); // 8B
+        for (uint32_t i = 0; i < dataset_valsizes_.size(); i++)
+        {
+            uint32_t tmp_valsize = dataset_valsizes_[i];
+            average_dataset_valuesize_ += tmp_valsize;
+
+            if (i == 0 || tmp_valsize < min_dataset_valuesize_)
+            {
+                min_dataset_valuesize_ = tmp_valsize;
+            }
+
+            if (i == 0 || tmp_valsize > max_dataset_valuesize_)
+            {
+                max_dataset_valuesize_ = tmp_valsize;
+            }
+        }
+        average_dataset_valuesize_ /= dataset_valsizes_.size();
+
         // Dump information
         std::ostringstream oss;
-        oss << "load dataset file " << tmp_dataset_filepath << " with " << line_count << " lines";
+        oss << "load dataset file " << tmp_dataset_filepath << " with " << dataset_valsizes_.size() << " unique objects";
         oss << " (dataset_valsizes_[0]/[1]: " << dataset_valsizes_[0] << "/" << dataset_valsizes_[1] << ")"; // Debug information
         Util::dumpNormalMsg(instance_name_, oss.str());
         
@@ -340,6 +368,57 @@ namespace covered
     {
         // Get workload filepath based on global client worker index
         const std::string tmp_workload_filepath = getWorkloadFilepath_(local_client_worker_index);
+
+        // Check existance of workload file
+        if (!Util::isFileExist(tmp_workload_filepath, true))
+        {
+            std::ostringstream oss;
+            oss << "failed to find the workload file " << tmp_workload_filepath << "!";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+
+        std::vector<int64_t>& curclient_curworker_workload_objids_ref = curclient_perworker_workload_objids_[local_client_worker_index];
+
+        // Read workload file line by line
+        std::fstream* fs_ptr = Util::openFile(tmp_workload_filepath, std::ios_base::in);
+        assert(fs_ptr != NULL);
+        std::string cur_line = "";
+        while (true)
+        {
+            // Read the current line
+            // NOTE: NO need to use mmap and traditional read/write or even direct I/O is sufficient, as we ONLY need to enumerate the workload file once!
+            std::getline(*fs_ptr, cur_line);
+
+            // Load object ID of the current request (format: timestamp,objid,valsize)
+            uint32_t first_delim_pos = cur_line.find(",");
+            uint32_t second_delim_pos = cur_line.find(",", first_delim_pos + 1);
+            const std::string objid_str = cur_line.substr(first_delim_pos + 1, second_delim_pos - first_delim_pos - 1);
+            int64_t objid = std::stoll(objid_str);
+            assert(objid >= 0);
+
+            // Update workload objid of the local client worker in current client
+            curclient_curworker_workload_objids_ref.push_back(objid);
+
+            // Check if achieving the end of the file
+            if (fs_ptr->eof())
+            {
+                break;
+            }
+        }
+
+        // Close file and release ifstream
+        fs_ptr->close();
+        delete fs_ptr;
+        fs_ptr = NULL;
+
+        // Dump information
+        std::ostringstream oss;
+        oss << "load workload file " << tmp_workload_filepath << "for local client worker " << local_client_worker_index << " with " << curclient_curworker_workload_objids_ref.size() << " requests";
+        oss << " (curclient_curworker_workload_objids_ref[0]/[1]: " << curclient_curworker_workload_objids_ref[0] << "/" << curclient_curworker_workload_objids_ref[1] << ")"; // Debug information
+        Util::dumpNormalMsg(instance_name_, oss.str());
+        
+        return;
     }
 
     std::string AkamaiWorkloadWrapper::getWorkloadFilepath_(const uint32_t& local_client_worker_index) const

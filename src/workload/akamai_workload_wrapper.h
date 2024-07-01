@@ -40,6 +40,7 @@ namespace covered
         virtual void quickDatasetDel(const Key& key) override;
     private:
         static const std::string kClassName;
+        static const uint32_t TRAGEN_VALSIZE_UNIT; // Value size unit in TRAGEN (NOTE: the unit of object sizes in Akamai's traces is KiB instead of bytes)
 
         static Key getKeyFromObjid_(const int64_t& objid); // Generate Key based on 8-byte object ID
         static int64_t getObjidFromKey_(const Key& key); // Get 8-byte object ID based on the given Key
