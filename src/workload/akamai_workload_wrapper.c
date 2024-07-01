@@ -271,17 +271,20 @@ namespace covered
             // NOTE: NO need to use mmap and traditional read/write or even direct I/O is sufficient, as we ONLY need to enumerate the dataset file once!
             std::getline(*fs_ptr, cur_line);
 
-            // Load object ID and value size (format: objid,valsize)
-            uint32_t delim_pos = cur_line.find(",");
-            const std::string objid_str = cur_line.substr(0, delim_pos);
-            int64_t objid = std::stoll(objid_str);
-            assert(objid >= 0);
-            const std::string valsize_str = cur_line.substr(delim_pos + 1, cur_line.size() - delim_pos - 1);
-            uint32_t valsize = static_cast<uint32_t>(std::stoul(valsize_str)) * TRAGEN_VALSIZE_UNIT; // NOTE: the unit of object sizes in Akamai's traces is KiB instead of bytes
+            size_t delim_pos = cur_line.find(",");
+            if (delim_pos != std::string::npos) // NOTE: avoid empty line
+            {
+                // Load object ID and value size (format: objid,valsize)
+                const std::string objid_str = cur_line.substr(0, delim_pos);
+                int64_t objid = std::stoll(objid_str);
+                assert(objid >= 0);
+                const std::string valsize_str = cur_line.substr(delim_pos + 1, cur_line.size() - delim_pos - 1);
+                uint32_t valsize = static_cast<uint32_t>(std::stoul(valsize_str)) * TRAGEN_VALSIZE_UNIT; // NOTE: the unit of object sizes in Akamai's traces is KiB instead of bytes
 
-            // Update dataset_valsizes_
-            // NOTE: NO need to track object IDs, which are the indexes of dataset_valsizes_
-            dataset_valsizes_.push_back(valsize);
+                // Update dataset_valsizes_
+                // NOTE: NO need to track object IDs, which are the indexes of dataset_valsizes_
+                dataset_valsizes_.push_back(valsize);
+            }
 
             // Check if achieving the end of the file
             if (fs_ptr->eof())
@@ -366,15 +369,18 @@ namespace covered
             // NOTE: NO need to use mmap and traditional read/write or even direct I/O is sufficient, as we ONLY need to enumerate the workload file once!
             std::getline(*fs_ptr, cur_line);
 
-            // Load object ID of the current request (format: timestamp,objid,valsize)
-            uint32_t first_delim_pos = cur_line.find(",");
-            uint32_t second_delim_pos = cur_line.find(",", first_delim_pos + 1);
-            const std::string objid_str = cur_line.substr(first_delim_pos + 1, second_delim_pos - first_delim_pos - 1);
-            int64_t objid = std::stoll(objid_str);
-            assert(objid >= 0);
+            size_t first_delim_pos = cur_line.find(",");
+            if (first_delim_pos != std::string::npos) // NOTE: avoid empty line
+            {
+                // Load object ID of the current request (format: timestamp,objid,valsize)
+                size_t second_delim_pos = cur_line.find(",", first_delim_pos + 1);
+                const std::string objid_str = cur_line.substr(first_delim_pos + 1, second_delim_pos - first_delim_pos - 1);
+                int64_t objid = std::stoll(objid_str);
+                assert(objid >= 0);
 
-            // Update workload objid of the local client worker in current client
-            curclient_curworker_workload_objids_ref.push_back(objid);
+                // Update workload objid of the local client worker in current client
+                curclient_curworker_workload_objids_ref.push_back(objid);   
+            }
 
             // Check if achieving the end of the file
             if (fs_ptr->eof())

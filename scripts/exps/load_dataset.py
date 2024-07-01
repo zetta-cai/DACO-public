@@ -58,7 +58,13 @@ for tmp_workload in zeta_workloads:
     tmp_keycnt = 1000000 # 1M by default
     load_dataset(tmp_workload, tmp_keycnt)
 
-# (4) Hint users to check keycnt and dataset size in log files, and update keycnt in config.json if necessary
+# (4) Load dataset into Rocksdb for Akamai traces
+akamai_workloads = ["akamaiweb", "akamaivideo"]
+for tmp_workload in akamai_workloads:
+    tmp_keycnt = 1000000 # 1M by default
+    load_dataset(tmp_workload, tmp_keycnt)
+
+# (5) Hint users to check keycnt and dataset size in log files, and update keycnt in config.json if necessary
 # NOTE: we comment the following code as we have already updated config.json with correct keycnt, and calculate cache memory capacity in corresponding exps correctly
 #LogUtil.emphasize(Common.scriptname, "Please check keycnt and dataset size in the following log files, and update keycnt in config.json accordingly if necessary:\n{}".format(log_filepaths))
 
