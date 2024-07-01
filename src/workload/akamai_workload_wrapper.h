@@ -19,7 +19,7 @@ namespace covered
     class AkamaiWorkloadWrapper : public WorkloadWrapperBase
     {
     public:
-        AkamaiWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const float& zipf_alpha);
+        AkamaiWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role);
         virtual ~AkamaiWorkloadWrapper();
 
         virtual WorkloadItem generateWorkloadItem(const uint32_t& local_client_worker_idx) override; // NOTE: randomly select an item without modifying any variable -> thread safe
@@ -42,9 +42,6 @@ namespace covered
         static const std::string kClassName;
         static const uint32_t TRAGEN_VALSIZE_UNIT; // Value size unit in TRAGEN (NOTE: the unit of object sizes in Akamai's traces is KiB instead of bytes)
 
-        static Key getKeyFromObjid_(const int64_t& objid); // Generate Key based on 8-byte object ID
-        static int64_t getObjidFromKey_(const Key& key); // Get 8-byte object ID based on the given Key
-
         virtual void initWorkloadParameters_() override;
         virtual void overwriteWorkloadParameters_() override;
         virtual void createWorkloadGenerator_() override;
@@ -61,6 +58,8 @@ namespace covered
 
         // Common utilities
         void checkPointers_() const;
+        Key getKeyFromObjid_(const int64_t& objid) const; // Generate Key based on 8-byte object ID
+        int64_t getObjidFromKey_(const Key& key) const; // Get 8-byte object ID based on the given Key
 
         // (2) Statistics variables
         
@@ -78,7 +77,7 @@ namespace covered
         // (4) Other shared variables
         // For role of clients, dataset loader, and cloud
         // NOTE: NO need to track object IDs, which range from 0 to keycnt-1
-        std::vector<Value> dataset_valsizes_; // Value sizes of dataset objects (indexed by object ID); client needs dataset_valsizes_ to generate workload items (although NOT used by client workers due to GET requests)
+        std::vector<uint32_t> dataset_valsizes_; // Value sizes of dataset objects (indexed by object ID); client needs dataset_valsizes_ to generate workload items (although NOT used by client workers due to GET requests)
         // For role of clients during evaluation
         std::vector<std::vector<int64_t>> curclient_perworker_workload_objids_; // Object IDs of workload sequence for each client worker in the current client
         std::vector<uint32_t> curclient_perworker_workloadidx_; // To-be-accessed workload index for each client worker in the current client

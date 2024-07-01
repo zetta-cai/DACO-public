@@ -8,9 +8,9 @@
 namespace covered
 {
     const std::string AkamaiWorkloadWrapper::kClassName("AkamaiWorkloadWrapper");
-    static const uint32_t TRAGEN_VALSIZE_UNIT = 1024; // 1KiB
+    const uint32_t AkamaiWorkloadWrapper::TRAGEN_VALSIZE_UNIT = 1024; // 1KiB
 
-    AkamaiWorkloadWrapper::AkamaiWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const float& zipf_alpha) : WorkloadWrapperBase(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role)
+    AkamaiWorkloadWrapper::AkamaiWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role) : WorkloadWrapperBase(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role)
     {
         UNUSED(perclient_opcnt); // NO need to pre-generate workload items for approximate workload distribution, as Akamai traces have workload files
 
@@ -208,30 +208,6 @@ namespace covered
         quickDatasetPut(key, Value()); // Use default value with is_deleted = true and value size = 0 as delete operation
 
         return;
-    }
-
-    Key AkamaiWorkloadWrapper::getKeyFromObjid_(const int64_t& objid)
-    {
-        assert(objid >= 0 && objid < dataset_valsizes_.size());
-        const uint32_t objid_bytecnt = sizeof(int64_t); // 8B
-
-        // Get the keystr (8B)
-        std::string tmp_keystr((const char*)&objid, objid_bytecnt); // 8B
-
-        return tmp_keystr;
-    }
-
-    int64_t AkamaiWorkloadWrapper::getObjidFromKey_(const Key& key)
-    {
-        const uint32_t objid_bytecnt = sizeof(int64_t); // 8B
-        assert(key.getKeyLength() == objid_bytecnt);
-
-        // Get the object ID (8B)
-        int64_t tmp_objid = 0;
-        memcpy((char *)&tmp_objid, key.getKeystr().c_str(), objid_bytecnt);
-        assert(tmp_objid >= 0);
-
-        return tmp_objid;
     }
 
     void AkamaiWorkloadWrapper::initWorkloadParameters_()
@@ -448,5 +424,29 @@ namespace covered
     {
         // Nothing to check
         return;
+    }
+
+    Key AkamaiWorkloadWrapper::getKeyFromObjid_(const int64_t& objid) const
+    {
+        assert(objid >= 0 && objid < dataset_valsizes_.size());
+        const uint32_t objid_bytecnt = sizeof(int64_t); // 8B
+
+        // Get the keystr (8B)
+        std::string tmp_keystr((const char*)&objid, objid_bytecnt); // 8B
+
+        return tmp_keystr;
+    }
+
+    int64_t AkamaiWorkloadWrapper::getObjidFromKey_(const Key& key) const
+    {
+        const uint32_t objid_bytecnt = sizeof(int64_t); // 8B
+        assert(key.getKeyLength() == objid_bytecnt);
+
+        // Get the object ID (8B)
+        int64_t tmp_objid = 0;
+        memcpy((char *)&tmp_objid, key.getKeystr().c_str(), objid_bytecnt);
+        assert(tmp_objid >= 0 && tmp_objid < dataset_valsizes_.size());
+
+        return tmp_objid;
     }
 }
