@@ -29,8 +29,7 @@ namespace covered
         min_dataset_valuesize_ = 0;
         max_dataset_valuesize_ = 0;
         dataset_valsizes_.clear();
-        // TODO: END HERE
-        loadDatasetFile_(); // Load dataset file to update dataset_valsizes_ and dataset statistics (required by all roles including clients, dataset loader, and cloud); clients use value sizes to generate workload items (yet not used due to GET requests)
+        loadDatasetFile_(); // Load dataset file to update dataset_valsizes_ and dataset statistics (required by all roles including clients, dataset loader, and cloud); clients use value sizes to generate workload items (yet not used due to GET requests))
 
         // For clients
         curclient_perworker_workload_objids_.resize(perclient_workercnt, std::vector<int64_t>());
@@ -238,27 +237,13 @@ namespace covered
     {
         if (needWorkloadItems_()) // Clients
         {
-            const uint32_t tmp_keycnt = getKeycnt_();
-            const std::string tmp_workload_name = getWorkloadName_();
-            const std::string tmp_trace_dirpath = Config::getTraceDirpath();
             const uint32_t tmp_perclient_workercnt = getPerclientWorkercnt_();
-            const uint32_t tmp_clietcnt = getClientcnt_();
-            const uint32_t tmp_total_workercnt = tmp_clietcnt * tmp_perclient_workercnt;
 
             // Load workload file for each client
             for (uint32_t tmp_local_client_worker_idx = 0; tmp_local_client_worker_idx < tmp_perclient_workercnt; tmp_local_client_worker_idx++)
             {
-                // Get global client worker index
-                uint32_t tmp_global_client_worker_idx = Util::getGlobalClientWorkerIdx(getClientIdx_(), tmp_local_client_worker_idx, tmp_perclient_workercnt);
-
-                // Get workload filepath based on global client worker index
-                std::ostringstream oss;
-                oss << tmp_trace_dirpath << "/" << tmp_workload_name << "/dataset" << tmp_keycnt << "_workercnt" << tmp_total_workercnt << "/"; // E.g., data/akamaiweb/dataset1000000_workercnt4/
-                oss << "worker" << tmp_global_client_worker_idx << "_sequence.txt"; // E.g., worker0_sequence.txt
-                const std::string tmp_workload_filepath = oss.str();
-
                 // Load workload items into curclient_perworker_workload_objids_[tmp_local_client_worker_idx]
-                loadWorkloadFile_(tmp_workload_filepath, tmp_local_client_worker_idx);
+                loadWorkloadFile_(tmp_local_client_worker_idx);
 
                 // Start from the first workload item
                 curclient_perworker_workloadidx_[tmp_local_client_worker_idx] = 0;
@@ -285,12 +270,98 @@ namespace covered
     // (1) Akamai-specific helper functions
 
     // For role of clients, dataset loader, and cloud
-    void AkamaiWorkloadWrapper::loadDatasetFile_(const std::string& dataset_filepath)
-    {}
+    void AkamaiWorkloadWrapper::loadDatasetFile_()
+    {
+        // Get dataset filepath
+        const std::string tmp_dataset_filepath = getDatasetFilepath_();
+
+        // Check existance of dataset file
+        if (!Util::isFileExist(tmp_dataset_filepath, true))
+        {
+            std::ostringstream oss;
+            oss << "failed to find the dataset file " << tmp_dataset_filepath << "!";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+
+        // Read dataset file line by line
+        std::fstream* fs_ptr = Util::openFile(tmp_dataset_filepath, std::ios_base::in);
+        assert(fs_ptr != NULL);
+        uint32_t line_count = 0;
+        std::string cur_line = "";
+        while (true)
+        {
+            // Read the current line
+            std::getline(*fs_ptr, cur_line);
+            line_count += 1;
+
+            // Load object ID and value size
+            uint32_t delim_pos = cur_line.find(",");
+            const std::string objid_str = cur_line.substr(0, delim_pos);
+            int64_t objid = std::stoll(objid_str);
+            assert(objid >= 0);
+            const std::string valsize_str = cur_line.substr(delim_pos + 1, cur_line.size() - delim_pos - 1);
+            uint32_t valsize = static_cast<uint32_t>(std::stoul(valsize_str));
+
+            // TODO: Update dataset_valsizes_ and dataset statistics
+
+            // Check if achieving the end of the file
+            if (fs_ptr->eof())
+            {
+                break;
+            }
+        }
+
+        // Dump information
+        std::ostringstream oss;
+        oss << "load dataset file " << tmp_dataset_filepath << " with " << line_count << " lines";
+        oss << " (dataset_valsizes_[0]/[1]: " << dataset_valsizes_[0] << "/" << dataset_valsizes_[1] << ")"; // Debug information
+        Util::dumpNormalMsg(instance_name_, oss.str());
+        
+        return;
+    }
+    
+    std::string AkamaiWorkloadWrapper::getDatasetFilepath_() const
+    {
+        const uint32_t tmp_keycnt = getKeycnt_();
+        const std::string tmp_workload_name = getWorkloadName_();
+        const std::string tmp_trace_dirpath = Config::getTraceDirpath();
+
+        // Get dataset filepath
+        std::ostringstream oss;
+        oss << tmp_trace_dirpath << "/" << tmp_workload_name << "/dataset" << tmp_keycnt << ".txt"; // E.g., data/akamaiweb/dataset1000000.txt
+        const std::string tmp_dataset_filepath = oss.str();
+
+        return tmp_dataset_filepath;
+    }
 
     // For role of clients
-    void AkamaiWorkloadWrapper::loadWorkloadFile_(const std::string& workload_filepath, const uint32_t& local_client_worker_index)
-    {}
+    void AkamaiWorkloadWrapper::loadWorkloadFile_(const uint32_t& local_client_worker_index)
+    {
+        // Get workload filepath based on global client worker index
+        const std::string tmp_workload_filepath = getWorkloadFilepath_(local_client_worker_index);
+    }
+
+    std::string AkamaiWorkloadWrapper::getWorkloadFilepath_(const uint32_t& local_client_worker_index) const
+    {
+        const uint32_t tmp_perclient_workercnt = getPerclientWorkercnt_();
+        const uint32_t tmp_keycnt = getKeycnt_();
+        const std::string tmp_workload_name = getWorkloadName_();
+        const std::string tmp_trace_dirpath = Config::getTraceDirpath();
+        const uint32_t tmp_clietcnt = getClientcnt_();
+        const uint32_t tmp_total_workercnt = tmp_clietcnt * tmp_perclient_workercnt;
+
+        // Get global client worker index
+        uint32_t tmp_global_client_worker_idx = Util::getGlobalClientWorkerIdx(getClientIdx_(), local_client_worker_index, tmp_perclient_workercnt);
+
+        // Get workload filepath based on global client worker index
+        std::ostringstream oss;
+        oss << tmp_trace_dirpath << "/" << tmp_workload_name << "/dataset" << tmp_keycnt << "_workercnt" << tmp_total_workercnt << "/"; // E.g., data/akamaiweb/dataset1000000_workercnt4/
+        oss << "worker" << tmp_global_client_worker_idx << "_sequence.txt"; // E.g., worker0_sequence.txt
+        const std::string tmp_workload_filepath = oss.str();
+
+        return tmp_workload_filepath;
+    }
 
     // (2) Common utilities
 

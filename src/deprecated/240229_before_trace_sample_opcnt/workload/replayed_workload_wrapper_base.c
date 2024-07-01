@@ -529,7 +529,7 @@ namespace covered
             assert(!tmp_is_achieve_max_eval_workload_opcnt); // NOTE: ONLY clients could achieve max eval workload opcnt
         }
 
-        // Close file and release ofstream
+        // Close file and release ifstream
         fs_ptr->close();
         delete fs_ptr;
         fs_ptr = NULL;
@@ -650,7 +650,7 @@ namespace covered
             }
         }
 
-        // Close file and release ofstream
+        // Close file and release ifstream
         fs_ptr->close();
         delete fs_ptr;
         fs_ptr = NULL;

@@ -284,6 +284,11 @@ namespace covered
         }
         average_dataset_valuesize_ /= dataset_size;
 
+        // Close file and release ifstream
+        fs_ptr->close();
+        delete fs_ptr;
+        fs_ptr = NULL;
+
         return;
     }
 

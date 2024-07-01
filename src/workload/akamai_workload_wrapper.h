@@ -51,10 +51,12 @@ namespace covered
         // (1) Akamai-specific helper functions
 
         // For role of clients, dataset loader, and cloud
-        void loadDatasetFile_(const std::string& dataset_filepath); // Load dataset file (objid-valsize pairs for dataset objects); clients use value sizes to generate workload items (yet not used due to GET requests)
+        void loadDatasetFile_(); // Load dataset file (objid-valsize pairs for dataset objects); clients use value sizes to generate workload items (yet not used due to GET requests)
+        std::string getDatasetFilepath_() const;
 
         // For role of clients
-        void loadWorkloadFile_(const std::string& workload_filepath, const uint32_t& local_client_worker_index);
+        void loadWorkloadFile_(const uint32_t& local_client_worker_index);
+        std::string getWorkloadFilepath_(const uint32_t& local_client_worker_index) const;
 
         // Common utilities
         void checkPointers_() const;

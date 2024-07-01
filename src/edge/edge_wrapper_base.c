@@ -1070,7 +1070,7 @@ namespace covered
             // Load edge snapshot file
             loadEdgeSnapshot_(fs_ptr);
 
-            // Close file and release ofstream
+            // Close file and release ifstream
             fs_ptr->close();
             delete fs_ptr;
             fs_ptr = NULL;

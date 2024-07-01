@@ -520,7 +520,7 @@ namespace covered
             assert(!tmp_is_achieve_trace_sample_opcnt); // NOTE: ONLY trace preprocessor can achieve trace sample opcnt
         }
 
-        // Close file and release ofstream
+        // Close file and release ifstream
         fs_ptr->close();
         delete fs_ptr;
         fs_ptr = NULL;
@@ -631,7 +631,7 @@ namespace covered
             curclient_workload_value_sizes_.push_back(tmp_coded_value_size);
         }
 
-        // Close file and release ofstream
+        // Close file and release ifstream
         fs_ptr->close();
         delete fs_ptr;
         fs_ptr = NULL;

@@ -273,6 +273,11 @@ namespace covered
             valuesize_histogram[tmp_valuesize] = tmp_valuesize_freq;
         }
 
+        // Close file and release ifstream
+        fs_ptr->close();
+        delete fs_ptr;
+        fs_ptr = NULL;
+
         // (2) Convert characteristics into key/value size distribution
         
         // Get dataset key size distribution

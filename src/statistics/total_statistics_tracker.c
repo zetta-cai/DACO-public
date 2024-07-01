@@ -316,7 +316,7 @@ namespace covered
         uint32_t tmp_deserialize_size = stable_total_aggregated_statistics_.deserialize(tmp_dynamic_array, 0);
         size += tmp_deserialize_size;
 
-        // Close file and release ofstream
+        // Close file and release ifstream
         fs_ptr->close();
         delete fs_ptr;
         fs_ptr = NULL;
