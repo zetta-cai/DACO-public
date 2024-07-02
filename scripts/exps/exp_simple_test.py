@@ -10,15 +10,25 @@ from .utils.prototype import *
 
 # (2) Define the settings for the experiment
 
-# Test Zeta workload generator to reproduce public traces w/o geographical information
+# Test Akamai's traces with 50% memory
 simple_example_settings = {
     "clientcnt": 4,
     "edgecnt": 4,
     "keycnt": 1000000,
-    "capacity_mb": 1024,
-    "cache_name": "lhd+", # covered, gdsf+, lhd+
-    "workload_name": "zeta_tencentphoto2" # zeta_wikitext, zeta_wikiimage, zeta_tencentphoto1, zeta_tencentphoto2
+    "capacity_mb": 37287, # 149149/4 = 37287 (for akamaiweb), 892448/4 = 223112 (for akamaivideo)
+    "cache_name": "covered", # covered, gdsf+, lhd+
+    "workload_name": "akamaiweb" # akamaiweb, akamaivideo
 }
+
+# # Test Zeta workload generator to reproduce public traces w/o geographical information
+# simple_example_settings = {
+#     "clientcnt": 4,
+#     "edgecnt": 4,
+#     "keycnt": 1000000,
+#     "capacity_mb": 1024,
+#     "cache_name": "lhd+", # covered, gdsf+, lhd+
+#     "workload_name": "zeta_tencentphoto2" # zeta_wikitext, zeta_wikiimage, zeta_tencentphoto1, zeta_tencentphoto2
+# }
 
 # # Extremely large cache hit ratio issue of SIEVE+ under wikitext with 50% memory
 # simple_example_settings = {
