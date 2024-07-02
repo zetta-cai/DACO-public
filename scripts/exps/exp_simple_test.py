@@ -10,12 +10,12 @@ from .utils.prototype import *
 
 # (2) Define the settings for the experiment
 
-# Test Akamai's traces with 50% memory
+# Test Akamai's traces with 25% memory
 simple_example_settings = {
     "clientcnt": 4,
     "edgecnt": 4,
     "keycnt": 1000000,
-    "capacity_mb": 37287, # 149149/4 = 37287 (for akamaiweb), 892448/4 = 223112 (for akamaivideo)
+    "capacity_mb": 18644, # 149149/8 = 18644 (for akamaiweb), 892448/8 = 111556 (for akamaivideo)
     "cache_name": "covered", # covered, gdsf+, lhd+
     "workload_name": "akamaiweb" # akamaiweb, akamaivideo
 }
