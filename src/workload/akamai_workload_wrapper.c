@@ -322,7 +322,7 @@ namespace covered
         // Dump information
         std::ostringstream oss;
         oss << "load dataset file " << tmp_dataset_filepath << " with " << dataset_valsizes_.size() << " unique objects";
-        oss << " (dataset_valsizes_[0]/[1]: " << dataset_valsizes_[0] << "/" << dataset_valsizes_[1] << ")"; // Debug information
+        // oss << " (dataset_valsizes_[0]/[1]: " << dataset_valsizes_[0] << "/" << dataset_valsizes_[1] << ")"; // Debug information
         Util::dumpNormalMsg(instance_name_, oss.str());
         
         return;
@@ -397,7 +397,7 @@ namespace covered
         // Dump information
         std::ostringstream oss;
         oss << "load workload file " << tmp_workload_filepath << "for local client worker " << local_client_worker_index << " with " << curclient_curworker_workload_objids_ref.size() << " requests";
-        oss << " (curclient_curworker_workload_objids_ref[0]/[1]: " << curclient_curworker_workload_objids_ref[0] << "/" << curclient_curworker_workload_objids_ref[1] << ")"; // Debug information
+        // oss << " (curclient_curworker_workload_objids_ref[0]/[1]: " << curclient_curworker_workload_objids_ref[0] << "/" << curclient_curworker_workload_objids_ref[1] << ")"; // Debug information
         Util::dumpNormalMsg(instance_name_, oss.str());
         
         return;
