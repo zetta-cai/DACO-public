@@ -46,10 +46,9 @@
 // ---> If not defined, always evict the uncached object with the smallest priority in local uncached metadata for untracked objects.
 #define ENABLE_SMALL_LRU_CACHE
 
+#include <cmath> // isnan, isinf
 #include <cstdint> // uint32_t, uint64_t
 #include <assert.h>
-
-#include "common/util.h"
 
 namespace covered
 {
@@ -102,7 +101,12 @@ namespace covered
         }
         
         //ObjectSize tmp_objsize_kb = B2KB(tmp_object_size);
-        popularity = Util::popularityDivide(static_cast<Popularity>(frequency), static_cast<Popularity>(tmp_object_size)); // # of cache accesses per space unit (similar as LHD)
+        Popularity floating_frequency = static_cast<Popularity>(frequency);
+        Popularity floating_objsize = static_cast<Popularity>(tmp_object_size);
+        assert(!std::isnan(floating_frequency) && !std::isinf(floating_frequency));
+        assert(!std::isnan(floating_objsize) && !std::isinf(floating_objsize));
+        popularity = floating_frequency / floating_objsize; // # of cache accesses per space unit (similar as LHD)
+        assert(!std::isnan(popularity) && !std::isinf(popularity));
 
         return popularity;
     }

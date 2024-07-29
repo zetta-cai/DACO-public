@@ -10,15 +10,25 @@ from .utils.prototype import *
 
 # (2) Define the settings for the experiment
 
-# Test Akamai's traces with 25% memory
+# Test COVERED's small LRU cache
 simple_example_settings = {
-    "clientcnt": 4,
-    "edgecnt": 4,
+    "clientcnt": 12,
+    "edgecnt": 12,
     "keycnt": 1000000,
-    "capacity_mb": 18644, # 149149/8 = 18644 (for akamaiweb), 892448/8 = 111556 (for akamaivideo)
+    "capacity_mb": 1024,
     "cache_name": "covered", # covered, gdsf+, lhd+
-    "workload_name": "akamaiweb" # akamaiweb, akamaivideo
+    "workload_name": "facebook"
 }
+
+# # Test Akamai's traces with 25% memory
+# simple_example_settings = {
+#     "clientcnt": 4,
+#     "edgecnt": 4,
+#     "keycnt": 1000000,
+#     "capacity_mb": 18644, # 149149/8 = 18644 (for akamaiweb), 892448/8 = 111556 (for akamaivideo)
+#     "cache_name": "covered", # covered, gdsf+, lhd+
+#     "workload_name": "akamaiweb" # akamaiweb, akamaivideo
+# }
 
 # # Test Zeta workload generator to reproduce public traces w/o geographical information
 # simple_example_settings = {
