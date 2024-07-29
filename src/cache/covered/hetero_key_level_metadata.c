@@ -39,18 +39,18 @@ namespace covered
 
     HeteroKeyLevelMetadata::~HeteroKeyLevelMetadata() {}
 
-    void HeteroKeyLevelMetadata::updateNoValueDynamicMetadata(const bool& is_redirected, const bool& is_global_cached)
+    void HeteroKeyLevelMetadata::updateNoValueDynamicMetadata(const bool& is_redirected, const bool& is_global_cached, const Frequency& added_local_frequency, const Frequency& added_redirected_frequency)
     {
         checkValidity_();
         assert(is_global_cached == true); // Local cached objects MUST be global cached
         
         if (is_redirected)
         {
-            redirected_frequency_++;
+            redirected_frequency_ += added_redirected_frequency; // By default +1
         }
         else
         {
-            KeyLevelMetadataBase::updateNoValueDynamicMetadata_();
+            KeyLevelMetadataBase::updateNoValueDynamicMetadata_(added_local_frequency);
         }
 
         return;

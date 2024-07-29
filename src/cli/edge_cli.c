@@ -9,6 +9,7 @@ namespace covered
     const std::string EdgeCLI::DEFAULT_HASH_NAME = "mmh3"; // NOTE: NOT use UTil::MMH3_HASH_NAME due to undefined initialization order of C++ static variables
     const uint32_t EdgeCLI::DEFAULT_PERCACHESERVER_WORKERCNT = 1;
     const uint64_t EdgeCLI::DEFAULT_COVERED_LOCAL_UNCACHED_MAX_MEM_USAGE_MB = 1;
+    const uint64_t EdgeCLI::DEFAULT_COVERED_LOCAL_UNCACHED_LRU_MAX_MB = 1;
     const uint32_t EdgeCLI::DEFAULT_COVERED_PEREDGE_SYNCED_VICTIMCNT = 3;
     const uint32_t EdgeCLI::DEFAULT_COVERED_PEREDGE_MONITORED_VICTIMSETCNT = 3;
     const uint64_t EdgeCLI::DEFAULT_COVERED_POPULARITY_AGGREGATION_MAX_MEM_USAGE_MB = 1;
@@ -25,6 +26,7 @@ namespace covered
 
         // ONLY used by COVERED
         covered_local_uncached_max_mem_usage_bytes_ = 0;
+        covered_local_uncached_lru_max_bytes_ = 0;
         covered_peredge_synced_victimcnt_ = 0;
         covered_peredge_monitored_victimsetcnt_ = 0;
         covered_popularity_aggregation_max_mem_usage_bytes_ = 0;
@@ -59,6 +61,11 @@ namespace covered
     uint64_t EdgeCLI::getCoveredLocalUncachedMaxMemUsageBytes() const
     {
         return covered_local_uncached_max_mem_usage_bytes_;
+    }
+
+    uint64_t EdgeCLI::getCoveredLocalUncachedLruMaxBytes() const
+    {
+        return covered_local_uncached_lru_max_bytes_;
     }
 
     uint32_t EdgeCLI::getCoveredPeredgeSyncedVictimcnt() const
@@ -119,6 +126,10 @@ namespace covered
                 {
                     oss << " --covered_local_uncached_max_mem_usage_mb " << B2MB(covered_local_uncached_max_mem_usage_bytes_);
                 }
+                if (covered_local_uncached_lru_max_bytes_ != MB2B(DEFAULT_COVERED_LOCAL_UNCACHED_LRU_MAX_MB))
+                {
+                    oss << " -- covered_local_uncached_lru_max_mb " << B2MB(covered_local_uncached_lru_max_bytes_);
+                }
                 if (covered_peredge_synced_victimcnt_ != DEFAULT_COVERED_PEREDGE_SYNCED_VICTIMCNT)
                 {
                     oss << " --covered_peredge_synced_victimcnt " << covered_peredge_synced_victimcnt_;
@@ -176,6 +187,7 @@ namespace covered
                 ("hash_name", boost::program_options::value<std::string>()->default_value(DEFAULT_HASH_NAME), hash_name_descstr.c_str())
                 ("percacheserver_workercnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_PERCACHESERVER_WORKERCNT), "the number of worker threads for each cache server")
                 ("covered_local_uncached_max_mem_usage_mb", boost::program_options::value<uint64_t>()->default_value(DEFAULT_COVERED_LOCAL_UNCACHED_MAX_MEM_USAGE_MB), "the maximum memory usage for local uncached metadata in units of MiB (only used by COVERED)")
+                ("covered_local_uncached_max_lru_mb", boost::program_options::value<uint64_t>()->default_value(DEFAULT_COVERED_LOCAL_UNCACHED_LRU_MAX_MB), "the maximum memory usage for local uncached LRU in units of MiB (only used for COVERED if enabled)")
                 ("covered_peredge_synced_victimcnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_COVERED_PEREDGE_SYNCED_VICTIMCNT), "per-edge number of victims synced to each neighbor (only used by COVERED)")
                 ("covered_peredge_monitored_victimsetcnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_COVERED_PEREDGE_MONITORED_VICTIMSETCNT), "per-edge number of monitored victim syncsets for each neighbor (only used by COVERED)")
                 ("covered_popularity_aggregation_max_mem_usage_mb", boost::program_options::value<uint64_t>()->default_value(DEFAULT_COVERED_POPULARITY_AGGREGATION_MAX_MEM_USAGE_MB), "the maximum memory usage for popularity aggregation in units of MiB (only used by COVERED)")
@@ -204,6 +216,7 @@ namespace covered
             uint32_t percacheserver_workercnt = argument_info_["percacheserver_workercnt"].as<uint32_t>();
             // ONLY used by COVERED
             uint64_t covered_local_uncached_max_mem_usage_bytes = MB2B(argument_info_["covered_local_uncached_max_mem_usage_mb"].as<uint64_t>()); // In units of bytes
+            uint64_t covered_local_uncached_lru_max_bytes = MB2B(argument_info_["covered_local_uncached_lru_max_mb"].as<uint64_t>()); // In units of bytes
             uint32_t covered_peredge_synced_victimcnt = argument_info_["covered_peredge_synced_victimcnt"].as<uint32_t>();
             uint32_t covered_peredge_monitored_victimsetcnt = argument_info_["covered_peredge_monitored_victimsetcnt"].as<uint32_t>();
             uint64_t covered_popularity_aggregation_max_mem_usage_bytes = MB2B(argument_info_["covered_popularity_aggregation_max_mem_usage_mb"].as<uint64_t>()); // In units of bytes
@@ -225,6 +238,14 @@ namespace covered
                 else
                 {
                     covered_local_uncached_max_mem_usage_bytes_ = capacity_bytes * Config::getCoveredLocalUncachedMaxMemUsageRatio();
+                }
+                if (capacity_bytes * Config::getCoveredLocalUncachedLruMaxRatio() >= covered_local_uncached_lru_max_bytes)
+                {
+                    covered_local_uncached_lru_max_bytes_ = covered_local_uncached_lru_max_bytes;
+                }
+                else
+                {
+                    covered_local_uncached_lru_max_bytes_ = capacity_bytes * Config::getCoveredLocalUncachedLruMaxRatio();
                 }
                 covered_peredge_synced_victimcnt_ = covered_peredge_synced_victimcnt;
                 covered_peredge_monitored_victimsetcnt_ = covered_peredge_monitored_victimsetcnt;
@@ -269,6 +290,7 @@ namespace covered
             {
                 // ONLY used by COVERED
                 oss << std::endl << "Covered local uncached max mem usage (bytes): " << covered_local_uncached_max_mem_usage_bytes_ << std::endl;
+                oss << std::endl << "Covered local uncached lru max bytes: " << covered_local_uncached_lru_max_bytes_ << std::endl;
                 oss << "Covered per-edge-node synced victim count:" << covered_peredge_synced_victimcnt_ << std::endl;
                 oss << "Covered per-edge-node monitored victim syncset count:" << covered_peredge_monitored_victimsetcnt_ << std::endl;
                 oss << "Covered popularity aggregation max mem usage (bytes): " << covered_popularity_aggregation_max_mem_usage_bytes_ << std::endl;
@@ -362,6 +384,7 @@ namespace covered
         {
             const uint64_t capacity_bytes = EdgescaleCLI::getCapacityBytes();
             assert(covered_local_uncached_max_mem_usage_bytes_ > 0 && covered_local_uncached_max_mem_usage_bytes_ < capacity_bytes);
+            assert(covered_local_uncached_lru_max_bytes_ > 0 && covered_local_uncached_lru_max_bytes_ < capacity_bytes);
             assert(covered_peredge_synced_victimcnt_ > 0);
             assert(covered_peredge_monitored_victimsetcnt_ > 0);
             assert(covered_popularity_aggregation_max_mem_usage_bytes_ > 0 && covered_popularity_aggregation_max_mem_usage_bytes_ < capacity_bytes);

@@ -28,6 +28,9 @@ namespace covered
 #include "common/covered_common_header.h"
 #include "cache/covered/local_cached_metadata.h"
 #include "cache/covered/local_uncached_metadata.h"
+#ifdef ENABLE_SMALL_LRU_CACHE
+#include "cache/covered/local_uncached_lru.h"
+#endif
 #include "cache/local_cache_base.h"
 
 namespace covered
@@ -43,7 +46,7 @@ namespace covered
     class CoveredLocalCache : public LocalCacheBase
     {
     public:
-        CoveredLocalCache(const EdgeWrapperBase* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint64_t& local_uncached_capacity_bytes, const uint32_t& peredge_synced_victimcnt);
+        CoveredLocalCache(const EdgeWrapperBase* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint64_t& local_uncached_capacity_bytes, const uint64_t& local_uncached_lru_bytes, const uint32_t& peredge_synced_victimcnt);
         virtual ~CoveredLocalCache();
 
         virtual const bool hasFineGrainedManagement() const;
@@ -93,6 +96,10 @@ namespace covered
         
         uint32_t hashForTommyds_(const Key& key) const;
 
+        #ifdef ENABLE_SMALL_LRU_CACHE
+        void tryToMoveFromLocalUncachedLruToMetadata_(const Key& key, const Reward& updated_lru_reward) const;
+        #endif
+
         // Member variables
 
         // (A) Const variable
@@ -109,7 +116,11 @@ namespace covered
 
         // (C) Non-const shared variables of local uncached objects for admission
 
+        // NOTE: group-level info is just for approximate object size (NOT used now), which can be maintained individually for local cached/uncached metadata and local uncached LRU
         mutable LocalUncachedMetadata local_uncached_metadata_; // Metadata for local uncached objects
+        #ifdef ENABLE_SMALL_LRU_CACHE
+        mutable LocalUncachedLru local_uncached_lru_; // A small LRU cache for online update for local uncached objects
+        #endif
     };
 }
 

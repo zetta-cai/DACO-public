@@ -77,7 +77,7 @@ namespace covered
 
         // For newly-admited/tracked keys
         // NOTE: for admission and getrsp/put/delreq w/ miss, intialize and update object-/group-level metadata (both value-unrelated and value-related) for newly admitted cached key or currently tracked uncached key
-        bool addForNewKey(const EdgeWrapperBase* edge_wrapper_ptr, const Key& key, const Value& value, const uint32_t& peredge_synced_victimcnt, const bool& is_global_cached, const bool& is_neighbor_cached); // Return if affect local synced victims in victim tracker (always return false for local uncached metadata)
+        bool addForNewKey(const EdgeWrapperBase* edge_wrapper_ptr, const Key& key, const Value& value, const uint32_t& peredge_synced_victimcnt, const bool& is_global_cached, const bool& is_neighbor_cached, const Frequency& added_local_frequency = 1, const Frequency& added_redirected_frequency = 1); // Return if affect local synced victims in victim tracker (always return false for local uncached metadata)
 
         // For existing key
         // NOTE: for get/put/delreq w/ hit/miss, update object-/group-level value-unrelated metadata for existing key (i.e., already admitted/tracked objects for local cached/uncached)
@@ -109,7 +109,6 @@ namespace covered
 
         // For popularity information
         virtual void calculateAndUpdatePopularity_(perkey_metadata_list_iter_t& perkey_metadata_list_iter, const T& key_level_metadata_ref, const GroupLevelMetadata& group_level_metadata_ref) = 0;
-        Popularity calculatePopularity_(const Frequency& frequency, const ObjectSize& object_size) const;
 
         // For reward information
         //uint32_t getLeastRewardRank_(const perkey_lookup_table_const_iter_t& perkey_lookup_iter) const; // NOTE: this function is time-consuming
@@ -136,7 +135,7 @@ namespace covered
 
         // For object-level metadata
         const T& getkeyLevelMetadata_(const perkey_lookup_table_const_iter_t& perkey_lookup_const_iter) const; // Return existing key-level metadata
-        perkey_metadata_list_iter_t addPerkeyMetadata_(const Key& key, const Value& value, const GroupId& assigned_group_id, const bool& is_global_cached, const bool& is_neighbor_cached); // For admission and getrsp/put/delreq w/ miss, initialize and update key-level value-unrelated and value-related metadata for newly-admited/tracked key; return new perkey metadata iterator
+        perkey_metadata_list_iter_t addPerkeyMetadata_(const Key& key, const Value& value, const GroupId& assigned_group_id, const bool& is_global_cached, const bool& is_neighbor_cached, const Frequency& added_local_frequency, const Frequency& added_redirected_frequency); // For admission and getrsp/put/delreq w/ miss, initialize and update key-level value-unrelated and value-related metadata for newly-admited/tracked key; return new perkey metadata iterator (added_local_frequency is used for both cached & uncached, while added_redirected_frequency is only used by local uncached objects)
         perkey_metadata_list_iter_t updateNoValuePerkeyMetadata_(const perkey_lookup_table_iter_t& perkey_lookup_iter, const bool& is_redirected, const bool& is_global_cached); // For get/put/delreq w/ hit/miss, update object-level value-unrelated metadata for existing key (i.e., already admitted/tracked objects for local cached/uncached); return updated KeyLevelMetadata
         perkey_metadata_list_iter_t updateValuePerkeyMetadata_(const perkey_lookup_table_iter_t& perkey_lookup_iter, const Value& value, const Value& original_value); // For put/delreq w/ hit/miss and getrsp w/ invalid-hit, update object-level value-related metadata for existing key (i.e., already admitted/tracked objects for local cached/uncached); return updated KeyLevelMetadata
         void removePerkeyMetadata_(const perkey_lookup_table_iter_t& perkey_lookup_iter);

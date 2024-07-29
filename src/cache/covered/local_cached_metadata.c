@@ -85,13 +85,13 @@ namespace covered
 
         // Calculate and update local cached popularity
         Frequency local_frequency = key_level_metadata_ref.getLocalFrequency();
-        Popularity local_cached_popularity = calculatePopularity_(local_frequency, object_size);
+        Popularity local_cached_popularity = calculatePopularity(local_frequency, object_size);
         perkey_metadata_list_iter->second.updateLocalPopularity(local_cached_popularity);
 
         // Calculate and update redirected cached popularity
         // NOTE: Redirected cached popularity is calculated based on static metadata (e.g., object size) from local requests, object-level metadata (e.g., frequency) for redirected requests, and group-level metadata for all requests
         Frequency redirected_frequency = key_level_metadata_ref.getRedirectedFrequency();
-        Popularity redirected_cached_popularity = calculatePopularity_(redirected_frequency, object_size);
+        Popularity redirected_cached_popularity = calculatePopularity(redirected_frequency, object_size);
         perkey_metadata_list_iter->second.updateRedirectedPopularity(redirected_cached_popularity);
 
         return;

@@ -11,7 +11,7 @@ namespace covered
 {
     const std::string CacheWrapper::kClassName("CacheWrapper");
 
-    CacheWrapper::CacheWrapper(const EdgeWrapperBase* edge_wrapper_ptr, const std::string& cache_name, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint32_t& dataset_keycnt, const uint64_t& local_uncached_capacity_bytes, const uint32_t& peredge_synced_victimcnt) : cache_name_(cache_name)
+    CacheWrapper::CacheWrapper(const EdgeWrapperBase* edge_wrapper_ptr, const std::string& cache_name, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint32_t& dataset_keycnt, const uint64_t& local_uncached_capacity_bytes, const uint64_t& local_uncached_lru_bytes, const uint32_t& peredge_synced_victimcnt) : cache_name_(cache_name)
     {
         // Differentiate local edge cache in different edge nodes
         std::ostringstream oss;
@@ -19,7 +19,7 @@ namespace covered
         instance_name_ = oss.str();
 
         // Allocate local edge cache
-        local_cache_ptr_ = LocalCacheBase::getLocalCacheByCacheName(edge_wrapper_ptr, cache_name, edge_idx, capacity_bytes, dataset_keycnt, local_uncached_capacity_bytes, peredge_synced_victimcnt);
+        local_cache_ptr_ = LocalCacheBase::getLocalCacheByCacheName(edge_wrapper_ptr, cache_name, edge_idx, capacity_bytes, dataset_keycnt, local_uncached_capacity_bytes, local_uncached_lru_bytes, peredge_synced_victimcnt);
         assert(local_cache_ptr_ != NULL);
 
         // Allocate per-key rwlock for cache wrapper

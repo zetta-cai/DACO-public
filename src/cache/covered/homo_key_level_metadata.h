@@ -22,7 +22,7 @@ namespace covered
         HomoKeyLevelMetadata(const HomoKeyLevelMetadata& other);
         ~HomoKeyLevelMetadata();
 
-        virtual void updateNoValueDynamicMetadata(const bool& is_redirected, const bool& is_global_cached) override; // For get/put/delreq w/ hit/miss, update object-level value-unrelated metadata (is_redirected MUST be false and will NOT be used)
+        virtual void updateNoValueDynamicMetadata(const bool& is_redirected, const bool& is_global_cached, const Frequency& added_local_frequency = 1, const Frequency& added_redirected_frequency = 1) override; // For get/put/delreq w/ hit/miss, update object-level value-unrelated metadata (is_redirected MUST be false and will NOT be used)
 
         bool isGlobalCached() const;
         void updateIsGlobalCached(const bool& is_global_cached);

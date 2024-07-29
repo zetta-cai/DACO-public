@@ -31,12 +31,13 @@ namespace covered
 
     HomoKeyLevelMetadata::~HomoKeyLevelMetadata() {}
 
-    void HomoKeyLevelMetadata::updateNoValueDynamicMetadata(const bool& is_redirected, const bool& is_global_cached)
+    void HomoKeyLevelMetadata::updateNoValueDynamicMetadata(const bool& is_redirected, const bool& is_global_cached, const Frequency& added_local_frequency, const Frequency& added_redirected_frequency)
     {
         checkValidity_();
         assert(!is_redirected); // MUST be local request for local uncached objects
+        UNUSED(added_redirected_frequency);
 
-        KeyLevelMetadataBase::updateNoValueDynamicMetadata_();
+        KeyLevelMetadataBase::updateNoValueDynamicMetadata_(added_local_frequency);
         is_global_cached_ = is_global_cached;
 
         return;

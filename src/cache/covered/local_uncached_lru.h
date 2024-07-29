@@ -1,7 +1,7 @@
 /*
  * LocalUncachedLru: a small LRU cache of access statistics (including object-level, group-level and sorted popularity metadata) for recently-accessed locally-uncached objects (yet not tracked by LocalUncachedMetadata).
  *
- * NOTE: object-level metadata and group-level metadata in LocalUncachedLru are updated for local misses for local uncached objects (refer to CacheMetadataBase (src/cache/covered/cache_metadata_base.h) for object-level LRU list and group-level metadata).
+ * NOTE: object-level metadata and group-level metadata in LocalUncachedLru are updated for local misses for local uncached objects (refer to CacheMetadataBase (src/cache/covered/cache_metadata_base.h) and LocalUncachedMetadata (src/cache/covered/local_uncached_metadata.h) for object-level LRU list and group-level metadata).
  * 
  * By Siyuan Sheng (2024.07.28).
  */
@@ -36,6 +36,16 @@ namespace covered
         LocalUncachedLru(const uint64_t& max_bytes_for_local_uncached_lru);
         ~LocalUncachedLru();
 
+        ObjectSize getObjectSize(const Key& key) const; // Get accurate/approximate object size
+        bool isKeyExist(const Key& key) const;
+        bool isGlobalCachedForExistingKey(const Key& key) const;
+
+        Reward addForNewKey(const EdgeWrapperBase* edge_wrapper_ptr, const Key& key, const Value& value, const bool& is_global_cached);
+        Reward updateNoValueStatsForExistingKey(const EdgeWrapperBase* edge_wrapper_ptr, const Key& key, const bool& is_global_cached); // Update local uncached LRU for local misses of local uncached objects
+        Reward updateValueStatsForExistingKey(const EdgeWrapperBase* edge_wrapper_ptr, const Key& key, const Value& value, const Value& original_value);
+        void removeForExistingKey(const Key& key, const Value& value, HomoKeyLevelMetadata& homo_keylevel_metadata);
+        Reward updateIsGlobalCachedForExistingKey(const EdgeWrapperBase* edge_wrapper_ptr, const Key& key, const bool& is_getrsp, const bool& is_global_cached); // NOTE: ONLY for getrsp (put/delreq will update is_global_cached when update value-unrelated metadata)
+
         uint64_t getSizeForCapacity() const; // Get size for capacity constraint for local uncached objects in the small LRU cache (not tracked by local uncached metadata yet)
 
         // Dump/load local uncached lru for cache metadata in cache snapshot
@@ -43,6 +53,10 @@ namespace covered
         void loadLocalUncachedLru(std::fstream* fs_ptr);
     private:
         static const std::string kClassName;
+
+        void calculateAndUpdatePopularity_(perkey_metadata_list_t::iterator& perkey_metadata_list_iter, const HomoKeyLevelMetadata& key_level_metadata_ref, const GroupLevelMetadata& group_level_metadata_ref);
+        Reward calculateReward_(const EdgeWrapperBase* edge_wrapper_ptr, perkey_metadata_list_t::iterator perkey_metadata_list_iter) const;
+        bool needEraseForUncachedObjects_(Key& erased_key) const;
 
         const uint64_t max_bytes_for_local_uncached_lru_; // Used only for local uncached objects in the small LRU cache
         

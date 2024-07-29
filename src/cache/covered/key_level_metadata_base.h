@@ -22,7 +22,7 @@ namespace covered
         KeyLevelMetadataBase(const KeyLevelMetadataBase& other);
         ~KeyLevelMetadataBase();
 
-        virtual void updateNoValueDynamicMetadata(const bool& is_redirected, const bool& is_global_cached) = 0; // For get/put/delreq w/ hit/miss, update object-level value-unrelated metadata (is_redirected ONLY used by local cached metadata yet always false for local uncached metadata; is_global_cached ONLY used by local uncached metadata yet always true for local cached metadata)
+        virtual void updateNoValueDynamicMetadata(const bool& is_redirected, const bool& is_global_cached, const Frequency& added_local_frequency = 1, const Frequency& added_redirected_frequency = 1) = 0; // For get/put/delreq w/ hit/miss, update object-level value-unrelated metadata (is_redirected ONLY used by local cached metadata yet always false for local uncached metadata; is_global_cached ONLY used by local uncached metadata yet always true for local cached metadata)
 
         void updateValueDynamicMetadata(const ObjectSize& object_size, const ObjectSize& original_object_size); // For admission, put/delreq w/ hit/miss, and getrsp w/ invalid-hit (also getrsp w/ miss if for newly-tracked key), update object-level value-related metadata
         void updateLocalPopularity(const Popularity& local_popularity);
@@ -40,7 +40,7 @@ namespace covered
         virtual void dumpKeyLevelMetadata(std::fstream* fs_ptr) const;
         virtual void loadKeyLevelMetadata(std::fstream* fs_ptr);
     protected:
-        void updateNoValueDynamicMetadata_(); // Update value-unrelated dynamic metadata
+        void updateNoValueDynamicMetadata_(const Frequency& added_local_frequency = 1); // Update value-unrelated dynamic metadata
 
         // Just impl trick to avoid bugs (NOT count into cache size)
         bool is_valid_;

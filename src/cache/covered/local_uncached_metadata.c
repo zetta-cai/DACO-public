@@ -111,7 +111,7 @@ namespace covered
 
         // Calculate and update local uncached popularity
         Frequency local_frequency = key_level_metadata_ref.getLocalFrequency();
-        Popularity local_uncached_popularity = calculatePopularity_(local_frequency, object_size);
+        Popularity local_uncached_popularity = calculatePopularity(local_frequency, object_size);
         perkey_metadata_list_iter->second.updateLocalPopularity(local_uncached_popularity);
 
         return;

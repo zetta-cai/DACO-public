@@ -159,11 +159,11 @@ namespace covered
         return;
     }
 
-    void KeyLevelMetadataBase::updateNoValueDynamicMetadata_()
+    void KeyLevelMetadataBase::updateNoValueDynamicMetadata_(const Frequency& added_local_frequency)
     {
         checkValidity_();
 
-        local_frequency_++;
+        local_frequency_ += added_local_frequency; // By default is +1
 
         return;
     }

@@ -30,6 +30,7 @@ namespace covered
 
         // ONLY used by COVERED
         uint64_t getCoveredLocalUncachedMaxMemUsageBytes() const;
+        uint64_t getCoveredLocalUncachedLruMaxBytes() const;
         uint32_t getCoveredPeredgeSyncedVictimcnt() const;
         uint32_t getCoveredPeredgeMonitoredVictimsetcnt() const;
         uint64_t getCoveredPopularityAggregationMaxMemUsageBytes() const;
@@ -42,7 +43,8 @@ namespace covered
         static const std::string DEFAULT_CACHE_NAME;
         static const std::string DEFAULT_HASH_NAME;
         static const uint32_t DEFAULT_PERCACHESERVER_WORKERCNT;
-        static const uint64_t DEFAULT_COVERED_LOCAL_UNCACHED_MAX_MEM_USAGE_MB;
+        static const uint64_t DEFAULT_COVERED_LOCAL_UNCACHED_MAX_MEM_USAGE_MB; // For local uncached metadata
+        static const uint64_t DEFAULT_COVERED_LOCAL_UNCACHED_LRU_MAX_MB; // For local uncached LRU (if enabled)
         static const uint32_t DEFAULT_COVERED_PEREDGE_SYNCED_VICTIMCNT;
         static const uint32_t DEFAULT_COVERED_PEREDGE_MONITORED_VICTIMSETCNT;
         static const uint64_t DEFAULT_COVERED_POPULARITY_AGGREGATION_MAX_MEM_USAGE_MB;
@@ -67,7 +69,8 @@ namespace covered
         uint32_t percacheserver_workercnt_;
 
         // ONLY used by COVERED
-        uint64_t covered_local_uncached_max_mem_usage_bytes_;
+        uint64_t covered_local_uncached_max_mem_usage_bytes_; // For local uncached metadata
+        uint64_t covered_local_uncached_lru_max_bytes_; // For local uncached LRU (if enabled)
         uint32_t covered_peredge_synced_victimcnt_; // Max # of victim cacheinfos tracked by an edge node for each neighbor
         uint32_t covered_peredge_monitored_victimsetcnt_; // Max # of victim syncsets monitored by an edge node for each neighbor
         uint64_t covered_popularity_aggregation_max_mem_usage_bytes_;

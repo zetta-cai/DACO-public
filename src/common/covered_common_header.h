@@ -41,7 +41,15 @@
 // ---> If not defined, we also monitor stability of global object hit ratio within warmup maximum duration (in units of seconds) after achieving warmup reqcnt if necessary (i.e., w/ remaining time).
 //#define ENABLE_WARMUP_MAX_DURATION
 
+// Used in src/cache/covered_local_cache.*
+// ---> If defined, use a small LRU cache (src/cache/covered/local_uncached_lru.*) to decide whether to update local uncached metadata (priority queue of access statistics of uncached objects).
+// ---> If not defined, always evict the uncached object with the smallest priority in local uncached metadata for untracked objects.
+#define ENABLE_SMALL_LRU_CACHE
+
 #include <cstdint> // uint32_t, uint64_t
+#include <assert.h>
+
+#include "common/util.h"
 
 namespace covered
 {
@@ -64,6 +72,40 @@ namespace covered
 
     // Max keycnt per group for local cached/uncached objects
     #define COVERED_PERGROUP_MAXKEYCNT 10 // At most 10 keys per group for local cached/uncached objects
+
+    inline Popularity calculatePopularity(const Frequency& frequency, const ObjectSize& object_size)
+    {
+        // (OBSOLETE: zero-reward for one-hit-wonders will mis-evict hot keys) Set popularity as zero for zero-reward of one-hit-wonders to quickly evict them
+        // if (frequency <= 1)
+        // {
+        //     return 0;
+        // }
+
+        ObjectSize tmp_object_size = object_size;
+
+        // (OBSOLETE: we CANNOT directly use recency_index, as each object has an recency_index of 1 when updating popularity and we will NOT update recency info of all objects for each cache hit/miss)
+        //uint32_t recency_index = std::distance(perkey_metadata_list_.begin(), perkey_metadata_const_iter) + 1;
+        //tmp_object_size *= recency_index;
+
+        // NOTE: Here we use a simple approach to calculate popularity
+        Popularity popularity = 0.0;
+
+        if (tmp_object_size == 0) // Zero object size due to delreqs or approximate value sizes in local uncached metadata
+        {
+            #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
+            assert(false); // TMPDEBUG
+            tmp_object_size = 1; // Give the largest possible popularity for delreqs due to zero space usage for deleted value
+            #else
+            popularity = 0; // Set popularity as zero to avoid mis-admiting the uncached object with unknow object size if w/ approximate value sizes
+            return popularity;
+            #endif
+        }
+        
+        //ObjectSize tmp_objsize_kb = B2KB(tmp_object_size);
+        popularity = Util::popularityDivide(static_cast<Popularity>(frequency), static_cast<Popularity>(tmp_object_size)); // # of cache accesses per space unit (similar as LHD)
+
+        return popularity;
+    }
 }
 
 #endif

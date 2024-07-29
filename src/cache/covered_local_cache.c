@@ -16,7 +16,10 @@ namespace covered
         return *targetkey != obj_to_compare->key;
     }
 
-    CoveredLocalCache::CoveredLocalCache(const EdgeWrapperBase* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint64_t& local_uncached_capacity_bytes, const uint32_t& peredge_synced_victimcnt) : LocalCacheBase(edge_wrapper_ptr, edge_idx, capacity_bytes), peredge_synced_victimcnt_(peredge_synced_victimcnt), local_cached_metadata_(), local_uncached_metadata_(local_uncached_capacity_bytes)
+    CoveredLocalCache::CoveredLocalCache(const EdgeWrapperBase* edge_wrapper_ptr, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint64_t& local_uncached_capacity_bytes, const uint64_t& local_uncached_lru_bytes, const uint32_t& peredge_synced_victimcnt) : LocalCacheBase(edge_wrapper_ptr, edge_idx, capacity_bytes), peredge_synced_victimcnt_(peredge_synced_victimcnt), local_cached_metadata_(), local_uncached_metadata_(local_uncached_capacity_bytes)
+    #ifdef ENABLE_SMALL_LRU_CACHE
+    , local_uncached_lru_(local_uncached_lru_bytes)
+    #endif
     {
         // (A) Const variable
 
@@ -117,6 +120,18 @@ namespace covered
                 else // Key will be newly tracked
                 {
                     // NOTE: NOT track local uncached object into local uncached metadata by addForNewKey() here, as the get request of untracked object with (the first) cache miss cannot provide object size information to initialize and update local uncached metadata, and also cannot trigger placement
+
+                    #ifdef ENABLE_SMALL_LRU_CACHE
+                    bool is_lru_tracked = local_uncached_lru_.isKeyExist(key);
+                    if (is_lru_tracked)
+                    {
+                        // Update local uncached LRU
+                        const bool original_is_global_cached = local_uncached_lru_.isGlobalCachedForExistingKey(key);
+                        Reward lru_reward = local_uncached_lru_.updateNoValueStatsForExistingKey(edge_wrapper_ptr_, key, original_is_global_cached);
+
+                        tryToMoveFromLocalUncachedLruToMetadata_(key, lru_reward);
+                    }
+                    #endif
                 }
             }
         }
@@ -192,15 +207,62 @@ namespace covered
                     const uint32_t original_value_size = original_object_size >= keylen ? original_object_size - keylen : 0;
                     local_uncached_metadata_.removeForExistingKey(key, Value(original_value_size)); // Remove original value size to detrack the key from local uncached metadata
                 }
+
+                #ifdef ENABLE_SMALL_LRU_CACHE
+                bool is_lru_tracked = local_uncached_lru_.isKeyExist(key);
+                if (is_lru_tracked)
+                {
+                    const uint32_t lru_object_size = local_uncached_lru_.getObjectSize(key);
+                    const uint32_t lru_value_size = lru_object_size >= key.getKeyLength() ? lru_object_size - key.getKeyLength() : 0;
+
+                    // Remove from small LRU cache
+                    HomoKeyLevelMetadata lru_homo_keylevel_metadata;
+                    local_uncached_lru_.removeForExistingKey(key, Value(lru_value_size), lru_homo_keylevel_metadata);
+                }
+                #endif
             }
             else // With valid object size
             {
                 if (!is_key_tracked) // Key will be newly tracked by local uncached metadata
                 {
+                    #ifdef ENABLE_SMALL_LRU_CACHE
+                    bool is_lru_tracked = local_uncached_lru_.isKeyExist(key);
+                    Reward lru_reward = 0;
+                    if (is_lru_tracked)
+                    {
+                        // Udpate the small LRU cache
+                        if (is_getrsp) // getrsp with cache miss
+                        {
+                            const bool original_is_global_cached = local_uncached_lru_.isGlobalCachedForExistingKey(key);
+                            if (is_global_cached != original_is_global_cached) // If is_global_cached flag changes
+                            {
+                                lru_reward = local_uncached_lru_.updateIsGlobalCachedForExistingKey(edge_wrapper_ptr_, key, is_getrsp, is_global_cached); // Update is_global_cached
+                            }
+                        }
+                        else // put/delreq with cache miss
+                        {
+                            // Update local uncached value-unrelated metadata for put/delreq with cache miss
+                            lru_reward = local_uncached_lru_.updateNoValueStatsForExistingKey(edge_wrapper_ptr_, key, is_global_cached);
+                            
+                            const uint32_t lru_original_object_size = local_uncached_lru_.getObjectSize(key);
+                            const uint32_t lru_original_value_size = lru_original_object_size >= keylen ? lru_original_object_size - keylen : 0;
+                            lru_reward = local_uncached_lru_.updateValueStatsForExistingKey(edge_wrapper_ptr_, key, value, Value(lru_original_value_size));
+                        }
+                    }
+                    else
+                    {
+                        // Add into LRU cache
+                        lru_reward = local_uncached_lru_.addForNewKey(edge_wrapper_ptr_, key, value, is_global_cached);
+                    }
+
+                    // Try to move it from the small LRU cache into local uncached metadata
+                    tryToMoveFromLocalUncachedLruToMetadata_(key, lru_reward);
+                    #else
                     // Initialize and update local uncached metadata for getrsp/put/delreq with cache miss (both value-unrelated and value-related)
                     // NOTE: if the latest local uncached popularity of the newly-tracked key is NOT detracked in addForNewKey() under local uncached metadata capacity limitation, local/remote release writelock (for put/delreq) or local/remote directory lookup for the next getreq (for getrsp) will get the latest local uncached popularity for popularity aggregation to trigger placement calculation
                     const bool is_neighbor_cached = false; // NOTE: NEVER used by local uncached metadata
                     local_uncached_metadata_.addForNewKey(edge_wrapper_ptr_, key, value, peredge_synced_victimcnt_, is_global_cached, is_neighbor_cached); // NOTE: peredge_synced_victimcnt_ will NOT be used for local uncached metadata
+                    #endif
                 }
                 else // Key is tracked by local uncached metadata
                 {
@@ -285,6 +347,15 @@ namespace covered
             // NOTE: get/put/delrsp with cache miss MUST already udpate local uncached metadata with the current value before admission, so we can directly use current value to remove it from local uncached metadata instead of approximate value
             local_uncached_metadata_.removeForExistingKey(key, value);
         }
+
+        #ifdef ENABLE_SMALL_LRU_CACHE
+        // Remove from the small LRU cache if necessary for admission
+        if (local_uncached_lru_.isKeyExist(key))
+        {
+            HomoKeyLevelMetadata unused_keylevel_metadata;
+            local_uncached_lru_.removeForExistingKey(key, value, unused_keylevel_metadata);
+        }
+        #endif
 
         is_successful = true;
 
@@ -552,6 +623,11 @@ namespace covered
         uint64_t local_uncached_metadata_size = local_uncached_metadata_.getSizeForCapacity();
         internal_size = Util::uint64Add(internal_size, local_uncached_metadata_size);
 
+        #ifdef ENABLE_SMALL_LRU_CACHE
+        uint64_t local_uncached_lru_size = local_uncached_lru_.getSizeForCapacity();
+        internal_size = Util::uint64Add(internal_size, local_uncached_lru_size);
+        #endif
+
         return internal_size;
     }
 
@@ -573,6 +649,37 @@ namespace covered
         return tommy_hash_u32(0, key.getKeystr().c_str(), key.getKeyLength());
     }
 
+    #ifdef ENABLE_SMALL_LRU_CACHE
+    void CoveredLocalCache::tryToMoveFromLocalUncachedLruToMetadata_(const Key& key, const Reward& updated_lru_reward) const
+    {
+        if (updated_lru_reward <= 0)
+        {
+            return;
+        }
+
+        // Insert from local uncached LRU into local uncached metadata if necessary
+        Key unused_tmp_least_reward_key;
+        Reward tmp_least_reward = 0;
+        bool is_exist = local_uncached_metadata_.getLeastRewardKeyAndReward(0, unused_tmp_least_reward_key, tmp_least_reward);
+        if (!is_exist || updated_lru_reward > tmp_least_reward)
+        {
+            // Get LRU value size
+            const uint32_t lru_object_size = local_uncached_lru_.getObjectSize(key);
+            const uint32_t lru_value_size = lru_object_size >= key.getKeyLength() ? lru_object_size - key.getKeyLength() : 0;
+
+            // Remove from small LRU cache
+            HomoKeyLevelMetadata lru_homo_keylevel_metadata;
+            local_uncached_lru_.removeForExistingKey(key, Value(lru_value_size), lru_homo_keylevel_metadata);
+
+            // Insert into local uncached metadata (will evict the least reward key)
+            const bool is_neighbor_cached = false; // NOTE: NEVER used by local uncached metadata
+            local_uncached_metadata_.addForNewKey(edge_wrapper_ptr_, key, Value(lru_value_size), peredge_synced_victimcnt_, lru_homo_keylevel_metadata.isGlobalCached(), is_neighbor_cached, lru_homo_keylevel_metadata.getLocalFrequency());
+        }
+
+        return;
+    }
+    #endif
+
     // (5) Dump/load cache metadata for cache snapshot
 
     void CoveredLocalCache::dumpCacheMetadata(std::fstream* fs_ptr) const
@@ -584,6 +691,10 @@ namespace covered
 
         // Dump local uncached metadata
         local_uncached_metadata_.dumpLocalMetadata(fs_ptr);
+
+        #ifdef ENABLE_SMALL_LRU_CACHE
+        local_uncached_lru_.dumpLocalUncachedLru(fs_ptr);
+        #endif
 
         return;
     }
@@ -597,6 +708,10 @@ namespace covered
 
         // Load local uncached metadata
         local_uncached_metadata_.loadLocalMetadata(fs_ptr);
+
+        #ifdef ENABLE_SMALL_LRU_CACHE
+        local_uncached_lru_.loadLocalUncachedLru(fs_ptr);
+        #endif
 
         return;
     }

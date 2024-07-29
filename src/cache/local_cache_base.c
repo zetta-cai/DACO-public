@@ -26,7 +26,7 @@ namespace covered
 {
     const std::string LocalCacheBase::kClassName("LocalCacheBase");
 
-    LocalCacheBase* LocalCacheBase::getLocalCacheByCacheName(const EdgeWrapperBase* edge_wrapper_ptr, const std::string& cache_name, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint32_t& dataset_keycnt, const uint64_t& local_uncached_capacity_bytes, const uint32_t& peredge_synced_victimcnt)
+    LocalCacheBase* LocalCacheBase::getLocalCacheByCacheName(const EdgeWrapperBase* edge_wrapper_ptr, const std::string& cache_name, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint32_t& dataset_keycnt, const uint64_t& local_uncached_capacity_bytes, const uint64_t& local_uncached_lru_bytes, const uint32_t& peredge_synced_victimcnt)
     {
         LocalCacheBase* local_cache_ptr = NULL;
         if (cache_name == Util::ARC_CACHE_NAME || cache_name == Util::EXTENDED_ARC_CACHE_NAME)
@@ -95,7 +95,7 @@ namespace covered
         }
         else if (cache_name == Util::COVERED_CACHE_NAME)
         {
-            local_cache_ptr = new CoveredLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes, local_uncached_capacity_bytes, peredge_synced_victimcnt);
+            local_cache_ptr = new CoveredLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes, local_uncached_capacity_bytes, local_uncached_lru_bytes, peredge_synced_victimcnt);
         }
         else
         {

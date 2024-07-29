@@ -64,6 +64,7 @@ namespace covered
         static const std::string CLOUD_RECVREQ_STARTPORT_KEYSTR;
         static const std::string CLOUD_ROCKSDB_BASEDIR_KEYSTR;
         static const std::string COVERED_LOCAL_UNCACHED_MAX_MEM_USAGE_RATIO_KEYSTR;
+        static const std::string COVERED_LOCAL_UNCACHED_LRU_RATIO_KEYSTR;
         static const std::string COVERED_POPULARITY_AGGREGATION_MAX_MEM_USAGE_RATIO_KEYSTR;
         static const std::string DATASET_LOADER_SLEEP_FOR_COMPACTION_SEC_KEYSTR;
         static const std::string EDGE_BEACON_SERVER_RECVREQ_STARTPORT_KEYSTR;
@@ -123,6 +124,7 @@ namespace covered
         static uint16_t getCloudRecvreqStartport();
         static std::string getCloudRocksdbBasedir();
         static double getCoveredLocalUncachedMaxMemUsageRatio();
+        static double getCoveredLocalUncachedLruMaxRatio();
         static double getCoveredPopularityAggregationMaxMemUsageRatio();
         static uint32_t getDatasetLoaderSleepForCompactionSec();
         static uint16_t getEdgeBeaconServerRecvreqStartport();
@@ -220,6 +222,7 @@ namespace covered
         static uint16_t cloud_recvreq_startport_; // Start UDP port for cloud to receive global requests
         static std::string cloud_rocksdb_basedir_; // Base directory of RocksDB in cloud
         static double covered_local_uncached_max_mem_usage_ratio_; // The maximum memory usage ratio for local uncached metadata (ONLY used by COVERED)
+        static double covered_local_uncached_lru_ratio_; // The maximum memory usage ratio for local uncached LRU (ONLY used for COVERED if enabled)
         static double covered_popularity_aggregation_max_mem_usage_ratio_; // The maximum memory usage ratio for popularity aggregation (ONLY used by COVERED)
         static uint32_t dataset_loader_sleep_for_compaction_sec_; // Sleep time for dataset loader to wait for compaction in units of seconds
         static uint16_t edge_beacon_server_recvreq_startport_; // Start UDP port for edge beacon server to receive cooperation control requests

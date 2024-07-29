@@ -26,7 +26,7 @@ namespace covered
         HeteroKeyLevelMetadata(const HeteroKeyLevelMetadata& other);
         ~HeteroKeyLevelMetadata();
 
-        virtual void updateNoValueDynamicMetadata(const bool& is_redirected, const bool& is_global_cached) override; // For getreq with redirected hits, update object-level value-unrelated metadata (is_global_cached MUST be true and will NOT be used)
+        virtual void updateNoValueDynamicMetadata(const bool& is_redirected, const bool& is_global_cached, const Frequency& added_local_frequency = 1, const Frequency& added_redirected_frequency = 1) override; // For getreq with redirected hits, update object-level value-unrelated metadata (is_global_cached MUST be true and will NOT be used)
         
         void updateRedirectedPopularity(const Popularity& redirected_popularity);
 

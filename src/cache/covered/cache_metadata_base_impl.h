@@ -110,7 +110,7 @@ namespace covered
     // For newly-admited/tracked keys
 
     template<class T>
-    bool CacheMetadataBase<T>::addForNewKey(const EdgeWrapperBase* edge_wrapper_ptr, const Key& key, const Value& value, const uint32_t& peredge_synced_victimcnt, const bool& is_global_cached, const bool& is_neighbor_cached)
+    bool CacheMetadataBase<T>::addForNewKey(const EdgeWrapperBase* edge_wrapper_ptr, const Key& key, const Value& value, const uint32_t& peredge_synced_victimcnt, const bool& is_global_cached, const bool& is_neighbor_cached, const Frequency& added_local_frequency, const Frequency& added_redirected_frequency)
     {
         bool affect_victim_tracker = false;
 
@@ -122,7 +122,7 @@ namespace covered
         const GroupLevelMetadata& group_level_metadata_ref = addPergroupMetadata_(key, value, assigned_group_id);
 
         // Add object-level metadata for local requests (both value-unrelated and value-related) for new key
-        perkey_metadata_list_iter_t perkey_metadata_list_iter = addPerkeyMetadata_(key, value, assigned_group_id, is_global_cached, is_neighbor_cached);
+        perkey_metadata_list_iter_t perkey_metadata_list_iter = addPerkeyMetadata_(key, value, assigned_group_id, is_global_cached, is_neighbor_cached, added_local_frequency, added_redirected_frequency);
         const T& key_level_metadata_ref = perkey_metadata_list_iter->second;
 
         // Calculate and update popularity for newly-admited key
@@ -546,7 +546,7 @@ namespace covered
     }
 
     template<class T>
-    typename CacheMetadataBase<T>::perkey_metadata_list_iter_t CacheMetadataBase<T>::addPerkeyMetadata_(const Key& key, const Value& value, const GroupId& assigned_group_id, const bool& is_global_cached, const bool& is_neighbor_cached)
+    typename CacheMetadataBase<T>::perkey_metadata_list_iter_t CacheMetadataBase<T>::addPerkeyMetadata_(const Key& key, const Value& value, const GroupId& assigned_group_id, const bool& is_global_cached, const bool& is_neighbor_cached, const Frequency& added_local_frequency, const Frequency& added_redirected_frequency)
     {
         // NOTE: NO need to verify key existence due to LRU-based list
 
@@ -558,7 +558,7 @@ namespace covered
         // Update both value-unrelated and value-related metadata for new key
         const bool is_redirected = false; // ONLY local-request-related messages (e.g., directory lookup, foreground directory eviction, acquire/release writelock; getrsp/put/delreq w/ local misses) can admit/track new keys in local cached/uncached metadata
         const ObjectSize object_size = key.getKeyLength() + value.getValuesize();
-        perkey_metadata_list_iter->second.updateNoValueDynamicMetadata(is_redirected, is_global_cached);
+        perkey_metadata_list_iter->second.updateNoValueDynamicMetadata(is_redirected, is_global_cached, added_local_frequency, added_redirected_frequency);
         perkey_metadata_list_iter->second.updateValueDynamicMetadata(object_size, 0);
         // NOTE: local popularity of the key-level metadata will be updated by addForNewKey()
 
@@ -743,40 +743,10 @@ namespace covered
 
     // For local (cached/uncached) popularity (local hits for local cached metadata; local misses for local uncached metadata)
 
-    template<class T>
-    Popularity CacheMetadataBase<T>::calculatePopularity_(const Frequency& frequency, const ObjectSize& object_size) const
-    {
-        // (OBSOLETE: zero-reward for one-hit-wonders will mis-evict hot keys) Set popularity as zero for zero-reward of one-hit-wonders to quickly evict them
-        // if (frequency <= 1)
-        // {
-        //     return 0;
-        // }
-
-        ObjectSize tmp_object_size = object_size;
-
-        // (OBSOLETE: we CANNOT directly use recency_index, as each object has an recency_index of 1 when updating popularity and we will NOT update recency info of all objects for each cache hit/miss)
-        //uint32_t recency_index = std::distance(perkey_metadata_list_.begin(), perkey_metadata_const_iter) + 1;
-        //tmp_object_size *= recency_index;
-
-        // NOTE: Here we use a simple approach to calculate popularity
-        Popularity popularity = 0.0;
-
-        if (tmp_object_size == 0) // Zero object size due to delreqs or approximate value sizes in local uncached metadata
-        {
-            #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
-            assert(false); // TMPDEBUG
-            tmp_object_size = 1; // Give the largest possible popularity for delreqs due to zero space usage for deleted value
-            #else
-            popularity = 0; // Set popularity as zero to avoid mis-admiting the uncached object with unknow object size if w/ approximate value sizes
-            return popularity;
-            #endif
-        }
-        
-        //ObjectSize tmp_objsize_kb = B2KB(tmp_object_size);
-        popularity = Util::popularityDivide(static_cast<Popularity>(frequency), static_cast<Popularity>(tmp_object_size)); // # of cache accesses per space unit (similar as LHD)
-
-        return popularity;
-    }
+    // template<class T>
+    // Popularity CacheMetadataBase<T>::calculatePopularity_(const Frequency& frequency, const ObjectSize& object_size) const
+    // {
+    // }
 
     // For reward information
 
