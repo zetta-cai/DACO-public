@@ -72,7 +72,7 @@ namespace covered
         return NULL;
     }
 
-    EvaluatorWrapper::EvaluatorWrapper(const uint32_t& clientcnt, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& warmup_reqcnt_scale, const uint32_t& warmup_max_duration_sec, const uint32_t& stresstest_duration_sec, const std::string& evaluator_statistics_filepath, const std::string& realnet_option) : clientcnt_(clientcnt), edgecnt_(edgecnt), warmup_reqcnt_(keycnt * warmup_reqcnt_scale), warmup_max_duration_sec_(warmup_max_duration_sec), stresstest_duration_sec_(stresstest_duration_sec), evaluator_statistics_filepath_(evaluator_statistics_filepath), realnet_option_(realnet_option)
+    EvaluatorWrapper::EvaluatorWrapper(const uint32_t& clientcnt, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& warmup_reqcnt_scale, const uint32_t& warmup_max_duration_sec, const uint32_t& stresstest_duration_sec, const std::string& evaluator_statistics_filepath, const std::string& realnet_option) : clientcnt_(clientcnt), edgecnt_(edgecnt), warmup_reqcnt_(keycnt * warmup_reqcnt_scale), warmup_max_duration_sec_(warmup_max_duration_sec), stresstest_duration_sec_(stresstest_duration_sec), evaluator_statistics_filepath_(evaluator_statistics_filepath), realnet_option_(realnet_option), evaluator_msg_seqnum_(0)
     {
         if (realnet_option == Util::REALNET_LOAD_OPTION_NAME)
         {

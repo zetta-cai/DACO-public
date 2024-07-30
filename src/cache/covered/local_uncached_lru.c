@@ -479,7 +479,9 @@ namespace covered
         {
             assert(perkey_metadata_list_.size() > 0);
 
-            erased_key = (perkey_metadata_list_.end()--)->first;
+            perkey_metadata_list_t::const_iterator tmp_const_iter = perkey_metadata_list_.end();
+            tmp_const_iter--; // Point to the last element in object-level metadata LRU list
+            erased_key = tmp_const_iter->first;
             return true;
         }
         else
