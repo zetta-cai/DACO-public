@@ -11,6 +11,7 @@
 
 #include <boost/program_options.hpp>
 
+#include "common/cli_latency_info.h"
 #include "cli/cli_base.h"
 
 namespace covered
@@ -21,18 +22,25 @@ namespace covered
         PropagationCLI();
         virtual ~PropagationCLI();
 
-        uint32_t getPropagationLatencyClientedgeAvgUs() const;
-        uint32_t getPropagationLatencyCrossedgeAvgUs() const;
-        uint32_t getPropagationLatencyEdgecloudAvgUs() const;
+        CLILatencyInfo getCLILatencyInfo() const;
 
         std::string toCliString(); // NOT virtual for cilutil
         virtual void clearIsToCliString(); // Idempotent operation: clear is_to_cli_string_ for the next toCliString()
     private:
+        static const std::string DEFAULT_PROPAGATION_LATENCY_DISTNAME;
+        static const uint32_t DEFAULT_PROPAGATION_LATENCY_CLIENTEDGE_LBOUND_US;
         static const uint32_t DEFAULT_PROPAGATION_LATENCY_CLIENTEDGE_AVG_US;
+        static const uint32_t DEFAULT_PROPAGATION_LATENCY_CLIENTEDGE_RBOUND_US;
+        static const uint32_t DEFAULT_PROPAGATION_LATENCY_CROSSEDGE_LBOUND_US;
         static const uint32_t DEFAULT_PROPAGATION_LATENCY_CROSSEDGE_AVG_US;
+        static const uint32_t DEFAULT_PROPAGATION_LATENCY_CROSSEDGE_RBOUND_US;
+        static const uint32_t DEFAULT_PROPAGATION_LATENCY_EDGECLOUD_LBOUND_US;
         static const uint32_t DEFAULT_PROPAGATION_LATENCY_EDGECLOUD_AVG_US;
+        static const uint32_t DEFAULT_PROPAGATION_LATENCY_EDGECLOUD_RBOUND_US;
 
         static const std::string kClassName;
+
+        void verifyPropagationLatencyDistname_() const;
 
         bool is_add_cli_parameters_;
         bool is_set_param_and_config_;
@@ -40,9 +48,7 @@ namespace covered
 
         bool is_to_cli_string_;
 
-        uint32_t propagation_latency_clientedge_avg_us_; // Average RTT between client and edge
-        uint32_t propagation_latency_crossedge_avg_us_; // Average RTT between edge and neighbor
-        uint32_t propagation_latency_edgecloud_avg_us_; // Average RTT between edge and cloud
+        CLILatencyInfo cli_latency_info_; // Distribution, avg, left bound, and right bound of each type of propagation latency
     protected:
         virtual void addCliParameters_() override;
         virtual void setParamAndConfig_(const std::string& main_class_name) override;

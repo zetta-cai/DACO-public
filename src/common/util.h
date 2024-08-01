@@ -183,6 +183,17 @@ namespace covered
         static const int LINE_SEP_CHAR; // Line separator character
         static const int TSV_SEP_CHAR; // Tab-separated value separator character
 
+        // Propagation latency simulation
+        static const std::string PROPAGATION_SIMULATION_UNIFORM_DISTNAME;
+        static const std::string PROPAGATION_SIMULATION_CONSTANT_DISTNAME;
+        // NOTE: just ensure each propagation simulator param uses a unique random seed; actually it is okay for different types of propagation latency to use the same random seed due to different distribution ranges, but we still ensure unique random seeds now
+        static const uint32_t PROPAGATION_SIMULATION_CLIENT_SEED_BASE;
+        static const uint32_t PROPAGATION_SIMULATION_CLIENT_SEED_FACTOR;
+        static const uint32_t PROPAGATION_SIMULATION_EDGE_SEED_BASE;
+        static const uint32_t PROPAGATION_SIMULATION_EDGE_SEED_FACTOR;
+        static const uint32_t PROPAGATION_SIMULATION_CLOUD_SEED_BASE;
+        static const uint32_t PROPAGATION_SIMULATION_CLOUD_SEED_FACTOR;
+
         // (0) For caches and workloads
 
         static bool isSingleNodeCache(const std::string cache_name); // Will disable cooperative caching for single-node caches
@@ -284,6 +295,12 @@ namespace covered
         static std::string getAckedStatusStr(const std::unordered_map<NetworkAddr, std::pair<bool, uint32_t>, NetworkAddrHasher>& acked_flags, const std::string& rolestr);
         static std::string getAckedStatusStr(const std::unordered_map<uint32_t, bool>& acked_flags, const std::string& rolestr);
         static std::string getAckedStatusStr(const std::unordered_map<Key, std::pair<bool, uint32_t>, KeyHasher>& acked_flags, const std::string& rolestr);
+
+        // Propagation latency simulation
+        static uint32_t getPropagationSimulationRandomSeedForClient(const uint32_t& node_idx, const uint32_t& local_propagation_simulator_idx);
+        static uint32_t getPropagationSimulationRandomSeedForEdge(const uint32_t& node_idx, const uint32_t& local_propagation_simulator_idx);
+        static uint32_t getPropagationSimulationRandomSeedForCloud(const uint32_t& node_idx, const uint32_t& local_propagation_simulator_idx);
+        static uint32_t getPropagationSimulationRandomSeed_(const uint32_t& node_idx, const uint32_t& local_propagation_simulator_idx, const uint32_t& seed_base, const uint32_t& seed_factor);
 
         // (6) Intermediate files
 

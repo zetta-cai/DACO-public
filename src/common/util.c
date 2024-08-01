@@ -139,6 +139,16 @@ namespace covered
     const int Util::LINE_SEP_CHAR = '\n';
     const int Util::TSV_SEP_CHAR = '\t';
 
+    // Propagation latency simulation
+    const std::string Util::PROPAGATION_SIMULATION_UNIFORM_DISTNAME("uniform");
+    const std::string Util::PROPAGATION_SIMULATION_CONSTANT_DISTNAME("constant");
+    const uint32_t Util::PROPAGATION_SIMULATION_CLIENT_SEED_BASE = 0;
+    const uint32_t Util::PROPAGATION_SIMULATION_CLIENT_SEED_FACTOR = 10;
+    const uint32_t Util::PROPAGATION_SIMULATION_EDGE_SEED_BASE = 10000;
+    const uint32_t Util::PROPAGATION_SIMULATION_EDGE_SEED_FACTOR = 10;
+    const uint32_t Util::PROPAGATION_SIMULATION_CLOUD_SEED_BASE = 20000;
+    const uint32_t Util::PROPAGATION_SIMULATION_CLOUD_SEED_FACTOR = 10;
+
     const std::string Util::kClassName("Util");
 
     std::mutex Util::msgdump_lock_;
@@ -1015,6 +1025,29 @@ namespace covered
         return oss.str();
     }
 
+    // Propagation latency simulation
+
+    uint32_t Util::getPropagationSimulationRandomSeedForClient(const uint32_t& node_idx, const uint32_t& local_propagation_simulator_idx)
+    {
+        return getPropagationSimulationRandomSeed_(node_idx, local_propagation_simulator_idx, PROPAGATION_SIMULATION_CLIENT_SEED_BASE, PROPAGATION_SIMULATION_CLIENT_SEED_FACTOR);
+    }
+
+    uint32_t Util::getPropagationSimulationRandomSeedForEdge(const uint32_t& node_idx, const uint32_t& local_propagation_simulator_idx)
+    {
+        return getPropagationSimulationRandomSeed_(node_idx, local_propagation_simulator_idx, PROPAGATION_SIMULATION_EDGE_SEED_BASE, PROPAGATION_SIMULATION_EDGE_SEED_FACTOR);
+    }
+
+    uint32_t Util::getPropagationSimulationRandomSeedForCloud(const uint32_t& node_idx, const uint32_t& local_propagation_simulator_idx)
+    {
+        return getPropagationSimulationRandomSeed_(node_idx, local_propagation_simulator_idx, PROPAGATION_SIMULATION_CLOUD_SEED_BASE, PROPAGATION_SIMULATION_CLOUD_SEED_FACTOR);
+    }
+
+    uint32_t Util::getPropagationSimulationRandomSeed_(const uint32_t& node_idx, const uint32_t& local_propagation_simulator_idx, const uint32_t& seed_base, const uint32_t& seed_factor)
+    {
+        uint32_t random_seed = seed_base + node_idx * seed_factor + local_propagation_simulator_idx;
+        return random_seed;
+    }
+
     // (6) Intermediate files
 
     std::string Util::getSampledDatasetFilepath(const std::string& workload_name)
@@ -1120,9 +1153,11 @@ namespace covered
         const uint32_t perclient_opcnt = evaluator_cli_ptr->getPerclientOpcnt();
         const uint32_t percacheserver_workercnt = evaluator_cli_ptr->getPercacheserverWorkercnt();
         const uint32_t perclient_workercnt = evaluator_cli_ptr->getPerclientWorkercnt();
-        const uint32_t propagation_latency_clientedge_avg_us = evaluator_cli_ptr->getPropagationLatencyClientedgeAvgUs();
-        const uint32_t propagation_latency_crossedge_avg_us = evaluator_cli_ptr->getPropagationLatencyCrossedgeAvgUs();
-        const uint32_t propagation_latency_edgecloud_avg_us = evaluator_cli_ptr->getPropagationLatencyEdgecloudAvgUs();
+        // NOTE: using avg latencies is sufficient to distinguish different WAN settings
+        const CLILatencyInfo cli_latency_info = evaluator_cli_ptr->getCLILatencyInfo();
+        const uint32_t propagation_latency_clientedge_avg_us = cli_latency_info.getPropagationLatencyClientedgeAvgUs();
+        const uint32_t propagation_latency_crossedge_avg_us = cli_latency_info.getPropagationLatencyCrossedgeAvgUs();
+        const uint32_t propagation_latency_edgecloud_avg_us = cli_latency_info.getPropagationLatencyEdgecloudAvgUs();
         const uint32_t warmup_reqcnt_scale = evaluator_cli_ptr->getWarmupReqcntScale();
         const uint32_t warmup_max_duration_sec = evaluator_cli_ptr->getWarmupMaxDurationSec();
         const uint32_t stresstest_duration_sec = evaluator_cli_ptr->getStresstestDurationSec();
