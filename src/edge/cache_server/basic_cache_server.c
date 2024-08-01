@@ -75,7 +75,7 @@ namespace covered
         return directory_update_request_ptr;
     }
 
-    void BasicCacheServer::processRspToAdmitBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written, bool& is_neighbor_cached, const bool& is_background) const
+    void BasicCacheServer::processRspToAdmitBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written, bool& is_neighbor_cached, const bool& is_background, const uint32_t& directory_admit_cross_edge_latency_us) const
     {
         checkPointers_();
         assert(control_response_ptr != NULL);
@@ -127,6 +127,7 @@ namespace covered
 
         UNUSED(is_neighbor_cached);
         UNUSED(is_background);
+        UNUSED(directory_admit_cross_edge_latency_us);
 
         return;
     }
@@ -201,7 +202,7 @@ namespace covered
         return directory_update_request_ptr;
     }
     
-    bool BasicCacheServer::processRspToEvictBeaconDirectory_(MessageBase* control_response_ptr, const Value& value, bool& is_being_written, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr, const bool& is_background) const
+    bool BasicCacheServer::processRspToEvictBeaconDirectory_(MessageBase* control_response_ptr, const Value& value, bool& is_being_written, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr, const bool& is_background, const uint32_t& directory_evict_cross_edge_latency_us) const
     {
         checkPointers_();
         assert(control_response_ptr != NULL);
@@ -251,6 +252,7 @@ namespace covered
         UNUSED(total_bandwidth_usage);
         UNUSED(event_list);
         UNUSED(extra_common_msghdr);
+        UNUSED(directory_evict_cross_edge_latency_us);
 
         return is_finish;
     }

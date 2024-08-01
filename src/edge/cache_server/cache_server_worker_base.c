@@ -576,8 +576,8 @@ namespace covered
                 uint32_t tmp_content_discovery_cross_edge_latency_us = static_cast<uint32_t>(tmp_content_discovery_cross_edge_rtt_us);
                 if (extra_common_msghdr.isSkipPropagationLatency()) // Compensate propagation latency for warmup speedup
                 {
-                    // NOTE: cross-edge propagation latency from CLI is a single trip latency, which should be counted twice for RTT
-                    tmp_content_discovery_cross_edge_latency_us += 2 * tmp_edge_wrapper_ptr->getPropagationLatencyCrossedgeUs();
+                    // NOTE: cross-edge propagation latency from CLI is already a round-trip latency, which should NOT be counted twice for RTT
+                    tmp_content_discovery_cross_edge_latency_us += tmp_edge_wrapper_ptr->getPropagationLatencyCrossedgeAvgUs();
                 }
 
                 processRspToLookupBeaconDirectory_(control_response_ptr, is_being_written, is_valid_directory_exist, directory_info, best_placement_edgeset, need_hybrid_fetching, fast_path_hint, tmp_content_discovery_cross_edge_latency_us);
@@ -686,8 +686,8 @@ namespace covered
                 uint32_t tmp_request_redirection_cross_edge_latency_us = static_cast<uint32_t>(tmp_request_redirection_cross_edge_rtt_us);
                 if (extra_common_msghdr.isSkipPropagationLatency()) // Compensate propagation latency for warmup speedup
                 {
-                    // NOTE: cross-edge propagation latency from CLI is a single trip latency, which should be counted twice for RTT
-                    tmp_request_redirection_cross_edge_latency_us += 2 * tmp_edge_wrapper_ptr->getPropagationLatencyCrossedgeUs();
+                    // NOTE: cross-edge propagation latency from CLI is already a round-trip latency, which should NOT be counted twice for RTT
+                    tmp_request_redirection_cross_edge_latency_us += tmp_edge_wrapper_ptr->getPropagationLatencyCrossedgeAvgUs();
                 }
 
                 // Get value and hitflag from redirected response message
@@ -831,8 +831,8 @@ namespace covered
                 uint32_t tmp_cloud_access_edge_cloud_latency_us = static_cast<uint32_t>(tmp_cloud_access_edge_cloud_rtt_us);
                 if (extra_common_msghdr.isSkipPropagationLatency()) // Compensate propagation latency for warmup speedup
                 {
-                    // NOTE: edge-cloud propagation latency from CLI is a single trip latency, which should be counted twice for RTT
-                    tmp_cloud_access_edge_cloud_latency_us += 2 * tmp_edge_wrapper_ptr->getPropagationLatencyEdgecloudUs();
+                    // NOTE: edge-cloud propagation latency from CLI is already a round-trip latency, which should NOT be counted twice for RTT
+                    tmp_cloud_access_edge_cloud_latency_us += tmp_edge_wrapper_ptr->getPropagationLatencyEdgecloudAvgUs();
                 }
 
                 // Get value from global response message

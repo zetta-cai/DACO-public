@@ -551,6 +551,9 @@ namespace covered
         bool is_stale_response = false; // Only recv again instead of send if with a stale response
         while (true) // Timeout-and-retry mechanism
         {
+            // Prepare for latency-aware weight tuning
+            const struct timespec tmp_directory_admit_start_timestamp = Util::getCurrentTimespec(); // NOT count timeout
+
             if (!is_stale_response)
             {
                 // Prepare directory update request to check directory information in beacon node
@@ -604,8 +607,18 @@ namespace covered
                     continue; // Jump to while loop
                 }
 
+                // Update cross-edge latency for latency-aware weight tuning if NOT timeout
+                const struct timespec tmp_directory_admit_end_timestamp = Util::getCurrentTimespec();
+                const double tmp_directory_admit_cross_edge_rtt_us = Util::getDeltaTimeUs(tmp_directory_admit_end_timestamp, tmp_directory_admit_start_timestamp);
+                uint32_t tmp_directory_admit_cross_edge_latency_us = static_cast<uint32_t>(tmp_directory_admit_cross_edge_rtt_us);
+                if (extra_common_msghdr.isSkipPropagationLatency()) // Compensate propagation latency for warmup speedup
+                {
+                    // NOTE: cross-edge propagation latency from CLI is already a round-trip latency, which should NOT be counted twice for RTT
+                    tmp_directory_admit_cross_edge_latency_us += tmp_edge_wrapper_ptr->getPropagationLatencyCrossedgeAvgUs();
+                }
+
                 // Update is_neighbor_cached based on remote directory admission response
-                processRspToAdmitBeaconDirectory_(control_response_ptr, is_being_written, is_neighbor_cached, is_background); // NOTE: is_being_written is updated here
+                processRspToAdmitBeaconDirectory_(control_response_ptr, is_being_written, is_neighbor_cached, is_background, tmp_directory_admit_cross_edge_latency_us); // NOTE: is_being_written is updated here
 
                 // Update total bandwidth usage for received directory update (admission) response
                 BandwidthUsage directory_update_response_bandwidth_usage = control_response_ptr->getBandwidthUsageRef();
@@ -807,6 +820,12 @@ namespace covered
         bool is_stale_response = false; // Only recv again instead of send if with a stale response
         while (acked_cnt != partial_victim_cnt) // Timeout-and-retry mechanism
         {
+            // Prepare for latency-aware weight tuning (only count the first RTT of current batch)
+            bool is_measure_first_req = false;
+            bool is_measure_first_rsp = false;
+            uint32_t tmp_directory_evict_cross_edge_latency_us = 0;
+            struct timespec tmp_directory_evict_start_timestamp;
+
             if (!is_stale_response) // Resend for the first time or timeout
             {
                 // Send (partial_victim_cnt - acked_cnt) directory update requests to the beacon nodes that have not acknowledged
@@ -836,6 +855,12 @@ namespace covered
                     }
                     else // Send directory update req with is_admit = false to evict remote directory info for the victim key
                     {
+                        if (!is_measure_first_req) // Only count RTT for the first request in the current batch
+                        {
+                            is_measure_first_req = true;
+                            tmp_directory_evict_start_timestamp = Util::getCurrentTimespec(); // NOT count timeout
+                        }
+
                         MessageBase* directory_update_request_ptr = getReqToEvictBeaconDirectory_(tmp_victim_key, directory_info, source_addr, extra_common_msghdr, is_background);
                         assert(directory_update_request_ptr != NULL);
 
@@ -895,6 +920,22 @@ namespace covered
                         break; // Jump to while loop
                     }
 
+                    if (!is_measure_first_rsp) // Only count RTT for the first response in the current batch
+                    {
+                        assert(is_measure_first_req); // Must issue at least one request
+                        is_measure_first_rsp = true;
+
+                        // Update cross-edge latency for latency-aware weight tuning if NOT timeout
+                        const struct timespec tmp_directory_evict_end_timestamp = Util::getCurrentTimespec();
+                        const double tmp_directory_evict_cross_edge_rtt_us = Util::getDeltaTimeUs(tmp_directory_evict_end_timestamp, tmp_directory_evict_start_timestamp);
+                        tmp_directory_evict_cross_edge_latency_us = static_cast<uint32_t>(tmp_directory_evict_cross_edge_rtt_us);
+                        if (extra_common_msghdr.isSkipPropagationLatency()) // Compensate propagation latency for warmup speedup
+                        {
+                            // NOTE: cross-edge propagation latency from CLI is already a round-trip latency, which should NOT be counted twice for RTT
+                            tmp_directory_evict_cross_edge_latency_us += tmp_edge_wrapper_ptr->getPropagationLatencyCrossedgeAvgUs();
+                        }
+                    }
+
                     // Mark the key has been acknowledged with DirectoryUpdateResponse
                     const Key tmp_received_key = MessageBase::getKeyFromMessage(control_response_ptr);
                     bool is_match = false;
@@ -932,7 +973,13 @@ namespace covered
                         std::unordered_map<Key, Value, KeyHasher>::const_iterator partial_victims_const_iter = partial_victims.find(tmp_received_key);
                         assert(partial_victims_const_iter != partial_victims.end());
                         const Value tmp_victim_value = partial_victims_const_iter->second;
-                        is_finish = processRspToEvictBeaconDirectory_(control_response_ptr, tmp_victim_value, _unused_is_being_written, source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, extra_common_msghdr, is_background);
+                        is_finish = processRspToEvictBeaconDirectory_(control_response_ptr, tmp_victim_value, _unused_is_being_written, source_addr, recvrsp_socket_server_ptr, total_bandwidth_usage, event_list, extra_common_msghdr, is_background, tmp_directory_evict_cross_edge_latency_us);
+
+                        if (tmp_directory_evict_cross_edge_latency_us > 0) // ONLY update weight tuner for the first RTT in the current batch
+                        {
+                            tmp_directory_evict_cross_edge_latency_us = 0;
+                        }
+
                         if (is_finish)
                         {
                             return is_finish; // Edge is NOT running

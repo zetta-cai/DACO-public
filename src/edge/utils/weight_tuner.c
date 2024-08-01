@@ -97,11 +97,17 @@ namespace covered
         // Dump initial weight info
         oss.clear();
         oss.str("");
-        oss << "initial local hit weight: " << weight_info_.getLocalHitWeight() << ", cooperative hit weight: " << weight_info_.getCooperativeHitWeight() << ", remote beacon prob: " << ewma_remote_beacon_prob_;
+        oss << "initial cross-edge latency (us): " << ewma_propagation_latency_crossedge_us_ << ", edge-cloud latency (us): " << ewma_propagation_latency_edgecloud_us_ << ", local hit weight: " << weight_info_.getLocalHitWeight() << ", cooperative hit weight: " << weight_info_.getCooperativeHitWeight() << ", remote beacon prob: " << ewma_remote_beacon_prob_;
         Util::dumpNormalMsg(instance_name_, oss.str());
     }
 
-    WeightTuner::~WeightTuner() {}
+    WeightTuner::~WeightTuner()
+    {
+        // Dump eventual weight info
+        std::ostringstream oss;
+        oss << "eventual cross-edge latency (us): " << ewma_propagation_latency_crossedge_us_ << ", edge-cloud latency (us): " << ewma_propagation_latency_edgecloud_us_ << ", local hit weight: " << weight_info_.getLocalHitWeight() << ", cooperative hit weight: " << weight_info_.getCooperativeHitWeight() << ", remote beacon prob: " << ewma_remote_beacon_prob_;
+        Util::dumpNormalMsg(instance_name_, oss.str());
+    }
 
     WeightInfo WeightTuner::getWeightInfo() const
     {

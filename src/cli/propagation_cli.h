@@ -21,16 +21,16 @@ namespace covered
         PropagationCLI();
         virtual ~PropagationCLI();
 
-        uint32_t getPropagationLatencyClientedgeUs() const;
-        uint32_t getPropagationLatencyCrossedgeUs() const;
-        uint32_t getPropagationLatencyEdgecloudUs() const;
+        uint32_t getPropagationLatencyClientedgeAvgUs() const;
+        uint32_t getPropagationLatencyCrossedgeAvgUs() const;
+        uint32_t getPropagationLatencyEdgecloudAvgUs() const;
 
         std::string toCliString(); // NOT virtual for cilutil
         virtual void clearIsToCliString(); // Idempotent operation: clear is_to_cli_string_ for the next toCliString()
     private:
-        static const uint32_t DEFAULT_PROPAGATION_LATENCY_CLIENTEDGE_US;
-        static const uint32_t DEFAULT_PROPAGATION_LATENCY_CROSSEDGE_US;
-        static const uint32_t DEFAULT_PROPAGATION_LATENCY_EDGECLOUD_US;
+        static const uint32_t DEFAULT_PROPAGATION_LATENCY_CLIENTEDGE_AVG_US;
+        static const uint32_t DEFAULT_PROPAGATION_LATENCY_CROSSEDGE_AVG_US;
+        static const uint32_t DEFAULT_PROPAGATION_LATENCY_EDGECLOUD_AVG_US;
 
         static const std::string kClassName;
 
@@ -40,9 +40,9 @@ namespace covered
 
         bool is_to_cli_string_;
 
-        uint32_t propagation_latency_clientedge_us_; // 1/2 RTT between client and edge (bidirectional link)
-        uint32_t propagation_latency_crossedge_us_; // 1/2 RTT between edge and neighbor (bidirectional link)
-        uint32_t propagation_latency_edgecloud_us_; // 1/2 RTT between edge and cloud (bidirectional link)
+        uint32_t propagation_latency_clientedge_avg_us_; // Average RTT between client and edge
+        uint32_t propagation_latency_crossedge_avg_us_; // Average RTT between edge and neighbor
+        uint32_t propagation_latency_edgecloud_avg_us_; // Average RTT between edge and cloud
     protected:
         virtual void addCliParameters_() override;
         virtual void setParamAndConfig_(const std::string& main_class_name) override;

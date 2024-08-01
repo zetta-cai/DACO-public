@@ -80,7 +80,7 @@ namespace covered
         return directory_update_request_ptr;
     }
 
-    void CoveredCacheServer::processRspToAdmitBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written, bool& is_neighbor_cached, const bool& is_background) const
+    void CoveredCacheServer::processRspToAdmitBeaconDirectory_(MessageBase* control_response_ptr, bool& is_being_written, bool& is_neighbor_cached, const bool& is_background, const uint32_t& directory_admit_cross_edge_latency_us) const
     {
         checkPointers_();
         assert(control_response_ptr != NULL);
@@ -90,6 +90,9 @@ namespace covered
 
         uint32_t source_edge_idx = control_response_ptr->getSourceIndex();
         VictimSyncset neighbor_victim_syncset;
+
+        // Update EWMA of cross-edge latency for latency-aware weight tuning (NOTE: processRspToAdmitBeaconDirectory_() is ONLY invoked by CacheServerBase::admitBeaconDirectory_(), via cache server worker for other baselines, and cache server placement processor for BestGuess and COVERED)
+        tmp_edge_wrapper_ptr->getWeightTunerRef().updateEwmaCrossedgeLatency(directory_admit_cross_edge_latency_us);
 
         // NOTE: ONLY foreground directory eviction could trigger hybrid data fetching, while foreground/background directory admission will NEVER perform placement calculation and hence NO hybrid data fetching
         if (!is_background)
@@ -236,7 +239,7 @@ namespace covered
         return directory_update_request_ptr;
     }
     
-    bool CoveredCacheServer::processRspToEvictBeaconDirectory_(MessageBase* control_response_ptr, const Value& value, bool& is_being_written, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr, const bool& is_background) const
+    bool CoveredCacheServer::processRspToEvictBeaconDirectory_(MessageBase* control_response_ptr, const Value& value, bool& is_being_written, const NetworkAddr& recvrsp_source_addr, UdpMsgSocketServer* recvrsp_socket_server_ptr, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr, const bool& is_background, const uint32_t& directory_evict_cross_edge_latency_us) const
     {
         checkPointers_();
         assert(control_response_ptr != NULL);
@@ -245,6 +248,13 @@ namespace covered
         bool is_finish = false;
 
         // CoveredCacheManager* tmp_covered_cache_manager_ptr = tmp_edge_wrapper_ptr->getCoveredCacheManagerPtr();
+
+        // NOTE: will pass directory_evict_cross_edge_latency_us = 0 for non-first eviction messages in each batch of CacheServerBase::partialParallelEvictDirectory_() to avoid batch processing latency impact
+        if (directory_evict_cross_edge_latency_us > 0)
+        {
+            // Update EWMA of cross-edge latency for latency-aware weight tuning (NOTE: processRspToEvictBeaconDirectory_() is ONLY invoked by CacheServerBase::partialParallelEvictDirectory_() in CacheServerBase::parallelEvictDirectory_() in CacheServerBase::evictForCapacity_(), via cache server worker for other baselines, and cache server placement processor for BestGuess and COVERED)
+            tmp_edge_wrapper_ptr->getWeightTunerRef().updateEwmaCrossedgeLatency(directory_evict_cross_edge_latency_us);
+        }
             
         // Victim synchronization
         const KeyByteVictimsetMessage* directory_update_response_ptr = static_cast<const KeyByteVictimsetMessage*>(control_response_ptr);

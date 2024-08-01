@@ -9,13 +9,13 @@ namespace covered
     const std::string PropagationSimulatorParam::kClassName("PropagationSimulatorParam");
 
 
-    PropagationSimulatorParam::PropagationSimulatorParam() : SubthreadParamBase(), propagation_latency_us_(0), rwlock_for_propagation_item_buffer_("rwlock_for_propagation_item_buffer_"), is_first_item_(true), prev_timespec_()
+    PropagationSimulatorParam::PropagationSimulatorParam() : SubthreadParamBase(), propagation_latency_avg_us_(0), rwlock_for_propagation_item_buffer_("rwlock_for_propagation_item_buffer_"), is_first_item_(true), prev_timespec_()
     {
         propagation_item_buffer_ptr_ = NULL;
         instance_name_ = "";
     }
 
-    PropagationSimulatorParam::PropagationSimulatorParam(NodeWrapperBase* node_wrapper_ptr, const uint32_t& propagation_latency_us, const uint32_t& propagation_item_buffer_size) : SubthreadParamBase(), node_wrapper_ptr_(node_wrapper_ptr), propagation_latency_us_(propagation_latency_us), rwlock_for_propagation_item_buffer_("rwlock_for_propagation_item_buffer_"), is_first_item_(true), prev_timespec_()
+    PropagationSimulatorParam::PropagationSimulatorParam(NodeWrapperBase* node_wrapper_ptr, const uint32_t& propagation_latency_avg_us, const uint32_t& propagation_item_buffer_size) : SubthreadParamBase(), node_wrapper_ptr_(node_wrapper_ptr), propagation_latency_avg_us_(propagation_latency_avg_us), rwlock_for_propagation_item_buffer_("rwlock_for_propagation_item_buffer_"), is_first_item_(true), prev_timespec_()
     {
         assert(node_wrapper_ptr != NULL);
 
@@ -63,10 +63,10 @@ namespace covered
         return node_wrapper_ptr_;
     }
 
-    uint32_t PropagationSimulatorParam::getPropagationLatencyUs() const
+    uint32_t PropagationSimulatorParam::getPropagationLatencyAvgUs() const
     {
         // No need to acquire a lock due to const shared variable
-        return propagation_latency_us_;
+        return propagation_latency_avg_us_;
     }
 
     bool PropagationSimulatorParam::push(MessageBase* message_ptr, const NetworkAddr& dst_addr)
@@ -77,6 +77,9 @@ namespace covered
         // Acquire a write lock
         std::string context_name = "PropagationSimulatorParam::push()";
         rwlock_for_propagation_item_buffer_.acquire_lock(context_name);
+
+        // Calculate emission latency for the current message
+        uint32_t cur_emission_latency_us = propagation_latency_avg_us_ / 2;
 
         const bool skip_propagation_latency = message_ptr->getExtraCommonMsghdr().isSkipPropagationLatency();
         uint32_t sleep_us = 0;
@@ -91,7 +94,7 @@ namespace covered
             struct timespec cur_timespec = Util::getCurrentTimespec();
             if (is_first_item_)
             {
-                sleep_us = propagation_latency_us_;
+                sleep_us = cur_emission_latency_us;
 
                 prev_timespec_ = cur_timespec;
                 is_first_item_ = false;
@@ -99,15 +102,15 @@ namespace covered
             else
             {
                 sleep_us = Util::getDeltaTimeUs(cur_timespec, prev_timespec_);
-                if (sleep_us > propagation_latency_us_)
+                if (sleep_us > cur_emission_latency_us)
                 {
-                    sleep_us = propagation_latency_us_;
+                    sleep_us = cur_emission_latency_us;
                 }
 
                 prev_timespec_ = cur_timespec;
             }
         }
-        assert(sleep_us <= propagation_latency_us_);
+        assert(sleep_us <= cur_emission_latency_us);
 
         // Push propagation item into ring buffer
         PropagationItem propagation_item(message_ptr, dst_addr, sleep_us);
@@ -116,7 +119,7 @@ namespace covered
         #ifdef DEBUG_PROPAGATION_SIMULATOR_PARAM
         //std::vector<PropagationItem> tmp_propagation_items = propagation_item_buffer_ptr_->getElementsForDebug();
         std::ostringstream oss;
-        oss << "push to sleep " << sleep_us << " us to simulate a propagation latency of " << propagation_latency_us_ << " us; keystr: " << MessageBase::getKeyFromMessage(message_ptr).getKeystr() << "; dstadrr: " << dst_addr.toString() << "; srcaddr: " << message_ptr->getSourceAddr().toString() << "; ";
+        oss << "push to sleep " << sleep_us << " us to simulate an emission latency of " << cur_emission_latency_us << " us; keystr: " << MessageBase::getKeyFromMessage(message_ptr).getKeystr() << "; dstadrr: " << dst_addr.toString() << "; srcaddr: " << message_ptr->getSourceAddr().toString() << "; ";
         //for (uint32_t i = 0; i < tmp_propagation_items.size(); i++)
         //{
         //    oss << "tmp_propagation_items[" << i << "] sleep_us: " << tmp_propagation_items[i].getSleepUs() << "; ";
@@ -151,7 +154,7 @@ namespace covered
         SubthreadParamBase::operator=(other);
 
         node_wrapper_ptr_ = other.node_wrapper_ptr_;
-        propagation_latency_us_ = other.propagation_latency_us_;
+        propagation_latency_avg_us_ = other.propagation_latency_avg_us_;
 
         instance_name_ = other.instance_name_;
         

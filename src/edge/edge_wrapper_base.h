@@ -60,7 +60,7 @@ namespace covered
     public:
         static void* launchEdge(void* edge_wrapper_param_ptr);
 
-        EdgeWrapperBase(const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& edge_idx, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& keycnt, const uint64_t& local_uncached_capacity_bytes, const uint64_t& local_uncached_lru_bytes, const uint32_t& percacheserver_workercnt, const uint32_t& peredge_synced_victimcnt, const uint32_t& peredge_monitored_victimsetcnt, const uint64_t& popularity_aggregation_capacity_bytes, const double& popularity_collection_change_ratio, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us, const uint32_t& topk_edgecnt, const std::string& realnet_option, const std::string& realnet_expname);
+        EdgeWrapperBase(const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& edge_idx, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& keycnt, const uint64_t& local_uncached_capacity_bytes, const uint64_t& local_uncached_lru_bytes, const uint32_t& percacheserver_workercnt, const uint32_t& peredge_synced_victimcnt, const uint32_t& peredge_monitored_victimsetcnt, const uint64_t& popularity_aggregation_capacity_bytes, const double& popularity_collection_change_ratio, const uint32_t& propagation_latency_clientedge_avg_us, const uint32_t& propagation_latency_crossedge_avg_us, const uint32_t& propagation_latency_edgecloud_avg_us, const uint32_t& topk_edgecnt, const std::string& realnet_option, const std::string& realnet_expname);
         virtual ~EdgeWrapperBase();
 
         // (1) Const getters
@@ -68,8 +68,8 @@ namespace covered
         std::string getCacheName() const;
         uint64_t getCapacityBytes() const;
         uint32_t getPercacheserverWorkercnt() const;
-        uint32_t getPropagationLatencyCrossedgeUs() const;
-        uint32_t getPropagationLatencyEdgecloudUs() const;
+        uint32_t getPropagationLatencyCrossedgeAvgUs() const;
+        uint32_t getPropagationLatencyEdgecloudAvgUs() const;
         std::string getRealnetOption() const;
         std::string getRealnetExpname() const;
 
@@ -166,8 +166,8 @@ namespace covered
         const std::string cache_name_; // Come from CLI
         const uint64_t capacity_bytes_; // Come from CLI
         const uint32_t percacheserver_workercnt_; // Come from CLI
-        const uint32_t propagation_latency_crossedge_us_; // Come from CLI
-        const uint32_t propagation_latency_edgecloud_us_; // Come from CLI
+        const uint32_t propagation_latency_crossedge_avg_us_; // Come from CLI
+        const uint32_t propagation_latency_edgecloud_avg_us_; // Come from CLI
         const std::string realnet_option_; // Come from CLI
         const std::string realnet_expname_; // Come from CLI
 

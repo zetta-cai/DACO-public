@@ -26,11 +26,11 @@ namespace covered
     {
     public:
         PropagationSimulatorParam();
-        PropagationSimulatorParam(NodeWrapperBase* node_wrapper_ptr, const uint32_t& propagation_latency_us, const uint32_t& propagation_item_buffer_size);
+        PropagationSimulatorParam(NodeWrapperBase* node_wrapper_ptr, const uint32_t& propagation_latency_avg_us, const uint32_t& propagation_item_buffer_size);
         ~PropagationSimulatorParam();
 
         const NodeWrapperBase* getNodeWrapperPtr() const;
-        uint32_t getPropagationLatencyUs() const;
+        uint32_t getPropagationLatencyAvgUs() const;
 
         bool push(MessageBase* message_ptr, const NetworkAddr& dst_addr);
         bool pop(PropagationItem& element); // Only invoked by PropagationSimulator
@@ -41,7 +41,7 @@ namespace covered
 
         // Const shared variables
         NodeWrapperBase* node_wrapper_ptr_;
-        uint32_t propagation_latency_us_;
+        uint32_t propagation_latency_avg_us_;
         std::string instance_name_;
 
         Rwlock rwlock_for_propagation_item_buffer_; // Ensure the atomicity of all non-const variables due to multiple providers (all subthreads of a client/edge/cloud node)
