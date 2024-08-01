@@ -48,6 +48,7 @@ namespace covered
 
         bool is_to_cli_string_;
 
+        // NOTE: avg is for constant distribution; left/right bound is for uniform distribution
         CLILatencyInfo cli_latency_info_; // Distribution, avg, left bound, and right bound of each type of propagation latency
     protected:
         virtual void addCliParameters_() override;

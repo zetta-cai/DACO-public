@@ -9,13 +9,16 @@ namespace covered
     const std::string PropagationSimulatorParam::kClassName("PropagationSimulatorParam");
 
 
-    PropagationSimulatorParam::PropagationSimulatorParam() : SubthreadParamBase(), propagation_latency_avg_us_(0), rwlock_for_propagation_item_buffer_("rwlock_for_propagation_item_buffer_"), is_first_item_(true), prev_timespec_()
+    PropagationSimulatorParam::PropagationSimulatorParam() : SubthreadParamBase(), node_wrapper_ptr_(NULL), propagation_latency_distname_(""), propagation_latency_lbound_us_(0), propagation_latency_avg_us_(0), propagation_latency_rbound_us_(0), propagation_latency_random_seed_(0), rwlock_for_propagation_item_buffer_("rwlock_for_propagation_item_buffer_"), is_first_item_(true), prev_timespec_(), propagation_latency_randgen_(0)
     {
-        propagation_item_buffer_ptr_ = NULL;
         instance_name_ = "";
+
+        propagation_item_buffer_ptr_ = NULL;
+
+        propagation_latency_dist_ptr_ = NULL;
     }
 
-    PropagationSimulatorParam::PropagationSimulatorParam(NodeWrapperBase* node_wrapper_ptr, const uint32_t& propagation_latency_avg_us, const uint32_t& propagation_item_buffer_size) : SubthreadParamBase(), node_wrapper_ptr_(node_wrapper_ptr), propagation_latency_avg_us_(propagation_latency_avg_us), rwlock_for_propagation_item_buffer_("rwlock_for_propagation_item_buffer_"), is_first_item_(true), prev_timespec_()
+    PropagationSimulatorParam::PropagationSimulatorParam(NodeWrapperBase* node_wrapper_ptr, const std::string& propagation_latency_distname, const uint32_t& propagation_latency_lbound_us, const uint32_t& propagation_latency_avg_us, const uint32_t& propagation_latency_rbound_us, const uint32_t& propagation_latency_random_seed, const uint32_t& propagation_item_buffer_size) : SubthreadParamBase(), node_wrapper_ptr_(node_wrapper_ptr), propagation_latency_distname_(propagation_latency_distname), propagation_latency_lbound_us_(propagation_latency_lbound_us), propagation_latency_avg_us_(propagation_latency_avg_us), propagation_latency_rbound_us_(propagation_latency_rbound_us), propagation_latency_random_seed_(propagation_latency_random_seed), rwlock_for_propagation_item_buffer_("rwlock_for_propagation_item_buffer_"), is_first_item_(true), prev_timespec_(), propagation_latency_randgen_(propagation_latency_random_seed)
     {
         assert(node_wrapper_ptr != NULL);
 
@@ -27,6 +30,9 @@ namespace covered
         const bool with_multi_providers = false; // Although with multiple providers (all subthreads of a client/edge/cloud node), rwlock_for_propagation_item_buffer_ has already guaranteed the atomicity of propagation_item_buffer_ptr_
         propagation_item_buffer_ptr_ = new RingBuffer<PropagationItem>(PropagationItem(), propagation_item_buffer_size, with_multi_providers);
         assert(propagation_item_buffer_ptr_ != NULL);
+
+        propagation_latency_dist_ptr_ = new std::uniform_int_distribution<uint32_t>(propagation_latency_lbound_us, propagation_latency_rbound_us);
+        assert(propagation_latency_dist_ptr_ != NULL);
     }
 
     PropagationSimulatorParam::~PropagationSimulatorParam()
@@ -54,6 +60,11 @@ namespace covered
         // Release ring buffer itself
         delete propagation_item_buffer_ptr_;
         propagation_item_buffer_ptr_ = NULL;
+
+        // Release random latency distribution
+        assert(propagation_latency_dist_ptr_ != NULL);
+        delete propagation_latency_dist_ptr_;
+        propagation_latency_dist_ptr_ = NULL;
     }
 
     const NodeWrapperBase* PropagationSimulatorParam::getNodeWrapperPtr() const
@@ -61,12 +72,6 @@ namespace covered
         // No need to acquire a lock due to const shared variable
         assert(node_wrapper_ptr_ != NULL);
         return node_wrapper_ptr_;
-    }
-
-    uint32_t PropagationSimulatorParam::getPropagationLatencyAvgUs() const
-    {
-        // No need to acquire a lock due to const shared variable
-        return propagation_latency_avg_us_;
     }
 
     bool PropagationSimulatorParam::push(MessageBase* message_ptr, const NetworkAddr& dst_addr)
@@ -79,16 +84,18 @@ namespace covered
         rwlock_for_propagation_item_buffer_.acquire_lock(context_name);
 
         // Calculate emission latency for the current message
-        uint32_t cur_emission_latency_us = propagation_latency_avg_us_ / 2;
+        // NOTE: as the incoming and outcoming links use different random seeds to generate WAN delays, using RTT/2 still follows asymmetric network settings and the range is still [left bound, right bound] of the given type of latency
+        const uint32_t propagation_latency = genPropagationLatency_();
+        const uint32_t cur_emission_latency_us = propagation_latency / 2;
 
         const bool skip_propagation_latency = message_ptr->getExtraCommonMsghdr().isSkipPropagationLatency();
         uint32_t sleep_us = 0;
-        if (skip_propagation_latency)
+        if (skip_propagation_latency) // Warmup phase
         {
             // skip_propagation_latency = true means the message is enabled with warmup speedup under warmup phase
             sleep_us = 0;
         }
-        else
+        else // Stresstest phase
         {
             // Calculate sleep interval
             struct timespec cur_timespec = Util::getCurrentTimespec();
@@ -154,7 +161,11 @@ namespace covered
         SubthreadParamBase::operator=(other);
 
         node_wrapper_ptr_ = other.node_wrapper_ptr_;
+        propagation_latency_distname_ = other.propagation_latency_distname_;
+        propagation_latency_lbound_us_ = other.propagation_latency_lbound_us_;
         propagation_latency_avg_us_ = other.propagation_latency_avg_us_;
+        propagation_latency_rbound_us_ = other.propagation_latency_rbound_us_;
+        propagation_latency_random_seed_ = other.propagation_latency_random_seed_;
 
         instance_name_ = other.instance_name_;
         
@@ -179,7 +190,49 @@ namespace covered
 
         is_first_item_ = other.is_first_item_;
         prev_timespec_ = other.prev_timespec_;
+
+        propagation_latency_randgen_ = other.propagation_latency_randgen_;
+
+        // Deep copy
+        if (propagation_latency_dist_ptr_ != NULL)
+        {
+            delete propagation_latency_dist_ptr_;
+            propagation_latency_dist_ptr_ = NULL;
+        }
+        if (other.propagation_latency_dist_ptr_ != NULL)
+        {
+            propagation_latency_dist_ptr_ = new std::uniform_int_distribution<uint32_t>(other.propagation_latency_lbound_us_, other.propagation_latency_rbound_us_);
+            assert(propagation_latency_dist_ptr_ != NULL);
+        }
         
         return *this;
+    }
+
+    uint32_t PropagationSimulatorParam::genPropagationLatency_()
+    {
+        // NOTE: NO need to acquire lock here, which has been done in PropagationSimulatorParam::push() and PropagationSimulatorParam::genPropagationLatency()
+
+        uint32_t propagation_latency = 0;
+        if (propagation_latency_distname_ == Util::PROPAGATION_SIMULATION_CONSTANT_DISTNAME)
+        {
+            propagation_latency = propagation_latency_avg_us_;
+        }
+        else if (propagation_latency_distname_ == Util::PROPAGATION_SIMULATION_UNIFORM_DISTNAME)
+        {
+            assert(propagation_latency_dist_ptr_ != NULL);
+            propagation_latency = (*propagation_latency_dist_ptr_)(propagation_latency_randgen_);
+
+            assert(propagation_latency >= propagation_latency_lbound_us_);
+            assert(propagation_latency <= propagation_latency_rbound_us_);
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "propagation latency distribution " << propagation_latency_distname_ << " is not supported!" << std::endl;
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+
+        return propagation_latency;
     }
 }

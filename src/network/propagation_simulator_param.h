@@ -11,6 +11,7 @@
 
 //#define DEBUG_PROPAGATION_SIMULATOR_PARAM
 
+#include <random> // std::mt19937_64 and std::uniform_int_distribution
 #include <string>
 #include <time.h>
 
@@ -26,11 +27,10 @@ namespace covered
     {
     public:
         PropagationSimulatorParam();
-        PropagationSimulatorParam(NodeWrapperBase* node_wrapper_ptr, const uint32_t& propagation_latency_avg_us, const uint32_t& propagation_item_buffer_size);
+        PropagationSimulatorParam(NodeWrapperBase* node_wrapper_ptr, const std::string& propagation_latency_distname, const uint32_t& propagation_latency_lbound_us, const uint32_t& propagation_latency_avg_us, const uint32_t& propagation_latency_rbound_us, const uint32_t& propagation_latency_random_seed, const uint32_t& propagation_item_buffer_size);
         ~PropagationSimulatorParam();
 
         const NodeWrapperBase* getNodeWrapperPtr() const;
-        uint32_t getPropagationLatencyAvgUs() const;
 
         bool push(MessageBase* message_ptr, const NetworkAddr& dst_addr);
         bool pop(PropagationItem& element); // Only invoked by PropagationSimulator
@@ -39,9 +39,15 @@ namespace covered
     private:
         static const std::string kClassName;
 
+        uint32_t genPropagationLatency_();
+
         // Const shared variables
         NodeWrapperBase* node_wrapper_ptr_;
+        std::string propagation_latency_distname_;
+        uint32_t propagation_latency_lbound_us_;
         uint32_t propagation_latency_avg_us_;
+        uint32_t propagation_latency_rbound_us_;
+        uint32_t propagation_latency_random_seed_;
         std::string instance_name_;
 
         Rwlock rwlock_for_propagation_item_buffer_; // Ensure the atomicity of all non-const variables due to multiple providers (all subthreads of a client/edge/cloud node)
@@ -51,6 +57,10 @@ namespace covered
         RingBuffer<PropagationItem>* propagation_item_buffer_ptr_;
         bool is_first_item_;
         struct timespec prev_timespec_;
+
+        // Used to generate random latency distribution
+        std::mt19937_64 propagation_latency_randgen_;
+        std::uniform_int_distribution<uint32_t>* propagation_latency_dist_ptr_;
     };
 }
 
