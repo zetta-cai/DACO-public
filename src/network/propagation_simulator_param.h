@@ -35,6 +35,8 @@ namespace covered
         bool push(MessageBase* message_ptr, const NetworkAddr& dst_addr);
         bool pop(PropagationItem& element); // Only invoked by PropagationSimulator
 
+        uint32_t genPropagationLatency(); // Atomic function
+
         const PropagationSimulatorParam& operator=(const PropagationSimulatorParam& other);
     private:
         static const std::string kClassName;
@@ -50,7 +52,9 @@ namespace covered
         uint32_t propagation_latency_random_seed_;
         std::string instance_name_;
 
-        Rwlock rwlock_for_propagation_item_buffer_; // Ensure the atomicity of all non-const variables due to multiple providers (all subthreads of a client/edge/cloud node)
+        // Ensure the atomicity of all non-const variables due to multiple providers (all subthreads of a client/edge/cloud node)
+        // NOTE: only use write lock of rwlock (similar to a mutex; yet not use mutex so as to utilize the debug info of rwlock), as ring buffer only allows one reader and one writer (both will modify indexes in ring buffer)
+        Rwlock rwlock_for_propagation_item_buffer_;
         
         // Non-const variables shared by working threads of each ndoe and propagation simulator
         // NOTE: there will be multiple writers (processing threads of each componenet) yet a single reader (the corresponding propagation simulator) -> NOT need to acquire lock for pop()

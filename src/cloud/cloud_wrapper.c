@@ -59,14 +59,14 @@ namespace covered
         uint32_t cloud_idx = cloud_wrapper_param.getCloudIdx();
         CloudCLI* cloud_cli_ptr = cloud_wrapper_param.getCloudCLIPtr();
 
-        CloudWrapper local_cloud(cloud_idx, cloud_cli_ptr->getCloudStorage(), cloud_cli_ptr->getKeycnt(), cloud_cli_ptr->getPropagationLatencyEdgecloudAvgUs(), cloud_cli_ptr->getWorkloadName(), cloud_cli_ptr->getZipfAlpha());
+        CloudWrapper local_cloud(cloud_idx, cloud_cli_ptr->getCloudStorage(), cloud_cli_ptr->getKeycnt(), cloud_cli_ptr->getCLILatencyInfo(), cloud_cli_ptr->getWorkloadName(), cloud_cli_ptr->getZipfAlpha());
         local_cloud.start();
         
         pthread_exit(NULL);
         return NULL;
     }
 
-    CloudWrapper::CloudWrapper(const uint32_t& cloud_idx, const std::string& cloud_storage, const uint32_t& keycnt, const uint32_t& propagation_latency_edgecloud_avg_us, const std::string& workload_name, const float& zipf_alpha) : NodeWrapperBase(NodeWrapperBase::CLOUD_NODE_ROLE, cloud_idx, 1, true)
+    CloudWrapper::CloudWrapper(const uint32_t& cloud_idx, const std::string& cloud_storage, const uint32_t& keycnt, const CLILatencyInfo& cli_latency_info, const std::string& workload_name, const float& zipf_alpha) : NodeWrapperBase(NodeWrapperBase::CLOUD_NODE_ROLE, cloud_idx, 1, true)
     {
         assert(cloud_idx == 0); // TODO: only support 1 cloud node now!
 
@@ -89,7 +89,9 @@ namespace covered
         assert(cloud_rocksdb_ptr_ != NULL);
 
         // Allocate cloud-to-edge propagation simulator param
-        cloud_toedge_propagation_simulator_param_ptr_ = new PropagationSimulatorParam((NodeWrapperBase*)this, propagation_latency_edgecloud_avg_us, Config::getPropagationItemBufferSizeCloudToedge());
+        uint32_t local_propagation_simulator_idx = 0;
+        uint32_t cloud_toedge_propagation_simulation_random_seed = Util::getPropagationSimulationRandomSeedForClient(cloud_idx, local_propagation_simulator_idx);
+        cloud_toedge_propagation_simulator_param_ptr_ = new PropagationSimulatorParam((NodeWrapperBase*)this, cli_latency_info.getPropagationLatencyDistname(), cli_latency_info.getPropagationLatencyEdgecloudLboundUs(), cli_latency_info.getPropagationLatencyEdgecloudAvgUs(), cli_latency_info.getPropagationLatencyEdgecloudRboundUs(), cloud_toedge_propagation_simulation_random_seed, Config::getPropagationItemBufferSizeCloudToedge());
         assert(cloud_toedge_propagation_simulator_param_ptr_ != NULL);
 
         // Allocate cloud data server param

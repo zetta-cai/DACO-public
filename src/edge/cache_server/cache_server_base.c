@@ -614,7 +614,10 @@ namespace covered
                 if (extra_common_msghdr.isSkipPropagationLatency()) // Compensate propagation latency for warmup speedup
                 {
                     // NOTE: cross-edge propagation latency from CLI is already a round-trip latency, which should NOT be counted twice for RTT
-                    tmp_directory_admit_cross_edge_latency_us += tmp_edge_wrapper_ptr->getPropagationLatencyCrossedgeAvgUs();
+                    // tmp_directory_admit_cross_edge_latency_us += tmp_edge_wrapper_ptr->getPropagationLatencyCrossedgeAvgUs();
+
+                    // NOTE: follow the dynamic latency distribution with a unique random seed to simulate RTT during warmup phase
+                    tmp_directory_admit_cross_edge_latency_us += tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency();
                 }
 
                 // Update is_neighbor_cached based on remote directory admission response
@@ -932,7 +935,10 @@ namespace covered
                         if (extra_common_msghdr.isSkipPropagationLatency()) // Compensate propagation latency for warmup speedup
                         {
                             // NOTE: cross-edge propagation latency from CLI is already a round-trip latency, which should NOT be counted twice for RTT
-                            tmp_directory_evict_cross_edge_latency_us += tmp_edge_wrapper_ptr->getPropagationLatencyCrossedgeAvgUs();
+                            // tmp_directory_evict_cross_edge_latency_us += tmp_edge_wrapper_ptr->getPropagationLatencyCrossedgeAvgUs();
+
+                            // NOTE: follow the dynamic latency distribution with a unique random seed to simulate RTT during warmup phase
+                            tmp_directory_evict_cross_edge_latency_us += tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency();
                         }
                     }
 

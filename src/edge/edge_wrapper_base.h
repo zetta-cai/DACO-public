@@ -21,6 +21,7 @@ namespace covered
 
 #include "cache/cache_wrapper.h"
 #include "cli/edge_cli.h"
+#include "common/cli_latency_info.h"
 #include "common/node_wrapper_base.h"
 #include "core/covered_cache_manager.h"
 #include "core/popularity/edgeset.h"
@@ -60,7 +61,7 @@ namespace covered
     public:
         static void* launchEdge(void* edge_wrapper_param_ptr);
 
-        EdgeWrapperBase(const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& edge_idx, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& keycnt, const uint64_t& local_uncached_capacity_bytes, const uint64_t& local_uncached_lru_bytes, const uint32_t& percacheserver_workercnt, const uint32_t& peredge_synced_victimcnt, const uint32_t& peredge_monitored_victimsetcnt, const uint64_t& popularity_aggregation_capacity_bytes, const double& popularity_collection_change_ratio, const uint32_t& propagation_latency_clientedge_avg_us, const uint32_t& propagation_latency_crossedge_avg_us, const uint32_t& propagation_latency_edgecloud_avg_us, const uint32_t& topk_edgecnt, const std::string& realnet_option, const std::string& realnet_expname);
+        EdgeWrapperBase(const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& edge_idx, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& keycnt, const uint64_t& local_uncached_capacity_bytes, const uint64_t& local_uncached_lru_bytes, const uint32_t& percacheserver_workercnt, const uint32_t& peredge_synced_victimcnt, const uint32_t& peredge_monitored_victimsetcnt, const uint64_t& popularity_aggregation_capacity_bytes, const double& popularity_collection_change_ratio, const CLILatencyInfo& cli_latency_info, const uint32_t& topk_edgecnt, const std::string& realnet_option, const std::string& realnet_expname);
         virtual ~EdgeWrapperBase();
 
         // (1) Const getters

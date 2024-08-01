@@ -67,11 +67,11 @@ namespace covered
         const std::string cache_name = edge_cli_ptr->getCacheName();
         if (cache_name == Util::COVERED_CACHE_NAME)
         {
-            edge_wrapper_ptr = new CoveredEdgeWrapper(cache_name, edge_cli_ptr->getCapacityBytes(), edge_idx, edge_cli_ptr->getEdgecnt(), edge_cli_ptr->getHashName(), edge_cli_ptr->getKeycnt(), edge_cli_ptr->getCoveredLocalUncachedMaxMemUsageBytes(), edge_cli_ptr->getCoveredLocalUncachedLruMaxBytes(), edge_cli_ptr->getPercacheserverWorkercnt(), edge_cli_ptr->getCoveredPeredgeSyncedVictimcnt(), edge_cli_ptr->getCoveredPeredgeMonitoredVictimsetcnt(), edge_cli_ptr->getCoveredPopularityAggregationMaxMemUsageBytes(), edge_cli_ptr->getCoveredPopularityCollectionChangeRatio(), edge_cli_ptr->getPropagationLatencyClientedgeAvgUs(), edge_cli_ptr->getPropagationLatencyCrossedgeAvgUs(), edge_cli_ptr->getPropagationLatencyEdgecloudAvgUs(), edge_cli_ptr->getCoveredTopkEdgecnt(), edge_cli_ptr->getRealnetOption(), edge_cli_ptr->getRealnetExpname());
+            edge_wrapper_ptr = new CoveredEdgeWrapper(cache_name, edge_cli_ptr->getCapacityBytes(), edge_idx, edge_cli_ptr->getEdgecnt(), edge_cli_ptr->getHashName(), edge_cli_ptr->getKeycnt(), edge_cli_ptr->getCoveredLocalUncachedMaxMemUsageBytes(), edge_cli_ptr->getCoveredLocalUncachedLruMaxBytes(), edge_cli_ptr->getPercacheserverWorkercnt(), edge_cli_ptr->getCoveredPeredgeSyncedVictimcnt(), edge_cli_ptr->getCoveredPeredgeMonitoredVictimsetcnt(), edge_cli_ptr->getCoveredPopularityAggregationMaxMemUsageBytes(), edge_cli_ptr->getCoveredPopularityCollectionChangeRatio(), edge_cli_ptr->getCLILatencyInfo(), edge_cli_ptr->getCoveredTopkEdgecnt(), edge_cli_ptr->getRealnetOption(), edge_cli_ptr->getRealnetExpname());
         }
         else
         {
-            edge_wrapper_ptr = new BasicEdgeWrapper(cache_name, edge_cli_ptr->getCapacityBytes(), edge_idx, edge_cli_ptr->getEdgecnt(), edge_cli_ptr->getHashName(), edge_cli_ptr->getKeycnt(), edge_cli_ptr->getCoveredLocalUncachedMaxMemUsageBytes(), edge_cli_ptr->getCoveredLocalUncachedLruMaxBytes(), edge_cli_ptr->getPercacheserverWorkercnt(), edge_cli_ptr->getCoveredPeredgeSyncedVictimcnt(), edge_cli_ptr->getCoveredPeredgeMonitoredVictimsetcnt(), edge_cli_ptr->getCoveredPopularityAggregationMaxMemUsageBytes(), edge_cli_ptr->getCoveredPopularityCollectionChangeRatio(), edge_cli_ptr->getPropagationLatencyClientedgeAvgUs(), edge_cli_ptr->getPropagationLatencyCrossedgeAvgUs(), edge_cli_ptr->getPropagationLatencyEdgecloudAvgUs(), edge_cli_ptr->getCoveredTopkEdgecnt(), edge_cli_ptr->getRealnetOption(), edge_cli_ptr->getRealnetExpname());
+            edge_wrapper_ptr = new BasicEdgeWrapper(cache_name, edge_cli_ptr->getCapacityBytes(), edge_idx, edge_cli_ptr->getEdgecnt(), edge_cli_ptr->getHashName(), edge_cli_ptr->getKeycnt(), edge_cli_ptr->getCoveredLocalUncachedMaxMemUsageBytes(), edge_cli_ptr->getCoveredLocalUncachedLruMaxBytes(), edge_cli_ptr->getPercacheserverWorkercnt(), edge_cli_ptr->getCoveredPeredgeSyncedVictimcnt(), edge_cli_ptr->getCoveredPeredgeMonitoredVictimsetcnt(), edge_cli_ptr->getCoveredPopularityAggregationMaxMemUsageBytes(), edge_cli_ptr->getCoveredPopularityCollectionChangeRatio(), edge_cli_ptr->getCLILatencyInfo(), edge_cli_ptr->getCoveredTopkEdgecnt(), edge_cli_ptr->getRealnetOption(), edge_cli_ptr->getRealnetExpname());
         }
         assert(edge_wrapper_ptr != NULL);
         edge_wrapper_ptr->start();
@@ -83,7 +83,7 @@ namespace covered
         return NULL;
     }
 
-    EdgeWrapperBase::EdgeWrapperBase(const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& edge_idx, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& keycnt, const uint64_t& local_uncached_capacity_bytes, const uint64_t& local_uncached_lru_bytes, const uint32_t& percacheserver_workercnt, const uint32_t& peredge_synced_victimcnt, const uint32_t& peredge_monitored_victimsetcnt, const uint64_t& popularity_aggregation_capacity_bytes, const double& popularity_collection_change_ratio, const uint32_t& propagation_latency_clientedge_avg_us, const uint32_t& propagation_latency_crossedge_avg_us, const uint32_t& propagation_latency_edgecloud_avg_us, const uint32_t& topk_edgecnt, const std::string& realnet_option, const std::string& realnet_expname) : NodeWrapperBase(NodeWrapperBase::EDGE_NODE_ROLE, edge_idx, edgecnt, true), cache_name_(cache_name), capacity_bytes_(capacity_bytes), percacheserver_workercnt_(percacheserver_workercnt), propagation_latency_crossedge_avg_us_(propagation_latency_crossedge_avg_us), propagation_latency_edgecloud_avg_us_(propagation_latency_edgecloud_avg_us), realnet_option_(realnet_option), realnet_expname_(realnet_expname), edge_background_counter_for_beacon_server_(), is_dumped_for_realnet_(false)
+    EdgeWrapperBase::EdgeWrapperBase(const std::string& cache_name, const uint64_t& capacity_bytes, const uint32_t& edge_idx, const uint32_t& edgecnt, const std::string& hash_name, const uint32_t& keycnt, const uint64_t& local_uncached_capacity_bytes, const uint64_t& local_uncached_lru_bytes, const uint32_t& percacheserver_workercnt, const uint32_t& peredge_synced_victimcnt, const uint32_t& peredge_monitored_victimsetcnt, const uint64_t& popularity_aggregation_capacity_bytes, const double& popularity_collection_change_ratio, const CLILatencyInfo& cli_latency_info, const uint32_t& topk_edgecnt, const std::string& realnet_option, const std::string& realnet_expname) : NodeWrapperBase(NodeWrapperBase::EDGE_NODE_ROLE, edge_idx, edgecnt, true), cache_name_(cache_name), capacity_bytes_(capacity_bytes), percacheserver_workercnt_(percacheserver_workercnt), propagation_latency_crossedge_avg_us_(cli_latency_info.getPropagationLatencyCrossedgeAvgUs()), propagation_latency_edgecloud_avg_us_(cli_latency_info.getPropagationLatencyEdgecloudAvgUs()), realnet_option_(realnet_option), realnet_expname_(realnet_expname), edge_background_counter_for_beacon_server_(), is_dumped_for_realnet_(false)
     {
         // Differentiate different edge nodes
         std::ostringstream oss;
@@ -99,15 +99,21 @@ namespace covered
         assert(cooperation_wrapper_ptr_ != NULL);
 
         // Allocate edge-to-client propagation simulator param
-        edge_toclient_propagation_simulator_param_ptr_ = new PropagationSimulatorParam((NodeWrapperBase*)this, propagation_latency_clientedge_avg_us, Config::getPropagationItemBufferSizeEdgeToclient());
+        uint32_t local_propagation_simulator_idx = 0;
+        uint32_t edge_toclient_propagation_simulation_random_seed = Util::getPropagationSimulationRandomSeedForClient(edge_idx, local_propagation_simulator_idx);
+        edge_toclient_propagation_simulator_param_ptr_ = new PropagationSimulatorParam((NodeWrapperBase*)this, cli_latency_info.getPropagationLatencyDistname(), cli_latency_info.getPropagationLatencyClientedgeLboundUs(), cli_latency_info.getPropagationLatencyClientedgeAvgUs(), cli_latency_info.getPropagationLatencyClientedgeRboundUs(), edge_toclient_propagation_simulation_random_seed, Config::getPropagationItemBufferSizeEdgeToclient());
         assert(edge_toclient_propagation_simulator_param_ptr_ != NULL);
 
         // Allocate edge-to-edge propagation simulator param
-        edge_toedge_propagation_simulator_param_ptr_ = new PropagationSimulatorParam((NodeWrapperBase*)this, propagation_latency_crossedge_avg_us, Config::getPropagationItemBufferSizeEdgeToedge());
+        local_propagation_simulator_idx += 1;
+        uint32_t edge_toedge_propagation_simulation_random_seed = Util::getPropagationSimulationRandomSeedForClient(edge_idx, local_propagation_simulator_idx);
+        edge_toedge_propagation_simulator_param_ptr_ = new PropagationSimulatorParam((NodeWrapperBase*)this, cli_latency_info.getPropagationLatencyDistname(), cli_latency_info.getPropagationLatencyCrossedgeLboundUs(), cli_latency_info.getPropagationLatencyCrossedgeAvgUs(), cli_latency_info.getPropagationLatencyCrossedgeRboundUs(), edge_toedge_propagation_simulation_random_seed, Config::getPropagationItemBufferSizeEdgeToedge());
         assert(edge_toedge_propagation_simulator_param_ptr_ != NULL);
 
         // Allocate edge-to-cloud propagation simulator param
-        edge_tocloud_propagation_simulator_param_ptr_ = new PropagationSimulatorParam((NodeWrapperBase*)this, propagation_latency_edgecloud_avg_us, Config::getPropagationItemBufferSizeEdgeTocloud());
+        local_propagation_simulator_idx += 1;
+        uint32_t edge_tocloud_propagation_simulation_random_seed = Util::getPropagationSimulationRandomSeedForClient(edge_idx, local_propagation_simulator_idx);
+        edge_tocloud_propagation_simulator_param_ptr_ = new PropagationSimulatorParam((NodeWrapperBase*)this, cli_latency_info.getPropagationLatencyDistname(), cli_latency_info.getPropagationLatencyEdgecloudLboundUs(), cli_latency_info.getPropagationLatencyEdgecloudAvgUs(), cli_latency_info.getPropagationLatencyEdgecloudRboundUs(), edge_tocloud_propagation_simulation_random_seed, Config::getPropagationItemBufferSizeEdgeTocloud());
         assert(edge_tocloud_propagation_simulator_param_ptr_ != NULL);
 
         // Allocate edge beacon server param

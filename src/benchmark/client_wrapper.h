@@ -21,6 +21,7 @@ namespace covered
 
 #include "benchmark/client_worker_param.h"
 #include "cli/client_cli.h"
+#include "common/cli_latency_info.h"
 #include "common/node_wrapper_base.h"
 #include "network/propagation_simulator_param.h"
 #include "statistics/client_statistics_tracker.h"
@@ -49,7 +50,7 @@ namespace covered
     public:
         static void* launchClient(void* client_wrapper_param_ptr);
 
-        ClientWrapper(const uint64_t& capacity_bytes, const uint32_t& client_idx, const uint32_t& clientcnt, const bool& is_warmup_speedup, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const uint32_t& propagation_latency_clientedge_avg_us, const std::string& realnet_option, const uint32_t& warmup_reqcnt_scale, const std::string& workload_name, const float& zipf_alpha);
+        ClientWrapper(const uint64_t& capacity_bytes, const uint32_t& client_idx, const uint32_t& clientcnt, const bool& is_warmup_speedup, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const CLILatencyInfo& cli_latency_info, const std::string& realnet_option, const uint32_t& warmup_reqcnt_scale, const std::string& workload_name, const float& zipf_alpha);
         virtual ~ClientWrapper();
 
         // (1) Const getters

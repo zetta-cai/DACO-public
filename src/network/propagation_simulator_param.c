@@ -21,6 +21,8 @@ namespace covered
     PropagationSimulatorParam::PropagationSimulatorParam(NodeWrapperBase* node_wrapper_ptr, const std::string& propagation_latency_distname, const uint32_t& propagation_latency_lbound_us, const uint32_t& propagation_latency_avg_us, const uint32_t& propagation_latency_rbound_us, const uint32_t& propagation_latency_random_seed, const uint32_t& propagation_item_buffer_size) : SubthreadParamBase(), node_wrapper_ptr_(node_wrapper_ptr), propagation_latency_distname_(propagation_latency_distname), propagation_latency_lbound_us_(propagation_latency_lbound_us), propagation_latency_avg_us_(propagation_latency_avg_us), propagation_latency_rbound_us_(propagation_latency_rbound_us), propagation_latency_random_seed_(propagation_latency_random_seed), rwlock_for_propagation_item_buffer_("rwlock_for_propagation_item_buffer_"), is_first_item_(true), prev_timespec_(), propagation_latency_randgen_(propagation_latency_random_seed)
     {
         assert(node_wrapper_ptr != NULL);
+        assert(propagation_latency_lbound_us <= propagation_latency_avg_us);
+        assert(propagation_latency_avg_us <= propagation_latency_rbound_us);
 
         // Differential propagation simulator parameter of different nodes
         std::ostringstream oss;
@@ -156,6 +158,20 @@ namespace covered
         return is_successful;
     }
 
+    uint32_t PropagationSimulatorParam::genPropagationLatency()
+    {
+        // Acquire a write lock
+        std::string context_name = "PropagationSimulatorParam::genPropagationLatency()";
+        rwlock_for_propagation_item_buffer_.acquire_lock(context_name);
+
+        uint32_t propagation_latency = genPropagationLatency_();
+
+        // Release a write lock
+        rwlock_for_propagation_item_buffer_.unlock(context_name);
+
+        return propagation_latency;
+    }
+
     const PropagationSimulatorParam& PropagationSimulatorParam::operator=(const PropagationSimulatorParam& other)
     {
         SubthreadParamBase::operator=(other);
@@ -210,7 +226,7 @@ namespace covered
 
     uint32_t PropagationSimulatorParam::genPropagationLatency_()
     {
-        // NOTE: NO need to acquire lock here, which has been done in PropagationSimulatorParam::push() and PropagationSimulatorParam::genPropagationLatency()
+        // NOTE: NO need to acquire write lock here, which has been done in PropagationSimulatorParam::push() and PropagationSimulatorParam::genPropagationLatency()
 
         uint32_t propagation_latency = 0;
         if (propagation_latency_distname_ == Util::PROPAGATION_SIMULATION_CONSTANT_DISTNAME)
