@@ -62,7 +62,6 @@ namespace covered
     const std::string Util::LHD_CACHE_NAME("lhd");
     const std::string Util::LRB_CACHE_NAME("lrb");
     const std::string Util::LRU_CACHE_NAME("lru");
-    const std::string Util::MAGNET_CACHE_NAME("magnet"); // cooperative caching
     const std::string Util::S3FIFO_CACHE_NAME("s3fifo");
     const std::string Util::SEGCACHE_CACHE_NAME("segcache");
     const std::string Util::SIEVE_CACHE_NAME("sieve");
@@ -70,25 +69,45 @@ namespace covered
     const std::string Util::WTINYLFU_CACHE_NAME("wtinylfu");
     const std::string Util::COVERED_CACHE_NAME("covered");
     
-    // Extended cache names
-    const std::string Util::EXTENDED_ARC_CACHE_NAME("arc+");
-    const std::string Util::EXTENDED_CACHELIB_CACHE_NAME("cachelib+");
-    const std::string Util::EXTENDED_FIFO_CACHE_NAME("fifo+");
-    const std::string Util::EXTENDED_FROZENHOT_CACHE_NAME("frozenhot+");
-    const std::string Util::EXTENDED_GLCACHE_CACHE_NAME("glcache+");
-    const std::string Util::EXTENDED_GDSF_CACHE_NAME("gdsf+");
-    const std::string Util::EXTENDED_GDSIZE_CACHE_NAME("gdsize+");
-    const std::string Util::EXTENDED_LFUDA_CACHE_NAME("lfuda+");
-    const std::string Util::EXTENDED_LRUK_CACHE_NAME("lruk+");
-    const std::string Util::EXTENDED_LFU_CACHE_NAME("lfu+");
-    const std::string Util::EXTENDED_LHD_CACHE_NAME("lhd+");
-    const std::string Util::EXTENDED_LRB_CACHE_NAME("lrb+");
-    const std::string Util::EXTENDED_LRU_CACHE_NAME("shark"); // lru+ = shark
-    const std::string Util::EXTENDED_S3FIFO_CACHE_NAME("s3fifo+");
-    const std::string Util::EXTENDED_SEGCACHE_CACHE_NAME("segcache+");
-    const std::string Util::EXTENDED_SIEVE_CACHE_NAME("sieve+");
-    const std::string Util::EXTENDED_SLRU_CACHE_NAME("slru+");
-    const std::string Util::EXTENDED_WTINYLFU_CACHE_NAME("wtinylfu+");
+    // Shark-extended cache names
+    const std::string Util::SHARK_EXTENDED_ARC_CACHE_NAME("shark+arc");
+    const std::string Util::SHARK_EXTENDED_CACHELIB_CACHE_NAME("shark+cachelib");
+    const std::string Util::SHARK_EXTENDED_FIFO_CACHE_NAME("shark+fifo");
+    const std::string Util::SHARK_EXTENDED_FROZENHOT_CACHE_NAME("shark+frozenhot");
+    const std::string Util::SHARK_EXTENDED_GLCACHE_CACHE_NAME("shark+glcache");
+    const std::string Util::SHARK_EXTENDED_GDSF_CACHE_NAME("shark+gdsf");
+    const std::string Util::SHARK_EXTENDED_GDSIZE_CACHE_NAME("shark+gdsize");
+    const std::string Util::SHARK_EXTENDED_LFUDA_CACHE_NAME("shark+lfuda");
+    const std::string Util::SHARK_EXTENDED_LRUK_CACHE_NAME("shark+lruk");
+    const std::string Util::SHARK_EXTENDED_LFU_CACHE_NAME("shark+lfu");
+    const std::string Util::SHARK_EXTENDED_LHD_CACHE_NAME("shark+lhd");
+    const std::string Util::SHARK_EXTENDED_LRB_CACHE_NAME("shark+lrb");
+    const std::string Util::SHARK_EXTENDED_LRU_CACHE_NAME("shark"); // shark+lru = shark
+    const std::string Util::SHARK_EXTENDED_S3FIFO_CACHE_NAME("shark+s3fifo");
+    const std::string Util::SHARK_EXTENDED_SEGCACHE_CACHE_NAME("shark+segcache");
+    const std::string Util::SHARK_EXTENDED_SIEVE_CACHE_NAME("shark+sieve");
+    const std::string Util::SHARK_EXTENDED_SLRU_CACHE_NAME("shark+slru");
+    const std::string Util::SHARK_EXTENDED_WTINYLFU_CACHE_NAME("shark+wtinylfu");
+
+    // MagNet-extended cache names
+    const std::string Util::MAGNET_EXTENDED_ARC_CACHE_NAME("magnet+arc");
+    const std::string Util::MAGNET_EXTENDED_CACHELIB_CACHE_NAME("magnet+cachelib");
+    const std::string Util::MAGNET_EXTENDED_FIFO_CACHE_NAME("magnet+fifo");
+    const std::string Util::MAGNET_EXTENDED_FROZENHOT_CACHE_NAME("magnet+frozenhot");
+    const std::string Util::MAGNET_EXTENDED_GLCACHE_CACHE_NAME("magnet+glcache");
+    const std::string Util::MAGNET_EXTENDED_GDSF_CACHE_NAME("magnet+gdsf");
+    const std::string Util::MAGNET_EXTENDED_GDSIZE_CACHE_NAME("magnet+gdsize");
+    const std::string Util::MAGNET_EXTENDED_LFUDA_CACHE_NAME("magnet+lfuda");
+    const std::string Util::MAGNET_EXTENDED_LRUK_CACHE_NAME("magnet+lruk");
+    const std::string Util::MAGNET_EXTENDED_LFU_CACHE_NAME("magnet+lfu");
+    const std::string Util::MAGNET_EXTENDED_LHD_CACHE_NAME("magnet+lhd");
+    const std::string Util::MAGNET_EXTENDED_LRB_CACHE_NAME("magnet+lrb");
+    const std::string Util::MAGNET_EXTENDED_LRU_CACHE_NAME("magnet"); // magnet+lru = magnet
+    const std::string Util::MAGNET_EXTENDED_S3FIFO_CACHE_NAME("magnet+s3fifo");
+    const std::string Util::MAGNET_EXTENDED_SEGCACHE_CACHE_NAME("magnet+segcache");
+    const std::string Util::MAGNET_EXTENDED_SIEVE_CACHE_NAME("magnet+sieve");
+    const std::string Util::MAGNET_EXTENDED_SLRU_CACHE_NAME("magnet+slru");
+    const std::string Util::MAGNET_EXTENDED_WTINYLFU_CACHE_NAME("magnet+wtinylfu");
 
     // Hash name
     const std::string Util::MMH3_HASH_NAME("mmh3");
@@ -159,6 +178,37 @@ namespace covered
     bool Util::isSingleNodeCache(const std::string cache_name)
     {
         if (cache_name == ARC_CACHE_NAME || cache_name == CACHELIB_CACHE_NAME || cache_name == FIFO_CACHE_NAME || cache_name == FROZENHOT_CACHE_NAME || cache_name == GLCACHE_CACHE_NAME || cache_name == GDSF_CACHE_NAME || cache_name == GDSIZE_CACHE_NAME || cache_name == LFUDA_CACHE_NAME || cache_name == LRUK_CACHE_NAME || cache_name == LFU_CACHE_NAME || cache_name == LHD_CACHE_NAME || cache_name == LRB_CACHE_NAME || cache_name == LRU_CACHE_NAME || cache_name == S3FIFO_CACHE_NAME || cache_name == SEGCACHE_CACHE_NAME || cache_name == SIEVE_CACHE_NAME || cache_name == SLRU_CACHE_NAME || cache_name == WTINYLFU_CACHE_NAME)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    bool Util::isCooperativeCache(const std::string cache_name)
+    {
+        // NOTE: Shark and MagNet are in Shark-like and MagNet-like methods
+        if (cache_name == BESTGUESS_CACHE_NAME || cache_name == COVERED_CACHE_NAME)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    bool Util::isSharkLikeCache(const std::string cache_name)
+    {
+        if (cache_name == SHARK_EXTENDED_ARC_CACHE_NAME || cache_name == SHARK_EXTENDED_CACHELIB_CACHE_NAME || cache_name == SHARK_EXTENDED_FIFO_CACHE_NAME || cache_name == SHARK_EXTENDED_FROZENHOT_CACHE_NAME || cache_name == SHARK_EXTENDED_GLCACHE_CACHE_NAME || cache_name == SHARK_EXTENDED_GDSF_CACHE_NAME || cache_name == SHARK_EXTENDED_GDSIZE_CACHE_NAME || cache_name == SHARK_EXTENDED_LFUDA_CACHE_NAME || cache_name == SHARK_EXTENDED_LRUK_CACHE_NAME || cache_name == SHARK_EXTENDED_LFU_CACHE_NAME || cache_name == SHARK_EXTENDED_LHD_CACHE_NAME || cache_name == SHARK_EXTENDED_LRB_CACHE_NAME || cache_name == SHARK_EXTENDED_LRU_CACHE_NAME || cache_name == SHARK_EXTENDED_S3FIFO_CACHE_NAME || cache_name == SHARK_EXTENDED_SEGCACHE_CACHE_NAME || cache_name == SHARK_EXTENDED_SIEVE_CACHE_NAME || cache_name == SHARK_EXTENDED_SLRU_CACHE_NAME || cache_name == SHARK_EXTENDED_WTINYLFU_CACHE_NAME)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    bool Util::isMagnetLikeCache(const std::string cache_name)
+    {
+        if (cache_name == MAGNET_EXTENDED_ARC_CACHE_NAME || cache_name == MAGNET_EXTENDED_CACHELIB_CACHE_NAME || cache_name == MAGNET_EXTENDED_FIFO_CACHE_NAME || cache_name == MAGNET_EXTENDED_FROZENHOT_CACHE_NAME || cache_name == MAGNET_EXTENDED_GLCACHE_CACHE_NAME || cache_name == MAGNET_EXTENDED_GDSF_CACHE_NAME || cache_name == MAGNET_EXTENDED_GDSIZE_CACHE_NAME || cache_name == MAGNET_EXTENDED_LFUDA_CACHE_NAME || cache_name == MAGNET_EXTENDED_LRUK_CACHE_NAME || cache_name == MAGNET_EXTENDED_LFU_CACHE_NAME || cache_name == MAGNET_EXTENDED_LHD_CACHE_NAME || cache_name == MAGNET_EXTENDED_LRB_CACHE_NAME || cache_name == MAGNET_EXTENDED_LRU_CACHE_NAME || cache_name == MAGNET_EXTENDED_S3FIFO_CACHE_NAME || cache_name == MAGNET_EXTENDED_SEGCACHE_CACHE_NAME || cache_name == MAGNET_EXTENDED_SIEVE_CACHE_NAME || cache_name == MAGNET_EXTENDED_SLRU_CACHE_NAME || cache_name == MAGNET_EXTENDED_WTINYLFU_CACHE_NAME)
         {
             return true;
         }

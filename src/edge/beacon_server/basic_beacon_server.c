@@ -77,8 +77,8 @@ namespace covered
         tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->lookupDirectoryTableByBeaconServer(tmp_key, source_edge_idx, edge_cache_server_worker_recvreq_dst_addr, is_being_written, is_valid_directory_exist, directory_info, is_source_cached, &dirinfo_set);
         UNUSED(is_source_cached);
 
-        // Clustering for MagNet
-        if (tmp_edge_wrapper_ptr->getCacheName() == Util::MAGNET_CACHE_NAME)
+        // Clustering for MagNet-like caches
+        if (Util::isMagnetLikeCache(tmp_edge_wrapper_ptr->getCacheName()))
         {
             // Perform clustering for object accesses of MagNet
             // NOTE: the function could update is_valid_directory_exist and directory_info

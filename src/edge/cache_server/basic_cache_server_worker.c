@@ -47,8 +47,8 @@ namespace covered
         tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->lookupDirectoryTableByCacheServer(key, current_edge_idx, is_being_written, is_valid_directory_exist, directory_info, is_source_cached, &dirinfo_set);
         UNUSED(is_source_cached);
 
-        // Clustering for MagNet
-        if (tmp_edge_wrapper_ptr->getCacheName() == Util::MAGNET_CACHE_NAME)
+        // Clustering for MagNet-like caches
+        if (Util::isMagnetLikeCache(tmp_edge_wrapper_ptr->getCacheName()))
         {
             // Perform clustering for object accesses of MagNet
             // NOTE: the function could update is_valid_directory_exist and directory_info
@@ -264,8 +264,8 @@ namespace covered
 
         bool is_finish = false;
 
-        // NOTE: MagNet only admits object after fetching value from cloud
-        if (tmp_edge_wrapper_ptr->getCacheName() == Util::MAGNET_CACHE_NAME && is_cooperative_cached)
+        // NOTE: MagNet-like caches only admit object after fetching value from cloud
+        if (Util::isMagnetLikeCache(tmp_edge_wrapper_ptr->getCacheName()) && is_cooperative_cached)
         {
             return is_finish; // NO need to trigger independent admission if value is fetched from guided edge node located by clustering
         }

@@ -23,10 +23,10 @@ namespace covered
         instance_name_ = oss.str();
 
         hash_wrapper_for_magnet_ptr_ = NULL;
-        if (cache_name == Util::MAGNET_CACHE_NAME)
+        if (Util::isMagnetLikeCache(cache_name))
         {
-            uint32_t tmp_seed = static_cast<uint32_t>(std::hash<std::string>{}(Util::MAGNET_CACHE_NAME)); // Calculate seed based on cache name (different from 0 used by DHT for locating beacon nodes)
-            hash_wrapper_for_magnet_ptr_ = new HashWrapperBase::getHashWrapperByHashName(Util::MMH3_HASH_NAME, tmp_seed);
+            const uint32_t tmp_seed = 1103; // Use a prime as random seed for MagNet-like clustering (different from 0 used by DHT for locating beacon nodes)
+            hash_wrapper_for_magnet_ptr_ = HashWrapperBase::getHashWrapperByHashName(Util::MMH3_HASH_NAME, tmp_seed);
             assert(hash_wrapper_for_magnet_ptr_ != NULL);
         }
 
@@ -36,7 +36,7 @@ namespace covered
         
     BasicEdgeWrapper::~BasicEdgeWrapper()
     {
-        if (getCacheName() == Util::MAGNET_CACHE_NAME)
+        if (Util::isMagnetLikeCache(getCacheName()))
         {
             assert(hash_wrapper_for_magnet_ptr_ != NULL);
             delete hash_wrapper_for_magnet_ptr_;
@@ -248,7 +248,8 @@ namespace covered
 
         if (funcname == ClusterForMagnetFuncParam::FUNCNAME)
         {
-            // TODO
+            ClusterForMagnetFuncParam* tmp_param_ptr = static_cast<ClusterForMagnetFuncParam*>(func_param_ptr);
+            clusterForMagnet_(tmp_param_ptr->getKeyConstRef(), tmp_param_ptr->getDirinfoSetConstRef(), tmp_param_ptr->isBeingWrittenConstRef(), tmp_param_ptr->isValidDirectoryExistRef(), tmp_param_ptr->getDirectoryInfoRef());
         }
         else
         {
@@ -295,7 +296,7 @@ namespace covered
 
     void BasicEdgeWrapper::clusterForMagnet_(const Key& key, const std::list<DirectoryInfo>& dirinfo_set, const bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
     {
-        assert(getCacheName() == Util::MAGNET_CACHE_NAME);
+        assert(Util::isMagnetLikeCache(getCacheName()));
 
         if (is_valid_directory_exist)
         {

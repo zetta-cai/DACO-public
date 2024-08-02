@@ -107,7 +107,6 @@ namespace covered
         static const std::string LHD_CACHE_NAME;
         static const std::string LRB_CACHE_NAME;
         static const std::string LRU_CACHE_NAME;
-        static const std::string MAGNET_CACHE_NAME;
         static const std::string S3FIFO_CACHE_NAME;
         static const std::string SEGCACHE_CACHE_NAME;
         static const std::string SIEVE_CACHE_NAME;
@@ -115,25 +114,45 @@ namespace covered
         static const std::string WTINYLFU_CACHE_NAME;
         static const std::string COVERED_CACHE_NAME;
 
-        // Extended cache names (e.g.., ARC+)
-        static const std::string EXTENDED_ARC_CACHE_NAME;
-        static const std::string EXTENDED_CACHELIB_CACHE_NAME;
-        static const std::string EXTENDED_FIFO_CACHE_NAME;
-        static const std::string EXTENDED_FROZENHOT_CACHE_NAME;
-        static const std::string EXTENDED_GLCACHE_CACHE_NAME;
-        static const std::string EXTENDED_GDSF_CACHE_NAME; // Greedy dual
-        static const std::string EXTENDED_GDSIZE_CACHE_NAME; // Greedy dual
-        static const std::string EXTENDED_LFUDA_CACHE_NAME; // Greedy dual
-        static const std::string EXTENDED_LRUK_CACHE_NAME; // Greedy dual
-        static const std::string EXTENDED_LFU_CACHE_NAME;
-        static const std::string EXTENDED_LHD_CACHE_NAME;
-        static const std::string EXTENDED_LRB_CACHE_NAME;
-        static const std::string EXTENDED_LRU_CACHE_NAME; // The same as Shark
-        static const std::string EXTENDED_S3FIFO_CACHE_NAME;
-        static const std::string EXTENDED_SEGCACHE_CACHE_NAME;
-        static const std::string EXTENDED_SIEVE_CACHE_NAME;
-        static const std::string EXTENDED_SLRU_CACHE_NAME;
-        static const std::string EXTENDED_WTINYLFU_CACHE_NAME;
+        // Shark-extended cache names (e.g.., shark+arc)
+        static const std::string SHARK_EXTENDED_ARC_CACHE_NAME;
+        static const std::string SHARK_EXTENDED_CACHELIB_CACHE_NAME;
+        static const std::string SHARK_EXTENDED_FIFO_CACHE_NAME;
+        static const std::string SHARK_EXTENDED_FROZENHOT_CACHE_NAME;
+        static const std::string SHARK_EXTENDED_GLCACHE_CACHE_NAME;
+        static const std::string SHARK_EXTENDED_GDSF_CACHE_NAME; // Greedy dual
+        static const std::string SHARK_EXTENDED_GDSIZE_CACHE_NAME; // Greedy dual
+        static const std::string SHARK_EXTENDED_LFUDA_CACHE_NAME; // Greedy dual
+        static const std::string SHARK_EXTENDED_LRUK_CACHE_NAME; // Greedy dual
+        static const std::string SHARK_EXTENDED_LFU_CACHE_NAME;
+        static const std::string SHARK_EXTENDED_LHD_CACHE_NAME;
+        static const std::string SHARK_EXTENDED_LRB_CACHE_NAME;
+        static const std::string SHARK_EXTENDED_LRU_CACHE_NAME; // The same as Shark
+        static const std::string SHARK_EXTENDED_S3FIFO_CACHE_NAME;
+        static const std::string SHARK_EXTENDED_SEGCACHE_CACHE_NAME;
+        static const std::string SHARK_EXTENDED_SIEVE_CACHE_NAME;
+        static const std::string SHARK_EXTENDED_SLRU_CACHE_NAME;
+        static const std::string SHARK_EXTENDED_WTINYLFU_CACHE_NAME;
+
+        // MagNet-extended cache names (e.g.., magnet+arc)
+        static const std::string MAGNET_EXTENDED_ARC_CACHE_NAME;
+        static const std::string MAGNET_EXTENDED_CACHELIB_CACHE_NAME;
+        static const std::string MAGNET_EXTENDED_FIFO_CACHE_NAME;
+        static const std::string MAGNET_EXTENDED_FROZENHOT_CACHE_NAME;
+        static const std::string MAGNET_EXTENDED_GLCACHE_CACHE_NAME;
+        static const std::string MAGNET_EXTENDED_GDSF_CACHE_NAME; // Greedy dual
+        static const std::string MAGNET_EXTENDED_GDSIZE_CACHE_NAME; // Greedy dual
+        static const std::string MAGNET_EXTENDED_LFUDA_CACHE_NAME; // Greedy dual
+        static const std::string MAGNET_EXTENDED_LRUK_CACHE_NAME; // Greedy dual
+        static const std::string MAGNET_EXTENDED_LFU_CACHE_NAME;
+        static const std::string MAGNET_EXTENDED_LHD_CACHE_NAME;
+        static const std::string MAGNET_EXTENDED_LRB_CACHE_NAME;
+        static const std::string MAGNET_EXTENDED_LRU_CACHE_NAME; // The same as MagNet
+        static const std::string MAGNET_EXTENDED_S3FIFO_CACHE_NAME;
+        static const std::string MAGNET_EXTENDED_SEGCACHE_CACHE_NAME;
+        static const std::string MAGNET_EXTENDED_SIEVE_CACHE_NAME;
+        static const std::string MAGNET_EXTENDED_SLRU_CACHE_NAME;
+        static const std::string MAGNET_EXTENDED_WTINYLFU_CACHE_NAME;
 
         // Hash name
         static const std::string MMH3_HASH_NAME;
@@ -198,6 +217,9 @@ namespace covered
         // (0) For caches and workloads
 
         static bool isSingleNodeCache(const std::string cache_name); // Will disable cooperative caching for single-node caches
+        static bool isCooperativeCache(const std::string cache_name); // Existing cooperative caches
+        static bool isSharkLikeCache(const std::string cache_name); // Shark-like cooperative caching with different independent caching policies
+        static bool isMagnetLikeCache(const std::string cache_name); // Will perform clustering for local/remote directory lookup, and independent admission only for values fetched from cloud
 
         // OBSOLETE: single-node does NOT have geo-graphical information and cannot be simply partitioned for geo-distributed access
         // Replay single-node trace files by sampling and partitioning for geo-distributed caching
