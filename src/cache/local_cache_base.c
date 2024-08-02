@@ -69,7 +69,7 @@ namespace covered
         {
             local_cache_ptr = new LrbLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes, dataset_keycnt);
         }
-        else if (cache_name == Util::LRU_CACHE_NAME || cache_name == Util::EXTENDED_LRU_CACHE_NAME)
+        else if (cache_name == Util::LRU_CACHE_NAME || cache_name == Util::EXTENDED_LRU_CACHE_NAME || cache_name == Util::MAGNET_CACHE_NAME)
         {
             local_cache_ptr = new LruLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
         }

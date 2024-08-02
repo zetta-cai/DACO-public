@@ -52,7 +52,7 @@ namespace covered
         return all_dirinfo;
     }
 
-    bool DirectoryTable::lookup(const Key& key, const uint32_t& source_edge_idx, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
+    bool DirectoryTable::lookup(const Key& key, const uint32_t& source_edge_idx, bool& is_valid_directory_exist, DirectoryInfo& directory_info, std::list<DirectoryInfo>* dirinfo_set_ptr) const
     {
         bool is_global_cached = false; // Whether the key is cached by a local/neighbor edge node (even if invalid temporarily)
 
@@ -75,6 +75,14 @@ namespace covered
             bool with_complete_dirinfo_set = valid_directory_info_set.tryToEraseIfComplete(DirectoryInfo(source_edge_idx), is_erase);
             assert(with_complete_dirinfo_set); // dirinfo set from directory entry MUST be complete
             UNUSED(is_erase);
+
+            // Return dirinfo_set if necessary
+            if (dirinfo_set_ptr != NULL)
+            {
+                // Get all non-source valid dirinfo if necessary (e.g., used by MagNet)
+                with_complete_dirinfo_set = valid_directory_info_set.getDirinfoSetIfComplete(*dirinfo_set_ptr);
+                assert(with_complete_dirinfo_set); // dirinfo set from directory entry MUST be complete
+            }
 
             with_complete_dirinfo_set = valid_directory_info_set.getDirinfoSetSizeIfComplete(dirinfo_set_size);
             assert(with_complete_dirinfo_set); // dirinfo set from directory entry MUST be complete

@@ -107,6 +107,7 @@ namespace covered
         static const std::string LHD_CACHE_NAME;
         static const std::string LRB_CACHE_NAME;
         static const std::string LRU_CACHE_NAME;
+        static const std::string MAGNET_CACHE_NAME;
         static const std::string S3FIFO_CACHE_NAME;
         static const std::string SEGCACHE_CACHE_NAME;
         static const std::string SIEVE_CACHE_NAME;
@@ -114,7 +115,7 @@ namespace covered
         static const std::string WTINYLFU_CACHE_NAME;
         static const std::string COVERED_CACHE_NAME;
 
-        // Extend cache names (e.g.., ARC+)
+        // Extended cache names (e.g.., ARC+)
         static const std::string EXTENDED_ARC_CACHE_NAME;
         static const std::string EXTENDED_CACHELIB_CACHE_NAME;
         static const std::string EXTENDED_FIFO_CACHE_NAME;

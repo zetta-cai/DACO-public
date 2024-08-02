@@ -49,7 +49,7 @@ namespace covered
     // Cache name
     // NOTE: update Util::isSingleNodeCache() accordingly if necessary
     const std::string Util::ARC_CACHE_NAME("arc");
-    const std::string Util::BESTGUESS_CACHE_NAME("bestguess");
+    const std::string Util::BESTGUESS_CACHE_NAME("bestguess"); // cooperative caching
     const std::string Util::CACHELIB_CACHE_NAME("cachelib");
     const std::string Util::FIFO_CACHE_NAME("fifo");
     const std::string Util::FROZENHOT_CACHE_NAME("frozenhot");
@@ -62,6 +62,7 @@ namespace covered
     const std::string Util::LHD_CACHE_NAME("lhd");
     const std::string Util::LRB_CACHE_NAME("lrb");
     const std::string Util::LRU_CACHE_NAME("lru");
+    const std::string Util::MAGNET_CACHE_NAME("magnet"); // cooperative caching
     const std::string Util::S3FIFO_CACHE_NAME("s3fifo");
     const std::string Util::SEGCACHE_CACHE_NAME("segcache");
     const std::string Util::SIEVE_CACHE_NAME("sieve");

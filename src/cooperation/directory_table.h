@@ -34,7 +34,7 @@ namespace covered
         DirinfoSet getAll(const Key& key) const;
 
         // Return whether the key is cached by a local/neighbor edge node (even if invalid temporarily)
-        bool lookup(const Key& key, const uint32_t& source_edge_idx, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const; // Find a non-source valid directory info if any
+        bool lookup(const Key& key, const uint32_t& source_edge_idx, bool& is_valid_directory_exist, DirectoryInfo& directory_info, std::list<DirectoryInfo>* dirinfo_set_ptr = NULL) const; // Find a non-source valid directory info if any
         bool update(const Key& key, const bool& is_admit, const DirectoryInfo& directory_info, const DirectoryMetadata& directory_metadata, MetadataUpdateRequirement& metadata_update_requirement);
         bool isGlobalCached(const Key& key) const;
         bool isCachedByGivenEdge(const Key& key, const uint32_t& edge_idx) const;
