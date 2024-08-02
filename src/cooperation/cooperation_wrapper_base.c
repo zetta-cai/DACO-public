@@ -166,7 +166,7 @@ namespace covered
         return dirinfo_set;
     }
 
-    bool CooperationWrapperBase::lookupDirectoryTableByCacheServer(const Key& key, const uint32_t& source_edge_idx, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, bool& is_source_cached) const
+    bool CooperationWrapperBase::lookupDirectoryTableByCacheServer(const Key& key, const uint32_t& source_edge_idx, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, bool& is_source_cached, std::list<DirectoryInfo>* dirinfo_set_ptr) const
     {
         checkPointers_();
 
@@ -179,7 +179,7 @@ namespace covered
         bool is_global_cached = false; // Whether the key is cached by a local/neighbor edge node (even if invalid temporarily)
 
         is_being_written = block_tracker_ptr_->isBeingWrittenForKey(key);
-        is_global_cached = lookupDirectoryTable_(key, source_edge_idx, is_being_written, is_valid_directory_exist, directory_info, is_source_cached); // NOTE: find a non-source valid directory info if any
+        is_global_cached = lookupDirectoryTable_(key, source_edge_idx, is_being_written, is_valid_directory_exist, directory_info, is_source_cached, dirinfo_set_ptr); // NOTE: find a non-source valid directory info if any
 
         // Release a read lock
         cooperation_wrapper_perkey_rwlock_ptr_->unlock_shared(key, context_name);
@@ -187,7 +187,7 @@ namespace covered
         return is_global_cached;
     }
 
-    bool CooperationWrapperBase::lookupDirectoryTableByBeaconServer(const Key& key, const uint32_t& source_edge_idx, const NetworkAddr& cache_server_worker_recvreq_dst_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, bool& is_source_cached)
+    bool CooperationWrapperBase::lookupDirectoryTableByBeaconServer(const Key& key, const uint32_t& source_edge_idx, const NetworkAddr& cache_server_worker_recvreq_dst_addr, bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, bool& is_source_cached, std::list<DirectoryInfo>* dirinfo_set_ptr)
     {
         checkPointers_();
 
@@ -200,7 +200,7 @@ namespace covered
         bool is_global_cached = false; // Whether the key is cached by a local/neighbor edge node (even if invalid temporarily)
 
         block_tracker_ptr_->blockEdgeForKeyIfExistAndBeingWritten(key, cache_server_worker_recvreq_dst_addr, is_being_written);
-        is_global_cached = lookupDirectoryTable_(key, source_edge_idx, is_being_written, is_valid_directory_exist, directory_info, is_source_cached); // NOTE: find a non-source valid directory info if any
+        is_global_cached = lookupDirectoryTable_(key, source_edge_idx, is_being_written, is_valid_directory_exist, directory_info, is_source_cached, dirinfo_set_ptr); // NOTE: find a non-source valid directory info if any
 
         // Release a read lock
         cooperation_wrapper_perkey_rwlock_ptr_->unlock(key, context_name);
@@ -208,7 +208,7 @@ namespace covered
         return is_global_cached;
     }
 
-    bool CooperationWrapperBase::lookupDirectoryTable_(const Key& key, const uint32_t& source_edge_idx, const bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, bool& is_source_cached) const
+    bool CooperationWrapperBase::lookupDirectoryTable_(const Key& key, const uint32_t& source_edge_idx, const bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info, bool& is_source_cached, std::list<DirectoryInfo>* dirinfo_set_ptr) const
     {
         // No need to acquire a read/write lock, which has been done in public functions
 
@@ -217,12 +217,17 @@ namespace covered
         if (!is_being_written) // if key is NOT being written
         {
             assert(directory_table_ptr_ != NULL);
-            is_global_cached = directory_table_ptr_->lookup(key, source_edge_idx, is_valid_directory_exist, directory_info); // NOTE: find a non-source valid directory info if any
+            is_global_cached = directory_table_ptr_->lookup(key, source_edge_idx, is_valid_directory_exist, directory_info, dirinfo_set_ptr); // NOTE: find a non-source valid directory info if any
         }
         else // key is being written
         {
             is_valid_directory_exist = false;
             directory_info = DirectoryInfo();
+
+            if (dirinfo_set_ptr != NULL)
+            {
+                dirinfo_set_ptr->clear(); // No valid directory -> will re-lookup after polling/interruption-based blocking
+            }
 
             is_global_cached = directory_table_ptr_->isGlobalCached(key);
         }

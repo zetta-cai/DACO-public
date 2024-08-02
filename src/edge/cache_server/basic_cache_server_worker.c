@@ -43,8 +43,18 @@ namespace covered
 
         uint32_t current_edge_idx = tmp_edge_wrapper_ptr->getNodeIdx();
         bool is_source_cached = false;
-        tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->lookupDirectoryTableByCacheServer(key, current_edge_idx, is_being_written, is_valid_directory_exist, directory_info, is_source_cached);
+        std::list<DirectoryInfo> dirinfo_set; // NOTE: get all valid dirinfo (ONLY used by MagNet)
+        tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->lookupDirectoryTableByCacheServer(key, current_edge_idx, is_being_written, is_valid_directory_exist, directory_info, is_source_cached, &dirinfo_set);
         UNUSED(is_source_cached);
+
+        // Clustering for MagNet
+        if (tmp_edge_wrapper_ptr->getCacheName() == Util::MAGNET_CACHE_NAME)
+        {
+            // Perform clustering for object accesses of MagNet
+            // NOTE: the function could update is_valid_directory_exist and directory_info
+            ClusterForMagnetFuncParam tmp_param_for_clustering(key, dirinfo_set, is_being_written, is_valid_directory_exist, directory_info);
+            tmp_edge_wrapper_ptr->constCustomFunc(ClusterForMagnetFuncParam::FUNCNAME, &tmp_param_for_clustering);
+        }
 
         UNUSED(best_placement_edgeset);
         UNUSED(need_hybrid_fetching);
@@ -247,16 +257,23 @@ namespace covered
         EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
 
         UNUSED(is_tracked_before_fetch_value);
-        UNUSED(is_cooperative_cached);
+        // UNUSED(is_cooperative_cached);
         UNUSED(best_placement_edgeset);
         UNUSED(need_hybrid_fetching);
         UNUSED(fast_path_hint);
 
         bool is_finish = false;
 
+        // NOTE: MagNet only admits object after fetching value from cloud
+        if (tmp_edge_wrapper_ptr->getCacheName() == Util::MAGNET_CACHE_NAME && is_cooperative_cached)
+        {
+            return is_finish; // NO need to trigger independent admission if value is fetched from guided edge node located by clustering
+        }
+
         // Trigger independent cache admission for local/global cache miss if necessary
         // NOTE: for COVERED, beacon node will tell the edge node whether to admit or not, w/o independent decision
         // NOTE: for BestGuess, the closest node will trigger best-guess placement via beacon node, w/o independent decision
+        // NOTE: for MagNet, trigger independent admission only if value is fetched from cloud (CacheWrapper::needIndependentAdmit() will return false if value is locally cached)
         struct timespec independent_admission_start_timestamp = Util::getCurrentTimespec();
         is_finish = tryToTriggerIndependentAdmission_(key, value, total_bandwidth_usage, event_list, extra_common_msghdr); // Add events of intermediate responses if with event tracking
         if (is_finish)

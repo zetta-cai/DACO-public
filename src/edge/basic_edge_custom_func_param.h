@@ -13,6 +13,7 @@
 #include "common/bandwidth_usage.h"
 #include "common/key.h"
 #include "common/value.h"
+#include "cooperation/directory/directory_info.h"
 #include "edge/edge_custom_func_param_base.h"
 #include "event/event_list.h"
 #include "message/extra_common_msghdr.h"
@@ -20,7 +21,7 @@
 
 namespace covered
 {
-    // TriggerBestGuessPlacementFuncParam for edge cache server of BestGuess
+    // TriggerBestGuessPlacementFuncParam for edge cache server worker of BestGuess
 
     class TriggerBestGuessPlacementFuncParam : public EdgeCustomFuncParamBase
     {
@@ -72,6 +73,32 @@ namespace covered
         const NetworkAddr& edge_cache_server_worker_recvrsp_dst_addr_const_ref_;
 
         bool is_finish_;
+    };
+
+    // ClusterForMagnetFuncParam for edge cache server worker and edge beacon server of MagNet
+
+    class ClusterForMagnetFuncParam : public EdgeCustomFuncParamBase
+    {
+    public:
+        static const std::string FUNCNAME; // perform clustering for object accesses for MagNet
+
+        ClusterForMagnetFuncParam(const Key& key, const std::list<DirectoryInfo>& dirinfo_set, const bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info);
+        ~ClusterForMagnetFuncParam();
+
+        const Key& getKeyConstRef() const;
+        const std::list<DirectoryInfo>& getDirinfoSetConstRef() const;
+        const bool& isBeingWrittenConstRef() const;
+        bool& isValidDirectoryExistRef();
+        DirectoryInfo& getDirectoryInfoRef();
+    private:
+        static const std::string kClassName;
+
+        const Key& key_const_ref_;
+        const std::list<DirectoryInfo>& dirinfo_set_const_ref_;
+        const bool& is_being_written_const_ref_;
+
+        bool& is_valid_directory_exist_ref_;
+        DirectoryInfo& directory_info_ref_;
     };
 }
 

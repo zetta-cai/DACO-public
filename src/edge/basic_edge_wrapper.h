@@ -18,6 +18,7 @@ namespace covered
 }
 
 #include "edge/edge_wrapper_base.h"
+#include "hash/hash_wrapper_base.h"
 
 namespace covered
 {
@@ -58,6 +59,9 @@ namespace covered
         virtual void dumpEdgeSnapshot_(std::fstream* fs_ptr) const override;
         virtual void loadEdgeSnapshot_(std::fstream* fs_ptr) override;
     private:
+        // Perform clustering for MagNet
+        void clusterForMagnet_(const Key& key, const std::list<DirectoryInfo>& dirinfo_set, const bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const;
+    private:
         static const std::string kClassName;
 
         // (5) Other utilities
@@ -65,6 +69,8 @@ namespace covered
         virtual void checkPointers_() const;
 
         std::string instance_name_;
+
+        HashWrapperBase* hash_wrapper_for_magnet_ptr_; // Used by MagNet for clustering
     };
 }
 

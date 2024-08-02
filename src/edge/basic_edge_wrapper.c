@@ -6,6 +6,7 @@
 #include "cache/basic_cache_custom_func_param.h"
 #include "common/util.h"
 #include "cooperation/basic_cooperation_custom_func_param.h"
+#include "edge/basic_edge_custom_func_param.h"
 #include "message/control_message.h"
 
 namespace covered
@@ -21,12 +22,26 @@ namespace covered
         oss << kClassName << " edge" << edge_idx;
         instance_name_ = oss.str();
 
+        hash_wrapper_for_magnet_ptr_ = NULL;
+        if (cache_name == Util::MAGNET_CACHE_NAME)
+        {
+            uint32_t tmp_seed = static_cast<uint32_t>(std::hash<std::string>{}(Util::MAGNET_CACHE_NAME)); // Calculate seed based on cache name (different from 0 used by DHT for locating beacon nodes)
+            hash_wrapper_for_magnet_ptr_ = new HashWrapperBase::getHashWrapperByHashName(Util::MMH3_HASH_NAME, tmp_seed);
+            assert(hash_wrapper_for_magnet_ptr_ != NULL);
+        }
+
         // Load snapshot to initialize edge node for real-net exps if necessary
         tryToInitializeForRealnet_();
     }
         
     BasicEdgeWrapper::~BasicEdgeWrapper()
     {
+        if (getCacheName() == Util::MAGNET_CACHE_NAME)
+        {
+            assert(hash_wrapper_for_magnet_ptr_ != NULL);
+            delete hash_wrapper_for_magnet_ptr_;
+            hash_wrapper_for_magnet_ptr_ = NULL;
+        }
     }
 
     // (1) Const getters
@@ -229,10 +244,19 @@ namespace covered
 
     void BasicEdgeWrapper::constCustomFunc(const std::string& funcname, EdgeCustomFuncParamBase* func_param_ptr) const
     {
-        std::ostringstream oss;
-        oss << funcname << " is not supported in constCustomFunc()";
-        Util::dumpErrorMsg(instance_name_, oss.str());
-        exit(1);
+        assert(func_param_ptr != NULL);
+
+        if (funcname == ClusterForMagnetFuncParam::FUNCNAME)
+        {
+            // TODO
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << funcname << " is not supported in constCustomFunc()";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
 
         return;
     }
@@ -265,6 +289,61 @@ namespace covered
 
         // Load cooperation wrapper
         cooperation_wrapper_ptr_->loadCooperationSnapshot(fs_ptr);
+
+        return;
+    }
+
+    void BasicEdgeWrapper::clusterForMagnet_(const Key& key, const std::list<DirectoryInfo>& dirinfo_set, const bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) const
+    {
+        assert(getCacheName() == Util::MAGNET_CACHE_NAME);
+
+        if (is_valid_directory_exist)
+        {
+            assert(!is_being_written); // being-written object must have invalid directory
+
+            const uint32_t MAGNET_HASH_RING_LENGTH = 1103 * 1123; // Multiplication of two primes (different from DHT_HASH_RING_LENGTH for locating beacon nodes)
+
+            // NOTE: simulate clustering for integers with K = 1 in MagNet
+            
+            // Hash the key (similar to LSH for clustering)
+            assert(hash_wrapper_for_magnet_ptr_ != NULL);
+            uint32_t hash_value = hash_wrapper_for_magnet_ptr_->hash(key);
+            uint32_t hash_ring_value = hash_value % MAGNET_HASH_RING_LENGTH;
+
+            // Map hash value into guided edge node (similar to quantization for clustering)
+            const uint32_t edgecnt = getNodeCnt();
+            uint32_t peredge_hash_ring_length = MAGNET_HASH_RING_LENGTH / edgecnt;
+            assert(peredge_hash_ring_length > 0);
+            uint32_t guided_edge_idx = hash_ring_value / peredge_hash_ring_length;
+            if (guided_edge_idx >= edgecnt)
+            {
+                guided_edge_idx = edgecnt - 1; // Map the tail hash ring values to the last edge node
+            }
+
+            // Check if the guided edge node caches the object
+            bool is_guided_edge_cached = false;
+            for (std::list<DirectoryInfo>::const_iterator tmp_iter = dirinfo_set.begin(); tmp_iter != dirinfo_set.end(); tmp_iter++)
+            {
+                const uint32_t tmp_edge_idx = tmp_iter->getTargetEdgeIdx();
+                if (tmp_edge_idx == guided_edge_idx)
+                {
+                    is_guided_edge_cached = true;
+                    break;
+                }
+            }
+
+            if (is_guided_edge_cached)
+            {
+                // Update directory info for the guided edge node
+                directory_info = DirectoryInfo(guided_edge_idx);
+            }
+            else
+            {
+                // Invalidate the directory info
+                is_valid_directory_exist = false;
+                directory_info = DirectoryInfo();
+            }
+        }
 
         return;
     }

@@ -86,4 +86,40 @@ namespace covered
     {
         return is_finish_;
     }
+
+    // ClusterForMagnetFuncParam for edge cache server worker and edge beacon server of MagNet
+
+    const std::string ClusterForMagnetFuncParam::kClassName("ClusterForMagnetFuncParam");
+
+    const std::string ClusterForMagnetFuncParam::FUNCNAME("cluster_for_magnet");
+
+    ClusterForMagnetFuncParam::ClusterForMagnetFuncParam(const Key& key, const std::list<DirectoryInfo>& dirinfo_set, const bool& is_being_written, bool& is_valid_directory_exist, DirectoryInfo& directory_info) : EdgeCustomFuncParamBase(), key_const_ref_(key), dirinfo_set_const_ref_(dirinfo_set), is_being_written_const_ref_(is_being_written), is_valid_directory_exist_ref_(is_valid_directory_exist), directory_info_ref_(directory_info)
+    {}
+
+    ClusterForMagnetFuncParam::~ClusterForMagnetFuncParam() {}
+
+    const Key& ClusterForMagnetFuncParam::getKeyConstRef() const
+    {
+        return key_const_ref_;
+    }
+
+    const std::list<DirectoryInfo>& ClusterForMagnetFuncParam::getDirinfoSetConstRef() const
+    {
+        return dirinfo_set_const_ref_;
+    }
+
+    const bool& ClusterForMagnetFuncParam::isBeingWrittenConstRef() const
+    {
+        return is_being_written_const_ref_;
+    }
+
+    bool& ClusterForMagnetFuncParam::isValidDirectoryExistRef()
+    {
+        return is_valid_directory_exist_ref_;
+    }
+
+    DirectoryInfo& ClusterForMagnetFuncParam::getDirectoryInfoRef()
+    {
+        return directory_info_ref_;
+    }
 }

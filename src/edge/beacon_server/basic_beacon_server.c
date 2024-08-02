@@ -73,8 +73,18 @@ namespace covered
         // Lookup local content directory
         is_being_written = false;
         bool is_source_cached = false;
-        tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->lookupDirectoryTableByBeaconServer(tmp_key, source_edge_idx, edge_cache_server_worker_recvreq_dst_addr, is_being_written, is_valid_directory_exist, directory_info, is_source_cached);
+        std::list<DirectoryInfo> dirinfo_set; // NOTE: get all valid dirinfo (ONLY used by MagNet)
+        tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->lookupDirectoryTableByBeaconServer(tmp_key, source_edge_idx, edge_cache_server_worker_recvreq_dst_addr, is_being_written, is_valid_directory_exist, directory_info, is_source_cached, &dirinfo_set);
         UNUSED(is_source_cached);
+
+        // Clustering for MagNet
+        if (tmp_edge_wrapper_ptr->getCacheName() == Util::MAGNET_CACHE_NAME)
+        {
+            // Perform clustering for object accesses of MagNet
+            // NOTE: the function could update is_valid_directory_exist and directory_info
+            ClusterForMagnetFuncParam tmp_param_for_clustering(tmp_key, dirinfo_set, is_being_written, is_valid_directory_exist, directory_info);
+            tmp_edge_wrapper_ptr->constCustomFunc(ClusterForMagnetFuncParam::FUNCNAME, &tmp_param_for_clustering);
+        }
 
         UNUSED(best_placement_edgeset);
         UNUSED(need_hybrid_fetching);
