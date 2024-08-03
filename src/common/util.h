@@ -103,6 +103,7 @@ namespace covered
         static const std::string GDSIZE_CACHE_NAME; // Greedy dual
         static const std::string LFUDA_CACHE_NAME; // Greedy dual
         static const std::string LRUK_CACHE_NAME; // Greedy dual
+        static const std::string LACACHE_CACHE_NAME;
         static const std::string LFU_CACHE_NAME;
         static const std::string LHD_CACHE_NAME;
         static const std::string LRB_CACHE_NAME;
@@ -124,6 +125,7 @@ namespace covered
         static const std::string SHARK_EXTENDED_GDSIZE_CACHE_NAME; // Greedy dual
         static const std::string SHARK_EXTENDED_LFUDA_CACHE_NAME; // Greedy dual
         static const std::string SHARK_EXTENDED_LRUK_CACHE_NAME; // Greedy dual
+        static const std::string SHARK_EXTENDED_LACACHE_CACHE_NAME;
         static const std::string SHARK_EXTENDED_LFU_CACHE_NAME;
         static const std::string SHARK_EXTENDED_LHD_CACHE_NAME;
         static const std::string SHARK_EXTENDED_LRB_CACHE_NAME;
@@ -144,6 +146,7 @@ namespace covered
         static const std::string MAGNET_EXTENDED_GDSIZE_CACHE_NAME; // Greedy dual
         static const std::string MAGNET_EXTENDED_LFUDA_CACHE_NAME; // Greedy dual
         static const std::string MAGNET_EXTENDED_LRUK_CACHE_NAME; // Greedy dual
+        static const std::string MAGNET_EXTENDED_LACACHE_CACHE_NAME;
         static const std::string MAGNET_EXTENDED_LFU_CACHE_NAME;
         static const std::string MAGNET_EXTENDED_LHD_CACHE_NAME;
         static const std::string MAGNET_EXTENDED_LRB_CACHE_NAME;
