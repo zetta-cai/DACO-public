@@ -371,6 +371,7 @@ namespace covered
 			// Randomly sample 100 cached objects
 			const std::list<CacheInfo>* sampled_cacheinfos_ptr = NULL;
 			std::list<CacheInfo> sampled_cacheinfos;
+			sampled_cacheinfos.clear();
 			if (entries_.size() <= SAMPLE_SIZE)
 			{
 				sampled_cacheinfos_ptr = &entries_;
@@ -378,7 +379,7 @@ namespace covered
 			else
 			{
 				// Sample without replacement
-				sampled_cacheinfos.resize(SAMPLE_SIZE);
+				// NOTE: NO need to resize sampled_cacheinfos, as std::back_inserter will choose the back() iterator to insert the sampled cacheinfos
 				std::sample(entries_.begin(), entries_.end(), std::back_inserter(sampled_cacheinfos), SAMPLE_SIZE, *randgen_ptr_); // Not sure why use randgen_ cannot pass compilation
 
 				sampled_cacheinfos_ptr = &sampled_cacheinfos;
