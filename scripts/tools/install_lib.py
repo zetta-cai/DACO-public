@@ -25,6 +25,7 @@ is_install_glcache = True # Completely used hacked version
 is_install_lrb = True
 is_install_frozenhot = True
 is_install_tragen = True
+is_install_lacache = True
 
 # Check input CLI parameters
 if len(sys.argv) != 2:
@@ -344,9 +345,22 @@ if is_install_tragen:
         tragen_overwrite_errstr = SubprocessUtil.getSubprocessErrstr(tragen_overwrite_subprocess)
         LogUtil.die(Common.scriptname, "failed to overwrite hacked part into tragen repo (errmsg: {})".format(tragen_overwrite_errstr))
 
-# (15) Others: chown of libraries and update LD_LIBRARY_PATH
+# (15) Install LACache (commit ID: 2dcb806)
 
-## (15.1) Chown of libraries
+if is_install_lacache:
+    lacache_clone_dirpath = "{}/lacache".format(Common.lib_dirpath)
+    lacache_software_name = "LA-Cache"
+    lacache_repo_url = "https://github.com/GYan58/la-cache.git"
+    SubprocessUtil.cloneRepo(Common.scriptname, lacache_clone_dirpath, lacache_software_name, lacache_repo_url)
+
+    lacache_target_commit = "2dcb806"
+    SubprocessUtil.checkoutCommit(Common.scriptname, lacache_clone_dirpath, lacache_software_name, lacache_target_commit)
+
+    # NOTE: NO need to install LA-Cache source code, as we refer to the source code to implement a practical version in src/cache/lacache for cooperative caching
+
+# (16) Others: chown of libraries and update LD_LIBRARY_PATH
+
+## (16.1) Chown of libraries
 
 LogUtil.prompt(Common.scriptname, "chown of libraries...")
 chown_cmd = "sudo chown -R {0}:{0} {1}".format(Common.username, Common.lib_dirpath)
@@ -355,7 +369,7 @@ if chown_subprocess.returncode != 0:
     chown_errstr = SubprocessUtil.getSubprocessErrstr(chown_subprocess)
     LogUtil.die(Common.scriptname, "failed to chown of libraries (errmsg: {})".format(chown_errstr))
 
-## (15.2) Update LD_LIBRARY_PATH for interactive and non-interactive shells
+## (16.2) Update LD_LIBRARY_PATH for interactive and non-interactive shells
 
 target_ld_libs = ["webcachesim", "libbf", "mongocxxdriver", "lightgbm", "glcache", "segcache", "cachelib", "boost", "x86_64-linux-gnu"]
 target_ld_lib_dirpaths = ["{}/lrb/install/webcachesim/lib".format(Common.lib_dirpath), "{}/lrb/install/libbf/lib".format(Common.lib_dirpath), "{}/lrb/install/mongocxxdriver/lib".format(Common.lib_dirpath), "{}/lrb/install/lightgbm/lib".format(Common.lib_dirpath), "{}/src/cache/glcache/micro-implementation/build/lib".format(Common.proj_dirname), "{}/src/cache/segcache/build/ccommon/lib".format(Common.proj_dirname), "{}/CacheLib/opt/cachelib/lib".format(Common.lib_dirpath), "{}/boost_1_81_0/install/lib".format(Common.lib_dirpath), "/usr/lib/x86_64-linux-gnu"]
@@ -376,7 +390,7 @@ for i in range(len(target_ld_lib_dirpaths)):
     else:
         update_bash_source_grepstr = "{}:{}".format(update_bash_source_grepstr, target_ld_lib_dirpaths[i])
 
-### (15.3) Update LD_LIBRARY_PATH for non-interactive shells
+### (16.3) Update LD_LIBRARY_PATH for non-interactive shells
 
 noninteractive_bash_source_filepath = "/home/{}/.bashrc_non_interactive".format(Common.username)
 
