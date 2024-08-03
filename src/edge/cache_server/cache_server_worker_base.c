@@ -508,11 +508,17 @@ namespace covered
         const uint64_t cur_msg_seqnum = tmp_edge_wrapper_ptr->getAndIncrNodeMsgSeqnum();
         const ExtraCommonMsghdr tmp_extra_common_msghdr(extra_common_msghdr.isSkipPropagationLatency(), extra_common_msghdr.isMonitored(), cur_msg_seqnum); // NOTE: use edge-assigned seqnum instead of client-assigned seqnum
 
+        // Prepare for latency-aware weight tuning
+        struct timespec tmp_content_discovery_start_timestamp;
+        memset((void *)&tmp_content_discovery_start_timestamp, 0, sizeof(struct timespec));
+
         bool is_stale_response = false; // Only recv again instead of send if with a stale response
         while (true) // Timeout-and-retry mechanism
         {
-            // Prepare for latency-aware weight tuning
-            const struct timespec tmp_content_discovery_start_timestamp = Util::getCurrentTimespec(); // NOT count timeout
+            if (!is_stale_response) // Timeout
+            {
+                tmp_content_discovery_start_timestamp = Util::getCurrentTimespec(); // NOT count timeout
+            }
 
             if (!is_stale_response)
             {
@@ -624,11 +630,17 @@ namespace covered
         const uint64_t cur_msg_seqnum = tmp_edge_wrapper_ptr->getAndIncrNodeMsgSeqnum();
         const ExtraCommonMsghdr tmp_extra_common_msghdr(extra_common_msghdr.isSkipPropagationLatency(), extra_common_msghdr.isMonitored(), cur_msg_seqnum); // NOTE: use edge-assigned seqnum instead of client-assigned seqnum
 
+        // Prepare for latency-aware weight tuning
+        struct timespec tmp_request_redirection_start_timestamp;
+        memset((void *)&tmp_request_redirection_start_timestamp, 0, sizeof(struct timespec));
+
         bool is_stale_response = false; // Only recv again instead of send if with a stale response
         while (true) // Timeout-and-retry mechanism
         {
-            // Prepare for latency-aware weight tuning
-            const struct timespec tmp_request_redirection_start_timestamp = Util::getCurrentTimespec(); // NOT count timeout
+            if (!is_stale_response) // Timeout
+            {
+                tmp_request_redirection_start_timestamp = Util::getCurrentTimespec(); // NOT count timeout
+            }
 
             if (!is_stale_response)
             {
@@ -766,12 +778,18 @@ namespace covered
         const uint64_t cur_msg_seqnum = tmp_edge_wrapper_ptr->getAndIncrNodeMsgSeqnum();
         const ExtraCommonMsghdr tmp_extra_common_msghdr(extra_common_msghdr.isSkipPropagationLatency(), extra_common_msghdr.isMonitored(), cur_msg_seqnum); // NOTE: use edge-assigned seqnum instead of client-assigned seqnum
 
+        // Prepare for latency-aware weight tuning
+        struct timespec tmp_cloud_access_start_timestamp;
+        memset((void *)&tmp_cloud_access_start_timestamp, 0, sizeof(struct timespec));
+
         // Timeout-and-retry
         bool is_stale_response = false; // Only recv again instead of send if with a stale response
         while (true)
         {
-            // Prepare for latency-aware weight tuning
-            const struct timespec tmp_cloud_access_start_timestamp = Util::getCurrentTimespec(); // NOT count timeout
+            if (!is_stale_response) // Timeout
+            {
+                tmp_cloud_access_start_timestamp = Util::getCurrentTimespec(); // NOT count timeout
+            }
 
             if (!is_stale_response)
             {

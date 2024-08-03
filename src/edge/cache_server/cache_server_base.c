@@ -548,11 +548,17 @@ namespace covered
         const uint64_t cur_msg_seqnum = tmp_edge_wrapper_ptr->getAndIncrNodeMsgSeqnum();
         const ExtraCommonMsghdr tmp_extra_common_msghdr(extra_common_msghdr.isSkipPropagationLatency(), extra_common_msghdr.isMonitored(), cur_msg_seqnum); // NOTE: use edge-assigned seqnum instead of client-assigned seqnum
 
+        // Prepare for latency-aware weight tuning
+        struct timespec tmp_directory_admit_start_timestamp;
+        memset((void *)&tmp_directory_admit_start_timestamp, 0, sizeof(struct timespec));
+
         bool is_stale_response = false; // Only recv again instead of send if with a stale response
         while (true) // Timeout-and-retry mechanism
         {
-            // Prepare for latency-aware weight tuning
-            const struct timespec tmp_directory_admit_start_timestamp = Util::getCurrentTimespec(); // NOT count timeout
+            if (!is_stale_response) // Timeout
+            {
+                tmp_directory_admit_start_timestamp = Util::getCurrentTimespec(); // NOT count timeout
+            }
 
             if (!is_stale_response)
             {
@@ -816,6 +822,13 @@ namespace covered
             acked_flags.insert(std::pair(victim_iter->first, std::pair(false, tmp_victim_beacon_edge_idx)));
         }
 
+        // Prepare for latency-aware weight tuning (only count the first RTT of current batch)
+        bool is_measure_first_req = false;
+        bool is_measure_first_rsp = false;
+        uint32_t tmp_directory_evict_cross_edge_latency_us = 0;
+        struct timespec tmp_directory_evict_start_timestamp;
+        memset((void *)&tmp_directory_evict_start_timestamp, 0, sizeof(struct timespec));
+
         // Issue multiple directory update requests with is_admit = false simultaneously
         const uint32_t partial_victim_cnt = partial_victims.size();
         const DirectoryInfo directory_info(tmp_edge_wrapper_ptr->getNodeIdx());
@@ -823,12 +836,15 @@ namespace covered
         bool is_stale_response = false; // Only recv again instead of send if with a stale response
         while (acked_cnt != partial_victim_cnt) // Timeout-and-retry mechanism
         {
-            // Prepare for latency-aware weight tuning (only count the first RTT of current batch)
-            bool is_measure_first_req = false;
-            bool is_measure_first_rsp = false;
-            uint32_t tmp_directory_evict_cross_edge_latency_us = 0;
-            struct timespec tmp_directory_evict_start_timestamp;
+            // Timeout and has not measured the first RTT
+            if (!is_stale_response && !is_measure_first_rsp)
+            {
+                // Reset the start timestamp for the first RTT
+                is_measure_first_req = false;
+                memset((void *)&tmp_directory_evict_start_timestamp, 0, sizeof(struct timespec));
+            }
 
+            // NOTE: NOT resend any message if receiving stale responses -> just continue to receive subsequent messages!
             if (!is_stale_response) // Resend for the first time or timeout
             {
                 // Send (partial_victim_cnt - acked_cnt) directory update requests to the beacon nodes that have not acknowledged
