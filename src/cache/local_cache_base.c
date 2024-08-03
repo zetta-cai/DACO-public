@@ -10,6 +10,7 @@
 #include "cache/covered_local_cache.h"
 #include "cache/fifo_local_cache.h"
 #include "cache/frozenhot_local_cache.h"
+#include "cache/lacache_local_cache.h"
 #include "cache/lfu_local_cache.h"
 #include "cache/lhd_local_cache.h"
 #include "cache/lrb_local_cache.h"
@@ -56,6 +57,10 @@ namespace covered
         else if (cache_name == Util::LRUK_CACHE_NAME || cache_name == Util::GDSIZE_CACHE_NAME || cache_name == Util::GDSF_CACHE_NAME || cache_name == Util::LFUDA_CACHE_NAME || cache_name == Util::SHARK_EXTENDED_LRUK_CACHE_NAME || cache_name == Util::SHARK_EXTENDED_GDSIZE_CACHE_NAME || cache_name == Util::SHARK_EXTENDED_GDSF_CACHE_NAME || cache_name == Util::SHARK_EXTENDED_LFUDA_CACHE_NAME || cache_name == Util::MAGNET_EXTENDED_LRUK_CACHE_NAME || cache_name == Util::MAGNET_EXTENDED_GDSIZE_CACHE_NAME || cache_name == Util::MAGNET_EXTENDED_GDSF_CACHE_NAME || cache_name == Util::MAGNET_EXTENDED_LFUDA_CACHE_NAME) // Greedy dual
         {
             local_cache_ptr = new GreedyDualLocalCache(edge_wrapper_ptr, cache_name, edge_idx, capacity_bytes);
+        }
+        else if (cache_name == Util::LACACHE_CACHE_NAME || cache_name == Util::SHARK_EXTENDED_LACACHE_CACHE_NAME || cache_name == Util::MAGNET_EXTENDED_LACACHE_CACHE_NAME)
+        {
+            local_cache_ptr = new LacacheLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
         }
         else if (cache_name == Util::LFU_CACHE_NAME || cache_name == Util::SHARK_EXTENDED_LFU_CACHE_NAME || cache_name == Util::MAGNET_EXTENDED_LFU_CACHE_NAME)
         {
@@ -208,7 +213,7 @@ namespace covered
         return need_independent_admit;
     }
 
-    void LocalCacheBase::admitLocalCache(const Key& key, const Value& value, const bool& is_neighbor_cached, bool& affect_victim_tracker, bool& is_successful)
+    void LocalCacheBase::admitLocalCache(const Key& key, const Value& value, const bool& is_neighbor_cached, bool& affect_victim_tracker, bool& is_successful, const uint64_t& miss_latency_us)
     {
         checkPointers_();
 
@@ -221,7 +226,7 @@ namespace covered
         assert(is_valid_objsize); // Object size checking
 
         is_successful = false;
-        admitLocalCacheInternal_(key, value, is_neighbor_cached, affect_victim_tracker, is_successful);
+        admitLocalCacheInternal_(key, value, is_neighbor_cached, affect_victim_tracker, is_successful, miss_latency_us);
 
         rwlock_for_local_cache_ptr_->unlock(context_name);
         return;

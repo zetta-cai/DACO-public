@@ -320,7 +320,7 @@ namespace covered
         return need_independent_admit;
     }
 
-    void CacheWrapper::admit(const Key& key, const Value& value, const bool& is_neighbor_cached, const bool& is_valid, const uint32_t& beacon_edgeidx, bool& affect_victim_tracker)
+    void CacheWrapper::admit(const Key& key, const Value& value, const bool& is_neighbor_cached, const bool& is_valid, const uint32_t& beacon_edgeidx, bool& affect_victim_tracker, const uint64_t& miss_latency_us)
     {
         checkPointers_();
 
@@ -329,7 +329,7 @@ namespace covered
         cache_wrapper_perkey_rwlock_ptr_->acquire_lock(key, context_name);
 
         bool is_successful = false;
-        local_cache_ptr_->admitLocalCache(key, value, is_neighbor_cached, affect_victim_tracker, is_successful);
+        local_cache_ptr_->admitLocalCache(key, value, is_neighbor_cached, affect_victim_tracker, is_successful, miss_latency_us);
 
         if (is_successful) // If key is admited successfully
         {
@@ -641,7 +641,8 @@ namespace covered
             bool is_successful = false;
             const bool is_neighbor_cached = false; // NOT used by baselines; temporarily set false for COVERED, which will be reset with correct local cached metadata loaded from snapshot file later
             bool unused_affect_victim_tracker = false;
-            local_cache_ptr_->admitLocalCache(tmp_key, tmp_value, is_neighbor_cached, unused_affect_victim_tracker, is_successful);
+            const uint64_t miss_latency_us_placeholder = 1; // Use positive placeholder to avoid failed assertion in LA-Cache
+            local_cache_ptr_->admitLocalCache(tmp_key, tmp_value, is_neighbor_cached, unused_affect_victim_tracker, is_successful, miss_latency_us_placeholder); // TODO: dump and load miss latency for LA-Cache (implement loadCacheMetadata() and invoke at the end below) (snapshot is NOT used now)
             UNUSED(unused_affect_victim_tracker);
 
             // Update validity map and beacon edgeidx if any

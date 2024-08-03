@@ -306,8 +306,10 @@ namespace covered
         return false;
     }
 
-    void CoveredLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, const bool& is_neighbor_cached, bool& affect_victim_tracker, bool& is_successful)
+    void CoveredLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, const bool& is_neighbor_cached, bool& affect_victim_tracker, bool& is_successful, const uint64_t& miss_latency_us)
     {
+        UNUSED(miss_latency_us); // ONLY used by LA-Cache
+        
         affect_victim_tracker = false;
         is_successful = false;
 

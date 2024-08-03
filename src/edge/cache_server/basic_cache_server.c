@@ -24,14 +24,14 @@ namespace covered
 
     // (1) For local edge cache admission and remote directory admission
 
-    void BasicCacheServer::admitLocalEdgeCache_(const Key& key, const Value& value, const bool& is_neighbor_cached, const bool& is_valid) const
+    void BasicCacheServer::admitLocalEdgeCache_(const Key& key, const Value& value, const bool& is_neighbor_cached, const bool& is_valid, const uint64_t& miss_latency_us) const
     {
         checkPointers_();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = getEdgeWrapperPtr();
 
         bool affect_victim_tracker = false; // If key is a local synced victim now
         const uint32_t beacon_edgeidx = tmp_edge_wrapper_ptr->getCooperationWrapperPtr()->getBeaconEdgeIdx(key);
-        tmp_edge_wrapper_ptr->getEdgeCachePtr()->admit(key, value, is_neighbor_cached, is_valid, beacon_edgeidx, affect_victim_tracker);
+        tmp_edge_wrapper_ptr->getEdgeCachePtr()->admit(key, value, is_neighbor_cached, is_valid, beacon_edgeidx, affect_victim_tracker, miss_latency_us);
 
         return;
     }

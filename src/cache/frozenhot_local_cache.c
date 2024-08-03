@@ -116,10 +116,11 @@ namespace covered
         return !is_local_cached;
     }
 
-    void FrozenhotLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, const bool& is_neighbor_cached, bool& affect_victim_tracker, bool& is_successful)
+    void FrozenhotLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, const bool& is_neighbor_cached, bool& affect_victim_tracker, bool& is_successful, const uint64_t& miss_latency_us)
     {
         UNUSED(is_neighbor_cached); // ONLY used by COVERED
         UNUSED(affect_victim_tracker); // ONLY used by COVERED
+        UNUSED(miss_latency_us); // ONLY used by LA-Cache
 
         bool is_local_cached = isLocalCachedInternal_(key);
         if (!is_local_cached) // NOTE: NOT admit if key exists

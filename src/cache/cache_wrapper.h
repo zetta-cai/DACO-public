@@ -70,7 +70,7 @@ namespace covered
         // (3) Local edge cache management
 
         bool needIndependentAdmit(const Key& key, const Value& value) const;
-        void admit(const Key& key, const Value& value, const bool& is_neighbor_cached, const bool& is_valid, const uint32_t& beacon_edgeidx, bool& affect_victim_tracker);
+        void admit(const Key& key, const Value& value, const bool& is_neighbor_cached, const bool& is_valid, const uint32_t& beacon_edgeidx, bool& affect_victim_tracker, const uint64_t& miss_latency_us = 0);
         void evict(std::unordered_map<Key, Value, KeyHasher>& victims, const uint64_t& required_size); // NOTE: single-thread function; eviction MUST affect victim tracker due to evicting objects with least local rewards (i.e., local synced victims)
 
         // (4) Other functions

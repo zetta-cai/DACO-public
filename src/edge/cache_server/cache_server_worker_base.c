@@ -246,6 +246,7 @@ namespace covered
         bool is_cooperative_cached = false;
         bool is_cooperative_valid = false;
         bool is_cooperative_cached_and_valid = false;
+        uint32_t get_cooperative_cache_latency_us = 0;
         Edgeset best_placement_edgeset; // Used for non-blocking placement notification if need hybrid data fetching for COVERED
         bool need_hybrid_fetching = false;
         FastPathHint fast_path_hint;
@@ -269,7 +270,7 @@ namespace covered
             }
 
             struct timespec get_cooperative_cache_end_timestamp = Util::getCurrentTimespec();
-            uint32_t get_cooperative_cache_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(get_cooperative_cache_end_timestamp, get_cooperative_cache_start_timestamp));
+            get_cooperative_cache_latency_us = static_cast<uint32_t>(Util::getDeltaTimeUs(get_cooperative_cache_end_timestamp, get_cooperative_cache_start_timestamp));
             event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_GET_COOPERATIVE_CACHE_EVENT_NAME, get_cooperative_cache_latency_us); // Add intermediate event if with event tracking
 
             #ifdef DEBUG_CACHE_SERVER_WORKER
@@ -308,7 +309,24 @@ namespace covered
         event_list.addEvent(Event::EDGE_CACHE_SERVER_WORKER_UPDATE_INVALID_LOCAL_CACHE_EVENT_NAME, update_invalid_local_cache_latency_us); // Add intermediate event if with event tracking
 
         // After fetching value from local/neighbor/cloud
-        is_finish = afterFetchingValue_(tmp_key, tmp_value, is_tracked_before_fetch_value, is_cooperative_cached, best_placement_edgeset, need_hybrid_fetching, fast_path_hint, total_bandwidth_usage, event_list, extra_common_msghdr); // NOTE: MUST after tryToUpdateInvalidLocalEdgeCache_() for potential fast-path placement calculation for COVERED
+        uint64_t miss_latency_us = 0;
+        if (is_cooperative_cached_and_valid) // Remote hit
+        {
+            miss_latency_us = get_cooperative_cache_latency_us;
+            if (extra_common_msghdr.isSkipPropagationLatency()) // Compensate propagation latency for warmup speedup
+            {
+                miss_latency_us += tmp_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency();
+            }
+        }
+        else if (!is_local_cached_and_valid) // Local cache miss without remote hit = cloud access
+        {
+            miss_latency_us = get_cloud_latency_us;
+            if (extra_common_msghdr.isSkipPropagationLatency()) // Compensate propagation latency for warmup speedup
+            {
+                miss_latency_us += tmp_edge_wrapper_ptr->getEdgeTocloudPropagationSimulatorParamPtr()->genPropagationLatency();
+            }
+        }
+        is_finish = afterFetchingValue_(tmp_key, tmp_value, is_tracked_before_fetch_value, is_cooperative_cached, best_placement_edgeset, need_hybrid_fetching, fast_path_hint, total_bandwidth_usage, event_list, extra_common_msghdr, miss_latency_us); // NOTE: MUST after tryToUpdateInvalidLocalEdgeCache_() for potential fast-path placement calculation for COVERED
         if (is_finish)
         {
             return is_finish;
@@ -1021,7 +1039,12 @@ namespace covered
         }
 
         // After writing value into cloud and local edge cache if any
-        is_finish = afterWritingValue_(tmp_key, tmp_value, lock_result, total_bandwidth_usage, event_list, extra_common_msghdr);
+        uint64_t miss_latency_us = write_cloud_latency_us;
+        if (extra_common_msghdr.isSkipPropagationLatency()) // Compensate propagation latency for warmup speedup
+        {
+            miss_latency_us += tmp_edge_wrapper_ptr->getEdgeTocloudPropagationSimulatorParamPtr()->genPropagationLatency();
+        }
+        is_finish = afterWritingValue_(tmp_key, tmp_value, lock_result, total_bandwidth_usage, event_list, extra_common_msghdr, miss_latency_us);
         if (is_finish) // Edge node is NOT running
         {
             return is_finish;
@@ -1630,7 +1653,7 @@ namespace covered
 
     // (4.1) Admit uncached objects in local edge cache
 
-    bool CacheServerWorkerBase::tryToTriggerIndependentAdmission_(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr) const
+    bool CacheServerWorkerBase::tryToTriggerIndependentAdmission_(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr, const uint64_t& miss_latency_us) const
     {
         checkPointers_();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -1649,13 +1672,13 @@ namespace covered
             Util::dumpVariablesForDebug(base_instance_name_, 11, "independent admission;", "keystr:", key.getKeystr().c_str(), "keysize:", std::to_string(key.getKeyLength()).c_str(), "is value deleted:", Util::toString(value.isDeleted()).c_str(), "value size:", Util::toString(value.getValuesize()).c_str(), "used_bytes_before_admit:", std::to_string(used_bytes_before_admit).c_str());
             #endif
 
-            is_finish = admitObject_(key, value, total_bandwidth_usage, event_list, extra_common_msghdr);
+            is_finish = admitObject_(key, value, total_bandwidth_usage, event_list, extra_common_msghdr, miss_latency_us);
         }
 
         return is_finish;
     }
 
-    bool CacheServerWorkerBase::admitObject_(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr) const
+    bool CacheServerWorkerBase::admitObject_(const Key& key, const Value& value, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr, const uint64_t& miss_latency_us) const
     {
         checkPointers_();
         CacheServerBase* tmp_cache_server_ptr = cache_server_worker_param_ptr_->getCacheServerPtr();
@@ -1677,7 +1700,7 @@ namespace covered
             }
         }
         const bool unused_is_neighbor_cached = false; // NOTE: NEVER used by baselines
-        tmp_cache_server_ptr->admitLocalEdgeCache_(key, value, unused_is_neighbor_cached, !is_being_written); // valid if not being written
+        tmp_cache_server_ptr->admitLocalEdgeCache_(key, value, unused_is_neighbor_cached, !is_being_written, miss_latency_us); // valid if not being written
         UNUSED(unused_is_neighbor_cached);
 
         // OBSOLETE: unreasonable due to incorrect trace partition (NOT used now)

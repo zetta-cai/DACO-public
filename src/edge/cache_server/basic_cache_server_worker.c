@@ -251,7 +251,7 @@ namespace covered
 
     // (1.5) After getting value from local/neighbor/cloud
 
-    bool BasicCacheServerWorker::afterFetchingValue_(const Key& key, const Value& value, const bool& is_tracked_before_fetch_value, const bool& is_cooperative_cached, const Edgeset& best_placement_edgeset, const bool& need_hybrid_fetching, const FastPathHint& fast_path_hint, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr) const
+    bool BasicCacheServerWorker::afterFetchingValue_(const Key& key, const Value& value, const bool& is_tracked_before_fetch_value, const bool& is_cooperative_cached, const Edgeset& best_placement_edgeset, const bool& need_hybrid_fetching, const FastPathHint& fast_path_hint, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr, const uint64_t& miss_latency_us) const
     {
         checkPointers_();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -275,7 +275,7 @@ namespace covered
         // NOTE: for BestGuess, the closest node will trigger best-guess placement via beacon node, w/o independent decision
         // NOTE: for MagNet, trigger independent admission only if value is fetched from cloud (CacheWrapper::needIndependentAdmit() will return false if value is locally cached)
         struct timespec independent_admission_start_timestamp = Util::getCurrentTimespec();
-        is_finish = tryToTriggerIndependentAdmission_(key, value, total_bandwidth_usage, event_list, extra_common_msghdr); // Add events of intermediate responses if with event tracking
+        is_finish = tryToTriggerIndependentAdmission_(key, value, total_bandwidth_usage, event_list, extra_common_msghdr, miss_latency_us); // Add events of intermediate responses if with event tracking
         if (is_finish)
         {
             return is_finish;
@@ -568,7 +568,7 @@ namespace covered
 
     // (2.5) After writing value into cloud and local edge cache if any
 
-    bool BasicCacheServerWorker::afterWritingValue_(const Key& key, const Value& value, const LockResult& lock_result, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr) const
+    bool BasicCacheServerWorker::afterWritingValue_(const Key& key, const Value& value, const LockResult& lock_result, BandwidthUsage& total_bandwidth_usage, EventList& event_list, const ExtraCommonMsghdr& extra_common_msghdr, const uint64_t& miss_latency_us) const
     {
         checkPointers_();
         EdgeWrapperBase* tmp_edge_wrapper_ptr = cache_server_worker_param_ptr_->getCacheServerPtr()->getEdgeWrapperPtr();
@@ -581,7 +581,7 @@ namespace covered
         // NOTE: for COVERED, beacon node will tell the edge node whether to admit or not, w/o independent decision
         // NOTE: for BestGuess, the closest node will trigger best-guess placement via beacon node, w/o independent decision
         struct timespec independent_admission_start_timestamp = Util::getCurrentTimespec();
-        is_finish = tryToTriggerIndependentAdmission_(key, value, total_bandwidth_usage, event_list, extra_common_msghdr);
+        is_finish = tryToTriggerIndependentAdmission_(key, value, total_bandwidth_usage, event_list, extra_common_msghdr, miss_latency_us);
         if (is_finish) // Edge node is NOT running
         {
             return is_finish;

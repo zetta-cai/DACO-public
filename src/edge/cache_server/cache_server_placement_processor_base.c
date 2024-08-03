@@ -169,7 +169,8 @@ namespace covered
         }
 
         // Admit into local edge cache for the received remote placement notification
-        tmp_cache_server_ptr->admitLocalEdgeCache_(key, value, is_neighbor_cached, tmp_is_valid); // May update local synced victims
+        const uint64_t unused_miss_latency_us = 0; // ONLY used for LA-Cache, while here is BestGuess or COVERED
+        tmp_cache_server_ptr->admitLocalEdgeCache_(key, value, is_neighbor_cached, tmp_is_valid, unused_miss_latency_us); // May update local synced victims
 
         // Perform background cache eviction in a blocking manner for consistent directory information (note that cache eviction happens after non-blocking placement notification)
         // NOTE: we update aggregated uncached popularity yet DISABLE recursive cache placement for metadata preservation during cache eviction
@@ -204,7 +205,8 @@ namespace covered
         const Value tmp_value = local_cache_admission_item.getValue();
         const bool is_neighbor_cached = local_cache_admission_item.isNeighborCached();
         const bool is_valid = local_cache_admission_item.isValid();
-        tmp_cache_server_ptr->admitLocalEdgeCache_(tmp_key, tmp_value, is_neighbor_cached, is_valid); // May update local synced victims
+        const uint64_t unused_miss_latency_us = 0; // ONLY used for LA-Cache, while here is BestGuess or COVERED
+        tmp_cache_server_ptr->admitLocalEdgeCache_(tmp_key, tmp_value, is_neighbor_cached, is_valid, unused_miss_latency_us); // May update local synced victims
 
         // Perform background cache eviction in a blocking manner for consistent directory information (note that cache eviction happens after non-blocking placement notification)
         // NOTE: we update aggregated uncached popularity yet DISABLE recursive cache placement for metadata preservation during cache eviction

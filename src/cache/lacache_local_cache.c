@@ -93,12 +93,15 @@ namespace covered
         return need_admit;
     }
 
-    void LacacheLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, const bool& is_neighbor_cached, bool& affect_victim_tracker, bool& is_successful)
+    void LacacheLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, const bool& is_neighbor_cached, bool& affect_victim_tracker, bool& is_successful, const uint64_t& miss_latency_us)
     {
         UNUSED(is_neighbor_cached); // ONLY used by COVERED
         UNUSED(affect_victim_tracker); // ONLY used by COVERED
+
+        // NOTE: ONLY BestGuess and COVERED will use cache server placement processor for admission and hence no miss latency, while LA-Cache will only perform independent admission and hence positive miss latency
+        assert(miss_latency_us > 0);
         
-        lacache_cache_ptr_->admit(key, value);
+        lacache_cache_ptr_->admit(key, value, miss_latency_us);
         is_successful = true;
 
         return;
