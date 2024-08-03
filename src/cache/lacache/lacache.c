@@ -184,8 +184,11 @@ namespace covered
 	const double LACache::BWidth = 104857600.0;
 	const int LACache::SAMPLE_SIZE = 100;
 
-	LACache::LACache() : size_(0), timer_(0), randgen_(0)
+	LACache::LACache() : size_(0), timer_(0), randgen_ptr_(NULL)
 	{
+		randgen_ptr_ = new std::mt19937_64(0);
+		assert(randgen_ptr_ != NULL);
+
 		// evictrule_entry_map_.clear();
 
 		entries_.clear();
@@ -195,7 +198,12 @@ namespace covered
 		size_ += sizeof(uint64_t); // For timer_
 	}
 
-	LACache::~LACache() {}
+	LACache::~LACache()
+	{
+		assert(randgen_ptr_ != NULL);
+		delete randgen_ptr_;
+		randgen_ptr_ = NULL;
+	}
 
 	bool LACache::get(const Key& key, Value& value)
 	{
@@ -371,7 +379,7 @@ namespace covered
 			{
 				// Sample without replacement
 				sampled_cacheinfos.resize(SAMPLE_SIZE);
-				std::sample(entries_.begin(), entries_.end(), std::back_inserter(sampled_cacheinfos), SAMPLE_SIZE, randgen_);
+				std::sample(entries_.begin(), entries_.end(), std::back_inserter(sampled_cacheinfos), SAMPLE_SIZE, *randgen_ptr_); // Not sure why use randgen_ cannot pass compilation
 
 				sampled_cacheinfos_ptr = &sampled_cacheinfos;
 			}

@@ -19,6 +19,7 @@ include src/mk/cache/fifo.mk
 include src/mk/cache/frozenhot.mk
 include src/mk/cache/glcache.mk
 include src/mk/cache/gdsf.mk
+include src/mk/cache/lacache.mk
 include src/mk/cache/lfu.mk
 include src/mk/cache/lhd.mk
 include src/mk/cache/lrb.mk

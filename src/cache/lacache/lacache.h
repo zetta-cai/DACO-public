@@ -146,7 +146,7 @@ namespace covered {
 		uint64_t timer_;
 
 		// For random sampling
-		std::mt19937_64 randgen_;
+		std::mt19937_64* randgen_ptr_;
 
 		// For cached objects (OBSOLETE due to time-varying rank scores)
 		// std::multimap<double, CacheInfo> evictrule_entry_map_; // Store key-value pair for each rank score (ordered by rank scores in ascending order)
