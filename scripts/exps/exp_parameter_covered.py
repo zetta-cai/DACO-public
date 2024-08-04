@@ -16,8 +16,8 @@ round_indexes = range(0, Common.exp_round_number) # [0, ..., exp_round_number-1]
 
 # Prepare settings for current experiment
 exp_default_settings = {
-    "clientcnt": 4,
-    "edgecnt": 4,
+    "clientcnt": 12,
+    "edgecnt": 12,
     "keycnt": 1000000,
     "capacity_mb": 1024,
     "cache_name": "covered",

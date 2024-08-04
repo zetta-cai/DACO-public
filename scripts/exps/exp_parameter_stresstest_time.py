@@ -16,8 +16,8 @@ round_indexes = range(0, Common.exp_round_number) # [0, ..., exp_round_number-1]
 
 # Prepare settings for current experiment
 exp_default_settings = {
-    "clientcnt": 4,
-    "edgecnt": 4,
+    "clientcnt": 12,
+    "edgecnt": 12,
     "keycnt": 1000000,
     "capacity_mb": 1024,
     "cache_name": "covered",
@@ -25,7 +25,8 @@ exp_default_settings = {
     "stresstest_duration_sec": 30,
 }
 # NOTE: run lrb, glcache, and segcache at last due to slow warmup issue of lrb (may be caused by model retraining), and memory usage issue of segcache and glcache (may be caused by bugs on segment-level memory management) -> TODO: if no results of the above baselines due to program crashes, please provide more DRAM memory (or swap memory), and run them again with sufficient time (may be in units of hours or days) for warmup and cache stable performance
-cache_names = ["covered", "shark", "bestguess", "arc+", "cachelib+", "fifo+", "frozenhot+", "gdsf+", "lfu+", "lhd+", "s3fifo+", "sieve+", "wtinylfu+", "lrb+", "glcache+", "segcache+"]
+# cache_names = ["covered", "shark", "bestguess", "arc+", "cachelib+", "fifo+", "frozenhot+", "gdsf+", "lfu+", "lhd+", "s3fifo+", "sieve+", "wtinylfu+", "lrb+", "glcache+", "segcache+"]
+cache_names = ["covered", "shark+gdsf", "shark+lhd"] # TMPEVAL: for fast evaluation
 # NOTE: NO need to run 30s, which is the same as previous experiments (performance against existing methods and extended methods)
 stresstest_time_list = [300, 3000] # 5min, 50min
 
