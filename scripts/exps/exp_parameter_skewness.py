@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# exp_performance_skewness: performance evaluation for different skewness parameters.
+# exp_parameter_skewness: parameter analysis for different skewness parameters.
 
 from .utils.prototype import *
 
