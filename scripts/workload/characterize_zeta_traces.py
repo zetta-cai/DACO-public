@@ -1,17 +1,15 @@
 #!/usr/bin/env python3
-# characterize_traces: characterize replayed trace files by Zipfian distribution to extract characteristics (including Zipfian constant, key size distribution, and value size distribution) for geo-distributed evaluation.
+# characterize_zeta_traces: characterize replayed trace files by Zeta-based Zipfian distribution to extract characteristics (including Zipfian constant, key size distribution, and value size distribution) for geo-distributed evaluation.
 
 import struct
 import gc
 
 from .utils.trace_loader import *
-# from .utils.zeta_curvefit import *
-from .utils.zipf_curvefit import *
+from .utils.zeta_curvefit import *
 from ..exps.utils.exputil import *
 
 # Zeta-based Zipfian constant: [1.012, 1.029, 1.0095, 1.0096]
-# Power-law Zipfian constant: [TODO, TODO, TODO, TODO]
-workload_names = [TraceLoader.WIKITEXT_WORKLOADNAME, TraceLoader.WIKIIMAGE_WORKLOADNAME, TraceLoader.TENCENTPHOTO1_WORKLOADNAME, TraceLoader.TENCENTPHOTO2_WORKLOADNAME]
+workload_names = [TraceLoader.ZETA_WIKITEXT_WORKLOADNAME, TraceLoader.ZETA_WIKIIMAGE_WORKLOADNAME, TraceLoader.ZETA_TENCENTPHOTO1_WORKLOADNAME, TraceLoader.ZETA_TENCENTPHOTO2_WORKLOADNAME]
 
 # Get dirpath of trace files
 client_machine_idxes = JsonUtil.getValueForKeystr(Common.scriptname, "client_machine_indexes")
@@ -36,13 +34,13 @@ for tmp_workload_name in workload_names:
     # If need to generate the characteristics file
     if is_generate_characteristic_file:
         # Get filename list based on the workload name
-        if tmp_workload_name == TraceLoader.WIKITEXT_WORKLOADNAME:
+        if tmp_workload_name == TraceLoader.ZETA_WIKITEXT_WORKLOADNAME:
             tmp_filename_list = JsonUtil.getValueForKeystr(Common.scriptname, "trace_dirpath_relative_wikitext_trace_filepaths")
-        elif tmp_workload_name == TraceLoader.WIKIIMAGE_WORKLOADNAME:
+        elif tmp_workload_name == TraceLoader.ZETA_WIKIIMAGE_WORKLOADNAME:
             tmp_filename_list = JsonUtil.getValueForKeystr(Common.scriptname, "trace_dirpath_relative_wikiimage_trace_filepaths")
-        elif tmp_workload_name == TraceLoader.TENCENTPHOTO1_WORKLOADNAME:
+        elif tmp_workload_name == TraceLoader.ZETA_TENCENTPHOTO1_WORKLOADNAME:
             tmp_filename_list = JsonUtil.getValueForKeystr(Common.scriptname, "trace_dirpath_relative_tencentphoto1_trace_filepaths")
-        elif tmp_workload_name == TraceLoader.TENCENTPHOTO2_WORKLOADNAME:
+        elif tmp_workload_name == TraceLoader.ZETA_TENCENTPHOTO2_WORKLOADNAME:
             tmp_filename_list = JsonUtil.getValueForKeystr(Common.scriptname, "trace_dirpath_relative_tencentphoto2_trace_filepaths")
         else:
             LogUtil.die(Common.scriptname, "unknown workload {}!".format(workload_name))
@@ -52,8 +50,7 @@ for tmp_workload_name in workload_names:
 
         # Curvefit the statistics by Zipfian distribution for the workload name
         tmp_sorted_frequency_list = tmp_trace_loader.getSortedFrequencyList()
-        # tmp_zipf_curvefit = ZetaCurvefit(tmp_sorted_frequency_list)
-        tmp_zipf_curvefit = ZipfCurvefit(tmp_sorted_frequency_list)
+        tmp_zipf_curvefit = ZetaCurvefit(tmp_sorted_frequency_list)
 
         # Dump the characteristics (Zipfian constant, key size distribution, and value size distribution) for the workload name
         LogUtil.prompt(Common.scriptname, "dump characteristics for workload {} into {}...".format(tmp_workload_name, tmp_workload_characteristic_filepath))

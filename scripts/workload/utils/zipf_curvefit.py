@@ -6,9 +6,9 @@ from scipy.optimize import curve_fit
 
 from ...common import *
 
-def zipf_func(x, a):
-    # x is object rank (>= 1) and a is Zipfian constant
-    return 1.0/(x**a)
+def zipf_func(x, a, c):
+    # x is object rank (>= 1) and a is Zipfian constant (C is a constant scaling factor to convert relative frequency into probability)
+    return 1.0/(x**a) * c
 
 class ZipfCurvefit:
 
@@ -37,8 +37,14 @@ class ZipfCurvefit:
         LogUtil.prompt(Common.scriptname, "Perform curvefitting...")
         curvefit_result = curve_fit(zipf_func, sampled_ranks_array, sampled_probabilities_array, p0=[1.1])
         self.zipf_constant_ = curvefit_result[0][0]
+        self.zipf_scaling_factor_ = curvefit_result[0][1]
         LogUtil.dump(Common.scriptname, "Zipfian constant: {}".format(self.zipf_constant_))
+        LogUtil.dump(Common.scriptname, "Zipfian scaling factor: {}".format(self.zipf_scaling_factor_))
 
     # Get Zipfian constant
     def getZipfConstant(self):
         return self.zipf_constant_
+    
+    # Get Zipfian scaling factor
+    def getZipfScalingFactor(self):
+        return self.zipf_scaling_factor_

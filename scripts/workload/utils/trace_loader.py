@@ -10,20 +10,24 @@ class TraceLoader:
     # For Wikipedia CDN traces
     TSV_DELIMITER = "\t" # Tab-separated values used by Wikipedia Text/Image trace files
     # For Wikipedia Text trace files
-    WIKITEXT_WORKLOADNAME = "zeta_wikitext"
+    ZIPF_WIKITEXT_WORKLOADNAME = "zipf_wikitext"
+    ZETA_WIKITEXT_WORKLOADNAME = "zeta_wikitext"
     WIKITEXT_COLUMNCNT = 4
     WIKITEXT_KEY_COLUMNIDX = 1
     WIKITEXT_VALSIZE_COLUMNIDX = 2
     # For Wikipedia Image trace files
-    WIKIIMAGE_WORKLOADNAME = "zeta_wikiimage"
+    ZIPF_WIKIIMAGE_WORKLOADNAME = "zipf_wikiimage"
+    ZETA_WIKIIMAGE_WORKLOADNAME = "zeta_wikiimage"
     WIKIIMAGE_COLUMNCNT = 5
     WIKIIMAGE_KEY_COLUMNIDX = 1
     WIKIIMAGE_VALSIZE_COLUMNIDX = 3
 
     # For Tencent photo caching trace
     LOG_DELIMITER = " " # Space-separated values used by Tencent photo caching trace files
-    TENCENTPHOTO1_WORKLOADNAME = "zeta_tencentphoto1"
-    TENCENTPHOTO2_WORKLOADNAME = "zeta_tencentphoto2"
+    ZIPF_TENCENTPHOTO1_WORKLOADNAME = "zipf_tencentphoto1"
+    ZIPF_TENCENTPHOTO2_WORKLOADNAME = "zipf_tencentphoto2"
+    ZETA_TENCENTPHOTO1_WORKLOADNAME = "zeta_tencentphoto1"
+    ZETA_TENCENTPHOTO2_WORKLOADNAME = "zeta_tencentphoto2"
     TENCENTPHOTO_COLUMNCNT = 8
     TENCENTPHOTO_KEY_COLUMNIDX = 1
     TENCENTPHOTO_IMGFORMAT_COLUMNIDX = 2
@@ -55,11 +59,11 @@ class TraceLoader:
             if not os.path.exists(tmp_filepath):
                 LogUtil.die(Common.scriptname, "file {} does not exist for workload {}!".format(tmp_filepath, workload_name))
 
-            if workload_name == TraceLoader.WIKITEXT_WORKLOADNAME:
+            if workload_name == TraceLoader.ZETA_WIKITEXT_WORKLOADNAME or workload_name == TraceLoader.ZIPF_WIKITEXT_WORKLOADNAME:
                 self.loadFileOfWikiText_(tmp_filepath)
-            elif workload_name == TraceLoader.WIKIIMAGE_WORKLOADNAME:
+            elif workload_name == TraceLoader.ZETA_WIKIIMAGE_WORKLOADNAME or workload_name == TraceLoader.ZIPF_WIKIIMAGE_WORKLOADNAME:
                 self.loadFileOfWikiImage_(tmp_filepath)
-            elif workload_name == TraceLoader.TENCENTPHOTO1_WORKLOADNAME or workload_name == TraceLoader.TENCENTPHOTO2_WORKLOADNAME:
+            elif workload_name == TraceLoader.ZETA_TENCENTPHOTO1_WORKLOADNAME or workload_name == TraceLoader.ZETA_TENCENTPHOTO2_WORKLOADNAME or workload_name == TraceLoader.ZIPF_TENCENTPHOTO1_WORKLOADNAME or workload_name == TraceLoader.ZIPF_TENCENTPHOTO2_WORKLOADNAME:
                 self.loadFileOfTencentPhoto_(tmp_filepath)
             else:
                 LogUtil.die(Common.scriptname, "unknown workload {}!".format(workload_name))
@@ -85,11 +89,11 @@ class TraceLoader:
         max_keysize = -1
         avg_keysize = 0
         for tmp_key in self.statistics_:
-            if self.workload_name_ == TraceLoader.WIKITEXT_WORKLOADNAME:
+            if self.workload_name_ == TraceLoader.ZETA_WIKITEXT_WORKLOADNAME or self.workload_name_ == TraceLoader.ZIPF_WIKITEXT_WORKLOADNAME:
                 tmp_keysize = 8 # Wikipedia Text uses bigint
-            elif self.workload_name_ == TraceLoader.WIKIIMAGE_WORKLOADNAME:
+            elif self.workload_name_ == TraceLoader.ZETA_WIKIIMAGE_WORKLOADNAME or self.workload_name_ == TraceLoader.ZIPF_WIKIIMAGE_WORKLOADNAME:
                 tmp_keysize = 8 # Wikipedia Image uses bigint
-            elif self.workload_name_ == TraceLoader.TENCENTPHOTO1_WORKLOADNAME or self.workload_name_ == TraceLoader.TENCENTPHOTO2_WORKLOADNAME:
+            elif self.workload_name_ == TraceLoader.ZETA_TENCENTPHOTO1_WORKLOADNAME or self.workload_name_ == TraceLoader.ZETA_TENCENTPHOTO2_WORKLOADNAME or self.workload_name_ == TraceLoader.ZIPF_TENCENTPHOTO1_WORKLOADNAME or self.workload_name_ == TraceLoader.ZIPF_TENCENTPHOTO2_WORKLOADNAME:
                 tmp_keysize = 20 # Tencent Photo uses 20B checksum
             else:
                 tmp_keysize = len(tmp_key)

@@ -229,7 +229,7 @@ namespace covered
     void ZetaWorkloadWrapper::loadZetaCharacteristicsFile_()
     {
         // NOTE: MUST be the same as characteristics filepath in scripts/workload/characterize_zeta_traces.py
-        const std::string zeta_characteristics_filepath = Config::getTraceDirpath() + "/" + getWorkloadName_() + ".characteristics.zeta";
+        const std::string zeta_characteristics_filepath = Config::getTraceDirpath() + "/" + getWorkloadName_() + ".characteristics";
 
         // Check existance of characteristics file
         if (!Util::isFileExist(zeta_characteristics_filepath, true))
