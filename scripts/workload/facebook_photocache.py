@@ -8,7 +8,7 @@ from scipy.special import zetac
 
 from ..common import *
 
-def zipf_func(x, a):
+def zeta_func(x, a):
     return (x**-a)/zetac(a)
 
 # NOTE: the numbers come from the paper of SOSP'13 An Analysis of Facebook Photo Caching
@@ -40,7 +40,7 @@ pop_x = np.array([10**0, 10**1, 10**2, 10**3, 10**4, 10**5, 10**6]) # NOTE: rank
 pop_y = np.array([10**6, 10**5, 10**4, 10**3.1, 10**2.2, 10**1.2, 10**0])
 # NOTE: [ERROR] we should NOT use pop_y.sum() as the total frequency information to get probabilities for curvefitting!!!
 pop_y = pop_y/pop_y.sum()
-result = curve_fit(zipf_func, pop_x, pop_y, p0=[1.1])
+result = curve_fit(zeta_func, pop_x, pop_y, p0=[1.1])
 zipf_a = result[0][0] # 1.67
 
 # (4) Generate dataset

@@ -1,4 +1,4 @@
-#include "workload/zeta_workload_wrapper.h"
+#include "workload/zipf_workload_wrapper.h"
 
 #include <assert.h>
 #include <memory> // std::make_unique
@@ -8,25 +8,23 @@
 
 namespace covered
 {
-    const std::string ZetaWorkloadWrapper::kClassName("ZetaWorkloadWrapper");
-
-    const uint32_t ZetaWorkloadWrapper::RIEMANN_ZETA_PRECISION = 1000000; // Precision for Riemann Zeta function calculation
+    const std::string ZipfWorkloadWrapper::kClassName("ZipfWorkloadWrapper");
 
     //, zipf_alpha_(zipf_alpha)
-    ZetaWorkloadWrapper::ZetaWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const float& zipf_alpha) : WorkloadWrapperBase(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role)
+    ZipfWorkloadWrapper::ZipfWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const float& zipf_alpha) : WorkloadWrapperBase(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role)
     {
-        // NOTE: perclient_opcnt is ONLY used by Zipfian/original Facebook CDN workload and Facebook photo caching workload (OBSOLETE) to represent workload distribution by pre-generated workload items (see src/workload/cachebench/workload_generator.* and src/workload/fbphoto_workload_wrapper.*), yet NOT used by others including Zipfian Wikipedia traces with Zeta workload distribution (NO need to pre-generate workload items for approximate workload distribution representation), TRAGEN-generated Akamai traces with workload requests loaded from files, and replayed Wikipedia traces with fixed number of sampled requests (OBSOLETE)
+        // NOTE: perclient_opcnt is ONLY used by Zipfian/original Facebook CDN workload and Facebook photo caching workload (OBSOLETE) to represent workload distribution by pre-generated workload items (see src/workload/cachebench/workload_generator.* and src/workload/fbphoto_workload_wrapper.*), yet NOT used by others including Zipfian Wikipedia traces with power-law workload distribution (NO need to pre-generate workload items for approximate workload distribution representation), TRAGEN-generated Akamai traces with workload requests loaded from files, and replayed Wikipedia traces with fixed number of sampled requests (OBSOLETE)
 
         // The way similar to cachelib for random seeds: 0 to generate the same dataset items shared by different clients, client idx to pre-generate workload items in each client for approximate workload distribution, and global worker idx to select pre-generated workload items uniformly as workloads of each worker
-        // Here we use another way: 0 to generate the same dataset items shared by different clients and global worker idx to select dataset items based on Zeta workload distribution as workloads of each worker
+        // Here we use another way: 0 to generate the same dataset items shared by different clients and global worker idx to select dataset items based on power-law workload distribution as workloads of each worker
         // TODO: Maybe change to the way similar to cachelib for consistent implementation, yet this is just impl trick and should NOT affect evaluation results
 
         UNUSED(perclient_opcnt);
 
-        // NOTE: Zeta-based Zipfian workloads are not replayed traces and NO need for trace preprocessing (also NO need to dump dataset file)
+        // NOTE: power-law Zipfian workloads are not replayed traces and NO need for trace preprocessing (also NO need to dump dataset file)
         assert(!needAllTraceFiles_()); // Must NOT trace preprocessor
 
-        // Differentiate Zeta workload wrapper in different clients
+        // Differentiate Zipf workload wrapper in different clients
         std::ostringstream oss;
         oss << kClassName << " client" << client_idx;
         instance_name_ = oss.str();
@@ -38,14 +36,14 @@ namespace covered
         average_dataset_valuesize_ = 0;
         min_dataset_valuesize_ = 0;
         max_dataset_valuesize_ = 0;
-        loadZetaCharacteristicsFile_(); // Load characteristics file to update dataset keys, probs, value sizes, and dataset statistics (required by all roles including clients, dataset loader, and cloud)
+        loadZipfCharacteristicsFile_(); // Load characteristics file to update dataset keys, probs, value sizes, and dataset statistics (required by all roles including clients, dataset loader, and cloud)
 
         // For clients
         client_worker_item_randgen_ptrs_.resize(perclient_workercnt, NULL);
         client_worker_reqdist_ptrs_.resize(perclient_workercnt, NULL);
     }
 
-    ZetaWorkloadWrapper::~ZetaWorkloadWrapper()
+    ZipfWorkloadWrapper::~ZipfWorkloadWrapper()
     {
         // For clients, dataset loader, and cloud
 
@@ -69,7 +67,7 @@ namespace covered
         }
     }
 
-    WorkloadItem ZetaWorkloadWrapper::generateWorkloadItem(const uint32_t& local_client_worker_idx)
+    WorkloadItem ZipfWorkloadWrapper::generateWorkloadItem(const uint32_t& local_client_worker_idx)
     {
         checkIsValid_();
         checkPointers_();
@@ -82,7 +80,7 @@ namespace covered
         assert(request_randgen_ptr != NULL);
         std::discrete_distribution<uint32_t>* request_dist_ptr = client_worker_reqdist_ptrs_[local_client_worker_idx];
         assert(request_dist_ptr != NULL);
-        const uint32_t tmp_key_index = (*request_dist_ptr)(*request_randgen_ptr); // NOTE: here we directly use Zeta distribution to select item from dataset as workload item, instead of selecting item from pre-generated workload items (approximate workload distribution as in src/workload/fbphoto_workload_wrapper.c)
+        const uint32_t tmp_key_index = (*request_dist_ptr)(*request_randgen_ptr); // NOTE: here we directly use power-law distribution to select item from dataset as workload item, instead of selecting item from pre-generated workload items (approximate workload distribution as in src/workload/fbphoto_workload_wrapper.c)
         assert(tmp_key_index < dataset_keys_.size());
 
         // Get key
@@ -91,7 +89,7 @@ namespace covered
         return WorkloadItem(tmp_key, Value(dataset_valsizes_[tmp_key_index]), WorkloadItemType::kWorkloadItemGet); // NOT found read-write ratio in the paper -> treat as read-only for all methods with fair comparisons
     }
 
-    uint32_t ZetaWorkloadWrapper::getPracticalKeycnt() const
+    uint32_t ZipfWorkloadWrapper::getPracticalKeycnt() const
     {
         checkIsValid_();
         checkPointers_();
@@ -101,7 +99,7 @@ namespace covered
         return dataset_keys_.size();
     }
 
-    WorkloadItem ZetaWorkloadWrapper::getDatasetItem(const uint32_t itemidx)
+    WorkloadItem ZipfWorkloadWrapper::getDatasetItem(const uint32_t itemidx)
     {
         checkIsValid_();
         checkPointers_();
@@ -116,7 +114,7 @@ namespace covered
 
     // Get average/min/max dataset key/value size
 
-    double ZetaWorkloadWrapper::getAvgDatasetKeysize() const
+    double ZipfWorkloadWrapper::getAvgDatasetKeysize() const
     {
         checkIsValid_();
         checkPointers_();
@@ -126,7 +124,7 @@ namespace covered
         return average_dataset_keysize_;
     }
     
-    double ZetaWorkloadWrapper::getAvgDatasetValuesize() const
+    double ZipfWorkloadWrapper::getAvgDatasetValuesize() const
     {
         checkIsValid_();
         checkPointers_();
@@ -136,7 +134,7 @@ namespace covered
         return average_dataset_valuesize_;
     }
 
-    uint32_t ZetaWorkloadWrapper::getMinDatasetKeysize() const
+    uint32_t ZipfWorkloadWrapper::getMinDatasetKeysize() const
     {
         checkIsValid_();
         checkPointers_();
@@ -146,7 +144,7 @@ namespace covered
         return min_dataset_keysize_;
     }
 
-    uint32_t ZetaWorkloadWrapper::getMinDatasetValuesize() const
+    uint32_t ZipfWorkloadWrapper::getMinDatasetValuesize() const
     {
         checkIsValid_();
         checkPointers_();
@@ -156,7 +154,7 @@ namespace covered
         return min_dataset_valuesize_;
     }
 
-    uint32_t ZetaWorkloadWrapper::getMaxDatasetKeysize() const
+    uint32_t ZipfWorkloadWrapper::getMaxDatasetKeysize() const
     {
         checkIsValid_();
         checkPointers_();
@@ -166,7 +164,7 @@ namespace covered
         return max_dataset_keysize_;
     }
 
-    uint32_t ZetaWorkloadWrapper::getMaxDatasetValuesize() const
+    uint32_t ZipfWorkloadWrapper::getMaxDatasetValuesize() const
     {
         checkIsValid_();
         checkPointers_();
@@ -178,7 +176,7 @@ namespace covered
 
     // For warmup speedup
 
-    void ZetaWorkloadWrapper::quickDatasetGet(const Key& key, Value& value) const
+    void ZipfWorkloadWrapper::quickDatasetGet(const Key& key, Value& value) const
     {
         checkIsValid_();
         checkPointers_();
@@ -199,7 +197,7 @@ namespace covered
         return;
     }
 
-    void ZetaWorkloadWrapper::quickDatasetPut(const Key& key, const Value& value)
+    void ZipfWorkloadWrapper::quickDatasetPut(const Key& key, const Value& value)
     {
         checkIsValid_();
         checkPointers_();
@@ -219,35 +217,35 @@ namespace covered
         return;
     }
 
-    void ZetaWorkloadWrapper::quickDatasetDel(const Key& key)
+    void ZipfWorkloadWrapper::quickDatasetDel(const Key& key)
     {
         quickDatasetPut(key, Value()); // Use default value with is_deleted = true and value size = 0 as delete operation
 
         return;
     }
 
-    void ZetaWorkloadWrapper::loadZetaCharacteristicsFile_()
+    void ZipfWorkloadWrapper::loadZipfCharacteristicsFile_()
     {
-        // NOTE: MUST be the same as characteristics filepath in scripts/workload/characterize_zeta_traces.py
-        const std::string zeta_characteristics_filepath = Config::getTraceDirpath() + "/" + getWorkloadName_() + ".characteristics.zeta";
+        // NOTE: MUST be the same as characteristics filepath in scripts/workload/characterize_zipf_traces.py
+        const std::string zipf_characteristics_filepath = Config::getTraceDirpath() + "/" + getWorkloadName_() + ".characteristics.zipf";
 
         // Check existance of characteristics file
-        if (!Util::isFileExist(zeta_characteristics_filepath, true))
+        if (!Util::isFileExist(zipf_characteristics_filepath, true))
         {
             std::ostringstream oss;
-            oss << "failed to find the characteristics file " << zeta_characteristics_filepath << "!";
+            oss << "failed to find the characteristics file " << zipf_characteristics_filepath << "!";
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }
 
         // (1) Load characteristics file including Zipfian constant, key size histogram, and value size histogram
-        std::fstream* fs_ptr = Util::openFile(zeta_characteristics_filepath, std::ios_base::in | std::ios_base::binary);
+        std::fstream* fs_ptr = Util::openFile(zipf_characteristics_filepath, std::ios_base::in | std::ios_base::binary);
         assert(fs_ptr != NULL);
 
         // Load Zipfian constant
         double zipf_constant = 0.0;
         fs_ptr->read((char *)&zipf_constant, sizeof(double));
-        assert(zipf_constant > 1.0); // Zeta-based Zipfian constant must be larger than 1.0
+        assert(zipf_constant > 1.0); // Power-law Zipfian constant must be larger than 1.0
 
         // Load key size histogram
         uint32_t keysize_histogram_size = 0;
@@ -365,7 +363,6 @@ namespace covered
 
         // Generate per-rank key, prob, and value size
         std::mt19937_64 tmp_dataset_randgen(Util::DATASET_KVPAIR_GENERATION_SEED);
-        const double riemann_zeta_value = calcRiemannZeta_(zipf_constant);
         double total_prob = 0.0;
         for (uint32_t i = 0; i < dataset_size; i++)
         {
@@ -382,7 +379,7 @@ namespace covered
             dataset_keys_[i] = getKeystrFromKeyrank_(tmp_rank, tmp_keysize);
 
             // Generate prob
-            double tmp_prob = 1.0 / std::pow(static_cast<double>(tmp_rank), zipf_constant) / riemann_zeta_value;
+            double tmp_prob = 1.0 / std::pow(static_cast<double>(tmp_rank), zipf_constant);
             dataset_probs_[i] = tmp_prob;
             total_prob += tmp_prob;
 
@@ -435,7 +432,7 @@ namespace covered
         average_dataset_keysize_ /= dataset_size;
         average_dataset_valuesize_ /= dataset_size;
 
-        // TODO: Print debug info (to verify the same dataset across different clients and the same Zeta distribution between C++ and python)
+        // TODO: Print debug info (to verify the same dataset across different clients and the same power-law distribution between C++ and python)
         std::ostringstream oss;
         oss << "zipf_constant: " << zipf_constant << std::endl;
         oss << "dataset_keys_[0]: " << Key(dataset_keys_[0]).getKeyDebugstr() << "; dataset_probs_[0]: " << dataset_probs_[0] << "; dataset_valsizes_[0]: " << dataset_valsizes_[0] << std::endl;
@@ -459,7 +456,7 @@ namespace covered
         return;
     }
 
-    std::string ZetaWorkloadWrapper::getKeystrFromKeyrank_(const int64_t& keyrank, const uint32_t& keysize)
+    std::string ZipfWorkloadWrapper::getKeystrFromKeyrank_(const int64_t& keyrank, const uint32_t& keysize)
     {
         assert(keyrank >= 1);
         const uint32_t keyrank_bytecnt = sizeof(int64_t); // 8B
@@ -482,17 +479,7 @@ namespace covered
         return tmp_keystr;
     }
 
-    double ZetaWorkloadWrapper::calcRiemannZeta_(const double& zipf_constant)
-    {
-        double riemann_zeta_value = 0.0;
-        for (uint32_t i = 1; i <= RIEMANN_ZETA_PRECISION; i++)
-        {
-            riemann_zeta_value += 1.0 / std::pow(static_cast<double>(i), zipf_constant);
-        }
-        return riemann_zeta_value;
-    }
-
-    int64_t ZetaWorkloadWrapper::getKeyrankFromKeystr_(const std::string& keystr)
+    int64_t ZipfWorkloadWrapper::getKeyrankFromKeystr_(const std::string& keystr)
     {
         const uint32_t keyrank_bytecnt = sizeof(int64_t); // 8B
         assert(keystr.length() >= keyrank_bytecnt);
@@ -505,7 +492,7 @@ namespace covered
         return tmp_keyrank;
     }
 
-    void ZetaWorkloadWrapper::initWorkloadParameters_()
+    void ZipfWorkloadWrapper::initWorkloadParameters_()
     {
         if (needWorkloadItems_()) // Clients
         {
@@ -535,23 +522,23 @@ namespace covered
         return;
     }
 
-    void ZetaWorkloadWrapper::overwriteWorkloadParameters_()
+    void ZipfWorkloadWrapper::overwriteWorkloadParameters_()
     {
         // Do nothing
 
         return;
     }
 
-    void ZetaWorkloadWrapper::createWorkloadGenerator_()
+    void ZipfWorkloadWrapper::createWorkloadGenerator_()
     {
-        // NOT need pre-generated workload items for approximate workload distribution due to directly generating workload items by Zeta distribution
+        // NOT need pre-generated workload items for approximate workload distribution due to directly generating workload items by power-law Zipf distribution
 
         return;
     }
 
     // (2) Common utilities
 
-    void ZetaWorkloadWrapper::checkPointers_() const
+    void ZipfWorkloadWrapper::checkPointers_() const
     {
         if (needWorkloadItems_()) // Clients
         {

@@ -10,6 +10,7 @@
 #include "workload/fbphoto_workload_wrapper.h"
 #include "workload/wikipedia_workload_wrapper.h"
 #include "workload/zeta_workload_wrapper.h"
+#include "workload/zipf_workload_wrapper.h"
 #include "workload/zipf_facebook_workload_wrapper.h"
 
 namespace covered
@@ -49,6 +50,11 @@ namespace covered
         {
             UNUSED(zipf_alpha);
             workload_ptr = new ZetaWorkloadWrapper(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role, zipf_alpha);
+        }
+        else if (workload_name == Util::ZIPF_WIKIPEDIA_IMAGE_WORKLOAD_NAME || workload_name == Util::ZIPF_WIKIPEDIA_TEXT_WORKLOAD_NAME || workload_name == Util::ZIPF_TENCENT_PHOTO1_WORKLOAD_NAME || workload_name == Util::ZIPF_TENCENT_PHOTO2_WORKLOAD_NAME) // Zipf-based workloads including Wikipedia image/text and Tencent photo caching dataset1/2 (based on power-law distribution; using key/value size distribution in characteristics files)
+        {
+            UNUSED(zipf_alpha);
+            workload_ptr = new ZipfWorkloadWrapper(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role, zipf_alpha);
         }
         else
         {

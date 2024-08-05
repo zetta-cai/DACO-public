@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
-# zipf_curvefit: curvefit the given statistics (sorted frequency list, i.e., rank-frequency pairs) by power-law Zipfian distribution to get Zipfian constant.
+# zeta_curvefit: curvefit the given statistics (sorted frequency list, i.e., rank-frequency pairs) by Zeta-based Zipfian distribution to get Zipfian constant.
 
 import numpy as np
 from scipy.optimize import curve_fit
+from scipy.special import zetac
 
 from ...common import *
 
-def zipf_func(x, a):
-    # x is object rank (>= 1) and a is Zipfian constant
-    return 1.0/(x**a)
+def zeta_func(x, a):
+    # x is object rank (>= 1) and a is Zipfian constant (> 1)
+    return (x**-a)/zetac(a)
 
-class ZipfCurvefit:
+class ZetaCurvefit:
 
     CURVEFIT_SAMPLE_COUNT = 1 * 1000 * 1000 # 1M samples for curvefit
 
@@ -23,9 +24,9 @@ class ZipfCurvefit:
 
         # Generate sampled indices
         sorted_indices_array = np.arange(len(sorted_probabilities_list))
-        if len(sorted_indices_array) > ZipfCurvefit.CURVEFIT_SAMPLE_COUNT:
-            LogUtil.dump(Common.scriptname, "sample {} points from {} points...".format(ZipfCurvefit.CURVEFIT_SAMPLE_COUNT, len(sorted_indices_array)))
-            sampled_indices_array = np.random.choice(sorted_indices_array, ZipfCurvefit.CURVEFIT_SAMPLE_COUNT, replace=False) # Each indice can only be sampled once
+        if len(sorted_indices_array) > ZetaCurvefit.CURVEFIT_SAMPLE_COUNT:
+            LogUtil.dump(Common.scriptname, "sample {} points from {} points...".format(ZetaCurvefit.CURVEFIT_SAMPLE_COUNT, len(sorted_indices_array)))
+            sampled_indices_array = np.random.choice(sorted_indices_array, ZetaCurvefit.CURVEFIT_SAMPLE_COUNT, replace=False) # Each indice can only be sampled once
         else:
             sampled_indices_array = sorted_indices_array
 
@@ -35,7 +36,7 @@ class ZipfCurvefit:
 
         # Curvefit based on Zipfian distribution
         LogUtil.prompt(Common.scriptname, "Perform curvefitting...")
-        curvefit_result = curve_fit(zipf_func, sampled_ranks_array, sampled_probabilities_array, p0=[1.1])
+        curvefit_result = curve_fit(zeta_func, sampled_ranks_array, sampled_probabilities_array, p0=[1.1])
         self.zipf_constant_ = curvefit_result[0][0]
         LogUtil.dump(Common.scriptname, "Zipfian constant: {}".format(self.zipf_constant_))
 

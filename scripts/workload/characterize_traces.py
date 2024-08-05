@@ -5,10 +5,12 @@ import struct
 import gc
 
 from .utils.trace_loader import *
+# from .utils.zeta_curvefit import *
 from .utils.zipf_curvefit import *
 from ..exps.utils.exputil import *
 
-# Zipfian constant: [1.012, 1.029, 1.0095, TODO]
+# Zeta-based Zipfian constant: [1.012, 1.029, 1.0095, 1.0096]
+# Power-law Zipfian constant: [TODO, TODO, TODO, TODO]
 workload_names = [TraceLoader.WIKITEXT_WORKLOADNAME, TraceLoader.WIKIIMAGE_WORKLOADNAME, TraceLoader.TENCENTPHOTO1_WORKLOADNAME, TraceLoader.TENCENTPHOTO2_WORKLOADNAME]
 
 # Get dirpath of trace files
@@ -50,6 +52,7 @@ for tmp_workload_name in workload_names:
 
         # Curvefit the statistics by Zipfian distribution for the workload name
         tmp_sorted_frequency_list = tmp_trace_loader.getSortedFrequencyList()
+        # tmp_zipf_curvefit = ZetaCurvefit(tmp_sorted_frequency_list)
         tmp_zipf_curvefit = ZipfCurvefit(tmp_sorted_frequency_list)
 
         # Dump the characteristics (Zipfian constant, key size distribution, and value size distribution) for the workload name

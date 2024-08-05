@@ -35,6 +35,10 @@ namespace covered
     const std::string Util::AKAMAI_VIDEO_WORKLOAD_NAME("akamaivideo"); // TRAGEN-generated Akamai's video CDN trace (geo-distributed)
     const std::string Util::FACEBOOK_WORKLOAD_NAME("facebook"); // Original Facebook CDN workload generator
     const std::string Util::ZIPF_FACEBOOK_WORKLOAD_NAME("zipf_facebook"); // Zipfian Facebook CDN workload generator (based on Zipfian power-law distribution)
+    const std::string Util::ZIPF_WIKIPEDIA_IMAGE_WORKLOAD_NAME("zipf_wikiimage"); // Power-law Zipfian Wikipedia image workload generator
+    const std::string Util::ZIPF_WIKIPEDIA_TEXT_WORKLOAD_NAME("zipf_wikitext"); // Power-law Zipfian Wikipedia text workload generator
+    const std::string Util::ZIPF_TENCENT_PHOTO1_WORKLOAD_NAME("zipf_tencentphoto1"); // Power-law Zipfian Tencent photo1 workload generator
+    const std::string Util::ZIPF_TENCENT_PHOTO2_WORKLOAD_NAME("zipf_tencentphoto2"); // Power-law Zipfian Tencent photo2 workload generator
     const std::string Util::ZETA_WIKIPEDIA_IMAGE_WORKLOAD_NAME("zeta_wikiimage"); // Zipfian Wikipedia image workload generator (based on Zeta distribution)
     const std::string Util::ZETA_WIKIPEDIA_TEXT_WORKLOAD_NAME("zeta_wikitext"); // Zipfian Wikipedia text workload generator (based on Zeta distribution)
     const std::string Util::ZETA_TENCENT_PHOTO1_WORKLOAD_NAME("zeta_tencentphoto1"); // Zipfian Tencent photo1 workload generator (based on Zeta distribution)
