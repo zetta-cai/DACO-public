@@ -63,8 +63,8 @@ for tmp_workload_name in workload_names:
         with open(tmp_workload_characteristic_filepath, "wb") as f:
             # Dump Zipfian constant as double in little endian
             f.write(struct.pack("<d", tmp_zipf_constant))
-            # Dump Zipfian scaling factor as double in little endian
-            f.write(struct.pack("<d", tmp_zipf_scaling_factor))
+            # # Dump Zipfian scaling factor as double in little endian
+            # f.write(struct.pack("<d", tmp_zipf_scaling_factor))
             # Dump key size histogram as uint32_t in little endian
             f.write(struct.pack("<I", len(tmp_keysize_histogram)))
             for i in range(len(tmp_keysize_histogram)):

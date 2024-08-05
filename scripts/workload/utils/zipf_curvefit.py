@@ -6,9 +6,13 @@ from scipy.optimize import curve_fit
 
 from ...common import *
 
-def zipf_func(x, a, c):
-    # x is object rank (>= 1) and a is Zipfian constant (C is a constant scaling factor to convert relative frequency into probability)
-    return 1.0/(x**a) * c
+# def zipf_func(x, a, c):
+#     # x is object rank (>= 1) and a is Zipfian constant (c is a constant scaling factor to convert relative frequency into probability)
+#     return 1.0/(x**a) * c
+
+def zipf_func(x, a):
+    # x is object rank (>= 1) and a is Zipfian constant
+    return 1.0/(x**a) # NOTE: return relative frequency instead of probability!!!
 
 class ZipfCurvefit:
 
@@ -19,10 +23,12 @@ class ZipfCurvefit:
     def __init__(self, sorted_frequency_list):
         np.random.seed(0)
 
-        sorted_probabilities_list = sorted_frequency_list / sorted_frequency_list.sum()
+        # sorted_probabilities_list = sorted_frequency_list / sorted_frequency_list.sum()
+        sorted_relative_frequency_list = sorted_frequency_list / sorted_frequency_list[0]
 
         # Generate sampled indices
-        sorted_indices_array = np.arange(len(sorted_probabilities_list))
+        # sorted_indices_array = np.arange(len(sorted_probabilities_list))
+        sorted_indices_array = np.arange(len(sorted_relative_frequency_list))
         if len(sorted_indices_array) > ZipfCurvefit.CURVEFIT_SAMPLE_COUNT:
             LogUtil.dump(Common.scriptname, "sample {} points from {} points...".format(ZipfCurvefit.CURVEFIT_SAMPLE_COUNT, len(sorted_indices_array)))
             sampled_indices_array = np.random.choice(sorted_indices_array, ZipfCurvefit.CURVEFIT_SAMPLE_COUNT, replace=False) # Each indice can only be sampled once
@@ -31,20 +37,22 @@ class ZipfCurvefit:
 
         # NOTE: NO need to sort sampled indices, as curvefit does NOT require ordered input, i.e., <(x0, y0), <x1, y1>> has the same curve as <(x1, y1), (x0, y0)>
         sampled_ranks_array = sampled_indices_array + 1
-        sampled_probabilities_array = np.array(sorted_probabilities_list)[sampled_indices_array]
+        # sampled_probabilities_array = np.array(sorted_probabilities_list)[sampled_indices_array]
+        sampled_relative_frequency_array = np.array(sorted_relative_frequency_list)[sampled_indices_array]
 
         # Curvefit based on Zipfian distribution
         LogUtil.prompt(Common.scriptname, "Perform curvefitting...")
-        curvefit_result = curve_fit(zipf_func, sampled_ranks_array, sampled_probabilities_array, p0=[1.1])
+        # curvefit_result = curve_fit(zipf_func, sampled_ranks_array, sampled_probabilities_array, p0=[1.1, 0.1])
+        curvefit_result = curve_fit(zipf_func, sampled_ranks_array, sampled_relative_frequency_array, p0=[1.1])
         self.zipf_constant_ = curvefit_result[0][0]
-        self.zipf_scaling_factor_ = curvefit_result[0][1]
+        # self.zipf_scaling_factor_ = curvefit_result[0][1]
         LogUtil.dump(Common.scriptname, "Zipfian constant: {}".format(self.zipf_constant_))
-        LogUtil.dump(Common.scriptname, "Zipfian scaling factor: {}".format(self.zipf_scaling_factor_))
+        # LogUtil.dump(Common.scriptname, "Zipfian scaling factor: {}".format(self.zipf_scaling_factor_))
 
     # Get Zipfian constant
     def getZipfConstant(self):
         return self.zipf_constant_
     
-    # Get Zipfian scaling factor
-    def getZipfScalingFactor(self):
-        return self.zipf_scaling_factor_
+    # # Get Zipfian scaling factor
+    # def getZipfScalingFactor(self):
+    #     return self.zipf_scaling_factor_

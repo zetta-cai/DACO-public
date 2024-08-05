@@ -247,10 +247,10 @@ namespace covered
         fs_ptr->read((char *)&zipf_constant, sizeof(double));
         assert(zipf_constant > 1.0); // Power-law Zipfian constant must be larger than 1.0
 
-        // Load Zipfian scaling factor (convert relative frequency into probability)
-        double zipf_scaling_factor = 0.0;
-        fs_ptr->read((char *)&zipf_scaling_factor, sizeof(double));
-        assert(zipf_scaling_factor > 0.0); // Power-law Zipfian scaling factor must be positive
+        // // Load Zipfian scaling factor (convert relative frequency into probability)
+        // double zipf_scaling_factor = 0.0;
+        // fs_ptr->read((char *)&zipf_scaling_factor, sizeof(double));
+        // assert(zipf_scaling_factor > 0.0); // Power-law Zipfian scaling factor must be positive
 
         // Load key size histogram
         uint32_t keysize_histogram_size = 0;
@@ -355,7 +355,7 @@ namespace covered
             assert(variable_valuesize_dist != NULL);
         }
 
-        // (3) Use Zipfian constant (with scaling factor) and key/value size distribution to generate keys, probs, and value sizes
+        // (3) Use Zipfian constant and key/value size distribution to generate keys, probs, and value sizes
 
         // Initialize dataset keys, probs, and value sizes
         const uint32_t dataset_size = getKeycnt_();
@@ -384,7 +384,8 @@ namespace covered
             dataset_keys_[i] = getKeystrFromKeyrank_(tmp_rank, tmp_keysize);
 
             // Generate prob
-            double tmp_prob = 1.0 / std::pow(static_cast<double>(tmp_rank), zipf_constant) * zipf_scaling_factor;
+            // double tmp_prob = 1.0 / std::pow(static_cast<double>(tmp_rank), zipf_constant) * zipf_scaling_factor;
+            double tmp_prob = 1.0 / std::pow(static_cast<double>(tmp_rank), zipf_constant);
             dataset_probs_[i] = tmp_prob;
             total_prob += tmp_prob;
 
