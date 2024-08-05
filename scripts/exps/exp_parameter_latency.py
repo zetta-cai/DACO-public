@@ -22,21 +22,30 @@ exp_default_settings = {
     "capacity_mb": 1024,
     "cache_name": "covered",
     "workload_name": "facebook",
-    "propagation_latency_clientedge_us": 500,
-    "propagation_latency_crossedge_us": 5000,
-    "propagation_latency_edgecloud_us": 50000
+    "propagation_latency_clientedge_lbound_us": 500,
+    "propagation_latency_clientedge_avg_us": 1000,
+    "propagation_latency_clientedge_rbound_us": 1500,
+    "propagation_latency_crossedge_lbound_us": 5000,
+    "propagation_latency_crossedge_avg_us": 10000,
+    "propagation_latency_crossedge_rbound_us": 15000,
+    "propagation_latency_edgecloud_lbound_us": 22000,
+    "propagation_latency_edgecloud_avg_us": 44000,
+    "propagation_latency_edgecloud_rbound_us": 66000
 }
 # NOTE: run lrb, glcache, and segcache at last due to slow warmup issue of lrb (may be caused by model retraining), and memory usage issue of segcache and glcache (may be caused by bugs on segment-level memory management) -> TODO: if no results of the above baselines due to program crashes, please provide more DRAM memory (or swap memory), and run them again with sufficient time (may be in units of hours or days) for warmup and cache stable performance
-cache_names = ["covered", "shark", "bestguess", "arc+", "cachelib+", "fifo+", "frozenhot+", "gdsf+", "lfu+", "lhd+", "s3fifo+", "sieve+", "wtinylfu+", "lrb+", "glcache+", "segcache+"]
-# NOTE: NO need to run 500-5000-50000, which is the same as previous experiments (performance against existing and extended methods)
-clientedge_latency_list = [100, 2500] # 0.1ms and 2.5ms of 1/2 RTT
-crossedge_latency_list = [1000, 25000] # 1ms and 25ms of 1/2 RTT
-edgecloud_latency_list = [10000, 250000] # 10ms and 250ms of 1/2 RTT
-
-# NOTE: due to the same conclusions for all the latency settings, we ONLY show the results of cross-cache latency for limited space in paper
-test_clientedge_latency = True
-test_crossedge_latency = True
-test_edgecloud_latency = True
+# cache_names = ["covered", "shark", "bestguess", "arc+", "cachelib+", "fifo+", "frozenhot+", "gdsf+", "lfu+", "lhd+", "s3fifo+", "sieve+", "wtinylfu+", "lrb+", "glcache+", "segcache+"]
+cache_names = ["covered", "shark+gdsf", "shark+lhd"] # TMPEVAL: for fast evaluation
+# NOTE: NO need to run default WAN delay settings, which is the same as previous experiments (performance against existing and extended methods)
+large_wan_name = "large"
+large_clientedge_lbound = 5000
+large_clientedge_avg = 7500
+large_clientedge_rbound = 10000
+large_crossedge_lbound = 20000
+large_crossedge_avg = 35000
+large_crossedge_rbound = 50000
+large_edgecloud_lbound = 100000
+large_edgecloud_avg = 150000
+large_edgecloud_rbound = 200000
 
 # Run the experiments with multiple rounds
 for tmp_round_index in round_indexes:
@@ -51,74 +60,34 @@ for tmp_round_index in round_indexes:
     # Run prototype for each cache name
     for tmp_cache_name in cache_names:
 
-        # (1) Run prototype for each client-edge latency
-        if test_clientedge_latency:
-            for tmp_clientedge_latency in clientedge_latency_list:
-                tmp_log_filepath = "{}/tmp_evaluator_for_{}_clientedge{}.out".format(tmp_log_dirpath, tmp_cache_name, tmp_clientedge_latency)
-                SubprocessUtil.tryToCreateDirectory(Common.scriptname, os.path.dirname(tmp_log_filepath))
+        # (1) Run prototype for large WAN delay setting
+        tmp_log_filepath = "{}/tmp_evaluator_for_{}_{}.out".format(tmp_log_dirpath, tmp_cache_name, large_wan_name)
+        SubprocessUtil.tryToCreateDirectory(Common.scriptname, os.path.dirname(tmp_log_filepath))
 
-                # Check log filepath
-                if os.path.exists(tmp_log_filepath):
-                    LogUtil.prompt(Common.scriptname, "Log filepath {} already exists, skip {} w/ {}us client-edge latency for the current round {}...".format(tmp_log_filepath, tmp_cache_name, tmp_clientedge_latency, tmp_round_index))
-                    continue
+        # Check log filepath
+        if os.path.exists(tmp_log_filepath):
+            LogUtil.prompt(Common.scriptname, "Log filepath {} already exists, skip {} w/ {} WAN delay setting for the current round {}...".format(tmp_log_filepath, tmp_cache_name, large_wan_name, tmp_round_index))
+            continue
 
-                # NOTE: Log filepath MUST NOT exist here
+        # NOTE: Log filepath MUST NOT exist here
 
-                # Prepare settings for the current cache name
-                tmp_exp_settings = exp_default_settings.copy()
-                tmp_exp_settings["cache_name"] = tmp_cache_name
-                tmp_exp_settings["propagation_latency_clientedge_us"] = tmp_clientedge_latency
+        # Prepare settings for the current cache name
+        tmp_exp_settings = exp_default_settings.copy()
+        tmp_exp_settings["cache_name"] = tmp_cache_name
+        tmp_exp_settings["propagation_latency_clientedge_lbound_us"] = large_clientedge_lbound
+        tmp_exp_settings["propagation_latency_clientedge_avg_us"] = large_clientedge_avg
+        tmp_exp_settings["propagation_latency_clientedge_rbound_us"] = large_clientedge_rbound
+        tmp_exp_settings["propagation_latency_crossedge_lbound_us"] = large_crossedge_lbound
+        tmp_exp_settings["propagation_latency_crossedge_avg_us"] = large_crossedge_avg
+        tmp_exp_settings["propagation_latency_crossedge_rbound_us"] = large_crossedge_rbound
+        tmp_exp_settings["propagation_latency_edgecloud_lbound_us"] = large_edgecloud_lbound
+        tmp_exp_settings["propagation_latency_edgecloud_avg_us"] = large_edgecloud_avg
+        tmp_exp_settings["propagation_latency_edgecloud_rbound_us"] = large_edgecloud_rbound
 
-                # Launch prototype
-                LogUtil.prompt(Common.scriptname, "Run prototype of {} w/ {}us client-edge latency for the current round {}...".format(tmp_cache_name, tmp_clientedge_latency, tmp_round_index))
-                prototype_instance = Prototype(evaluator_logfile = tmp_log_filepath, **tmp_exp_settings)
-                prototype_instance.run()
-        
-        # (2) Run prototype for each cross-edge latency
-        if test_crossedge_latency:
-            for tmp_crossedge_latency in crossedge_latency_list:
-                tmp_log_filepath = "{}/tmp_evaluator_for_{}_crossedge{}.out".format(tmp_log_dirpath, tmp_cache_name, tmp_crossedge_latency)
-                SubprocessUtil.tryToCreateDirectory(Common.scriptname, os.path.dirname(tmp_log_filepath))
-
-                # Check log filepath
-                if os.path.exists(tmp_log_filepath):
-                    LogUtil.prompt(Common.scriptname, "Log filepath {} already exists, skip {} w/ {}us cross-edge latency for the current round {}...".format(tmp_log_filepath, tmp_cache_name, tmp_crossedge_latency, tmp_round_index))
-                    continue
-
-                # NOTE: Log filepath MUST NOT exist here
-
-                # Prepare settings for the current cache name
-                tmp_exp_settings = exp_default_settings.copy()
-                tmp_exp_settings["cache_name"] = tmp_cache_name
-                tmp_exp_settings["propagation_latency_crossedge_us"] = tmp_crossedge_latency
-
-                # Launch prototype
-                LogUtil.prompt(Common.scriptname, "Run prototype of {} w/ {}us cross-edge latency for the current round {}...".format(tmp_cache_name, tmp_crossedge_latency, tmp_round_index))
-                prototype_instance = Prototype(evaluator_logfile = tmp_log_filepath, **tmp_exp_settings)
-                prototype_instance.run()
-        
-        # (3) Run prototype for each edge-cloud latency
-        if test_edgecloud_latency:
-            for tmp_edgecloud_latency in edgecloud_latency_list:
-                tmp_log_filepath = "{}/tmp_evaluator_for_{}_edgecloud{}.out".format(tmp_log_dirpath, tmp_cache_name, tmp_edgecloud_latency)
-                SubprocessUtil.tryToCreateDirectory(Common.scriptname, os.path.dirname(tmp_log_filepath))
-
-                # Check log filepath
-                if os.path.exists(tmp_log_filepath):
-                    LogUtil.prompt(Common.scriptname, "Log filepath {} already exists, skip {} w/ {}us edge-cloud latency for the current round {}...".format(tmp_log_filepath, tmp_cache_name, tmp_edgecloud_latency, tmp_round_index))
-                    continue
-
-                # NOTE: Log filepath MUST NOT exist here
-
-                # Prepare settings for the current cache name
-                tmp_exp_settings = exp_default_settings.copy()
-                tmp_exp_settings["cache_name"] = tmp_cache_name
-                tmp_exp_settings["propagation_latency_edgecloud_us"] = tmp_edgecloud_latency
-
-                # Launch prototype
-                LogUtil.prompt(Common.scriptname, "Run prototype of {} w/ {}us edge-cloud latency for the current round {}...".format(tmp_cache_name, tmp_edgecloud_latency, tmp_round_index))
-                prototype_instance = Prototype(evaluator_logfile = tmp_log_filepath, **tmp_exp_settings)
-                prototype_instance.run()
+        # Launch prototype
+        LogUtil.prompt(Common.scriptname, "Run prototype of {} w/ {} WAN delay setting client-edge latency for the current round {}...".format(tmp_cache_name, large_wan_name, tmp_round_index))
+        prototype_instance = Prototype(evaluator_logfile = tmp_log_filepath, **tmp_exp_settings)
+        prototype_instance.run()
 
 # Hint users to check stable statistics of cache peformance in log files
 LogUtil.emphasize(Common.scriptname, "Please check cache stable statistics in log files (at the end of each log file) in the following directories:\n{}".format(log_dirpaths))
