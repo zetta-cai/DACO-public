@@ -8,9 +8,8 @@ from .utils.trace_loader import *
 from .utils.zipf_curvefit import *
 from ..exps.utils.exputil import *
 
-# Power-law Zipfian constant: [TODO, TODO, TODO, TODO]
-# workload_names = [TraceLoader.ZIPF_WIKITEXT_WORKLOADNAME, TraceLoader.ZIPF_WIKIIMAGE_WORKLOADNAME, TraceLoader.ZIPF_TENCENTPHOTO1_WORKLOADNAME, TraceLoader.ZIPF_TENCENTPHOTO2_WORKLOADNAME]
-workload_names = [TraceLoader.ZIPF_WIKITEXT_WORKLOADNAME] # TMPDEBUG24
+# Power-law Zipfian constant: [0.7351769996271038, TODO, TODO, TODO]
+workload_names = [TraceLoader.ZIPF_WIKITEXT_WORKLOADNAME, TraceLoader.ZIPF_WIKIIMAGE_WORKLOADNAME, TraceLoader.ZIPF_TENCENTPHOTO1_WORKLOADNAME, TraceLoader.ZIPF_TENCENTPHOTO2_WORKLOADNAME]
 
 # Get dirpath of trace files
 client_machine_idxes = JsonUtil.getValueForKeystr(Common.scriptname, "client_machine_indexes")
@@ -56,7 +55,7 @@ for tmp_workload_name in workload_names:
         # Dump the characteristics (Zipfian constant, key size distribution, and value size distribution) for the workload name
         LogUtil.prompt(Common.scriptname, "dump characteristics for workload {} into {}...".format(tmp_workload_name, tmp_workload_characteristic_filepath))
         tmp_zipf_constant = tmp_zipf_curvefit.getZipfConstant()
-        tmp_zipf_scaling_factor = tmp_zipf_curvefit.getZipfScalingFactor()
+        # tmp_zipf_scaling_factor = tmp_zipf_curvefit.getZipfScalingFactor()
         tmp_keysize_histogram = tmp_trace_loader.getKeySizeHistogram()
         tmp_valuesize_histogram = tmp_trace_loader.getValueSizeHistogram()
         os.makedirs(os.path.dirname(tmp_workload_characteristic_filepath), exist_ok=True)

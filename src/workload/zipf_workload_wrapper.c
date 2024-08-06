@@ -245,7 +245,7 @@ namespace covered
         // Load Zipfian constant
         double zipf_constant = 0.0;
         fs_ptr->read((char *)&zipf_constant, sizeof(double));
-        assert(zipf_constant > 1.0); // Power-law Zipfian constant must be larger than 1.0
+        assert(zipf_constant > 0.0); // Power-law Zipfian constant must be larger than 0.0
 
         // // Load Zipfian scaling factor (convert relative frequency into probability)
         // double zipf_scaling_factor = 0.0;

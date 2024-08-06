@@ -9,7 +9,7 @@ def zipf_func(x, a):
 
 # For Wikipedia text workload
 wikitext_datasetcnt = 1000000
-wikitext_zipf_constant = 2.4269573520957066
+wikitext_zipf_constant = 0.7351769996271038
 wikitext_perrank_probs = []
 for i in range(wikitext_datasetcnt):
     wikitext_perrank_probs.append(zipf_func(i+1, wikitext_zipf_constant))
