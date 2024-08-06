@@ -8,8 +8,8 @@ from .utils.trace_loader import *
 from .utils.zipf_curvefit import *
 from ..exps.utils.exputil import *
 
-# Power-law Zipfian constant: [0.7351769996271038, 1.0128733530793717, 0.6645665328056994, 0.6566908883710469]
-workload_names = [TraceLoader.ZIPF_WIKITEXT_WORKLOADNAME, TraceLoader.ZIPF_WIKIIMAGE_WORKLOADNAME, TraceLoader.ZIPF_TENCENTPHOTO1_WORKLOADNAME, TraceLoader.ZIPF_TENCENTPHOTO2_WORKLOADNAME]
+# Power-law Zipfian constant: [0.7351769996271038, 1.0128733530793717, 0.6645665328056994, 0.6566908883710469, TODO, TODO]
+workload_names = [TraceLoader.ZIPF_WIKITEXT_WORKLOADNAME, TraceLoader.ZIPF_WIKIIMAGE_WORKLOADNAME, TraceLoader.ZIPF_TENCENTPHOTO1_WORKLOADNAME, TraceLoader.ZIPF_TENCENTPHOTO2_WORKLOADNAME, TraceLoader.ZIPF_TWITTERKV2_WORKLOADNAME, TraceLoader.ZIPF_TWITTERKV4_WORKLOADNAME]
 
 # Get dirpath of trace files
 client_machine_idxes = JsonUtil.getValueForKeystr(Common.scriptname, "client_machine_indexes")
@@ -42,6 +42,10 @@ for tmp_workload_name in workload_names:
             tmp_filename_list = JsonUtil.getValueForKeystr(Common.scriptname, "trace_dirpath_relative_tencentphoto1_trace_filepaths")
         elif tmp_workload_name == TraceLoader.ZIPF_TENCENTPHOTO2_WORKLOADNAME:
             tmp_filename_list = JsonUtil.getValueForKeystr(Common.scriptname, "trace_dirpath_relative_tencentphoto2_trace_filepaths")
+        elif tmp_workload_name == TraceLoader.ZIPF_TWITTERKV2_WORKLOADNAME:
+            tmp_filename_list = JsonUtil.getValueForKeystr(Comma.scriptname, "trace_dirpath_relative_twitterkv2_trace_filepaths")
+        elif tmp_workload_name == TraceLoader.ZIPF_TWITTERKV4_WORKLOADNAME:
+            tmp_filename_list = JsonUtil.getValueForKeystr(Common.scriptname, "trace_dirpath_relative_twitterkv4_trace_filepaths")
         else:
             LogUtil.die(Common.scriptname, "unknown workload {}!".format(workload_name))
 

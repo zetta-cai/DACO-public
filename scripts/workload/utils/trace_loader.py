@@ -35,6 +35,16 @@ class TraceLoader:
     TENCENTPHOTO_IMGFORMAT_WEB = 5
     TENCENTPHOTO_VALSIZE_COLUMNIDX = 4
 
+    # For Twitter KV traces
+    SORT_DELIMITER = "," # Comma-separated values used by Twitter KV trace files
+    ZIPF_TWITTERKV2_WORKLOADNAME = "zipf_twitterkv2"
+    ZIPF_TWITTERKV4_WORKLOADNAME = "zipf_twitterkv4"
+    TWITTERKV_COLUMNCNT = 7
+    TWITTERKV_KEY_COLUMNIDX = 1
+    TWITTERKV_KEYSIZE_COLUMNIDX = 2
+    TWITTERKV_VALSIZE_COLUMNIDX = 3
+    TWITTERKV_OPTYPE_COLUMNIDX = 5
+
     # For key size histogram (from 1B to 1KiB; each bucket is 1B)
     KEYSIZE_HISTOGRAM_SIZE = 1024
 
@@ -65,6 +75,8 @@ class TraceLoader:
                 self.loadFileOfWikiImage_(tmp_filepath)
             elif workload_name == TraceLoader.ZETA_TENCENTPHOTO1_WORKLOADNAME or workload_name == TraceLoader.ZETA_TENCENTPHOTO2_WORKLOADNAME or workload_name == TraceLoader.ZIPF_TENCENTPHOTO1_WORKLOADNAME or workload_name == TraceLoader.ZIPF_TENCENTPHOTO2_WORKLOADNAME:
                 self.loadFileOfTencentPhoto_(tmp_filepath)
+            elif workload_name == TraceLoader.ZIPF_TWITTERKV2_WORKLOADNAME or workload_name == TraceLoader.ZIPF_TWITTERKV4_WORKLOADNAME:
+                self.loadFileOfTwitterKV_(tmp_filepath)
             else:
                 LogUtil.die(Common.scriptname, "unknown workload {}!".format(workload_name))
 
@@ -95,6 +107,8 @@ class TraceLoader:
                 tmp_keysize = 8 # Wikipedia Image uses bigint
             elif self.workload_name_ == TraceLoader.ZETA_TENCENTPHOTO1_WORKLOADNAME or self.workload_name_ == TraceLoader.ZETA_TENCENTPHOTO2_WORKLOADNAME or self.workload_name_ == TraceLoader.ZIPF_TENCENTPHOTO1_WORKLOADNAME or self.workload_name_ == TraceLoader.ZIPF_TENCENTPHOTO2_WORKLOADNAME:
                 tmp_keysize = 20 # Tencent Photo uses 20B checksum
+            elif workload_name == TraceLoader.ZIPF_TWITTERKV2_WORKLOADNAME or workload_name == TraceLoader.ZIPF_TWITTERKV4_WORKLOADNAME:
+                # TODO
             else:
                 tmp_keysize = len(tmp_key)
             
@@ -219,6 +233,20 @@ class TraceLoader:
                 self.updateStatistics_(tmp_key, tmp_valsize)
         f.close()
         return
+    
+    # Load Twitter KV trace files
+    # Format: timestamp, anonymized key, key size, value size, client id, operation, TTL
+    def loadFileOfTwitterKV_(self, filepath):
+        LogUtil.prompt(Common.scriptname, "loading trace file {} for workload {}...".format(filepath, self.workload_name_))
+
+        f = open(filepath, mode="r")
+        while True:
+            tmp_line = f.readline()
+            if tmp_line == "": # End of file
+                break
+            
+            # Process each line
+            # TODO
 
     def updateStatistics_(self, key, valsize):
         if key not in self.statistics_:
