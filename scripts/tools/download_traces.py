@@ -104,3 +104,38 @@ for i in range(len(wikitext_trace_filepaths)):
             LogUtil.prompt(Common.scriptname, "clear {}...".format(tmp_tarball_filepath))
             os.remove(tmp_tarball_filepath)
 print("")
+
+# (4) Download and decompress Twitter KV traces
+
+LogUtil.prompt(Common.scriptname, "download and decompress Twitter KV traces...")
+
+# twitterkv_clusters = ["cluster2", "cluster4"]
+twitterkv_clusters = ["cluster2"] # TMPDEBUG24
+
+twitterkv_download_url_prefix = "https://ftp.pdl.cmu.edu/pub/datasets/twemcacheWorkload/open_source"
+for i in range(len(twitterkv_clusters)):
+    tmp_twitterkv_cluster = twitterkv_clusters[i]
+
+    # Download Twitter KV trace
+    tmp_twitterkv_cluster_tarball_filepath = "{}/{}.sort.zst".format(Common.trace_dirpath, tmp_twitterkv_cluster)
+    if not os.path.exists(tmp_twitterkv_cluster_tarball_filepath):
+        LogUtil.prompt(Common.scriptname, "download {}...".format(tmp_twitterkv_cluster_tarball_filepath))
+        tmp_twitterkv_cluster_download_url = "{}/{}.sort.zst".format(twitterkv_download_url_prefix, tmp_twitterkv_cluster)
+        tmp_twitterkv_cluster_download_cmd = "cd {} && wget {}".format(Common.trace_dirpath, tmp_twitterkv_cluster_download_url)
+        tmp_twitterkv_cluster_download_subprocess = SubprocessUtil.runCmd(tmp_twitterkv_cluster_download_cmd, is_capture_output=False)
+    
+    # Decompress Twitter KV trace
+    tmp_twitterkv_cluster_trace_dirpath = "{}/{}".format(Common.trace_dirpath, tmp_twitterkv_cluster)
+    if not os.path.exists(tmp_twitterkv_cluster_trace_dirpath):
+        os.makedirs(tmp_twitterkv_cluster_trace_dirpath)
+
+        # Decompress into trace dirpath
+        tmp_twitterkv_cluster_decompress_cmd = "cd {} && zstd -d {}".format(tmp_twitterkv_cluster_trace_dirpath, tmp_twitterkv_cluster_tarball_filepath)
+        tmp_twitterkv_cluster_decompress_subprocess = SubprocessUtil.runCmd(tmp_twitterkv_cluster_decompress_cmd, is_capture_output=False)
+
+    # Clear tarball file if necessary
+    # TMPDEBUG24
+    # if is_clear_tarball:
+    #     LogUtil.prompt(Common.scriptname, "clear {}...".format(tmp_twitterkv_cluster_tarball_filepath))
+    #     os.remove(tmp_twitterkv_cluster_tarball_filepath)
+print("")
