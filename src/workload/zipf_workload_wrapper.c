@@ -41,6 +41,17 @@ namespace covered
         // For clients
         client_worker_item_randgen_ptrs_.resize(perclient_workercnt, NULL);
         client_worker_reqdist_ptrs_.resize(perclient_workercnt, NULL);
+
+        // Optype ratios for workloads requiring them
+        read_ratio_ = 1.0;
+        update_ratio_ = 0.0;
+        insert_ratio_ = 0.0;
+        delete_ratio_ = 0.0;
+        if (Util::needOptypeRatios(workload_name)) // For clients under such workloads
+        {
+            client_worker_optype_dist_ptrs_.resize(perclient_workercnt, NULL);
+            client_worker_optype_randgen_ptrs_.resize(perclient_workercnt, NULL);
+        }
     }
 
     ZipfWorkloadWrapper::~ZipfWorkloadWrapper()
@@ -64,6 +75,26 @@ namespace covered
                 delete client_worker_reqdist_ptrs_[i];
                 client_worker_reqdist_ptrs_[i] = NULL;
             }
+
+            // For workloads need optype ratios
+            if (Util::needOptypeRatios(getWorkloadName_()))
+            {
+                // Release random generator for each client worker
+                for (uint32_t i = 0; i < client_worker_optype_randgen_ptrs_.size(); i++)
+                {
+                    assert(client_worker_optype_randgen_ptrs_[i] != NULL);
+                    delete client_worker_optype_randgen_ptrs_[i];
+                    client_worker_optype_randgen_ptrs_[i] = NULL;
+                }
+
+                // Release optype distribution for each client worker
+                for (uint32_t i = 0; i < client_worker_optype_dist_ptrs_.size(); i++)
+                {
+                    assert(client_worker_optype_dist_ptrs_[i] != NULL);
+                    delete client_worker_optype_dist_ptrs_[i];
+                    client_worker_optype_dist_ptrs_[i] = NULL;
+                }
+            }
         }
     }
 
@@ -74,6 +105,49 @@ namespace covered
 
         assert(needWorkloadItems_()); // Must be clients for evaluation
         assert(local_client_worker_idx < client_worker_item_randgen_ptrs_.size());
+
+        // Get optype if necessary
+        const std::string tmp_workload_name = getWorkloadName_();
+        WorkloadItemType tmp_optype = WorkloadItemType::kWorkloadItemGet; // Default to GET
+        if (Util::needOptypeRatios(tmp_workload_name))
+        {
+            std::uniform_real_distribution<double>* optype_dist_ptr = client_worker_optype_dist_ptrs_[local_client_worker_idx];
+            assert(optype_dist_ptr != NULL);
+            std::mt19937_64* optype_randgen_ptr = client_worker_optype_randgen_ptrs_[local_client_worker_idx];
+            assert(optype_randgen_ptr != NULL);
+
+            const double tmp_optype_real = (*optype_dist_ptr)(*optype_randgen_ptr);
+            assert(tmp_optype_real >= 0 && tmp_optype_real <= 1); // Must be [0, 1]
+            if (tmp_optype_real <= read_ratio_)
+            {
+                tmp_optype = WorkloadItemType::kWorkloadItemGet;
+            }
+            else if (tmp_optype_real > read_ratio_ && tmp_optype_real <= read_ratio_ + update_ratio_)
+            {
+                tmp_optype = WorkloadItemType::kWorkloadItemPut;
+            }
+            else if (tmp_optype_real > read_ratio_ + update_ratio_ && tmp_optype_real <= read_ratio_ + update_ratio_ + delete_ratio_)
+            {
+                tmp_optype = WorkloadItemType::kWorkloadItemDel;
+            }
+            else
+            {
+                // TODO: we should use WorkloadItemType::kWorkloadItemPut for a newly-inserted item, and assign keysize, valuesize, and prob for the new item (also need to update quickDatasetPut() accordingly)
+                // tmp_optype = WorkloadItemType::kWorkloadItemPut;
+
+                std::ostringstream oss;
+                oss << "NOT support insert operation for workload " << tmp_workload_name << " now!";
+                Util::dumpErrorMsg(instance_name_, oss.str());
+                exit(1);
+            }
+        }
+        if (tmp_optype != WorkloadItemType::kWorkloadItemGet && !Util::needOptypeRatios(tmp_workload_name))
+        {
+            std::ostringstream oss;
+            oss << "should NOT have non-GET operation for workload " << tmp_workload_name << " without requirements on optype ratios!";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
 
         // Get a workload index randomly
         std::mt19937_64* request_randgen_ptr = client_worker_item_randgen_ptrs_[local_client_worker_idx];
@@ -86,7 +160,7 @@ namespace covered
         // Get key
         Key tmp_key(dataset_keys_[tmp_key_index]);
         
-        return WorkloadItem(tmp_key, Value(dataset_valsizes_[tmp_key_index]), WorkloadItemType::kWorkloadItemGet); // NOT found read-write ratio in the paper -> treat as read-only for all methods with fair comparisons
+        return WorkloadItem(tmp_key, Value(dataset_valsizes_[tmp_key_index]), tmp_optype); // NOT found read-write ratio in the paper -> treat as read-only for all methods with fair comparisons
     }
 
     uint32_t ZipfWorkloadWrapper::getPracticalKeycnt() const
@@ -276,6 +350,15 @@ namespace covered
             valuesize_histogram[tmp_valuesize] = tmp_valuesize_freq;
         }
 
+        // Load optype ratios if necessary
+        if (Util::needOptypeRatios(getWorkloadName_()))
+        {
+            fs_ptr->read((char *)&read_ratio_, sizeof(double));
+            fs_ptr->read((char *)&update_ratio_, sizeof(double));
+            fs_ptr->read((char *)&delete_ratio_, sizeof(double));
+            fs_ptr->read((char *)&insert_ratio_, sizeof(double));
+        }
+
         // Close file and release ifstream
         fs_ptr->close();
         delete fs_ptr;
@@ -443,6 +526,11 @@ namespace covered
         oss << "zipf_constant: " << zipf_constant << std::endl;
         oss << "dataset_keys_[0]: " << Key(dataset_keys_[0]).getKeyDebugstr() << "; dataset_probs_[0]: " << dataset_probs_[0] << "; dataset_valsizes_[0]: " << dataset_valsizes_[0] << std::endl;
         oss << "dataset_keys_[1]: " << Key(dataset_keys_[1]).getKeyDebugstr() << "; dataset_probs_[1]: " << dataset_probs_[1] << "; dataset_valsizes_[1]: " << dataset_valsizes_[1];
+        if (Util::needOptypeRatios(getWorkloadName_()))
+        {
+            oss << std::endl;
+            oss << "read_ratio: " << read_ratio_ << "; update_ratio: " << update_ratio_ << "; delete_ratio: " << delete_ratio_ << "; insert_ratio: " << insert_ratio_;
+        }
         Util::dumpNormalMsg(instance_name_, oss.str());
 
         if (!is_fixed_keysize) // Release key size distribution if necessary
@@ -517,11 +605,25 @@ namespace covered
                     Util::dumpErrorMsg(instance_name_, "failed to create a random generator for requests!");
                     exit(1);
                 }
-
                 client_worker_item_randgen_ptrs_[tmp_local_client_worker_idx] = tmp_client_worker_item_randgen_ptr_;
 
                 client_worker_reqdist_ptrs_[tmp_local_client_worker_idx] = new std::discrete_distribution<uint32_t>(dataset_probs_.begin(), dataset_probs_.end());
                 assert(client_worker_reqdist_ptrs_[tmp_local_client_worker_idx] != NULL);
+
+                // Create randgen and uniform dist for clients under workloads need optype ratios
+                if (Util::needOptypeRatios(getWorkloadName_()))
+                {
+                    std::mt19937_64* tmp_client_worker_optype_randgen_ptr_ = new std::mt19937_64(tmp_global_client_worker_idx);
+                    if (tmp_client_worker_optype_randgen_ptr_ == NULL)
+                    {
+                        Util::dumpErrorMsg(instance_name_, "failed to create a random generator for optypes!");
+                        exit(1);
+                    }
+                    client_worker_optype_randgen_ptrs_[tmp_local_client_worker_idx] = tmp_client_worker_optype_randgen_ptr_;
+
+                    client_worker_optype_dist_ptrs_[tmp_local_client_worker_idx] = new std::uniform_real_distribution<double>(0.0, 1.0);
+                    assert(client_worker_optype_dist_ptrs_[tmp_local_client_worker_idx] != NULL);
+                }
             }
         }
 
@@ -558,6 +660,21 @@ namespace covered
             for (uint32_t i = 0; i < client_worker_reqdist_ptrs_.size(); i++)
             {
                 assert(client_worker_reqdist_ptrs_[i] != NULL);
+            }
+
+            if (Util::needOptypeRatios(getWorkloadName_()))
+            {
+                assert(client_worker_optype_randgen_ptrs_.size() > 0);
+                for (uint32_t i = 0; i < client_worker_optype_randgen_ptrs_.size(); i++)
+                {
+                    assert(client_worker_optype_randgen_ptrs_[i] != NULL);
+                }
+
+                assert(client_worker_optype_dist_ptrs_.size() > 0);
+                for (uint32_t i = 0; i < client_worker_optype_dist_ptrs_.size(); i++)
+                {
+                    assert(client_worker_optype_dist_ptrs_[i] != NULL);
+                }
             }
         }
     }

@@ -182,7 +182,7 @@ namespace covered
 
     std::mutex Util::msgdump_lock_;
 
-    // (0) Cache names
+    // (0) Cache and workload names
 
     bool Util::isSingleNodeCache(const std::string cache_name)
     {
@@ -244,6 +244,16 @@ namespace covered
         std::ostringstream oss;
         oss << "replayed workloads (" << WIKIPEDIA_IMAGE_WORKLOAD_NAME << " and " << WIKIPEDIA_TEXT_WORKLOAD_NAME << ")";
         return oss.str();
+    }
+
+    bool Util::needOptypeRatios(const std::string workload_name)
+    {
+        if (workload_name == ZIPF_TWITTERKV2_WORKLOAD_NAME || workload_name == ZIPF_TWITTERKV4_WORKLOAD_NAME)
+        {
+            return true;
+        }
+        
+        return false;
     }
 
     // (1) I/O

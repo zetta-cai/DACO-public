@@ -78,6 +78,15 @@ namespace covered
         std::vector<std::mt19937_64*> client_worker_item_randgen_ptrs_;
         std::vector<std::discrete_distribution<uint32_t>*> client_worker_reqdist_ptrs_; // randomly select request index from workload indices of each client
         // std::vector<uint32_t> workload_key_indices_; // workload indices for each client (NOTE: NO need due to directly generating workload items by power-law Zipf distribution)
+
+        // (5) Optype ratios for workloads requiring them
+        double read_ratio_;
+        double update_ratio_;
+        double delete_ratio_;
+        double insert_ratio_;
+        // For clients under such workloads
+        std::vector<std::mt19937_64*> client_worker_optype_randgen_ptrs_;
+        std::vector<std::uniform_real_distribution<double>*> client_worker_optype_dist_ptrs_;
     };
 }
 

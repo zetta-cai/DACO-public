@@ -79,8 +79,8 @@ for tmp_workload_name in workload_names:
         for i in range(len(tmp_valuesize_histogram)):
             f.write(struct.pack("<I", tmp_valuesize_histogram[i]))
         
-        # Dump read-write ratio for Twitter KV workloads
-        if tmp_workload_name == TraceLoader.ZIPF_TWITTERKV2_WORKLOADNAME or tmp_workload_name == TraceLoader.ZIPF_TWITTERKV4_WORKLOADNAME:
+        # Dump optype ratios for workloads requiring them
+        if TraceLoader.needOptypeRatios(tmp_workload_name):
             tmp_read_ratio = tmp_trace_loader.getReadRatio()
             tmp_update_ratio = tmp_trace_loader.getUpdateRatio()
             tmp_delete_ratio = tmp_trace_loader.getDeleteRatio()

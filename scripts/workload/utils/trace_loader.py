@@ -35,7 +35,7 @@ class TraceLoader:
     TENCENTPHOTO_IMGFORMAT_WEB = 5
     TENCENTPHOTO_VALSIZE_COLUMNIDX = 4
 
-    # For Twitter KV traces
+    # For Twitter KV traces (need optype ratios)
     SORT_DELIMITER = "," # Comma-separated values used by Twitter KV trace files
     ZIPF_TWITTERKV2_WORKLOADNAME = "zipf_twitterkv2"
     ZIPF_TWITTERKV4_WORKLOADNAME = "zipf_twitterkv4"
@@ -60,7 +60,7 @@ class TraceLoader:
         self.workload_name_ = workload_name
         self.statistics_ = {} # key: [value size, frequency]
 
-        # For Twitter KV workloads
+        # For workloads requiring optype ratios
         self.read_ratio_ = 1.0
         self.update_ratio_ = 0.0
         self.delete_ratio_ = 0.0
@@ -86,6 +86,10 @@ class TraceLoader:
                 self.loadFileOfTwitterKV_(tmp_filepath)
             else:
                 LogUtil.die(Common.scriptname, "unknown workload {}!".format(workload_name))
+    
+    @staticmethod
+    def needOptypeRatios(workload_name):
+        return workload_name == TraceLoader.ZIPF_TWITTERKV2_WORKLOADNAME or workload_name == TraceLoader.ZIPF_TWITTERKV4_WORKLOADNAME
 
     # Get sorted frequency list (sorted in descending order of frequencies in order to get ranks)
     # NOTE: rank (i.e., sorted index + 1) >= 1 for Zipfian distribution (no matter power low (alpha >= 0) or zeta (alpha > 1))
@@ -167,7 +171,7 @@ class TraceLoader:
         LogUtil.dump(Common.scriptname, "keycnt: {}; valsize min/max/avg: {}/{}/{}".format(len(self.statistics_), min_valsize, max_valsize, avg_valsize))
         return valsize_histogram
     
-    # Get read-write ratio for Twitter KV workloads
+    # Get optype ratios for workloads requiring them
     def getReadRatio(self):
         return self.read_ratio_
     def getUpdateRatio(self):
@@ -256,7 +260,7 @@ class TraceLoader:
     def loadFileOfTwitterKV_(self, filepath):
         LogUtil.prompt(Common.scriptname, "loading trace file {} for workload {}...".format(filepath, self.workload_name_))
 
-        # Read-write statistics for Twitter KV workloads
+        # Optype statistics for workloads requiring them
         read_cnt = 0
         update_cnt = 0
         delete_cnt = 0
@@ -273,7 +277,7 @@ class TraceLoader:
             content_size += len(tmp_line)
             if self.workload_name_ == TraceLoader.ZIPF_TWITTERKV2_WORKLOADNAME or self.workload_name_ == TraceLoader.ZIPF_TWITTERKV4_WORKLOADNAME:
                 if content_size >= TraceLoader.TWITTERKV_MAX_CONTENT_SIZE:
-                    LogUtil.warn(Common.scriptname, "content size exceeds limit {} for workload {}!".format(TWITTERKV_MAX_CONTENT_SIZE, self.workload_name_))
+                    LogUtil.warn(Common.scriptname, "content size exceeds limit {} for workload {}!".format(TraceLoader.TWITTERKV_MAX_CONTENT_SIZE, self.workload_name_))
                     break
             
             # Process each line
@@ -284,7 +288,7 @@ class TraceLoader:
             tmp_valsize = int(tmp_columns[TraceLoader.TWITTERKV_VALSIZE_COLUMNIDX])
             self.updateStatistics_(tmp_key, tmp_valsize)
 
-            # Update read-write statistics for Twitter KV workloads
+            # Update optype statistics for workloads requiring them
             tmp_optype = tmp_columns[TraceLoader.TWITTERKV_OPTYPE_COLUMNIDX]
             if tmp_optype == "get":
                 read_cnt += 1
@@ -295,7 +299,7 @@ class TraceLoader:
             elif tmp_optype == "add":
                 insert_cnt += 1
         
-        # Update read-write ratio for Twitter KV workloads
+        # Update optype ratios for workloads requiring them
         total_cnt = read_cnt + update_cnt + delete_cnt + insert_cnt
         self.read_ratio_ = double(read_cnt) / double(total_cnt)
         self.update_ratio_ = double(update_cnt) / double(total_cnt)

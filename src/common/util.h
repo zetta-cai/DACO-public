@@ -234,6 +234,7 @@ namespace covered
         // Replay single-node trace files by sampling and partitioning for geo-distributed caching
         static bool isReplayedWorkload(const std::string workload_name); // Will disable effects of keycnt/opcnt for replayed workloads (NO tunable workload parameters)
         static std::string getReplayedWorkloadHintstr(); // Used by CLI module to dump hint information
+        static bool needOptypeRatios(const std::string workload_name); // Will load and use optype ratios for workloads requring them
 
         // (1) I/O
 
