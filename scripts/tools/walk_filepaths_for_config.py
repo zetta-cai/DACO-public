@@ -8,14 +8,18 @@ from ..common import *
 # workload_dirname = "wikitext" # For Wikipedia text trace
 # workload_dirname = "wikiimage" # For Wikipedia image trace
 # workload_dirname = "tencent/dataset1" # For Tencent photo caching dataset 1
-workload_dirname = "tencent/dataset2" # For Tencent photo caching dataset 2
+# workload_dirname = "tencent/dataset2" # For Tencent photo caching dataset 2
+# workload_dirname = "cluster2" # For Twitter KV cluster2 trace
+workload_dirname = "cluster4" # For Twitter KV cluster4 trace
 
 # NOTE: we limit the maximize bytes of trace files for each workload due to memory limitation, yet still sufficient to extract the characteristics of the workload
 total_filesize_limits = {
     "wikitext": None, # NO limitation (6.3G)
     "wikiimage": None, # NO limitation (90G)
     "tencent/dataset1": 50 * 1000 * 1000 * 1000, # 50G (194G)
-    "tencent/dataset2": 50 * 1000 * 1000 * 1000, # 50G (207G)
+    "tencent/dataset2": 50 * 1000 * 1000 * 1000, # 50G (207G),
+    "cluster2": None, # No file size limitation (316G), but we will limit content size when loading the trace for memory limitation
+    "cluster4": None, # No file size limitation (277G), but we will limit content size when loading the trace for memory limitation
 }
 max_total_filesize = total_filesize_limits[workload_dirname]
 

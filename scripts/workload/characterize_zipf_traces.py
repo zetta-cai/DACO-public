@@ -43,7 +43,7 @@ for tmp_workload_name in workload_names:
         elif tmp_workload_name == TraceLoader.ZIPF_TENCENTPHOTO2_WORKLOADNAME:
             tmp_filename_list = JsonUtil.getValueForKeystr(Common.scriptname, "trace_dirpath_relative_tencentphoto2_trace_filepaths")
         elif tmp_workload_name == TraceLoader.ZIPF_TWITTERKV2_WORKLOADNAME:
-            tmp_filename_list = JsonUtil.getValueForKeystr(Comma.scriptname, "trace_dirpath_relative_twitterkv2_trace_filepaths")
+            tmp_filename_list = JsonUtil.getValueForKeystr(Common.scriptname, "trace_dirpath_relative_twitterkv2_trace_filepaths")
         elif tmp_workload_name == TraceLoader.ZIPF_TWITTERKV4_WORKLOADNAME:
             tmp_filename_list = JsonUtil.getValueForKeystr(Common.scriptname, "trace_dirpath_relative_twitterkv4_trace_filepaths")
         else:
@@ -56,6 +56,9 @@ for tmp_workload_name in workload_names:
         tmp_sorted_frequency_list = tmp_trace_loader.getSortedFrequencyList()
         tmp_zipf_curvefit = ZipfCurvefit(tmp_sorted_frequency_list)
 
+        # Open the file
+        f = open(tmp_workload_characteristic_filepath, "wb")
+
         # Dump the characteristics (Zipfian constant, key size distribution, and value size distribution) for the workload name
         LogUtil.prompt(Common.scriptname, "dump characteristics for workload {} into {}...".format(tmp_workload_name, tmp_workload_characteristic_filepath))
         tmp_zipf_constant = tmp_zipf_curvefit.getZipfConstant()
@@ -63,19 +66,37 @@ for tmp_workload_name in workload_names:
         tmp_keysize_histogram = tmp_trace_loader.getKeySizeHistogram()
         tmp_valuesize_histogram = tmp_trace_loader.getValueSizeHistogram()
         os.makedirs(os.path.dirname(tmp_workload_characteristic_filepath), exist_ok=True)
-        with open(tmp_workload_characteristic_filepath, "wb") as f:
-            # Dump Zipfian constant as double in little endian
-            f.write(struct.pack("<d", tmp_zipf_constant))
-            # # Dump Zipfian scaling factor as double in little endian
-            # f.write(struct.pack("<d", tmp_zipf_scaling_factor))
-            # Dump key size histogram as uint32_t in little endian
-            f.write(struct.pack("<I", len(tmp_keysize_histogram)))
-            for i in range(len(tmp_keysize_histogram)):
-                f.write(struct.pack("<I", tmp_keysize_histogram[i]))
-            # Dump value size histogram as uint32_t in little endian
-            f.write(struct.pack("<I", len(tmp_valuesize_histogram)))
-            for i in range(len(tmp_valuesize_histogram)):
-                f.write(struct.pack("<I", tmp_valuesize_histogram[i]))
+        # Dump Zipfian constant as double in little endian
+        f.write(struct.pack("<d", tmp_zipf_constant))
+        # # Dump Zipfian scaling factor as double in little endian
+        # f.write(struct.pack("<d", tmp_zipf_scaling_factor))
+        # Dump key size histogram as uint32_t in little endian
+        f.write(struct.pack("<I", len(tmp_keysize_histogram)))
+        for i in range(len(tmp_keysize_histogram)):
+            f.write(struct.pack("<I", tmp_keysize_histogram[i]))
+        # Dump value size histogram as uint32_t in little endian
+        f.write(struct.pack("<I", len(tmp_valuesize_histogram)))
+        for i in range(len(tmp_valuesize_histogram)):
+            f.write(struct.pack("<I", tmp_valuesize_histogram[i]))
+        
+        # Dump read-write ratio for Twitter KV workloads
+        if tmp_workload_name == TraceLoader.ZIPF_TWITTERKV2_WORKLOADNAME or tmp_workload_name == TraceLoader.ZIPF_TWITTERKV4_WORKLOADNAME:
+            tmp_read_ratio = tmp_trace_loader.getReadRatio()
+            tmp_update_ratio = tmp_trace_loader.getUpdateRatio()
+            tmp_delete_ratio = tmp_trace_loader.getDeleteRatio()
+            tmp_insert_ratio = tmp_trace_loader.getInsertRatio()
+
+            # Dump read ratio as double in little endian
+            f.write(struct.pack("<d", tmp_read_ratio))
+            # Dump update ratio as double in little endian
+            f.write(struct.pack("<d", tmp_update_ratio))
+            # Dump delete ratio as double in little endian
+            f.write(struct.pack("<d", tmp_delete_ratio))
+            # Dump insert ratio as double in little endian
+            f.write(struct.pack("<d", tmp_insert_ratio))
+
+        # Close the file
+        f.close()
         
         # Avoid memory overflow
         del tmp_trace_loader

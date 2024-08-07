@@ -135,8 +135,7 @@ for i in range(len(twitterkv_clusters)):
         tmp_twitterkv_cluster_decompress_subprocess = SubprocessUtil.runCmd(tmp_twitterkv_cluster_decompress_cmd, is_capture_output=False)
 
     # Clear tarball file if necessary
-    # TMPDEBUG24
-    # if is_clear_tarball:
-    #     LogUtil.prompt(Common.scriptname, "clear {}...".format(tmp_twitterkv_cluster_tarball_filepath))
-    #     os.remove(tmp_twitterkv_cluster_tarball_filepath)
+    if is_clear_tarball:
+        LogUtil.prompt(Common.scriptname, "clear {}...".format(tmp_twitterkv_cluster_tarball_filepath))
+        os.remove(tmp_twitterkv_cluster_tarball_filepath)
 print("")

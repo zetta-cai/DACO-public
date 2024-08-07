@@ -44,6 +44,7 @@ class TraceLoader:
     TWITTERKV_KEYSIZE_COLUMNIDX = 2
     TWITTERKV_VALSIZE_COLUMNIDX = 3
     TWITTERKV_OPTYPE_COLUMNIDX = 5
+    TWITTERKV_MAX_CONTENT_SIZE = 50 * 1000 * 1000 * 1000 # Limited loaded content size for memory limitation as 50G (316G for cluster2 and 277G for cluster4)
 
     # For key size histogram (from 1B to 1KiB; each bucket is 1B)
     KEYSIZE_HISTOGRAM_SIZE = 1024
@@ -58,6 +59,12 @@ class TraceLoader:
         self.filename_list_ = filename_list
         self.workload_name_ = workload_name
         self.statistics_ = {} # key: [value size, frequency]
+
+        # For Twitter KV workloads
+        self.read_ratio_ = 1.0
+        self.update_ratio_ = 0.0
+        self.delete_ratio_ = 0.0
+        self.insert_ratio_ = 0.0
 
         # Check dirpath
         if not os.path.exists(dirpath):
@@ -108,7 +115,7 @@ class TraceLoader:
             elif self.workload_name_ == TraceLoader.ZETA_TENCENTPHOTO1_WORKLOADNAME or self.workload_name_ == TraceLoader.ZETA_TENCENTPHOTO2_WORKLOADNAME or self.workload_name_ == TraceLoader.ZIPF_TENCENTPHOTO1_WORKLOADNAME or self.workload_name_ == TraceLoader.ZIPF_TENCENTPHOTO2_WORKLOADNAME:
                 tmp_keysize = 20 # Tencent Photo uses 20B checksum
             elif workload_name == TraceLoader.ZIPF_TWITTERKV2_WORKLOADNAME or workload_name == TraceLoader.ZIPF_TWITTERKV4_WORKLOADNAME:
-                # TODO
+                tmp_keysize = len(tmp_key) # String-type keys
             else:
                 tmp_keysize = len(tmp_key)
             
@@ -159,6 +166,16 @@ class TraceLoader:
         avg_valsize /= len(self.statistics_)
         LogUtil.dump(Common.scriptname, "keycnt: {}; valsize min/max/avg: {}/{}/{}".format(len(self.statistics_), min_valsize, max_valsize, avg_valsize))
         return valsize_histogram
+    
+    # Get read-write ratio for Twitter KV workloads
+    def getReadRatio(self):
+        return self.read_ratio_
+    def getUpdateRatio(self):
+        return self.update_ratio_
+    def getDeleteRatio(self):
+        return self.delete_ratio_
+    def getInsertRatio(self):
+        return self.insert_ratio_
     
     # Load Wikipedia Text trace files
     # Format: relative_unix,hashed_host_path_query,response_size,time_firstbyte
@@ -239,14 +256,51 @@ class TraceLoader:
     def loadFileOfTwitterKV_(self, filepath):
         LogUtil.prompt(Common.scriptname, "loading trace file {} for workload {}...".format(filepath, self.workload_name_))
 
+        # Read-write statistics for Twitter KV workloads
+        read_cnt = 0
+        update_cnt = 0
+        delete_cnt = 0
+        insert_cnt = 0
+
         f = open(filepath, mode="r")
+        content_size = 0
         while True:
             tmp_line = f.readline()
             if tmp_line == "": # End of file
                 break
             
+            # Check content size for Twitter KV workloads
+            content_size += len(tmp_line)
+            if self.workload_name_ == TraceLoader.ZIPF_TWITTERKV2_WORKLOADNAME or self.workload_name_ == TraceLoader.ZIPF_TWITTERKV4_WORKLOADNAME:
+                if content_size >= TraceLoader.TWITTERKV_MAX_CONTENT_SIZE:
+                    LogUtil.warn(Common.scriptname, "content size exceeds limit {} for workload {}!".format(TWITTERKV_MAX_CONTENT_SIZE, self.workload_name_))
+                    break
+            
             # Process each line
-            # TODO
+            tmp_columns = tmp_line.strip().split(TraceLoader.SORT_DELIMITER)
+            if len(tmp_columns) != TraceLoader.TWITTERKV_COLUMNCNT:
+                LogUtil.die(Common.scriptname, "invalid column count {} in trace file {} for workload {}!".format(len(tmp_columns), filepath, self.workload_name_))
+            tmp_key = tmp_columns[TraceLoader.TWITTERKV_KEY_COLUMNIDX]
+            tmp_valsize = int(tmp_columns[TraceLoader.TWITTERKV_VALSIZE_COLUMNIDX])
+            self.updateStatistics_(tmp_key, tmp_valsize)
+
+            # Update read-write statistics for Twitter KV workloads
+            tmp_optype = tmp_columns[TraceLoader.TWITTERKV_OPTYPE_COLUMNIDX]
+            if tmp_optype == "get":
+                read_cnt += 1
+            elif tmp_optype == "set":
+                update_cnt += 1
+            elif tmp_optype == "delete":
+                delete_cnt += 1
+            elif tmp_optype == "add":
+                insert_cnt += 1
+        
+        # Update read-write ratio for Twitter KV workloads
+        total_cnt = read_cnt + update_cnt + delete_cnt + insert_cnt
+        self.read_ratio_ = double(read_cnt) / double(total_cnt)
+        self.update_ratio_ = double(update_cnt) / double(total_cnt)
+        self.delete_ratio_ = double(delete_cnt) / double(total_cnt)
+        self.insert_ratio_ = double(insert_cnt) / double(total_cnt)
 
     def updateStatistics_(self, key, valsize):
         if key not in self.statistics_:
