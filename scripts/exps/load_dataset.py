@@ -52,7 +52,7 @@ tmp_workload = "zipf_facebook"
 tmp_zipf_alpha = 0.7 # NOTE: 0.7 is the default skewness of Facebook CDN workload if with Zipf-based generator; workload skewness does NOT affect dataset keys and value sizes
 load_dataset(tmp_workload, tmp_keycnt, tmp_zipf_alpha)
 
-# # (3) Load dataset into Rocksdb for Zeta-based workloads (non-replayed traces; statistics are extracted from trace files)
+# # (3) (OBSOLETE due to using power-law Zipf by default) Load dataset into Rocksdb for Zeta-based workloads (non-replayed traces; statistics are extracted from trace files)
 # zeta_workloads = ["zeta_wikitext", "zeta_wikiimage", "zeta_tencentphoto1", "zeta_tencentphoto2"]
 # for tmp_workload in zeta_workloads:
 #     tmp_keycnt = 1000000 # 1M by default
@@ -64,19 +64,19 @@ for tmp_workload in zipf_workloads:
     tmp_keycnt = 1000000 # 1M by default
     load_dataset(tmp_workload, tmp_keycnt)
 
-# (4) Load dataset into Rocksdb for Akamai traces
-akamai_workloads = ["akamaiweb", "akamaivideo"]
-for tmp_workload in akamai_workloads:
-    tmp_keycnt = 1000000 # 1M by default
-    load_dataset(tmp_workload, tmp_keycnt)
+# # (4) (OBSOLETE due to Akamai's workload generator is originally designed for single-cache-node) Load dataset into Rocksdb for Akamai traces
+# akamai_workloads = ["akamaiweb", "akamaivideo"]
+# for tmp_workload in akamai_workloads:
+#     tmp_keycnt = 1000000 # 1M by default
+#     load_dataset(tmp_workload, tmp_keycnt)
 
-# (5) Load dataset into Rocksdb for Twitter KV workloads
-twitterkv_workloads = ["twitterkv2", "twitterkv4"]
-for tmp_workload in twitterkv_workloads:
-    tmp_keycnt = 1000000 # 1M by default
-    load_dataset(tmp_workload, tmp_keycnt)
+# # (5) (OBSOLETE due to too small object sizes) Load dataset into Rocksdb for Twitter KV workloads
+# twitterkv_workloads = ["zipf_twitterkv2", "zipf_twitterkv4"]
+# for tmp_workload in twitterkv_workloads:
+#     tmp_keycnt = 1000000 # 1M by default
+#     load_dataset(tmp_workload, tmp_keycnt)
 
-# (5) Hint users to check keycnt and dataset size in log files, and update keycnt in config.json if necessary
+# (6) Hint users to check keycnt and dataset size in log files, and update keycnt in config.json if necessary
 # NOTE: we comment the following code as we have already updated config.json with correct keycnt, and calculate cache memory capacity in corresponding exps correctly
 #LogUtil.emphasize(Common.scriptname, "Please check keycnt and dataset size in the following log files, and update keycnt in config.json accordingly if necessary:\n{}".format(log_filepaths))
 
