@@ -118,7 +118,7 @@ class TraceLoader:
                 tmp_keysize = 8 # Wikipedia Image uses bigint
             elif self.workload_name_ == TraceLoader.ZETA_TENCENTPHOTO1_WORKLOADNAME or self.workload_name_ == TraceLoader.ZETA_TENCENTPHOTO2_WORKLOADNAME or self.workload_name_ == TraceLoader.ZIPF_TENCENTPHOTO1_WORKLOADNAME or self.workload_name_ == TraceLoader.ZIPF_TENCENTPHOTO2_WORKLOADNAME:
                 tmp_keysize = 20 # Tencent Photo uses 20B checksum
-            elif workload_name == TraceLoader.ZIPF_TWITTERKV2_WORKLOADNAME or workload_name == TraceLoader.ZIPF_TWITTERKV4_WORKLOADNAME:
+            elif self.workload_name_ == TraceLoader.ZIPF_TWITTERKV2_WORKLOADNAME or self.workload_name_ == TraceLoader.ZIPF_TWITTERKV4_WORKLOADNAME:
                 tmp_keysize = len(tmp_key) # String-type keys
             else:
                 tmp_keysize = len(tmp_key)
@@ -301,10 +301,10 @@ class TraceLoader:
         
         # Update optype ratios for workloads requiring them
         total_cnt = read_cnt + update_cnt + delete_cnt + insert_cnt
-        self.read_ratio_ = double(read_cnt) / double(total_cnt)
-        self.update_ratio_ = double(update_cnt) / double(total_cnt)
-        self.delete_ratio_ = double(delete_cnt) / double(total_cnt)
-        self.insert_ratio_ = double(insert_cnt) / double(total_cnt)
+        self.read_ratio_ = float(read_cnt) / float(total_cnt)
+        self.update_ratio_ = float(update_cnt) / float(total_cnt)
+        self.delete_ratio_ = float(delete_cnt) / float(total_cnt)
+        self.insert_ratio_ = float(insert_cnt) / float(total_cnt)
 
     def updateStatistics_(self, key, valsize):
         if key not in self.statistics_:

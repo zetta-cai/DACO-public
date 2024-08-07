@@ -8,7 +8,7 @@ from .utils.trace_loader import *
 from .utils.zipf_curvefit import *
 from ..exps.utils.exputil import *
 
-# Power-law Zipfian constant: [0.7351769996271038, 1.0128733530793717, 0.6645665328056994, 0.6566908883710469, TODO, TODO]
+# Power-law Zipfian constant: [0.7351769996271038, 1.0128733530793717, 0.6645665328056994, 0.6566908883710469, 0.42495198192158434 (OBSOLETE due to too small object sizes), 0.5831482696346101 (OBSOLETE due to too small object sizes)]
 workload_names = [TraceLoader.ZIPF_WIKITEXT_WORKLOADNAME, TraceLoader.ZIPF_WIKIIMAGE_WORKLOADNAME, TraceLoader.ZIPF_TENCENTPHOTO1_WORKLOADNAME, TraceLoader.ZIPF_TENCENTPHOTO2_WORKLOADNAME, TraceLoader.ZIPF_TWITTERKV2_WORKLOADNAME, TraceLoader.ZIPF_TWITTERKV4_WORKLOADNAME]
 
 # Get dirpath of trace files
