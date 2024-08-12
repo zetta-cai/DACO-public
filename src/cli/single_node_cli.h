@@ -1,11 +1,13 @@
 /*
- * SimulatorCLI: parse and process simulator CLI parameters dynamic configurations.
+ * SingleNodeCLI: parse and process single-node (run all components including client, cache, cloud, and evaluator in a single node) CLI parameters dynamic configurations.
+ *
+ * NOTE: SingleNodeCLI is used by single-node prototype and single-node simulator, which just have implementation differences (the former has parallel nodes for absolute performance, while the latter simulates cache nodes one by one for hit ratios), yet the role is the same to run the caching system (client/cache/cloud/evaluator) precisely/approximately in a single node.
  * 
  * By Siyuan Sheng (2023.08.04).
  */
 
-#ifndef SIMULATOR_CLI_H
-#define SIMULATOR_CLI_H
+#ifndef SINGLE_NODE_CLI_H
+#define SINGLE_NODE_CLI_H
 
 #include <string>
 
@@ -16,12 +18,12 @@
 
 namespace covered
 {
-    class SimulatorCLI : virtual public CloudCLI, virtual public EvaluatorCLI
+    class SingleNodeCLI : virtual public CloudCLI, virtual public EvaluatorCLI
     {
     public:
-        SimulatorCLI();
-        SimulatorCLI(int argc, char **argv);
-        virtual ~SimulatorCLI();
+        SingleNodeCLI();
+        SingleNodeCLI(int argc, char **argv);
+        virtual ~SingleNodeCLI();
 
         std::string toCliString(); // NOT virtual for cilutil
         virtual void clearIsToCliString(); // Idempotent operation: clear is_to_cli_string_ for the next toCliString()

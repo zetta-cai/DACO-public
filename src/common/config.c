@@ -1264,7 +1264,7 @@ namespace covered
     void Config::checkMainClassName_()
     {
         // Obsolete: STATISTICS_AGGREGATOR_MAIN_NAME
-        if (main_class_name_ != Util::SIMULATOR_MAIN_NAME && main_class_name_ != Util::TOTAL_STATISTICS_LOADER_MAIN_NAME && main_class_name_ != Util::DATASET_LOADER_MAIN_NAME && main_class_name_ != Util::CLIENT_MAIN_NAME && main_class_name_ != Util::EDGE_MAIN_NAME && main_class_name_ != Util::CLOUD_MAIN_NAME && main_class_name_ != Util::EVALUATOR_MAIN_NAME && main_class_name_ != Util::CLIUTIL_MAIN_NAME && main_class_name_ != Util::TRACE_PREPROCESSOR_MAIN_NAME)
+        if (main_class_name_ != Util::SINGLE_NODE_PROTOTYPE_MAIN_NAME && main_class_name_ != Util::SINGLE_NODE_SIMULATOR_MAIN_NAME && main_class_name_ != Util::TOTAL_STATISTICS_LOADER_MAIN_NAME && main_class_name_ != Util::DATASET_LOADER_MAIN_NAME && main_class_name_ != Util::CLIENT_MAIN_NAME && main_class_name_ != Util::EDGE_MAIN_NAME && main_class_name_ != Util::CLOUD_MAIN_NAME && main_class_name_ != Util::EVALUATOR_MAIN_NAME && main_class_name_ != Util::CLIUTIL_MAIN_NAME && main_class_name_ != Util::TRACE_PREPROCESSOR_MAIN_NAME)
         {
             std::ostringstream oss;
             oss << "main class name " << main_class_name_ << " is not supported!";
@@ -1460,8 +1460,11 @@ namespace covered
             exit(1);
         }
 
-        // (vi) client/edge/cloud/evaluator MUST be current machine idx if under single-node simulation
-        if (main_class_name_ == Util::SIMULATOR_MAIN_NAME)
+        // (vi) client/edge/cloud/evaluator MUST be current machine idx if under single-node prototype
+
+        // NOTE: single-node simulator does NOT launch client/edge/cloud/evaluator threads, and hence NO need to check the correpsonding settings in the config file
+        
+        if (main_class_name_ == Util::SINGLE_NODE_PROTOTYPE_MAIN_NAME)
         {
             assert(client_machine_idxes_.size() == 1);
             assert(client_machine_idxes_[0] == current_machine_idx_);

@@ -150,7 +150,8 @@ namespace covered
 
     void ThreadLauncher::getPerroleRequiredDedicatedCorecnt_(const std::string main_class_name, const uint32_t clientcnt, const uint32_t edgecnt, std::unordered_map<std::string, uint32_t>& perrole_required_dedicated_corecnt)
     {
-        if (main_class_name == Util::SIMULATOR_MAIN_NAME || main_class_name == Util::CLIENT_MAIN_NAME || main_class_name == Util::EDGE_MAIN_NAME || main_class_name == Util::CLOUD_MAIN_NAME || main_class_name == Util::EVALUATOR_MAIN_NAME)
+        // NOTE: single-node simulator does NOT launch client/cache/cloud/evaluator threads, and hence NO need to get per-role required dedicated corecnt
+        if (main_class_name == Util::SINGLE_NODE_PROTOTYPE_MAIN_NAME || main_class_name == Util::CLIENT_MAIN_NAME || main_class_name == Util::EDGE_MAIN_NAME || main_class_name == Util::CLOUD_MAIN_NAME || main_class_name == Util::EVALUATOR_MAIN_NAME)
         {
             // Different thread roles of clients/edges/cloud/evaluator will share dedicated CPU cores of current physical machine
             assert(clientcnt > 0);

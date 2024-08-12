@@ -155,8 +155,9 @@ namespace covered
             ClientCLI::createRequiredDirectories_(main_class_name);
             EdgeCLI::createRequiredDirectories_(main_class_name);
 
+            // NOTE: single-node simulator does NOT launch evaluator thread for absolute performance, and hence NO need to dump evaluator statistics
             bool is_createdir_for_evaluator_statistics = false;
-            if (main_class_name == Util::SIMULATOR_MAIN_NAME || main_class_name == Util::EVALUATOR_MAIN_NAME)
+            if (main_class_name == Util::SINGLE_NODE_PROTOTYPE_MAIN_NAME || main_class_name == Util::EVALUATOR_MAIN_NAME)
             {
                 is_createdir_for_evaluator_statistics = true;
             }

@@ -19,7 +19,8 @@ namespace covered
     // (1) For CLI parameters
 
     // Main class name
-    const std::string Util::SIMULATOR_MAIN_NAME("simulator");
+    const std::string Util::SINGLE_NODE_PROTOTYPE_MAIN_NAME("single_node_prototype");
+    const std::string Util::SINGLE_NODE_SIMULATOR_MAIN_NAME("single_node_simulator");
     //const std::string Util::STATISTICS_AGGREGATOR_MAIN_NAME("statistics_aggregator");
     const std::string Util::TOTAL_STATISTICS_LOADER_MAIN_NAME("total_statistics_loader");
     const std::string Util::DATASET_LOADER_MAIN_NAME("dataset_loader");

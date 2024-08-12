@@ -9,7 +9,7 @@ class CLIUtil:
     EDGE_PREFIX_STRING = "Edge:"
     CLOUD_PREFIX_STRING = "Cloud:"
     EVALUATOR_PREFIX_STRING = "Evaluator:"
-    SIMULATOR_PREFIX_STRING = "Simulator:"
+    SINGLE_NODE_PREFIX_STRING = "SingleNode:"
     DATASET_LOADER_PREFIX_STRING = "DatasetLoader:"
     TRACE_PREPROCESSOR_PREFIX_STRING = "TracePreprocessor:"
 
@@ -67,10 +67,10 @@ class CLIUtil:
                 self.evaluator_cli_str_ = CLIUtil.getCliStrAfterPrefix_(tmp_outputstr_line, CLIUtil.EVALUATOR_PREFIX_STRING)
                 if self.evaluator_cli_str_ != "":
                     continue
-            # For simulator
-            if self.simulator_cli_str_ == "":
-                self.simulator_cli_str_ = CLIUtil.getCliStrAfterPrefix_(tmp_outputstr_line, CLIUtil.SIMULATOR_PREFIX_STRING)
-                if self.simulator_cli_str_ != "":
+            # For single-node prototype/simulator
+            if self.single_node_cli_str_ == "":
+                self.single_node_cli_str_ = CLIUtil.getCliStrAfterPrefix_(tmp_outputstr_line, CLIUtil.SINGLE_NODE_PREFIX_STRING)
+                if self.single_node_cli_str_ != "":
                     continue
             # For dataset_loader
             if self.dataset_loader_cli_str_ == "":
@@ -95,8 +95,8 @@ class CLIUtil:
     def getEvaluatorCLIStr(self):
         return self.evaluator_cli_str_
 
-    def getSimulatorCLIStr(self):
-        return self.simulator_cli_str_
+    def getSingleNodeCLIStr(self):
+        return self.single_node_cli_str_
 
     def getDatasetLoaderCLIStr(self):
         return self.dataset_loader_cli_str_

@@ -1,7 +1,9 @@
 /*
- * Simulate all componenets including client/edge/cloud nodes and evaluator in the current physical machine.
+ * Launch all componenets including client/edge/cloud nodes and evaluator in the current physical machine as a single-node prototype.
  *
  * NOTE: clients/edges/cloud/evaluator MUST be in the same physical machine in config.json.
+ * 
+ * NOTE: single node prototype still runs different components in parallel by multiple threads for both hit ratios and absolute performance, while single node simulator only focuses on hit ratios under large scales without absolute performance.
  * 
  * By Siyuan Sheng (2023.07.27).
  */
@@ -15,7 +17,7 @@
 
 #include "benchmark/client_wrapper.h"
 #include "benchmark/evaluator_wrapper.h"
-#include "cli/simulator_cli.h"
+#include "cli/single_node_cli.h"
 #include "common/config.h"
 #include "common/thread_launcher.h"
 #include "common/util.h"
@@ -27,19 +29,19 @@
 int main(int argc, char **argv) {
     // (1) Parse and process different CLI parameters for client/edge/cloud/evaluator
 
-    covered::SimulatorCLI simulator_cli(argc, argv);
+    covered::SingleNodeCLI single_node_cli(argc, argv);
 
     // Validate thread launcher before launching threads
     const std::string main_class_name = covered::Config::getMainClassName();
-    covered::ThreadLauncher::validate(main_class_name, simulator_cli.getClientcnt(), simulator_cli.getEdgecnt());
+    covered::ThreadLauncher::validate(main_class_name, single_node_cli.getClientcnt(), single_node_cli.getEdgecnt());
 
-    // Bind main thread of simulator to a shared CPU core
+    // Bind main thread of single-node prototype to a shared CPU core
     covered::ThreadLauncher::bindMainThreadToSharedCpuCore(main_class_name);
 
     // (2) Launch evaluator to control benchmark workflow
 
     pthread_t evaluator_thread;
-    covered::EvaluatorWrapperParam evaluator_param((covered::EvaluatorCLI*)&simulator_cli);
+    covered::EvaluatorWrapperParam evaluator_param((covered::EvaluatorCLI*)&single_node_cli);
 
     covered::Util::dumpNormalMsg(main_class_name, "launch evaluator");
 
@@ -73,7 +75,7 @@ int main(int argc, char **argv) {
     // (2.1) Prepare one cloud parameter
 
     const uint32_t cloud_idx = 0; // TODO: support 1 cloud node now
-    cloud_param = covered::CloudWrapperParam(cloud_idx, (covered::CloudCLI*)&simulator_cli);
+    cloud_param = covered::CloudWrapperParam(cloud_idx, (covered::CloudCLI*)&single_node_cli);
 
     // (2.2) Launch one cloud node
 
@@ -92,7 +94,7 @@ int main(int argc, char **argv) {
 
     // (3) Simulate edgecnt edge nodes with cooperative caching
 
-    const uint32_t edgecnt = simulator_cli.getEdgecnt();
+    const uint32_t edgecnt = single_node_cli.getEdgecnt();
     pthread_t edge_threads[edgecnt];
     covered::EdgeWrapperParam edge_params[edgecnt];
 
@@ -100,7 +102,7 @@ int main(int argc, char **argv) {
 
     for (uint32_t edge_idx = 0; edge_idx < edgecnt; edge_idx++)
     {
-        covered::EdgeWrapperParam tmp_edge_param(edge_idx, (covered::EdgeCLI*)&simulator_cli);
+        covered::EdgeWrapperParam tmp_edge_param(edge_idx, (covered::EdgeCLI*)&single_node_cli);
         edge_params[edge_idx] = tmp_edge_param;
     }
 
@@ -127,7 +129,7 @@ int main(int argc, char **argv) {
     
     // (4) Simulate clientcnt clients by multi-threading
 
-    const uint32_t clientcnt = simulator_cli.getClientcnt();
+    const uint32_t clientcnt = single_node_cli.getClientcnt();
     pthread_t client_threads[clientcnt];
     covered::ClientWrapperParam client_params[clientcnt];
 
@@ -135,7 +137,7 @@ int main(int argc, char **argv) {
 
     for (uint32_t client_idx = 0; client_idx < clientcnt; client_idx++)
     {
-        covered::ClientWrapperParam tmp_client_param(client_idx, (covered::ClientCLI*)&simulator_cli);
+        covered::ClientWrapperParam tmp_client_param(client_idx, (covered::ClientCLI*)&single_node_cli);
         client_params[client_idx] = tmp_client_param;
     }
 

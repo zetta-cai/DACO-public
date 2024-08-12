@@ -50,10 +50,15 @@ dataset_loader: src/dataset_loader.o $(LINK_OBJECTS) $(CLOUD_OBJECTS)
 DEPS += src/dataset_loader.d
 CLEANS += src/dataset_loader.o
 
-simulator: src/simulator.o $(LINK_OBJECTS) $(CLOUD_OBJECTS)
+single_node_prototype: src/single_node_prototype.o $(LINK_OBJECTS) $(CLOUD_OBJECTS)
 	$(LINK) $^ $(ROCKSDB_LDLIBS) $(LDLIBS) -o $@
-DEPS += src/simulator.d
-CLEANS += src/simulator.o
+DEPS += src/single_node_prototype.d
+CLEANS += src/single_node_prototype.o
+
+single_node_simulator: src/single_node_simulator.o $(LINK_OBJECTS) $(CLOUD_OBJECTS)
+	$(LINK) $^ $(ROCKSDB_LDLIBS) $(LDLIBS) -o $@
+DEPS += src/single_node_simulator.d
+CLEANS += src/single_node_simulator.o
 
 client: src/client.o $(LINK_OBJECTS)
 	$(LINK) $^ $(LDLIBS) -o $@
@@ -98,7 +103,7 @@ CLEANS += src/trace_preprocessor.o
 ##############################################################################
 
 # statistics_aggregator
-TARGETS := dataset_loader simulator client edge cloud evaluator cliutil total_statistics_loader trace_preprocessor
+TARGETS := dataset_loader single_node_prototype client edge cloud evaluator cliutil total_statistics_loader trace_preprocessor
 
 all: $(TARGETS)
 #	rm -rf $(CLEANS) $(DEPS)

@@ -12,12 +12,12 @@
 #include <boost/program_options.hpp>
 
 #include "cli/dataset_loader_cli.h"
-#include "cli/simulator_cli.h"
+#include "cli/single_node_cli.h"
 #include "cli/trace_preprocessor_cli.h"
 
 namespace covered
 {
-    class CliutilCLI : virtual public DatasetLoaderCLI, virtual public SimulatorCLI, virtual public TracePreprocessorCLI
+    class CliutilCLI : virtual public DatasetLoaderCLI, virtual public SingleNodeCLI, virtual public TracePreprocessorCLI
     {
     public:
         CliutilCLI(int argc, char **argv);

@@ -65,7 +65,8 @@ namespace covered
         // (1) For CLI parameters
 
         // Main class name
-        static const std::string SIMULATOR_MAIN_NAME;
+        static const std::string SINGLE_NODE_PROTOTYPE_MAIN_NAME;
+        static const std::string SINGLE_NODE_SIMULATOR_MAIN_NAME;
         //static const std::string STATISTICS_AGGREGATOR_MAIN_NAME;
         static const std::string TOTAL_STATISTICS_LOADER_MAIN_NAME;
         static const std::string DATASET_LOADER_MAIN_NAME;

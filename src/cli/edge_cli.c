@@ -311,8 +311,9 @@ namespace covered
         {
             is_create_required_directories_ = true;
 
+            // NOTE: single-node simulator does NOT launch cache node threads, and hence NO need to check dirpath for cache snapshots
             bool is_check_snapshot_dirpath = false;
-            if (main_class_name == Util::EDGE_MAIN_NAME || main_class_name == Util::SIMULATOR_MAIN_NAME)
+            if (main_class_name == Util::EDGE_MAIN_NAME || main_class_name == Util::SINGLE_NODE_PROTOTYPE_MAIN_NAME)
             {
                 is_check_snapshot_dirpath = true;
             }

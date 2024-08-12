@@ -1,23 +1,23 @@
-#include "cli/simulator_cli.h"
+#include "cli/single_node_cli.h"
 
 #include "common/config.h"
 #include "common/util.h"
 
 namespace covered
 {
-    const std::string SimulatorCLI::kClassName("SimulatorCLI");
+    const std::string SingleNodeCLI::kClassName("SingleNodeCLI");
 
-    SimulatorCLI::SimulatorCLI() : CloudCLI(), EvaluatorCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false), is_to_cli_string_(false)
+    SingleNodeCLI::SingleNodeCLI() : CloudCLI(), EvaluatorCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false), is_to_cli_string_(false)
     {}
 
-    SimulatorCLI::SimulatorCLI(int argc, char **argv) : CloudCLI(), EvaluatorCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false), is_to_cli_string_(false)
+    SingleNodeCLI::SingleNodeCLI(int argc, char **argv) : CloudCLI(), EvaluatorCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false), is_to_cli_string_(false)
     {
         parseAndProcessCliParameters(argc, argv);
     }
 
-    SimulatorCLI::~SimulatorCLI() {}
+    SingleNodeCLI::~SingleNodeCLI() {}
 
-    std::string SimulatorCLI::toCliString()
+    std::string SingleNodeCLI::toCliString()
     {
         std::ostringstream oss;
         if (!is_to_cli_string_)
@@ -37,7 +37,7 @@ namespace covered
         return oss.str();
     }
 
-    void SimulatorCLI::clearIsToCliString()
+    void SingleNodeCLI::clearIsToCliString()
     {
         CloudCLI::clearIsToCliString();
         EvaluatorCLI::clearIsToCliString();
@@ -46,7 +46,7 @@ namespace covered
         return;
     }
 
-    void SimulatorCLI::addCliParameters_()
+    void SingleNodeCLI::addCliParameters_()
     {
         if (!is_add_cli_parameters_)
         {
@@ -59,7 +59,7 @@ namespace covered
         return;
     }
 
-    void SimulatorCLI::setParamAndConfig_(const std::string& main_class_name)
+    void SingleNodeCLI::setParamAndConfig_(const std::string& main_class_name)
     {
         if (!is_set_param_and_config_)
         {
@@ -72,7 +72,7 @@ namespace covered
         return;
     }
 
-    void SimulatorCLI::verifyAndDumpCliParameters_(const std::string& main_class_name)
+    void SingleNodeCLI::verifyAndDumpCliParameters_(const std::string& main_class_name)
     {
         if (!is_dump_cli_parameters_)
         {
@@ -85,7 +85,7 @@ namespace covered
         return;
     }
 
-    void SimulatorCLI::createRequiredDirectories_(const std::string& main_class_name)
+    void SingleNodeCLI::createRequiredDirectories_(const std::string& main_class_name)
     {
         if (!is_create_required_directories_)
         {

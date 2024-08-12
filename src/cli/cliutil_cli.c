@@ -7,7 +7,7 @@ namespace covered
 {
     const std::string CliutilCLI::kClassName("CliutilCLI");
 
-    CliutilCLI::CliutilCLI(int argc, char **argv) : DatasetLoaderCLI(), SimulatorCLI(), TracePreprocessorCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false), is_to_cli_string_(false)
+    CliutilCLI::CliutilCLI(int argc, char **argv) : DatasetLoaderCLI(), SingleNodeCLI(), TracePreprocessorCLI(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_create_required_directories_(false), is_to_cli_string_(false)
     {
         parseAndProcessCliParameters(argc, argv);
     }
@@ -26,7 +26,7 @@ namespace covered
             assert(is_create_required_directories_);
 
             oss << DatasetLoaderCLI::toCliString();
-            oss << SimulatorCLI::toCliString();
+            oss << SingleNodeCLI::toCliString();
             oss << TracePreprocessorCLI::toCliString();
 
             is_to_cli_string_ = true;
@@ -38,7 +38,7 @@ namespace covered
     void CliutilCLI::clearIsToCliString()
     {
         DatasetLoaderCLI::clearIsToCliString();
-        SimulatorCLI::clearIsToCliString();
+        SingleNodeCLI::clearIsToCliString();
         TracePreprocessorCLI::clearIsToCliString();
         
         is_to_cli_string_ = false;
@@ -50,7 +50,7 @@ namespace covered
         if (!is_add_cli_parameters_)
         {
             DatasetLoaderCLI::addCliParameters_();
-            SimulatorCLI::addCliParameters_();
+            SingleNodeCLI::addCliParameters_();
             TracePreprocessorCLI::addCliParameters_();
 
             is_add_cli_parameters_ = true;
@@ -64,7 +64,7 @@ namespace covered
         if (!is_set_param_and_config_)
         {
             DatasetLoaderCLI::setParamAndConfig_(main_class_name);
-            SimulatorCLI::setParamAndConfig_(main_class_name);
+            SingleNodeCLI::setParamAndConfig_(main_class_name);
             TracePreprocessorCLI::setParamAndConfig_(main_class_name);
 
             is_set_param_and_config_ = true;
@@ -78,7 +78,7 @@ namespace covered
         if (!is_dump_cli_parameters_)
         {
             DatasetLoaderCLI::verifyAndDumpCliParameters_(main_class_name);
-            SimulatorCLI::verifyAndDumpCliParameters_(main_class_name);
+            SingleNodeCLI::verifyAndDumpCliParameters_(main_class_name);
             TracePreprocessorCLI::verifyAndDumpCliParameters_(main_class_name);
 
             is_dump_cli_parameters_ = true;
@@ -92,7 +92,7 @@ namespace covered
         if (!is_create_required_directories_)
         {
             DatasetLoaderCLI::createRequiredDirectories_(main_class_name);
-            SimulatorCLI::createRequiredDirectories_(main_class_name);
+            SingleNodeCLI::createRequiredDirectories_(main_class_name);
             TracePreprocessorCLI::createRequiredDirectories_(main_class_name);
 
             is_create_required_directories_ = true;

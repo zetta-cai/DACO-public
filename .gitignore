@@ -9,7 +9,8 @@
 /output/*
 /lib/*
 /src/cache/segcache/build
-/simulator
+/single_node_prototype
+/single_node_simulator
 /total_statistics_loader
 /dataset_loader
 /client
