@@ -3,7 +3,7 @@
  * 
  * NOTE: single node prototype still runs different components in parallel by multiple threads for both hit ratios and absolute performance, while single node simulator only focuses on hit ratios under large scales without absolute performance.
  * 
- * NOTE: we assume that single-node simulator has a global view of all cache nodes to directly calculate local and remote hit ratios -> NO need content discovery, request redirection, and COVERED's popularity collection and victim synchronization (but still need local cache access to update cache statistics and cache admission/eviction policies for cache management).
+ * NOTE: we assume that single-node simulator has a global view of all cache nodes to directly calculate local and remote hit ratios -> NO need explicit message transmission for content discovery, request redirection, and COVERED's popularity collection and victim synchronization (but still need local cache access to update local cache statistics, content discovery to select target edge node, request redirection to update remote cache statistics, COVERED's popularity collection and victim synchronization for fast caceh placement, and baseline cache admission/eviction policies for cache management).
  * 
  * NOTE: as the simulator does not consider the absolute performance, NO need message transmissions and also NO need the WAN propagation latency injection (but still measure dynamically changed latencies for COVERED and involved baselines such as LA-Cache -> equal to NO other latencies such as processing latencies in cache nodes, which is acceptable as the propagation latencies are the bottleneck in WAN distributed caching, and single node simulator ONLY focuses on hit ratios instead of absolute performance).
  * 
@@ -15,11 +15,14 @@
 #include <sstream> // std::ostringstream
 #include <vector> // std::vector
 
+#include "cache/covered_cache_custom_func_param.h"
 #include "cli/single_node_cli.h"
 #include "common/config.h"
 #include "common/key.h"
 #include "common/util.h"
 #include "common/value.h"
+#include "edge/basic_edge_custom_func_param.h"
+#include "edge/covered_edge_custom_func_param.h"
 #include "edge/basic_edge_wrapper.h"
 #include "edge/covered_edge_wrapper.h"
 #include "workload/workload_wrapper_base.h"
@@ -28,16 +31,44 @@ namespace covered
 {
     // (1) Global structs and classes
 
-    // Global information of a cached object for single-node simulation
-    struct CachedGlobalInfo
+    // Object-level information of a global cached object for single-node simulation
+    struct GlobalCachedObjinfo
     {
         std::vector<uint32_t> edge_node_idxes; // Which edge nodes caching the object
+    };
+
+    // Object-level information of a local uncached object for single-node simulation (ONLY for COVERED)
+    struct LocalUncachedObjinfo
+    {
+        struct LocalUncachedObjinfoComparator
+        {
+            bool operator()(const std::pair<uint32_t, float>& lhs, const std::pair<uint32_t, float>& rhs) const
+            {
+                return lhs.second > rhs.second;
+            }
+        };
+
+        void update(const uint32_t& edgeidx, const CollectedPopularity& collected_popularity);
+        bool remove(const uint32_t& edgeidx);
+        void getTopkLocalUncachedPopularities(const uint32_t& covered_topk_edgecnt, std::vector<std::pair<uint32_t, float>>& topk_local_uncached_popularities) const;
+
+        uint32_t objsize;
+        std::map<uint32_t, float, LocalUncachedObjinfoComparator> peredge_local_uncached_popularity; // Local uncached popularity for each edge node not caching yet tracking the object (descending order of local uncached popularity)
+    };
+
+    // Edge-level eviction information for single-node simulation (ONLY for COVERED)
+    struct EdgeEvictinfo
+    {
+        uint64_t cache_margin_bytes;
+        std::list<VictimCacheinfo> victim_cacheinfos;
     };
 
     // (2) Global variables
 
     // Global information for single-node simulation
-    std::unordered_map<covered::Key, covered::CachedGlobalInfo, covered::KeyHasher> perkey_cached_global_info;
+    std::unordered_map<covered::Key, covered::GlobalCachedObjinfo, covered::KeyHasher> perkey_global_cached_objinfo; // For global cached objects
+    std::unordered_map<covered::Key, covered::LocalUncachedObjinfo, covered::KeyHasher> perkey_local_uncached_objinfo; // For local uncached objects (ONLY for COVERED)
+    std::unordered_map<uint32_t, EdgeEvictinfo> peredge_evictinfo; // For all edge nodes (ONLY for COVERED)
 
     // An array of edge wrappers (use the internal cache structures, e.g., local caches in cache wrapper, dht wrapper in cooperative wrapper, and COVERED's weight tuner) to simulate multiple edge nodes
     std::vector<covered::EdgeWrapperBase*> edge_wrapper_ptrs;
@@ -48,6 +79,28 @@ namespace covered
 
     // Evaluation variables
     std::mt19937_64 content_discovery_randgen(0); // Used for content discovery simulation
+}
+
+namespace covered
+{
+    // (1) Common helper functions
+
+    uint32_t getClosestEdgeidx(const uint32_t& clientidx);
+    EdgeWrapperBase* getClosestEdgeWrapperPtr(const uint32_t& clientidx);
+    CacheWrapper* getClosestEdgeCacheWrapperPtr(const uint32_t& clientidx);
+    uint32_t getBeaconEdgeidx(const Key& cur_key);
+    EdgeWrapperBase* getBeaconEdgeWrapperPtr(const Key& cur_key);
+    bool accessClosestCache(const Key& cur_key, const uint32_t& clientidx, const std::string& cache_name, Value& fetched_value); // Return is_local_cached_and_valid
+    void contentDiscovery(const Key& cur_key, const uint32_t& clientidx, const std::string& cache_name, const uint32_t& edgecnt, bool& is_remote_hit, uint32_t& target_edge_idx);
+    void requestRedirection(const Key& cur_key, const uint32_t& target_edge_idx, const std::string& cache_name, Value& fetched_value);
+    void validateClosestEdgeForFetchedValue(const Key& cur_key, const Value& fetched_value, const uint32_t& clientidx, const std::string& cache_name, const Hitflag& curobj_hitflag);
+
+    // (2) COVERED's helper functions
+
+    bool tryPopularityAggregationForClosestEdge(const Key& cur_key, const uint32_t& clientidx); // Return is_tracked_after_fetch_value
+    void victimSynchronizationForEdge(const uint32_t& edgeidx);
+    float calcEvictionCost(const Key& cur_key, const uint32_t& object_size, const std::unordered_set<uint32_t>& placement_edgeset);
+    void placementCalculation(const Key& cur_key, const uint32_t& covered_topk_edgecnt, bool& has_best_placement, std::unordered_set<uint32_t>& best_placement_edgeset);
 }
 
 int main(int argc, char **argv) {
@@ -91,7 +144,7 @@ int main(int argc, char **argv) {
 
     // (2) Initialize global variables for single-node simulation
 
-    covered::perkey_cached_global_info.clear();
+    covered::perkey_global_cached_objinfo.clear();
 
     // Initialize for edge nodes (refer to src/edge/edge_wrapper_base.c::launchEdge())
     covered::edge_wrapper_ptrs.resize(edgecnt, NULL);
@@ -152,85 +205,98 @@ int main(int argc, char **argv) {
             // Simulate the corresponding client node
             covered::WorkloadWrapperBase* curclient_workload_wrapper_ptr = covered::workload_wrapper_ptrs[clientidx];
 
-            // Simulate the corresponding edge node
-            const uint32_t curclient_closest_edge_idx = covered::closest_edge_idxes[clientidx];
-            covered::EdgeWrapperBase* curclient_closest_edge_wrapper_ptr = covered::edge_wrapper_ptrs[curclient_closest_edge_idx];
-            assert(curclient_closest_edge_wrapper_ptr != NULL);
-            covered::CacheWrapper* curclient_closest_edge_cache_wrapper_ptr = curclient_closest_edge_wrapper_ptr->getEdgeCachePtr();
-            assert(curclient_closest_edge_cache_wrapper_ptr != NULL);
-
             for (uint32_t local_client_worker_idx = 0; local_client_worker_idx < perclient_workercnt; local_client_worker_idx++)
             {
                 covered::WorkloadItem cur_workload_item = curclient_workload_wrapper_ptr->generateWorkloadItem(local_client_worker_idx);
                 covered::WorkloadItemType cur_workload_item_type = cur_workload_item.getItemType();
                 covered::Key cur_key = cur_workload_item.getKey();
                 covered::Value cur_value = cur_workload_item.getValue();
+                covered::Value fetched_value;
 
                 if (cur_workload_item_type == covered::WorkloadItemType::kWorkloadItemGet)
                 {
                     // Access local cache in the closest edge node for local hit/miss (update cache statistics in the closest edge node) (refer to src/edge/cache_server/basic_edge_wrapper.c::getLocalEdgeCache_())
-                    bool closest_edge_is_redirected = false;
-                    covered::Value closest_edge_value;
-                    bool unused_affect_victim_tracker = false;
-                    bool is_local_cached_and_valid = curclient_closest_edge_cache_wrapper_ptr->get(cur_key, closest_edge_is_redirected, closest_edge_value, unused_affect_victim_tracker);
-                    UNUSED(unused_affect_victim_tracker);
+                    bool is_local_cached_and_valid = covered::accessClosestCache(cur_key, clientidx, cache_name, fetched_value);
 
                     // Check if any other edge node caches the object
+                    covered::Hitflag curobj_hitflag = covered::Hitflag::kGlobalMiss;
                     if (!is_local_cached_and_valid) // Local miss
                     {
+                        bool is_remote_hit = false;
+                        uint32_t target_edge_idx = 0;
+
                         // Simulate content discovery (refer to src/cooperation/directory_table.c::lookup())
-                        std::unordered_map<covered::Key, covered::CachedGlobalInfo, covered::KeyHasher>::iterator perkey_cached_global_info_iter = covered::perkey_cached_global_info.find(cur_key);
-                        if (perkey_cached_global_info_iter != covered::perkey_cached_global_info.end()) // Remote hit
+                        covered::contentDiscovery(cur_key, clientidx, cache_name, edgecnt, is_remote_hit, target_edge_idx);
+
+                        if (is_remote_hit) // Remote hit
                         {
-                            std::vector<uint32_t> curobj_edge_node_idxes = perkey_cached_global_info_iter->second.edge_node_idxes;
-                            assert(curobj_edge_node_idxes.size() > 0);
-
-                            // Remove the closest edge node (source edge node must NOT cache the object)
-                            for (uint32_t i = 0; i < curobj_edge_node_idxes.size(); i++)
-                            {
-                                if (curobj_edge_node_idxes[i] == curclient_closest_edge_idx)
-                                {
-                                    curobj_edge_node_idxes.erase(curobj_edge_node_idxes.begin() + i);
-                                    break;
-                                }
-                            }
-
-                            // Randomly select a valid edge node as the target edge node
-                            std::uniform_int_distribution<uint32_t> uniform_dist(0, curobj_edge_node_idxes.size() - 1); // Range of [0, # of directory info - 1]
-                            uint32_t random_number = uniform_dist(covered::content_discovery_randgen);
-                            assert(random_number < curobj_edge_node_idxes.size());
-                            const uint32_t target_edge_idx = curobj_edge_node_idxes[random_number];
-                            assert(target_edge_idx < edgecnt);
-
                             // Access local cache in the remote edge node to simulate request redirection for remote hit (update cache statistics in the remote edge node) (refer to src/edge/cache_server/basic_cache_server_redirection_processor.c::processReqForRedirectedGet_())
-                            covered::EdgeWrapperBase* curobj_target_edge_wrapper_ptr = covered::edge_wrapper_ptrs[target_edge_idx];
-                            assert(curobj_target_edge_wrapper_ptr != NULL);
-                            covered::CacheWrapper* curobj_target_edge_cache_wrapper_ptr = curobj_target_edge_wrapper_ptr->getEdgeCachePtr();
-                            assert(curobj_target_edge_cache_wrapper_ptr != NULL);
-                            bool target_edge_is_redirected = true;
-                            covered::Value target_edge_value;
-                            bool is_cooperative_cached_and_valid = curobj_target_edge_cache_wrapper_ptr->get(cur_key, target_edge_is_redirected, target_edge_value, unused_affect_victim_tracker);
-                            UNUSED(unused_affect_victim_tracker);
+                            covered::requestRedirection(cur_key, target_edge_idx, cache_name, fetched_value);
 
                             // Update warmup status
-                            assert(is_cooperative_cached_and_valid);
                             warmup_interval_remote_hitcnt += 1;
-                        }
+
+                            curobj_hitflag = covered::Hitflag::kCooperativeHit;
+                        } // End of remote hit
                         else // Global miss
                         {
-                            // NOTE: NO need to simulate cloud access for global misses
-                        }
-                    }
+                            // Copy dataset value to fetched_value to simulate cloud access
+                            fetched_value = cur_value;
+
+                            curobj_hitflag = covered::Hitflag::kGlobalMiss;
+                        } // End of global miss
+                    } // End of local miss
                     else // Local hit
                     {
+                        // NOTE: fetched_value has already been set by accessClosestCache() before
+
                         // Update warmup status
                         warmup_interval_local_hitcnt += 1;
+
+                        curobj_hitflag = covered::Hitflag::kLocalHit;
+                    } // End of local hit
+
+                    // Access local cache in the closest edge node to simulate value validation if necessary for fetched value (update value-related statistics in the closest edge node) (refer to src/edge/cache_server/basic_cache_server_worker.c::tryToUpdateInvalidLocalEdgeCache_())
+                    covered::validateClosestEdgeForFetchedValue(cur_key, fetched_value, clientidx, cache_name, curobj_hitflag);
+
+                    // Trigger cache management
+                    if (cache_name == covered::Util::COVERED_CACHE_NAME) // COVERED
+                    {
+                        // Try to simulate popularity aggregation
+                        bool is_tracked_after_fetch_value = covered::tryPopularityAggregationForClosestEdge(cur_key, clientidx);
+
+                        if (is_tracked_after_fetch_value) // Local uncached yet tracked object
+                        {
+                            // Simulate fast cache placement in the beacon node (refer to src/core/covered_cache_manager.c::placementCalculation_())
+                            bool has_best_placement = false;
+                            std::unordered_set<uint32_t> best_placement_edgeset;
+                            covered::placementCalculation(cur_key, covered_topk_edgecnt, has_best_placement, best_placement_edgeset);
+
+                            // TODO: END HERE
+                            // covered::placementDeployment();
+
+                            // TODO: Update local uncached information for placement edge nodes after admission
+                            // TODO: Update global cached information for placement edge nodes after admission
+                            // TODO: Update per-edge eviction information for placement edge nodes after admission
+
+                            // TODO: Update local uncached information for placement edge nodes after eviction
+                            // TODO: Update global cached information for placement edge nodes after eviction
+                            // TODO: Update per-edge eviction information for placement edge nodes after eviction
+                        }
+                    } // End of COVERED
+                    else if (cache_name == covered::Util::BESTGUESS_CACHE_NAME) // BestGuess (Hint)
+                    {
+                        if (curobj_hitflag == covered::Hitflag::kGlobalMiss)
+                        {
+                            // TODO: BestGuess will evict with approximate global LRU
+                        }
                     }
-
-                    // TODO: Update value-related statistics
-
-                    // TODO: Check if the object is tracked by local uncached metadata for COVERED (NOTE: already update value-related statistics even if it is the first request on the object) (refer to src/edge/cache_server/covered_edge_wrapper.c::getLocalEdgeCache_())
-                }
+                    else // Single-node caches, shark-like caches, and magnet-like caches
+                    {
+                        // TODO: Trigger local admission/eviction of most baselines in the current closest cache node
+                        // TODO: Pass cache miss latency for LA-Cache
+                    }
+                } // End of GET request
                 else if (cur_workload_item_type == covered::WorkloadItemType::kWorkloadItemPut || cur_workload_item_type == covered::WorkloadItemType::kWorkloadItemDel)
                 {
                     // TODO: Access local cache in the closest edge node for local hit/miss (update cache statistics in the closest edge node)
@@ -282,5 +348,544 @@ int main(int argc, char **argv) {
         assert(covered::workload_wrapper_ptrs[clientidx] != NULL);
         delete covered::workload_wrapper_ptrs[clientidx];
         covered::workload_wrapper_ptrs[clientidx] = NULL;
+    }
+}
+
+namespace covered
+{
+    // (1) Global structs and classes
+
+    void LocalUncachedObjinfo::update(const uint32_t& edgeidx, const CollectedPopularity& collected_popularity)
+    {
+        objsize = collected_popularity.getObjectSize();
+        peredge_local_uncached_popularity[edgeidx] = collected_popularity.getLocalUncachedPopularity();
+        return;
+    }
+    
+    bool LocalUncachedObjinfo::remove(const uint32_t& edgeidx)
+    {
+        bool is_empty = false;
+        peredge_local_uncached_popularity.erase(edgeidx);
+        if (peredge_local_uncached_popularity.empty())
+        {
+            is_empty = true;
+        }
+        return is_empty;
+    }
+
+    void LocalUncachedObjinfo::getTopkLocalUncachedPopularities(const uint32_t& covered_topk_edgecnt, std::vector<std::pair<uint32_t, float>>& topk_local_uncached_popularities) const
+    {
+        topk_local_uncached_popularities.clear();
+
+        uint32_t cur_paircnt = 0;
+        for (std::map<uint32_t, float>::const_iterator iter = peredge_local_uncached_popularity.begin(); iter != peredge_local_uncached_popularity.end(); iter++)
+        {
+            topk_local_uncached_popularities.push_back(std::make_pair(iter->first, iter->second));
+
+            cur_paircnt += 1;
+            if (cur_paircnt >= covered_topk_edgecnt)
+            {
+                break;
+            }
+        }
+
+        assert(topk_local_uncached_popularities.size() <= covered_topk_edgecnt);
+        return;
+    }
+}
+
+namespace covered
+{
+    // (1) Common helper functions
+
+    uint32_t getClosestEdgeidx(const uint32_t& clientidx)
+    {
+        assert(clientidx < closest_edge_idxes.size());
+        
+        const uint32_t curclient_closest_edge_idx = closest_edge_idxes[clientidx];
+        return curclient_closest_edge_idx;
+    }
+
+
+    EdgeWrapperBase* getClosestEdgeWrapperPtr(const uint32_t& clientidx)
+    {
+        const uint32_t curclient_closest_edge_idx = getClosestEdgeidx(clientidx);
+        EdgeWrapperBase* curclient_closest_edge_wrapper_ptr = edge_wrapper_ptrs[curclient_closest_edge_idx];
+        assert(curclient_closest_edge_wrapper_ptr != NULL);
+        return curclient_closest_edge_wrapper_ptr;
+    }
+
+    CacheWrapper* getClosestEdgeCacheWrapperPtr(const uint32_t& clientidx)
+    {
+        EdgeWrapperBase* curclient_closest_edge_wrapper_ptr = getClosestEdgeWrapperPtr(clientidx);
+        CacheWrapper* curclient_closest_edge_cache_wrapper_ptr = curclient_closest_edge_wrapper_ptr->getEdgeCachePtr();
+        assert(curclient_closest_edge_cache_wrapper_ptr != NULL);
+        return curclient_closest_edge_cache_wrapper_ptr;
+    }
+
+    uint32_t getBeaconEdgeidx(const Key& cur_key)
+    {
+        EdgeWrapperBase* first_client_closest_edge_wrapper_ptr = getClosestEdgeWrapperPtr(0); // Any edge wrapper can calculate the beacon edge index deterministically
+        CooperationWrapperBase* first_client_closest_edge_cooperation_wrapper_ptr = first_client_closest_edge_wrapper_ptr->getCooperationWrapperPtr();
+        assert(first_client_closest_edge_cooperation_wrapper_ptr != NULL);
+        const uint32_t beacon_edgeidx = first_client_closest_edge_cooperation_wrapper_ptr->getBeaconEdgeIdx(cur_key);
+        return beacon_edgeidx;
+    }
+
+    EdgeWrapperBase* getBeaconEdgeWrapperPtr(const Key& cur_key)
+    {
+        const uint32_t beacon_edgeidx = getBeaconEdgeidx(cur_key);
+        EdgeWrapperBase* beacon_edge_wrapper_ptr = edge_wrapper_ptrs[beacon_edgeidx];
+        assert(beacon_edge_wrapper_ptr != NULL);
+        return beacon_edge_wrapper_ptr;
+    }
+
+    bool accessClosestCache(const Key& cur_key, const uint32_t& clientidx, const std::string& cache_name, Value& fetched_value)
+    {
+        CacheWrapper* curclient_closest_edge_cache_wrapper_ptr = getClosestEdgeCacheWrapperPtr(clientidx);
+
+        bool closest_edge_is_redirected = false;
+        bool affect_victim_tracker = false;
+        bool is_local_cached_and_valid = curclient_closest_edge_cache_wrapper_ptr->get(cur_key, closest_edge_is_redirected, fetched_value, affect_victim_tracker);
+
+        // Simulate victim synchronization of closest edge node (refer to src/edge/covered_edge_wrapper.c::updateCacheManagerForLocalSyncedVictimsInternal_())
+        if (cache_name == Util::COVERED_CACHE_NAME && affect_victim_tracker)
+        {
+            victimSynchronizationForEdge(getClosestEdgeidx(clientidx));
+        }
+
+        return is_local_cached_and_valid;
+    }
+
+    void contentDiscovery(const Key& cur_key, const uint32_t& clientidx, const std::string& cache_name, const uint32_t& edgecnt, bool& is_remote_hit, uint32_t& target_edge_idx)
+    {
+        EdgeWrapperBase* beacon_edge_wrapper_ptr = getBeaconEdgeWrapperPtr(cur_key);
+
+        std::unordered_map<Key, GlobalCachedObjinfo, KeyHasher>::iterator perkey_global_cached_objinfo_iter = perkey_global_cached_objinfo.find(cur_key);
+        // NOTE: ONLY consider content discovery and request redirection for non-single-node caches
+        if (!Util::isSingleNodeCache(cache_name) && perkey_global_cached_objinfo_iter != perkey_global_cached_objinfo.end()) // Global cached
+        {
+            std::vector<uint32_t> curobj_edge_node_idxes = perkey_global_cached_objinfo_iter->second.edge_node_idxes;
+            assert(curobj_edge_node_idxes.size() > 0);
+
+            // Remove the closest edge node (source edge node must NOT cache the object)
+            for (uint32_t i = 0; i < curobj_edge_node_idxes.size(); i++)
+            {
+                if (curobj_edge_node_idxes[i] == getClosestEdgeidx(clientidx))
+                {
+                    curobj_edge_node_idxes.erase(curobj_edge_node_idxes.begin() + i);
+                    break;
+                }
+            }
+
+            if (curobj_edge_node_idxes.size() == 0) // Not cached by other edge nodes
+            {
+                is_remote_hit = false;
+            }
+            else // Cached by other edge nodes
+            {
+                // Get target edge node index
+                if (Util::isMagnetLikeCache(cache_name)) // MagNet-like caches
+                {
+                    std::list<DirectoryInfo> curobj_dirinfo_set;
+                    for (uint32_t i = 0; i < curobj_edge_node_idxes.size(); i++)
+                    {
+                        curobj_dirinfo_set.push_back(DirectoryInfo(curobj_edge_node_idxes[i]));
+                    }
+
+                    // Select edge node based on clustering (refer to src/edge/beacon_server/basic_beacon_server.c::processReqToLookupLocalDirectory_())
+                    bool unused_is_being_written = false;
+                    bool curobj_is_valid_directory_exist = false;
+                    DirectoryInfo curobj_dirinfo;
+                    ClusterForMagnetFuncParam tmp_param_for_clustering(cur_key, curobj_dirinfo_set, unused_is_being_written, curobj_is_valid_directory_exist, curobj_dirinfo);
+                    beacon_edge_wrapper_ptr->constCustomFunc(ClusterForMagnetFuncParam::FUNCNAME, &tmp_param_for_clustering); // Simulate clustering in beacon edge node
+                    UNUSED(unused_is_being_written);
+
+                    if (curobj_is_valid_directory_exist) // Specific edge node caches the object
+                    {
+                        target_edge_idx = curobj_dirinfo.getTargetEdgeIdx();
+                        assert(target_edge_idx < edgecnt);
+
+                        is_remote_hit = true;
+                    }
+                    else // NOT cached by the specific edge node
+                    {
+                        is_remote_hit = false;
+                    }
+                } // End of MagNet-like caches
+                else // Other baselines and COVERED
+                {
+                    // Randomly select a valid edge node as the target edge node (refer to src/cooperation/directory_table.c::lookup())
+                    std::uniform_int_distribution<uint32_t> uniform_dist(0, curobj_edge_node_idxes.size() - 1); // Range of [0, # of directory info - 1]
+                    uint32_t random_number = uniform_dist(content_discovery_randgen);
+                    assert(random_number < curobj_edge_node_idxes.size());
+                    target_edge_idx = curobj_edge_node_idxes[random_number];
+                    assert(target_edge_idx < edgecnt);
+
+                    is_remote_hit = true;
+                } // End of other baselines and COVERED
+            }
+        } // End of global cached
+        else // Global uncached
+        {
+            is_remote_hit = false;
+        } // End of global uncached
+
+        return;
+    }
+
+    void requestRedirection(const Key& cur_key, const uint32_t& target_edge_idx, const std::string& cache_name, Value& fetched_value)
+    {
+        EdgeWrapperBase* curobj_target_edge_wrapper_ptr = edge_wrapper_ptrs[target_edge_idx];
+        assert(curobj_target_edge_wrapper_ptr != NULL);
+        CacheWrapper* curobj_target_edge_cache_wrapper_ptr = curobj_target_edge_wrapper_ptr->getEdgeCachePtr();
+        assert(curobj_target_edge_cache_wrapper_ptr != NULL);
+
+        bool target_edge_is_redirected = true;
+        bool affect_victim_tracker = false;
+        bool is_cooperative_cached_and_valid = curobj_target_edge_cache_wrapper_ptr->get(cur_key, target_edge_is_redirected, fetched_value, affect_victim_tracker);
+
+        // Simulate victim synchronization of target edge node (refer to src/edge/covered_edge_wrapper.c::updateCacheManagerForLocalSyncedVictimsInternal_())
+        if (cache_name == Util::COVERED_CACHE_NAME && affect_victim_tracker)
+        {
+            victimSynchronizationForEdge(target_edge_idx);
+        }
+
+        assert(is_cooperative_cached_and_valid);
+
+        return;
+    }
+
+    void validateClosestEdgeForFetchedValue(const Key& cur_key, const Value& fetched_value, const uint32_t& clientidx, const std::string& cache_name, const Hitflag& curobj_hitflag)
+    {
+        CacheWrapper* curclient_closest_edge_cache_wrapper_ptr = getClosestEdgeCacheWrapperPtr(clientidx);
+
+        bool unused_is_local_cached_and_invalid = false;
+        bool is_global_cached = (curobj_hitflag == Hitflag::kLocalHit || curobj_hitflag == Hitflag::kCooperativeHit);
+        bool affect_victim_tracker = false;
+        if (fetched_value.isDeleted()) // value is deleted
+        {
+            unused_is_local_cached_and_invalid = curclient_closest_edge_cache_wrapper_ptr->removeIfInvalidForGetrsp(cur_key, is_global_cached, affect_victim_tracker); // remove will NOT trigger eviction
+        }
+        else // non-deleted value
+        {
+            unused_is_local_cached_and_invalid = curclient_closest_edge_cache_wrapper_ptr->updateIfInvalidForGetrsp(cur_key, fetched_value, is_global_cached, affect_victim_tracker); // update may trigger eviction (see CacheServerWorkerBase::processLocalGetRequest_())
+        }
+        UNUSED(unused_is_local_cached_and_invalid);
+
+        // Simulate victim synchronization of closest edge node (refer to src/edge/covered_edge_wrapper.c::updateCacheManagerForLocalSyncedVictimsInternal_())
+        if (cache_name == Util::COVERED_CACHE_NAME && affect_victim_tracker)
+        {
+            victimSynchronizationForEdge(getClosestEdgeidx(clientidx));
+        }
+
+        return;
+    }
+
+    // (2) COVERED's helper functions
+
+    bool tryPopularityAggregationForClosestEdge(const Key& cur_key, const uint32_t& clientidx)
+    {
+        const uint32_t curclient_closest_edge_idx = getClosestEdgeidx(clientidx);
+        CacheWrapper* curclient_closest_edge_cache_wrapper_ptr = getClosestEdgeCacheWrapperPtr(clientidx);
+
+        // Check if the object is tracked by local uncached metadata in the closest cache node for COVERED (NOTE: already update value-related statistics even if it is the first request on the object) (refer to src/edge/cache_server/covered_edge_wrapper.c::getLocalEdgeCache_())
+        GetCollectedPopularityParam tmp_param(cur_key);
+        curclient_closest_edge_cache_wrapper_ptr->constCustomFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param);
+        const CollectedPopularity tmp_collected_popularity_after_fetch_value = tmp_param.getCollectedPopularityRef();
+        const bool is_tracked_after_fetch_value = tmp_collected_popularity_after_fetch_value.isTracked();
+
+        std::unordered_map<Key, LocalUncachedObjinfo, KeyHasher>::iterator perkey_local_uncached_objinfo_iter = perkey_local_uncached_objinfo.find(cur_key);
+        if (is_tracked_after_fetch_value) // Local uncached yet tracked object
+        {
+            // Simulate popularity aggregation (refer to src/core/popularity_aggregator.c::updateAggregatedUncachedPopularity())
+            if (perkey_local_uncached_objinfo_iter == perkey_local_uncached_objinfo.end()) // New local uncached object
+            {
+                LocalUncachedObjinfo tmp_local_uncached_objinfo;
+                tmp_local_uncached_objinfo.update(curclient_closest_edge_idx, tmp_collected_popularity_after_fetch_value);
+                perkey_local_uncached_objinfo.insert(std::make_pair(cur_key, tmp_local_uncached_objinfo));
+            }
+            else // Existing local uncached object
+            {
+                perkey_local_uncached_objinfo_iter->second.update(curclient_closest_edge_idx, tmp_collected_popularity_after_fetch_value);
+            }
+        } // End of local uncached yet tracked object
+        else // Local cached, or local uncached and untracked object
+        {
+            // Remove unnecessary popularity information
+            if (perkey_local_uncached_objinfo_iter != perkey_local_uncached_objinfo.end()) // Remove if exists
+            {
+                bool is_empty = perkey_local_uncached_objinfo_iter->second.remove(curclient_closest_edge_idx);
+                if (is_empty)
+                {
+                    perkey_local_uncached_objinfo.erase(perkey_local_uncached_objinfo_iter);
+                }
+            }
+        } // End of local cached, or local uncached and untracked object
+        
+        return is_tracked_after_fetch_value;
+    }
+
+    void victimSynchronizationForEdge(const uint32_t& edgeidx)
+    {
+        EdgeWrapperBase* given_edge_wrapper_ptr = edge_wrapper_ptrs[edgeidx];
+        assert(given_edge_wrapper_ptr != NULL);
+        CacheWrapper* given_edge_cache_wrapper_ptr = given_edge_wrapper_ptr->getEdgeCachePtr();
+        assert(given_edge_cache_wrapper_ptr != NULL);
+
+        uint64_t local_cache_margin_bytes = given_edge_wrapper_ptr->getCacheMarginBytes();
+        GetLocalSyncedVictimCacheinfosParam tmp_param;
+        given_edge_cache_wrapper_ptr->constCustomFunc(GetLocalSyncedVictimCacheinfosParam::FUNCNAME, &tmp_param); // NOTE: victim cacheinfos from local edge cache MUST be complete
+        if (peredge_evictinfo.find(edgeidx) == peredge_evictinfo.end()) // New edge node
+        {
+            EdgeEvictinfo tmp_evictinfo;
+            tmp_evictinfo.cache_margin_bytes = local_cache_margin_bytes;
+            tmp_evictinfo.victim_cacheinfos = tmp_param.getVictimCacheinfosConstRef();
+            peredge_evictinfo.insert(std::make_pair(edgeidx, tmp_evictinfo));
+        }
+        else // Existing edge node
+        {
+            EdgeEvictinfo& cur_evictinfo = peredge_evictinfo[edgeidx];
+            cur_evictinfo.cache_margin_bytes = local_cache_margin_bytes;
+            cur_evictinfo.victim_cacheinfos = tmp_param.getVictimCacheinfosConstRef();
+        }
+
+        return;
+    }
+
+    float calcEvictionCost(const Key& cur_key, const uint32_t& object_size, const std::unordered_set<uint32_t>& placement_edgeset)
+    {
+        assert(placement_edgeset.size() > 0);
+
+        EdgeWrapperBase* beacon_edge_wrapper_ptr = getBeaconEdgeWrapperPtr(cur_key);
+
+        float eviction_cost = 0.0;
+        std::unordered_map<Key, std::unordered_set<uint32_t>, KeyHasher> pervictim_edgeset;
+        std::unordered_map<Key, std::list<VictimCacheinfo>, KeyHasher> pervictim_cacheinfos;
+
+        // (1) Find victims from placement edgeset (refer to src/core/victim_tracker.c::findVictimsForPlacement_())
+
+        for (std::unordered_set<uint32_t>::const_iterator placement_edgeset_const_iter = placement_edgeset.begin(); placement_edgeset_const_iter != placement_edgeset.end(); placement_edgeset_const_iter++)
+        {
+            uint32_t tmp_edge_idx = *placement_edgeset_const_iter;
+
+            // NOTE: victim information of the current edge node MUST exist
+            assert(peredge_evictinfo.find(tmp_edge_idx) != peredge_evictinfo.end());
+            const uint64_t tmp_cache_margin_bytes = peredge_evictinfo[tmp_edge_idx].cache_margin_bytes;
+            const std::list<VictimCacheinfo>& tmp_synced_victim_cacheinfos = peredge_evictinfo[tmp_edge_idx].victim_cacheinfos;
+
+            // Check if the current edge node needs more victims, and fetch more victims for the current edge node if necessary
+            uint64_t tmp_required_bytes = (object_size > tmp_cache_margin_bytes) ? (object_size - tmp_cache_margin_bytes) : 0;
+            uint32_t tmp_synced_victim_bytes = 0; // Total bytes of victims synced by the current edge node
+            bool need_extra_victims = false;
+            std::list<VictimCacheinfo> tmp_extra_victim_cacheinfos;
+            if (tmp_required_bytes > 0) // Without sufficient cache space
+            {
+                // Sum up object sizes of synced victims in the current edge node
+                for (std::list<VictimCacheinfo>::const_iterator cacheinfo_list_const_iter = tmp_synced_victim_cacheinfos.begin(); cacheinfo_list_const_iter != tmp_synced_victim_cacheinfos.end(); cacheinfo_list_const_iter++) // Note that victim_cacheinfos_ follows the ascending order of local rewards
+                {
+                    uint32_t tmp_victim_object_size = 0;
+                    cacheinfo_list_const_iter->getObjectSize(tmp_victim_object_size);
+                    tmp_synced_victim_bytes += tmp_victim_object_size;
+                }
+
+                if (tmp_synced_victim_bytes < tmp_required_bytes)
+                {
+                    // Fetch more victims for the current edge node (refer to src/edge/cache_server/cache_server_victim_fetch_processor.c::processVictimFetchRequest_())
+                    bool has_victim_key = edge_wrapper_ptrs[tmp_edge_idx]->getEdgeCachePtr()->fetchVictimCacheinfosForRequiredSize(tmp_extra_victim_cacheinfos, object_size); // NOTE: victim cacheinfos from local edge cache MUST be complete
+                    assert(has_victim_key == true);
+
+                    need_extra_victims = true;
+                }
+            }
+
+            // Final victims of the current edge node
+            const std::list<VictimCacheinfo>* tmp_final_victim_cacheinfos_ptr = NULL;
+            if (need_extra_victims)
+            {
+                tmp_final_victim_cacheinfos_ptr = &tmp_extra_victim_cacheinfos;
+            }
+            else
+            {
+                tmp_final_victim_cacheinfos_ptr = &tmp_synced_victim_cacheinfos;
+            }
+            assert(tmp_final_victim_cacheinfos_ptr != NULL);
+
+            // Find victims in the current edge node if without sufficient cache space
+            uint64_t tmp_saved_bytes = 0;
+            if (tmp_required_bytes > 0) // Without sufficient cache space
+            {
+                assert(tmp_final_victim_cacheinfos_ptr->size() > 0);
+
+                for (std::list<VictimCacheinfo>::const_iterator cacheinfo_list_const_iter = tmp_final_victim_cacheinfos_ptr->begin(); cacheinfo_list_const_iter != tmp_final_victim_cacheinfos_ptr->end(); cacheinfo_list_const_iter++) // Note that victim_cacheinfos_ follows the ascending order of local rewards
+                {
+                    const VictimCacheinfo& tmp_victim_cacheinfo = *cacheinfo_list_const_iter;
+                    assert(tmp_victim_cacheinfo.isComplete()); // NOTE: victim cacheinfos in edge-level victim metadata of victim tracker MUST be complete
+                    const Key& tmp_victim_key = tmp_victim_cacheinfo.getKey();
+
+                    // Update per-victim edgeset
+                    if (pervictim_edgeset.find(tmp_victim_key) == pervictim_edgeset.end())
+                    {
+                        pervictim_edgeset.insert(std::make_pair(tmp_victim_key, std::unordered_set<uint32_t>()));
+                    }
+                    pervictim_edgeset[tmp_victim_key].insert(tmp_edge_idx);
+
+                    // Update per-victim cacheinfos
+                    if (pervictim_cacheinfos.find(tmp_victim_key) == pervictim_cacheinfos.end())
+                    {
+                        pervictim_cacheinfos.insert(std::make_pair(tmp_victim_key, std::list<VictimCacheinfo>()));
+                    }
+                    pervictim_cacheinfos[tmp_victim_key].push_back(tmp_victim_cacheinfo);
+
+                    // Check if we have found sufficient victims for the required bytes
+                    ObjectSize tmp_victim_object_size = 0;
+                    bool with_complete_victim_object_size = tmp_victim_cacheinfo.getObjectSize(tmp_victim_object_size);
+                    assert(with_complete_victim_object_size == true); // NOTE: victim cacheinfo in victim_cacheinfos_ MUST be complete
+                    tmp_saved_bytes += tmp_victim_object_size;
+
+                    if (tmp_saved_bytes >= tmp_required_bytes) // With sufficient victims for the required bytes
+                    {
+                        break;
+                    }
+                } // End of tmp_victim_cacheinfos_ref in the tmp_edge_idx
+            } // End of (object_size > tmp_cache_margin_bytes)
+
+            assert(tmp_saved_bytes >= tmp_required_bytes);
+        } // End of involved edge nodes
+
+        // (2) Calculate eviction cost (refer to src/core/victim_tracker.c::calcEvictionCost())
+
+        // Enumerate found victims to calculate eviction cost
+        for (std::unordered_map<Key, std::unordered_set<uint32_t>, KeyHasher>::const_iterator pervictim_edgeset_const_iter = pervictim_edgeset.begin(); pervictim_edgeset_const_iter != pervictim_edgeset.end(); pervictim_edgeset_const_iter++)
+        {
+            const Key& tmp_victim_key = pervictim_edgeset_const_iter->first;
+            const std::unordered_set<uint32_t>& tmp_victim_edgeset_ref = pervictim_edgeset_const_iter->second;
+
+            // Check if the victim edgeset is the last copies of the given key (refer to src/core/victim_tracker.c::isLastCopiesForVictimEdgeset_())
+            bool is_last_copies = true;
+            std::unordered_map<covered::Key, covered::GlobalCachedObjinfo, covered::KeyHasher>::iterator tmp_perkey_global_cached_objinfo_iter = perkey_global_cached_objinfo.find(tmp_victim_key);
+            assert(tmp_perkey_global_cached_objinfo_iter != perkey_global_cached_objinfo.end());
+            std::vector<uint32_t> tmp_victim_cached_edge_node_idxes = tmp_perkey_global_cached_objinfo_iter->second.edge_node_idxes;
+            for (uint32_t i = 0; i < tmp_victim_cached_edge_node_idxes.size(); i++)
+            {
+                uint32_t tmp_victim_cached_edge_idx = tmp_victim_cached_edge_node_idxes[i];
+                if (tmp_victim_edgeset_ref.find(tmp_victim_cached_edge_idx) == tmp_victim_edgeset_ref.end())
+                {
+                    is_last_copies = false;
+                    break;
+                }
+            }
+
+            // NOTE: we add each pair of edgeidx and cacheinfo of a victim simultaneously before -> tmp_victim_cacheinfos MUST exist and has the same size as tmp_victim_edgeset_ref
+            assert(pervictim_cacheinfos.find(tmp_victim_key) != pervictim_cacheinfos.end());
+            const std::list<VictimCacheinfo>& tmp_victim_cacheinfos = pervictim_cacheinfos[tmp_victim_key];
+            if (tmp_victim_cacheinfos.size() != tmp_victim_edgeset_ref.size())
+            {
+                std::ostringstream oss;
+                oss << "victim " << tmp_victim_key.getKeyDebugstr() << " has " << tmp_victim_cacheinfos.size() << " cacheinfos but " << tmp_victim_edgeset_ref.size() << " edges in edgeset";
+                Util::dumpErrorMsg("calcEvictionCost()", oss.str());
+                exit(1);
+            }
+
+            // Calculate eviction cost based on is_last_copies and tmp_victim_cacheinfos
+            for (std::list<VictimCacheinfo>::const_iterator victim_cacheinfo_list_const_iter = tmp_victim_cacheinfos.begin(); victim_cacheinfo_list_const_iter != tmp_victim_cacheinfos.end(); victim_cacheinfo_list_const_iter++)
+            {
+                assert(victim_cacheinfo_list_const_iter->isComplete()); // NOTE: victim cacheinfo from edge-level victim metadata of victim tracker MUST be complete
+
+                // Get local cached and redirected cache popularity of the given victim at the given edge node
+                Popularity tmp_local_cached_popularity = 0.0;
+                Popularity tmp_redirected_cached_popularity = 0.0;
+                bool with_complete_local_cached_popularity = victim_cacheinfo_list_const_iter->getLocalCachedPopularity(tmp_local_cached_popularity);
+                assert(with_complete_local_cached_popularity); // NOTE: victim cacheinfo of pervictim_cacheinfos (from peredge_victim_metadata_ in victim tracker) MUST be complete
+                bool with_complete_redirected_cached_popularity = victim_cacheinfo_list_const_iter->getRedirectedCachedPopularity(tmp_redirected_cached_popularity);
+                assert(with_complete_redirected_cached_popularity); // NOTE: victim cacheinfo of pervictim_cacheinfos (from peredge_victim_metadata_ in victim tracker) MUST be complete
+
+                CalcLocalCachedRewardFuncParam tmp_param(tmp_local_cached_popularity, tmp_redirected_cached_popularity, is_last_copies);
+                beacon_edge_wrapper_ptr->constCustomFunc(CalcLocalCachedRewardFuncParam::FUNCNAME, &tmp_param); // Simulate eviction cost calculation in the beacon edge node
+                Reward tmp_eviction_cost = tmp_param.getRewardConstRef();
+                eviction_cost += tmp_eviction_cost;
+            } // End of victim cacheinfos of the current victim
+        } // End of involved victims
+
+        return eviction_cost;
+    }
+
+    void placementCalculation(const Key& cur_key, const uint32_t& covered_topk_edgecnt, bool& has_best_placement, std::unordered_set<uint32_t>& best_placement_edgeset)
+    {
+        EdgeWrapperBase* beacon_edge_wrapper_ptr = getBeaconEdgeWrapperPtr(cur_key);
+
+        has_best_placement = false;
+        
+        float max_placement_gain = 0.0;
+        float tmp_best_placement_admission_benefit = 0.0;
+        std::unordered_set<uint32_t> tmp_best_placement_edgeset; // For preserved edgeset and placement notifications under non-blocking placement deployment
+
+        // (1) Get top-k list of local uncached popularity
+
+        // NOTE: local uncached popularity MUST exist, as we only invoke placementCalculation() after invoking tryPopularityAggregationForClosestEdge(), which returns true (i.e., the object is local tracked)
+        std::unordered_map<Key, LocalUncachedObjinfo, KeyHasher>::iterator perkey_local_uncached_objinfo_iter = perkey_local_uncached_objinfo.find(cur_key);
+        assert(perkey_local_uncached_objinfo_iter != perkey_local_uncached_objinfo.end());
+        const LocalUncachedObjinfo& local_uncached_objinfo_const_ref = perkey_local_uncached_objinfo_iter->second;
+
+        // Convert into top-k list
+        std::vector<std::pair<uint32_t, float>> topk_local_uncached_popularities; // <edgeidx, local uncached popularity>
+        local_uncached_objinfo_const_ref.getTopkLocalUncachedPopularities(covered_topk_edgecnt, topk_local_uncached_popularities);
+        const uint32_t tmp_topk_list_length = topk_local_uncached_popularities.size();
+        assert(tmp_topk_list_length <= covered_topk_edgecnt);
+        assert(tmp_topk_list_length > 0);
+
+        // Calculation total local uncached popularity
+        float all_local_uncached_popularity_sum = 0.0;
+        for (uint32_t i = 0; i < tmp_topk_list_length; i++)
+        {
+            all_local_uncached_popularity_sum += topk_local_uncached_popularities[i].second;
+        }
+
+        // (2) Greedy-based placement calculation
+
+        // Consider top-k edge nodes with largest local uncached popularity to calculate admission benefit and eviction cost
+        const uint32_t tmp_object_size = local_uncached_objinfo_const_ref.objsize;
+        std::unordered_set<uint32_t> tmp_placement_edgeset;
+        float topi_local_uncached_popularity_sum = 0.0;
+        for (uint32_t topicnt = 1; topicnt <= tmp_topk_list_length; topicnt++)
+        {
+            // Consider topi edge nodes ordered by local uncached popularity in a descending order
+
+            // Get top-i edge indexes and the sum of their local uncached popularities
+            const uint32_t topi_edgeidx = topk_local_uncached_popularities[topicnt - 1].first;
+            const float topi_local_uncached_popularity = topk_local_uncached_popularities[topicnt - 1].second;
+            tmp_placement_edgeset.insert(topi_edgeidx);
+            topi_local_uncached_popularity_sum += topi_local_uncached_popularity;
+            assert(Util::isApproxLargerEqual(all_local_uncached_popularity_sum, topi_local_uncached_popularity_sum));
+
+            // Calculate admission benefit (refer to src/core/popularity/aggregated_uncached_popularity.c::calcAdmissionBenefit())
+            Popularity sum_minus_topi = Util::popularityNonegMinus(all_local_uncached_popularity_sum, topi_local_uncached_popularity_sum);
+            const bool is_global_cached = (perkey_global_cached_objinfo.find(cur_key) != perkey_global_cached_objinfo.end());
+            CalcLocalUncachedRewardFuncParam tmp_param(topi_local_uncached_popularity_sum, is_global_cached, sum_minus_topi);
+            beacon_edge_wrapper_ptr->constCustomFunc(CalcLocalUncachedRewardFuncParam::FUNCNAME, &tmp_param); // Simulate admission benefit calculation in beacon edge node
+            const float tmp_admission_benefit = tmp_param.getRewardConstRef();
+
+            // Calculate eviction cost based on tmp_placement_edgeset (refer to src/core/victim_tracker.c::calcEvictionCost())
+            const float tmp_eviction_cost = calcEvictionCost(cur_key, tmp_object_size, tmp_placement_edgeset);
+
+            // Calculate placement gain (admission benefit - eviction cost)
+            const DeltaReward tmp_placement_gain = tmp_admission_benefit - tmp_eviction_cost;
+            if ((topicnt == 1) || (tmp_placement_gain > max_placement_gain))
+            {
+                max_placement_gain = tmp_placement_gain;
+
+                tmp_best_placement_admission_benefit = tmp_admission_benefit;
+                tmp_best_placement_edgeset = tmp_placement_edgeset;
+            }
+        }
+
+        // Update best placement if any
+        if (max_placement_gain > 0.0) // Still with positive placement gain
+        {
+            has_best_placement = true;
+            best_placement_edgeset = tmp_best_placement_edgeset; // tmp_best_placement_edgeset is the best placement
+        }
+
+        return;
     }
 }
