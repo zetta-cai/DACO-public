@@ -75,7 +75,7 @@ namespace covered
 
         cur_warmup_reqcnt_ = 0;
         const uint32_t total_warmup_reqcnt = client_wrapper_ptr->getKeycnt() * client_wrapper_ptr->getWarmupReqcntScale();
-        const uint32_t total_client_workercnt = client_wrapper_ptr->getNodeCnt() / client_wrapper_ptr->getPerclientWorkercnt();
+        const uint32_t total_client_workercnt = client_wrapper_ptr->getNodeCnt() * client_wrapper_ptr->getPerclientWorkercnt();
         warmup_reqcnt_limit_ = (total_warmup_reqcnt - 1) / total_client_workercnt + 1; // Get per-client-worker warmup reqcnt limitation
         assert(warmup_reqcnt_limit_ > 0);
         assert(warmup_reqcnt_limit_ * total_client_workercnt >= total_warmup_reqcnt); // Total # of issued warmup reqs MUST >= total # of required warmup reqs
