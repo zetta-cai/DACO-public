@@ -135,7 +135,7 @@ namespace covered
 
     // (2) Common helper functions
 
-    void processRequest(const WorkloadItem& cur_workload_item, const uint32_t& clientidx, const std::string& cache_name, const uint32_t& edgecnt, const uint32_t& covered_topk_edgecnt, uint32_t& reqcnt, uint32_t& local_hitcnt, uint32_t& remote_hitcnt, uint64_t avg_latency_us);
+    void processRequest(const WorkloadItem& cur_workload_item, const uint32_t& clientidx, const std::string& cache_name, const uint32_t& edgecnt, const uint32_t& covered_topk_edgecnt, uint32_t& reqcnt, uint32_t& local_hitcnt, uint32_t& remote_hitcnt, uint64_t& latency_sum_us);
 
     bool accessClosestCache(const Key& cur_key, const uint32_t& clientidx, const std::string& cache_name, Value& fetched_value); // Return is_local_cached_and_valid
     void writeClosestCache(const Key& cur_key, const Value& fetched_value, const uint32_t& clientidx, const std::string& cache_name, const WorkloadItemType& cur_workload_item_type);
@@ -257,7 +257,8 @@ int main(int argc, char **argv) {
     uint32_t warmup_interval_reqcnt = 0;
     uint32_t warmup_interval_local_hitcnt = 0;
     uint32_t warmup_interval_remote_hitcnt = 0;
-    uint64_t warmup_interval_avg_latency = 0; // Calculated latency (calculated performance, yet NOT absolute performance)
+    uint64_t warmup_interval_latency_sum = 0; // Calculated latency (calculated performance, yet NOT absolute performance)
+    uint32_t warmup_total_reqcnt = 0;
 
     // Generate requests via workload generators one by one to simulate cache access
     for (uint32_t warmup_reqidx = 0; warmup_reqidx < warmup_reqcnt_limit; warmup_reqidx++)
@@ -272,7 +273,7 @@ int main(int argc, char **argv) {
             {
                 covered::WorkloadItem cur_workload_item = curclient_workload_wrapper_ptr->generateWorkloadItem(local_client_worker_idx);
                 
-                covered::processRequest(cur_workload_item, clientidx, cache_name, edgecnt, covered_topk_edgecnt, warmup_interval_reqcnt, warmup_interval_local_hitcnt, warmup_interval_remote_hitcnt, warmup_interval_avg_latency);
+                covered::processRequest(cur_workload_item, clientidx, cache_name, edgecnt, covered_topk_edgecnt, warmup_interval_reqcnt, warmup_interval_local_hitcnt, warmup_interval_remote_hitcnt, warmup_interval_latency_sum);
             }
         }
 
@@ -285,10 +286,13 @@ int main(int argc, char **argv) {
             double warmup_local_hitratio = static_cast<double>(warmup_interval_local_hitcnt) / static_cast<double>(warmup_interval_reqcnt);
             double warmup_remote_hitratio = static_cast<double>(warmup_interval_remote_hitcnt) / static_cast<double>(warmup_interval_reqcnt);
             double warmup_global_hitratio = warmup_local_hitratio + warmup_remote_hitratio;
+            uint64_t warmup_interval_avg_latency = warmup_interval_latency_sum / static_cast<uint64_t>(warmup_interval_reqcnt);
+            warmup_total_reqcnt += warmup_interval_reqcnt;
 
             // Dump warmup statistics per interval
             std::ostringstream oss;
             oss << "[Warmup Statistics at Interval " << warmup_interval_idx << "]" << std::endl;
+            oss << "Total reqcnt: " << warmup_total_reqcnt << std::endl;
             oss << "Reqcnt: " << warmup_interval_reqcnt << ", LocalHitcnt: " << warmup_interval_local_hitcnt << ", RemoteHitcnt: " << warmup_interval_remote_hitcnt << std::endl;
             oss << "| Global Hit Ratio (Local + Remote) | Average Latency (us) |" << std::endl;
             oss << "| " << warmup_global_hitratio << " (" << warmup_local_hitratio << " + " << warmup_remote_hitratio << ") | " << warmup_interval_avg_latency << " |" << std::endl << std::endl;
@@ -299,7 +303,7 @@ int main(int argc, char **argv) {
             warmup_interval_reqcnt = 0;
             warmup_interval_local_hitcnt = 0;
             warmup_interval_remote_hitcnt = 0;
-            warmup_interval_avg_latency = 0;
+            warmup_interval_latency_sum = 0;
 
             warmup_interval_idx += 1;
         }
@@ -316,7 +320,7 @@ int main(int argc, char **argv) {
     uint32_t stresstest_total_reqcnt = 0;
     uint32_t stresstest_total_local_hitcnt = 0;
     uint32_t stresstest_total_remote_hitcnt = 0;
-    uint64_t stresstest_total_avg_latency = 0; // Calculated latency (calculated performance, yet NOT absolute performance)
+    uint64_t stresstest_total_latency_sum = 0; // Calculated latency (calculated performance, yet NOT absolute performance)
 
     // Generate requests via workload generators one by one to simulate cache access until stresstest duration finishes
     while (true)
@@ -331,7 +335,7 @@ int main(int argc, char **argv) {
             {
                 covered::WorkloadItem cur_workload_item = curclient_workload_wrapper_ptr->generateWorkloadItem(local_client_worker_idx);
                 
-                covered::processRequest(cur_workload_item, clientidx, cache_name, edgecnt, covered_topk_edgecnt, stresstest_total_reqcnt, stresstest_total_local_hitcnt, stresstest_total_remote_hitcnt, stresstest_total_avg_latency);
+                covered::processRequest(cur_workload_item, clientidx, cache_name, edgecnt, covered_topk_edgecnt, stresstest_total_reqcnt, stresstest_total_local_hitcnt, stresstest_total_remote_hitcnt, stresstest_total_latency_sum);
             }
         }
 
@@ -347,6 +351,7 @@ int main(int argc, char **argv) {
             double stresstest_local_hitratio = static_cast<double>(stresstest_total_local_hitcnt) / static_cast<double>(stresstest_total_reqcnt);
             double stresstest_remote_hitratio = static_cast<double>(stresstest_total_remote_hitcnt) / static_cast<double>(stresstest_total_reqcnt);
             double stresstest_global_hitratio = stresstest_local_hitratio + stresstest_remote_hitratio;
+            uint64_t stresstest_total_avg_latency = stresstest_total_latency_sum / static_cast<uint64_t>(stresstest_total_reqcnt);
 
             // Dump stresstest statistics until the current interval
             std::ostringstream oss;
@@ -740,7 +745,7 @@ namespace covered
 
     // (2) Common helper functions
 
-    void processRequest(const WorkloadItem& cur_workload_item, const uint32_t& clientidx, const std::string& cache_name, const uint32_t& edgecnt, const uint32_t& covered_topk_edgecnt, uint32_t& reqcnt, uint32_t& local_hitcnt, uint32_t& remote_hitcnt, uint64_t avg_latency_us)
+    void processRequest(const WorkloadItem& cur_workload_item, const uint32_t& clientidx, const std::string& cache_name, const uint32_t& edgecnt, const uint32_t& covered_topk_edgecnt, uint32_t& reqcnt, uint32_t& local_hitcnt, uint32_t& remote_hitcnt, uint64_t& latency_sum_us)
     {
         WorkloadItemType cur_workload_item_type = cur_workload_item.getItemType();
         Key cur_key = cur_workload_item.getKey();
@@ -822,7 +827,7 @@ namespace covered
             triggerCacheManagement(cur_key, fetched_value, clientidx, curobj_hitflag, cache_name, total_latency_us, covered_topk_edgecnt);
 
             // Update statistics
-            avg_latency_us = (avg_latency_us * (reqcnt - 1) + total_latency_us) / reqcnt;
+            latency_sum_us += total_latency_us;
         } // End of GET request
         else if (cur_workload_item_type == WorkloadItemType::kWorkloadItemPut || cur_workload_item_type == WorkloadItemType::kWorkloadItemDel)
         {
@@ -864,7 +869,7 @@ namespace covered
             triggerCacheManagement(cur_key, fetched_value, clientidx, curobj_hitflag, cache_name, total_latency_us, covered_topk_edgecnt);
 
             // Update statistics (NOTE: write MUST be cache miss -> NO need to update local hitcnt and remote hitcnt)
-            avg_latency_us = (avg_latency_us * (reqcnt - 1) + total_latency_us) / reqcnt;
+            latency_sum_us += total_latency_us;
         }
         else
         {
@@ -873,6 +878,8 @@ namespace covered
             Util::dumpErrorMsg("processRequest()", oss.str());
             exit(1);
         }
+
+        return;
     }
 
     bool accessClosestCache(const Key& cur_key, const uint32_t& clientidx, const std::string& cache_name, Value& fetched_value)
