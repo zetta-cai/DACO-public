@@ -60,6 +60,9 @@ namespace covered
         typedef std::multimap<float, uint32_t, std::greater<float>> sorted_popularity_map_t;
         typedef std::unordered_map<uint32_t, sorted_popularity_map_t::iterator> lookup_map_t;
 
+        LocalUncachedObjinfo();
+        LocalUncachedObjinfo(const LocalUncachedObjinfo& others); // NOTE: we need to redefine copy constructor due to the same reason as follows (see comment of copy assignment operator)
+
         void update(const uint32_t& edgeidx, const CollectedPopularity& collected_popularity);
         bool remove(const uint32_t& edgeidx);
         void getTopkLocalUncachedPopularities(const uint32_t& covered_topk_edgecnt, std::vector<std::pair<uint32_t, float>>& topk_local_uncached_popularities) const;
@@ -78,8 +81,6 @@ namespace covered
         bool getLocalUncachedObjinfo(const Key& key, LocalUncachedObjinfo& local_uncached_objinfo) const;
         void tryToRemoveLocalUncachedPopularityForEdge(const Key& key, const uint32_t edgeidx);
         void addLocalUncachedPopularityForEdge(const Key& key, const uint32_t edgeidx, const CollectedPopularity& collected_popularity);
-
-        void dumpDebugInfo(const Key& key) const; // TMPDEBUG24
 
         std::unordered_map<Key, LocalUncachedObjinfo, KeyHasher> key_local_uncached_objinfo_map; // For local uncached objects (ONLY for COVERED)
     };
@@ -477,6 +478,18 @@ namespace covered
 
     // LocalUncachedObjinfo
 
+    LocalUncachedObjinfo::LocalUncachedObjinfo()
+    {
+        objsize = 0;
+        edgeidx_multimapiter_lookup_map.clear();
+        sorted_local_uncached_popularity_edgeidx_map.clear();
+    }
+
+    LocalUncachedObjinfo::LocalUncachedObjinfo(const LocalUncachedObjinfo& others)
+    {
+        this->operator=(others);
+    }
+
     void LocalUncachedObjinfo::update(const uint32_t& edgeidx, const CollectedPopularity& collected_popularity)
     {
         objsize = collected_popularity.getObjectSize();
@@ -488,17 +501,6 @@ namespace covered
         {
             sorted_popularity_map_t::iterator sorted_popularity_map_iter = sorted_local_uncached_popularity_edgeidx_map.insert(std::pair<float, uint32_t>(tmp_local_uncached_popularity, edgeidx)); // Descending order
             lookup_map_iter = edgeidx_multimapiter_lookup_map.insert(std::pair<uint32_t, sorted_popularity_map_t::iterator>(edgeidx, sorted_popularity_map_iter)).first;
-
-            // TMPDEBUG24
-            std::ostringstream tmposs;
-            tmposs << "insert tmp_local_uncached_popularity " << tmp_local_uncached_popularity << " in edge " << edgeidx << std::endl;
-            tmposs << "lookup_map_iter->second->first: " << lookup_map_iter->second->first << ", lookup_map_iter->second->second: " << lookup_map_iter->second->second << std::endl;
-            tmposs << "sorted_local_uncached_popularity_edgeidx_map: ";
-            for (sorted_popularity_map_t::const_iterator iter = sorted_local_uncached_popularity_edgeidx_map.begin(); iter != sorted_local_uncached_popularity_edgeidx_map.end(); iter++)
-            {
-                tmposs << "(" << iter->first << ", " << iter->second << ") ";
-            }
-            Util::dumpNormalMsg("LocalUncachedObjinfo::update()", tmposs.str());
         }
         else
         {
@@ -511,27 +513,7 @@ namespace covered
             sorted_popularity_map_iter = sorted_local_uncached_popularity_edgeidx_map.insert(std::pair<float, uint32_t>(tmp_local_uncached_popularity, edgeidx)); // Descending order
 
             lookup_map_iter->second = sorted_popularity_map_iter;
-
-            // TMPDEBUG24
-            std::ostringstream tmposs;
-            tmposs << "update tmp_local_uncached_popularity " << tmp_local_uncached_popularity << " in edge " << edgeidx << std::endl;
-            tmposs << "lookup_map_iter->second->first: " << lookup_map_iter->second->first << ", lookup_map_iter->second->second: " << lookup_map_iter->second->second << std::endl;
-            tmposs << "sorted_local_uncached_popularity_edgeidx_map: ";
-            for (sorted_popularity_map_t::const_iterator iter = sorted_local_uncached_popularity_edgeidx_map.begin(); iter != sorted_local_uncached_popularity_edgeidx_map.end(); iter++)
-            {
-                tmposs << "(" << iter->first << ", " << iter->second << ") ";
-            }
-            Util::dumpNormalMsg("LocalUncachedObjinfo::update()", tmposs.str());
         }
-
-        // TMPDEBUG24
-        std::ostringstream tmposs2;
-        tmposs2 << "edgeidx_multimapiter_lookup_map: ";
-        for (lookup_map_t::const_iterator iter = edgeidx_multimapiter_lookup_map.begin(); iter != edgeidx_multimapiter_lookup_map.end(); iter++)
-        {
-            tmposs2 << "(" << iter->first << ", " << iter->second->first << ", " << iter->second->second << ") ";
-        }
-        Util::dumpNormalMsg("LocalUncachedObjinfo::update()", tmposs2.str());
 
         return;
     }
@@ -540,62 +522,14 @@ namespace covered
     {
         bool is_empty = false;
 
-        // TMPDEBUG24
-        std::ostringstream tmposs;
-        tmposs << "remove local uncached popularity in edge " << edgeidx;
-        Util::dumpNormalMsg("LocalUncachedObjinfo::remove()", tmposs.str());
-
         lookup_map_t::iterator lookup_map_iter = edgeidx_multimapiter_lookup_map.find(edgeidx);
         if (lookup_map_iter != edgeidx_multimapiter_lookup_map.end())
         {
             sorted_popularity_map_t::iterator sorted_popularity_map_iter = lookup_map_iter->second;
-            
-            // TMPDEBUG24
-            std::ostringstream tmposs3;
-            tmposs3 << "remove local uncached popularity in edge " << edgeidx << "before assert(sorted_popularity_map_iter != sorted_local_uncached_popularity_edgeidx_map.end())";
-            Util::dumpNormalMsg("LocalUncachedObjinfo::remove()", tmposs3.str());
-
             assert(sorted_popularity_map_iter != sorted_local_uncached_popularity_edgeidx_map.end());
-
-            // TMPDEBUG24
-            std::ostringstream tmposs4;
-            tmposs4 << "remove local uncached popularity in edge " << edgeidx << "before assert(sorted_popularity_map_iter->second == edgeidx)";
-            Util::dumpNormalMsg("LocalUncachedObjinfo::remove()", tmposs4.str());
-
             assert(sorted_popularity_map_iter->second == edgeidx);
 
-            // TMPDEBUG24
-            std::ostringstream tmposs5;
-            tmposs5 << "remove local uncached popularity in edge " << edgeidx << "before erase(sorted_popularity_map_iter)";
-            Util::dumpNormalMsg("LocalUncachedObjinfo::remove()", tmposs5.str());
-
-            // TMPDEBUG24
-            std::ostringstream tmposs6;
-            tmposs6 << "sorted_local_uncached_popularity_edgeidx_map: ";
-            for (sorted_popularity_map_t::const_iterator iter = sorted_local_uncached_popularity_edgeidx_map.begin(); iter != sorted_local_uncached_popularity_edgeidx_map.end(); iter++)
-            {
-                tmposs6 << "(" << iter->first << ", " << iter->second << ") ";
-            }
-            tmposs6 << std::endl;
-            tmposs6 << "sorted_popularity_map_iter->first: " << sorted_popularity_map_iter->first << ", sorted_popularity_map_iter->second: " << sorted_popularity_map_iter->second;
-            Util::dumpNormalMsg("LocalUncachedObjinfo::remove()", tmposs6.str());
-
-            // TMPDEBUG24
-            std::ostringstream tmposs8;
-            tmposs8 << "edgeidx_multimapiter_lookup_map: ";
-            for (lookup_map_t::const_iterator iter = edgeidx_multimapiter_lookup_map.begin(); iter != edgeidx_multimapiter_lookup_map.end(); iter++)
-            {
-                tmposs8 << "(" << iter->first << ", " << iter->second->first << ", " << iter->second->second << ") ";
-            }
-            Util::dumpNormalMsg("LocalUncachedObjinfo::update()", tmposs8.str());
-
             sorted_local_uncached_popularity_edgeidx_map.erase(sorted_popularity_map_iter);
-
-            // TMPDEBUG24
-            std::ostringstream tmposs7;
-            tmposs7 << "remove local uncached popularity in edge " << edgeidx << "before erase(lookup_map_iter)";
-            Util::dumpNormalMsg("LocalUncachedObjinfo::remove()", tmposs7.str());
-
             edgeidx_multimapiter_lookup_map.erase(lookup_map_iter);
         }
 
@@ -603,11 +537,6 @@ namespace covered
         {
             is_empty = true;
         }
-
-        // TMPDEBUG24
-        std::ostringstream tmposs2;
-        tmposs2 << "finish remove local uncached popularity in edge " << edgeidx;
-        Util::dumpNormalMsg("LocalUncachedObjinfo::remove()", tmposs2.str());
 
         return is_empty;
     }
@@ -631,22 +560,12 @@ namespace covered
             }
         }
 
-        // TMPDEBUG24
-        std::ostringstream tmposs;
-        tmposs << "edgeidx_multimapiter_lookup_map: ";
-        for (lookup_map_t::const_iterator iter = edgeidx_multimapiter_lookup_map.begin(); iter != edgeidx_multimapiter_lookup_map.end(); iter++)
-        {
-            tmposs << "(" << iter->first << ", " << iter->second->first << ", " << iter->second->second << ") ";
-        }
-        Util::dumpNormalMsg("LocalUncachedObjinfo::getTopkLocalUncachedPopularities()", tmposs.str());
-
         assert(topk_local_uncached_popularities.size() <= covered_topk_edgecnt);
         return;
     }
 
     const struct LocalUncachedObjinfo& LocalUncachedObjinfo::operator=(const struct LocalUncachedObjinfo& others)
     {
-        // TODO: (END HERE) Dump iterator address
         if (this != &others)
         {
             objsize = others.objsize;
@@ -680,21 +599,11 @@ namespace covered
             local_uncached_objinfo = key_local_uncached_objinfo_map_iter->second; // Deep copy
         }
 
-        // TMPDEBUG24
-        std::ostringstream tmposs;
-        tmposs << "get local uncached popularity of key " << key.getKeyDebugstr() << " with popularity " << local_uncached_objinfo.edgeidx_multimapiter_lookup_map.begin()->second->first;
-        Util::dumpNormalMsg("getLocalUncachedObjinfo()", tmposs.str());
-
         return is_exist;
     }
 
     void PerkeyLocalUncachedObjinfo::tryToRemoveLocalUncachedPopularityForEdge(const Key& key, const uint32_t edgeidx)
     {
-        // TMPDEBUG24
-        std::ostringstream tmposs;
-        tmposs << "remove local uncached popularity of key " << key.getKeyDebugstr() << " in edge " << edgeidx;
-        Util::dumpNormalMsg("tryToRemoveLocalUncachedPopularityForEdge()", tmposs.str());
-
         std::unordered_map<Key, LocalUncachedObjinfo, KeyHasher>::iterator key_local_uncached_objinfo_map_iter = key_local_uncached_objinfo_map.find(key);
         if (key_local_uncached_objinfo_map_iter != key_local_uncached_objinfo_map.end())
         {
@@ -704,11 +613,6 @@ namespace covered
                 key_local_uncached_objinfo_map.erase(key_local_uncached_objinfo_map_iter);
             }
         }
-
-        // TMPDEBUG24
-        std::ostringstream tmposs2;
-        tmposs2 << "finish remove local uncached popularity of key " << key.getKeyDebugstr() << " in edge " << edgeidx;
-        Util::dumpNormalMsg("tryToRemoveLocalUncachedPopularityForEdge()", tmposs2.str());
 
         return;
     }
@@ -726,34 +630,6 @@ namespace covered
         {
             key_local_uncached_objinfo_map_iter->second.update(edgeidx, collected_popularity);
         }
-
-        // TMPDEBUG24
-        std::ostringstream tmposs;
-        tmposs << "add local uncached popularity of key " << key.getKeyDebugstr() << " with popularity " << collected_popularity.getLocalUncachedPopularity();
-        Util::dumpNormalMsg("addLocalUncachedPopularityForEdge()", tmposs.str());
-
-        return;
-    }
-
-    // TMPDEBUG24
-    void PerkeyLocalUncachedObjinfo::dumpDebugInfo(const Key& key) const
-    {
-        std::unordered_map<Key, LocalUncachedObjinfo, KeyHasher>::const_iterator key_local_uncached_objinfo_map_iter = key_local_uncached_objinfo_map.find(key);
-        bool is_exist = (key_local_uncached_objinfo_map_iter != key_local_uncached_objinfo_map.end());
-        LocalUncachedObjinfo local_uncached_objinfo;
-        if (is_exist)
-        {
-            local_uncached_objinfo = key_local_uncached_objinfo_map_iter->second; // Deep copy
-        }
-        
-        // TMPDEBUG24
-        std::ostringstream tmposs;
-        tmposs << "dump local uncached objinfo of key " << key.getKeyDebugstr() << " with edgeidx-popularity pairs: ";
-        for (LocalUncachedObjinfo::lookup_map_t::const_iterator iter = local_uncached_objinfo.edgeidx_multimapiter_lookup_map.begin(); iter != local_uncached_objinfo.edgeidx_multimapiter_lookup_map.end(); iter++)
-        {
-            tmposs << "(" << iter->first << ", " << iter->second->first << ", " << iter->second->second << ") ";
-        }
-        Util::dumpWarnMsg("PerkeyLocalUncachedObjinfo::dumpDebugInfo()", tmposs.str());
 
         return;
     }
@@ -870,11 +746,6 @@ namespace covered
         Key cur_key = cur_workload_item.getKey();
         Value cur_value = cur_workload_item.getValue();
         Value fetched_value;
-
-        // TMPDEBUG24
-        std::ostringstream tmposs;
-        tmposs << "process request of key " << cur_key.getKeyDebugstr();
-        Util::dumpNormalMsg("processRequest()", tmposs.str());
 
         // Simulate the corresponding closest edge node
         EdgeWrapperBase* curclient_closest_edge_wrapper_ptr = getClosestEdgeWrapperPtr(clientidx);
@@ -1024,11 +895,6 @@ namespace covered
             bestguessVtimeSynchronizationForEdge(closest_edgeidx);
         }
 
-        // TMPDEBUG24
-        std::ostringstream tmposs;
-        tmposs << "access local cache of key " << cur_key.getKeyDebugstr() << " in edge " << closest_edgeidx << " with is_local_cached_and_valid: " << Util::toString(is_local_cached_and_valid);
-        Util::dumpNormalMsg("accessClosestCache()", tmposs.str());
-
         return is_local_cached_and_valid;
     }
 
@@ -1108,7 +974,7 @@ namespace covered
 
                     // Select edge node based on clustering (refer to src/edge/beacon_server/basic_beacon_server.c::processReqToLookupLocalDirectory_())
                     bool unused_is_being_written = false;
-                    bool curobj_is_valid_directory_exist = false;
+                    bool curobj_is_valid_directory_exist = true; // NOTE: src/edge/basic_edge_wrapper.c::clusterForMagnet_() will perform clustering only if is_valid_directory_exist is true (i.e., curobj_dirinfo_set is valid)
                     DirectoryInfo curobj_dirinfo;
                     ClusterForMagnetFuncParam tmp_param_for_clustering(cur_key, curobj_dirinfo_set, unused_is_being_written, curobj_is_valid_directory_exist, curobj_dirinfo);
                     beacon_edge_wrapper_ptr->constCustomFunc(ClusterForMagnetFuncParam::FUNCNAME, &tmp_param_for_clustering); // Simulate clustering in beacon edge node
@@ -1144,11 +1010,6 @@ namespace covered
             is_remote_hit = false;
         } // End of global uncached
 
-        // TMPDEBUG24
-        std::ostringstream tmposs;
-        tmposs << "content discovery of key " << cur_key.getKeyDebugstr() << " in client " << clientidx << " with is_remote_hit: " << Util::toString(is_remote_hit) << " and target edge " << target_edge_idx;
-        Util::dumpNormalMsg("contentDiscovery()", tmposs.str());
-
         return;
     }
 
@@ -1172,11 +1033,6 @@ namespace covered
             // Simulate vtime synchronization of target edge node for BestGuess
             bestguessVtimeSynchronizationForEdge(target_edge_idx);
         }
-
-        // TMPDEBUG24
-        std::ostringstream tmposs;
-        tmposs << "request redirection of key " << cur_key.getKeyDebugstr() << " to target edge " << target_edge_idx << " with is_cooperative_cached_and_valid: " << Util::toString(is_cooperative_cached_and_valid);
-        Util::dumpNormalMsg("requestRedirection()", tmposs.str());
 
         assert(is_cooperative_cached_and_valid);
 
@@ -1214,11 +1070,6 @@ namespace covered
             // Simulate vtime synchronization of closest edge node for BestGuess
             bestguessVtimeSynchronizationForEdge(closest_edgeidx);
         }
-
-        // TMPDEBUG24
-        std::ostringstream tmposs;
-        tmposs << "validate closest cache of key " << cur_key.getKeyDebugstr() << " in closest edge " << closest_edgeidx << " with unused_is_local_cached_and_invalid: " << Util::toString(unused_is_local_cached_and_invalid);
-        Util::dumpNormalMsg("validateClosestEdgeForFetchedValue()", tmposs.str());
 
         return;
     }
@@ -1280,11 +1131,6 @@ namespace covered
             }
         }
 
-        // TMPDEBUG24
-        std::ostringstream tmposs;
-        tmposs << "calc read latency of key " << cur_key.getKeyDebugstr() << " from client " << clientidx << " with hitflag: " << hitflag << " and total latency: " << total_latency_us;
-        Util::dumpNormalMsg("calcReadLatencyBeforeCacheManagement()", tmposs.str());
-
         return total_latency_us;
     }
 
@@ -1334,11 +1180,6 @@ namespace covered
         const uint32_t curclient_closest_edgeidx = getClosestEdgeidx(clientidx);
         CacheWrapper* curclient_closest_edge_cache_wrapper_ptr = getClosestEdgeCacheWrapperPtr(clientidx);
 
-        // TMPDEBUG24
-        std::ostringstream tmposs;
-        tmposs << "trigger placement of key " << cur_key.getKeyDebugstr() << " from client " << clientidx << " with hitflag: " << curobj_hitflag << " and total latency: " << total_latency_us;
-        Util::dumpNormalMsg("triggerCacheManagement()", tmposs.str());
-
         if (cache_name == Util::COVERED_CACHE_NAME) // COVERED
         {
             // Try to simulate popularity aggregation
@@ -1384,29 +1225,15 @@ namespace covered
             }
         }
 
-        // TMPDEBUG24
-        std::ostringstream tmposs2;
-        tmposs2 << "finish trigger placement of key " << cur_key.getKeyDebugstr();
-        Util::dumpNormalMsg("triggerCacheManagement()", tmposs2.str());
-
         return;
     }
 
     void admitIntoEdge(const Key& cur_key, const Value& fetched_value, const uint32_t& placement_edgeidx, const Hitflag& hitflag, const std::string& cache_name, const uint64_t& miss_latency_us)
     {
-        // TMPDEBUG24
-        std::cout << "at the beginning of admitIntoEdge()" << std::endl;
-        perkey_local_uncached_objinfo.dumpDebugInfo(cur_key);
-
         assert(placement_edgeidx < edge_wrapper_ptrs.size());
         const uint32_t beacon_edgeidx = getBeaconEdgeidx(cur_key);
         EdgeWrapperBase* placement_edge_wrapper_ptr = getEdgeWrapperPtr(placement_edgeidx);
         CacheWrapper* placement_edge_cache_wrapper_ptr = placement_edge_wrapper_ptr->getEdgeCachePtr();
-
-        // TMPDEBUG24
-        std::ostringstream tmposs;
-        tmposs << "admit key " << cur_key.getKeyDebugstr() << " into placement edge " << placement_edgeidx;
-        Util::dumpNormalMsg("admitIntoEdge()", tmposs.str());
 
         // Get original cached edge nodes before admission
         std::vector<uint32_t> original_cached_edge_nodes;
@@ -1436,43 +1263,15 @@ namespace covered
         const bool is_valid = true; // must NOT being written in single-node simulator
         placement_edge_cache_wrapper_ptr->admit(cur_key, fetched_value, is_neighbor_cached, is_valid, beacon_edgeidx, affect_victim_tracker, miss_latency_us);
 
-        // TMPDEBUG24
-        std::cout << "after admit()" << std::endl;
-        perkey_local_uncached_objinfo.dumpDebugInfo(cur_key);
-
         // Add placement edge index into global cached information of the object for all methods after admission
         perkey_global_cached_objinfo.addEdgeNode(cur_key, placement_edgeidx);
-
-        // TMPDEBUG24
-        std::cout << "after addEdgeNode()" << std::endl;
-        perkey_local_uncached_objinfo.dumpDebugInfo(cur_key);
-
         if (cache_name == Util::COVERED_CACHE_NAME) // ONLY for COVERED
         {
-            // TMPDEBUG24
-            std::ostringstream tmposs3;
-            tmposs3 << "admit key " << cur_key.getKeyDebugstr() << "before tryToRemoveLocalUncachedPopularityForEdge()";
-            Util::dumpNormalMsg("admitIntoEdge()", tmposs3.str());
-
-            // TMPDEBUG24
-            std::cout << "before tryToRemoveLocalUncachedPopularityForEdge()" << std::endl;
-            perkey_local_uncached_objinfo.dumpDebugInfo(cur_key);
-
             // Remove placement edge index from local uncached information of the object for COVERED after admission
             perkey_local_uncached_objinfo.tryToRemoveLocalUncachedPopularityForEdge(cur_key, placement_edgeidx);
 
-            // TMPDEBUG24
-            std::ostringstream tmposs4;
-            tmposs4 << "admit key " << cur_key.getKeyDebugstr() << "before coveredVictimSynchronizationForEdge()";
-            Util::dumpNormalMsg("admitIntoEdge()", tmposs4.str());
-
             // Update victim information of the placement edge node for COVERED after admission
             coveredVictimSynchronizationForEdge(placement_edgeidx, !affect_victim_tracker);
-
-            // TMPDEBUG24
-            std::ostringstream tmposs5;
-            tmposs5 << "admit key " << cur_key.getKeyDebugstr() << "before coveredMetadataUpdate()";
-            Util::dumpNormalMsg("admitIntoEdge()", tmposs5.str());
 
             // Metadata update (enable is_neighghbor_cached of the object) for COVERED after admission (refer to src/edge/covered_edge_wrapper.c::processMetadataUpdateRequirementInternal_() and src/edge/cache_server/cache_server_metadata_update_processor.c::processMetadataUpdateRequest_())
             bool is_from_single_to_multiple = (original_cached_edge_nodes.size() == 1);
@@ -1488,11 +1287,6 @@ namespace covered
             // Update vtime information of placement edge node for BestGuess after admission
             bestguessVtimeSynchronizationForEdge(placement_edgeidx);
         }
-
-        // TMPDEBUG24
-        std::ostringstream tmposs2;
-        tmposs2 << "finish admit key " << cur_key.getKeyDebugstr() << " into placement edge " << placement_edgeidx;
-        Util::dumpNormalMsg("admitIntoEdge()", tmposs2.str());
 
         // Evict after admission
         evictForCapacity(placement_edgeidx, cache_name);
@@ -1795,11 +1589,6 @@ namespace covered
     {
         EdgeWrapperBase* beacon_edge_wrapper_ptr = getBeaconEdgeWrapperPtr(cur_key);
 
-        // TMPDEBUG24
-        std::ostringstream tmposs;
-        tmposs << "calc placement of key " << cur_key.getKeyDebugstr();
-        Util::dumpNormalMsg("coveredPlacementCalculation()", tmposs.str());
-
         has_best_placement = false;
         
         float max_placement_gain = 0.0;
@@ -1817,11 +1606,6 @@ namespace covered
         local_uncached_objinfo.getTopkLocalUncachedPopularities(covered_topk_edgecnt, topk_local_uncached_popularities);
         const uint32_t tmp_topk_list_length = topk_local_uncached_popularities.size();
 
-        // TMPDEBUG24
-        std::ostringstream tmposs2;
-        tmposs2 << "calc placement of key " << cur_key.getKeyDebugstr() << "tmp_topk_list_length: " << tmp_topk_list_length;
-        Util::dumpNormalMsg("coveredPlacementCalculation()", tmposs2.str());
-
         assert(tmp_topk_list_length <= covered_topk_edgecnt);
         assert(tmp_topk_list_length > 0);
 
@@ -1831,11 +1615,6 @@ namespace covered
         {
             all_local_uncached_popularity_sum += topk_local_uncached_popularities[i].second;
         }
-
-        // TMPDEBUG24
-        std::ostringstream tmposs3;
-        tmposs3 << "calc placement of key " << cur_key.getKeyDebugstr() << "all_local_uncached_popularity_sum: " << all_local_uncached_popularity_sum;
-        Util::dumpNormalMsg("coveredPlacementCalculation()", tmposs3.str());
 
         // (2) Greedy-based placement calculation
 
@@ -1874,15 +1653,6 @@ namespace covered
             }
         }
 
-        // TMPDEBUG24
-        std::ostringstream tmposs4;
-        tmposs4 << "calc placement of key " << cur_key.getKeyDebugstr() << "max_placement_gain: " << max_placement_gain << ", tmp_best_placement_edgeset: ";
-        for (std::unordered_set<uint32_t>::const_iterator tmp_best_placement_edgeset_iter = tmp_best_placement_edgeset.begin(); tmp_best_placement_edgeset_iter != tmp_best_placement_edgeset.end(); tmp_best_placement_edgeset_iter++)
-        {
-            tmposs4 << *tmp_best_placement_edgeset_iter << " ";
-        }
-        Util::dumpNormalMsg("coveredPlacementCalculation()", tmposs4.str());
-
         // Update best placement if any
         if (max_placement_gain > 0.0) // Still with positive placement gain
         {
@@ -1895,15 +1665,6 @@ namespace covered
 
     void coveredPlacementDeployment(const Key& cur_key, const Value& fetched_value, const std::unordered_set<uint32_t>& best_placement_edgeset, const Hitflag& hitflag, const std::string& cache_name, const uint64_t miss_latency_us)
     {
-        // TMPDEBUG24
-        std::ostringstream tmposs;
-        tmposs << "deploy placement of key " << cur_key.getKeyDebugstr() << ", best_placement_edgeset: ";
-        for (std::unordered_set<uint32_t>::const_iterator best_placement_edgeset_iter = best_placement_edgeset.begin(); best_placement_edgeset_iter != best_placement_edgeset.end(); best_placement_edgeset_iter++)
-        {
-            tmposs << *best_placement_edgeset_iter << " ";
-        }
-        Util::dumpNormalMsg("coveredPlacementDeployment()", tmposs.str());
-
         assert(best_placement_edgeset.size() > 0);
 
         for (std::unordered_set<uint32_t>::const_iterator best_placement_edgeset_iter = best_placement_edgeset.begin(); best_placement_edgeset_iter != best_placement_edgeset.end(); best_placement_edgeset_iter++)

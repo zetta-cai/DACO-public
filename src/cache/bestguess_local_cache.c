@@ -226,10 +226,11 @@ namespace covered
             // Remove item from LRU list
             list_iterator_t list_iter = lookup_map_const_iter->second;
             assert(list_iter != bestguess_cache_.end());
+            const uint64_t item_size = list_iter->getSizeForCapacity();
             bestguess_cache_.erase(list_iter);
 
             // Update cache size usage for removed item
-            size_ = Util::uint64Minus(size_, list_iter->getSizeForCapacity());
+            size_ = Util::uint64Minus(size_, item_size);
 
             // Remove entry from key lookup map
             lookup_map_.erase(lookup_map_const_iter);
