@@ -508,6 +508,12 @@ namespace covered
         return main_class_name_;
     }
 
+    bool Config::isSimulation()
+    {
+        checkIsValid_();
+        return main_class_name_ == Util::SINGLE_NODE_SIMULATOR_MAIN_NAME;
+    }
+
     // For client physical machines
 
     uint32_t Config::getClientMachineCnt()
@@ -523,7 +529,7 @@ namespace covered
         assert(client_idx < clientcnt);
 
         const uint32_t tmp_client_global_machine_idx = getNodeGlobalMachineIdx_(client_idx, clientcnt, client_machine_idxes_);
-        if (is_launch)
+        if (!isSimulation() && is_launch)
         {
             if (tmp_client_global_machine_idx != current_machine_idx_)
             {
@@ -566,7 +572,7 @@ namespace covered
     {
         checkIsValid_();
 
-        if (is_launch)
+        if (!isSimulation() && is_launch)
         {
             if (cloud_machine_idx_ != current_machine_idx_)
             {
@@ -687,7 +693,7 @@ namespace covered
         assert(edge_idx < edgecnt);
 
         const uint32_t tmp_edge_global_machine_idx = getNodeGlobalMachineIdx_(edge_idx, edgecnt, edge_machine_idxes_);
-        if (is_launch)
+        if (!isSimulation() && is_launch)
         {
             if (tmp_edge_global_machine_idx != current_machine_idx_)
             {
@@ -745,7 +751,7 @@ namespace covered
     {
         checkIsValid_();
 
-        if (is_launch)
+        if (!isSimulation() && is_launch)
         {
             if (evaluator_machine_idx_ != current_machine_idx_)
             {

@@ -161,7 +161,7 @@ namespace covered
             {
                 is_createdir_for_evaluator_statistics = true;
             }
-            else if (main_class_name == Util::TOTAL_STATISTICS_LOADER_MAIN_NAME || main_class_name == Util::CLIUTIL_MAIN_NAME)
+            else if (main_class_name == Util::TOTAL_STATISTICS_LOADER_MAIN_NAME || main_class_name == Util::CLIUTIL_MAIN_NAME || main_class_name == Util::SINGLE_NODE_SIMULATOR_MAIN_NAME) // Need EvaluatorCLI yet NOT need required directories
             {
                 is_createdir_for_evaluator_statistics = false;
             }

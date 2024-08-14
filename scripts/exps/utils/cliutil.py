@@ -43,7 +43,7 @@ class CLIUtil:
         self.edge_cli_str_ = ""
         self.cloud_cli_str_ = ""
         self.evaluator_cli_str_ = ""
-        self.simulator_cli_str_ = ""
+        self.single_node_cli_str_ = ""
         self.dataset_loader_cli_str_ = ""
         self.trace_preprocessor_cli_str_ = ""
         for tmp_outputstr_line in run_cliutil_outputstr.splitlines():

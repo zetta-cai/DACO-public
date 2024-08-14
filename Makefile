@@ -103,7 +103,7 @@ CLEANS += src/trace_preprocessor.o
 ##############################################################################
 
 # statistics_aggregator
-TARGETS := dataset_loader single_node_prototype client edge cloud evaluator cliutil total_statistics_loader trace_preprocessor
+TARGETS := dataset_loader single_node_prototype single_node_simulator client edge cloud evaluator cliutil total_statistics_loader trace_preprocessor
 
 all: $(TARGETS)
 #	rm -rf $(CLEANS) $(DEPS)

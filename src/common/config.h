@@ -111,6 +111,7 @@ namespace covered
         static void loadConfig(const std::string& config_filepath, const std::string& main_class_name);
 
         static std::string getMainClassName();
+        static bool isSimulation();
 
         // For client physical machines
         static uint32_t getClientMachineCnt();
