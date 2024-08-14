@@ -17,7 +17,7 @@ simple_example_settings = {
     "edgecnt": 12,
     "keycnt": 1000000,
     "capacity_mb": 1024,
-    "cache_name": "covered", # covered, shark+gdsf, shark+lhd
+    "cache_name": "covered", # covered, shark, shark+gdsf, gdsf, shark+lhd, lhd, magnet, bestguess
     "workload_name": "facebook"
 }
 
