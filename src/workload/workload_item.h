@@ -32,7 +32,7 @@ namespace covered
 
         Key getKey() const;
         Value getValue() const;
-        WorkloadItemType getItemType();
+        WorkloadItemType getItemType() const;
 
         const WorkloadItem& operator=(const WorkloadItem& other);
     private:

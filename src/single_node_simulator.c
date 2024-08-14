@@ -17,6 +17,8 @@
 #include <sstream> // std::ostringstream
 #include <vector> // std::vector
 
+#include "benchmark/evaluator_wrapper.h"
+#include "cache/basic_cache_custom_func_param.h"
 #include "cache/covered_cache_custom_func_param.h"
 #include "cli/single_node_cli.h"
 #include "common/config.h"
@@ -43,11 +45,12 @@ namespace covered
     struct PerkeyGlobalCachedObjinfo
     {
         bool isGlobalCached(const Key& key) const;
+        bool isNeighborCached(const Key& key, const uint32_t& edgeidx) const;
         bool getEdgeNodeIdxes(const Key& key, std::vector<uint32_t>& edge_node_idxes) const;
         void addEdgeNode(const Key& key, const uint32_t& edgeidx);
         void removeEdgeNode(const Key& key, const uint32_t& edgeidx);
 
-        std::unordered_map<covered::Key, covered::GlobalCachedObjinfo, covered::KeyHasher> key_global_cached_objinfo_map; // For global cached objects
+        std::unordered_map<Key, GlobalCachedObjinfo, KeyHasher> key_global_cached_objinfo_map; // For global cached objects
     };
 
     // Object-level information of a local uncached object for single-node simulation (ONLY for COVERED)
@@ -102,12 +105,13 @@ namespace covered
     struct PerkeyGlobalCachedObjinfo perkey_global_cached_objinfo; // For global cached objects
     struct PerkeyLocalUncachedObjinfo perkey_local_uncached_objinfo; // For local uncached objects (ONLY for COVERED)
     struct PeredgeEvictNodeinfo peredge_evictinfo; // For all edge nodes (ONLY for COVERED)
+    std::unordered_map<uint32_t, uint64_t> peredge_victim_vtime; // For all edge nodes (ONLY for BestGuess)
 
     // An array of edge wrappers (use the internal cache structures, e.g., local caches in cache wrapper, dht wrapper in cooperative wrapper, and COVERED's weight tuner) to simulate multiple edge nodes
-    std::vector<covered::EdgeWrapperBase*> edge_wrapper_ptrs;
+    std::vector<EdgeWrapperBase*> edge_wrapper_ptrs;
 
     // An array of workload wrappers to simulate multiple client nodes (NO need metadata, e.g., is_warmup and closest edge index, in client (worker) wrapper, which will be maintained by single-node simulator itself)
-    std::vector<covered::WorkloadWrapperBase*> workload_wrapper_ptrs;
+    std::vector<WorkloadWrapperBase*> workload_wrapper_ptrs;
     std::vector<uint32_t> closest_edge_idxes; // Closest edge node index for each client node
 
     // Evaluation variables
@@ -116,7 +120,7 @@ namespace covered
 
 namespace covered
 {
-    // (1) Common helper functions
+    // (1) Utility functions
 
     uint32_t getClosestEdgeidx(const uint32_t& clientidx);
     EdgeWrapperBase* getEdgeWrapperPtr(const uint32_t& edgeidx);
@@ -124,21 +128,35 @@ namespace covered
     CacheWrapper* getClosestEdgeCacheWrapperPtr(const uint32_t& clientidx);
     uint32_t getBeaconEdgeidx(const Key& cur_key);
     EdgeWrapperBase* getBeaconEdgeWrapperPtr(const Key& cur_key);
+    bool isLocalBeacon(const Key& cur_key, const uint32_t& clientidx);
+
+    // (2) Common helper functions
+
+    void processRequest(const WorkloadItem& cur_workload_item, const uint32_t& clientidx, const std::string& cache_name, const uint32_t& edgecnt, const uint32_t& covered_topk_edgecnt, uint32_t& reqcnt, uint32_t& local_hitcnt, uint32_t& remote_hitcnt, uint64_t avg_latency_us);
+
     bool accessClosestCache(const Key& cur_key, const uint32_t& clientidx, const std::string& cache_name, Value& fetched_value); // Return is_local_cached_and_valid
+    void writeClosestCache(const Key& cur_key, const Value& fetched_value, const uint32_t& clientidx, const std::string& cache_name, const WorkloadItemType& cur_workload_item_type);
     void contentDiscovery(const Key& cur_key, const uint32_t& clientidx, const std::string& cache_name, const uint32_t& edgecnt, bool& is_remote_hit, uint32_t& target_edge_idx);
     void requestRedirection(const Key& cur_key, const uint32_t& target_edge_idx, const std::string& cache_name, Value& fetched_value);
     void validateClosestEdgeForFetchedValue(const Key& cur_key, const Value& fetched_value, const uint32_t& clientidx, const std::string& cache_name, const Hitflag& curobj_hitflag);
-    void admitIntoEdge(const Key& cur_key, const Value& fetched_value, const uint32_t& placement_edgeidx, const Hitflag& hitflag, const std::string& cache_name);
+    uint64_t calcReadLatencyBeforeCacheManagement(const Key& cur_key, const uint32_t& clientidx, const uint32_t& local_access_latency_us, const uint32_t& content_discovery_latency_us, const uint32_t& request_redirection_latency_us, const uint32_t& cloud_access_latency_us, const Hitflag& hitflag, const std::string& cache_name);
+    uint64_t calcWriteLatencyBeforeCacheManagement(const Key& cur_key, const uint32_t& clientidx, const uint32_t& local_access_latency_us, const uint32_t& acquire_writelock_latency_us, const uint32_t& release_writelock_latency_us, const uint32_t& cloud_access_latency_us, const std::string& cache_name);
+    void admitIntoEdge(const Key& cur_key, const Value& fetched_value, const uint32_t& placement_edgeidx, const Hitflag& hitflag, const std::string& cache_name, const uint64_t& miss_latency_us);
     void evictForCapacity(const uint32_t& placement_edgeidx, const std::string& cache_name);
 
-    // (2) COVERED's helper functions
+    // (3) COVERED's helper functions
 
     bool coveredTryPopularityAggregationForClosestEdge(const Key& cur_key, const uint32_t& clientidx); // Return is_tracked_after_fetch_value
     void coveredVictimSynchronizationForEdge(const uint32_t& edgeidx, const bool& only_update_cache_margin_bytes);
     float coveredCalcEvictionCost(const Key& cur_key, const uint32_t& object_size, const std::unordered_set<uint32_t>& placement_edgeset);
     void coveredPlacementCalculation(const Key& cur_key, const uint32_t& covered_topk_edgecnt, bool& has_best_placement, std::unordered_set<uint32_t>& best_placement_edgeset);
-    void coveredPlacementDeployment(const Key& key, const Value& fetched_value, const std::unordered_set<uint32_t>& best_placement_edgeset, const Hitflag& hitflag, const std::string& cache_name);
+    void coveredPlacementDeployment(const Key& key, const Value& fetched_value, const std::unordered_set<uint32_t>& best_placement_edgeset, const Hitflag& hitflag, const std::string& cache_name, const uint64_t miss_latency_us);
     void coveredMetadataUpdate(const Key& cur_key, const uint32_t& notify_edgeidx, const bool& is_neighbor_cached);
+
+    // (4) BestGuess's helper functions
+
+    void bestguessVtimeSynchronizationForEdge(const uint32_t& edgeidx);
+    uint32_t bestguessGetEdgeidxWithSmallestVtime();
 }
 
 int main(int argc, char **argv) {
@@ -179,6 +197,9 @@ int main(int argc, char **argv) {
 
     // Warmup configurations
     const uint32_t warmup_reqcnt_scale = single_node_cli.getWarmupReqcntScale();
+
+    // Stresstest configurations
+    const uint32_t stresstest_duration_sec = single_node_cli.getStresstestDurationSec();
 
     // (2) Initialize global variables for single-node simulation
 
@@ -224,13 +245,15 @@ int main(int argc, char **argv) {
     assert(warmup_reqcnt_limit > 0);
     assert(warmup_reqcnt_limit * total_client_workercnt >= total_warmup_reqcnt); // Total # of issued warmup reqs MUST >= total # of required warmup reqs
 
-    // Used to dump warmup status per interval
+    // Used to dump warmup statistics per interval
+    uint32_t warmup_interval_idx = 0;
     const uint32_t warmup_interval_us = SEC2US(1);
     struct timespec warmup_cur_timestamp = covered::Util::getCurrentTimespec();
     struct timespec warmup_prev_timestamp = warmup_cur_timestamp;
     uint32_t warmup_interval_reqcnt = 0;
     uint32_t warmup_interval_local_hitcnt = 0;
     uint32_t warmup_interval_remote_hitcnt = 0;
+    uint64_t warmup_interval_avg_latency = 0; // Calculated latency (calculated performance, yet NOT absolute performance)
 
     // Generate requests via workload generators one by one to simulate cache access
     for (uint32_t warmup_reqidx = 0; warmup_reqidx < warmup_reqcnt_limit; warmup_reqidx++)
@@ -244,130 +267,109 @@ int main(int argc, char **argv) {
             for (uint32_t local_client_worker_idx = 0; local_client_worker_idx < perclient_workercnt; local_client_worker_idx++)
             {
                 covered::WorkloadItem cur_workload_item = curclient_workload_wrapper_ptr->generateWorkloadItem(local_client_worker_idx);
-                covered::WorkloadItemType cur_workload_item_type = cur_workload_item.getItemType();
-                covered::Key cur_key = cur_workload_item.getKey();
-                covered::Value cur_value = cur_workload_item.getValue();
-                covered::Value fetched_value;
-
-                if (cur_workload_item_type == covered::WorkloadItemType::kWorkloadItemGet)
-                {
-                    // Access local cache in the closest edge node for local hit/miss (update cache statistics in the closest edge node) (refer to src/edge/cache_server/basic_edge_wrapper.c::getLocalEdgeCache_())
-                    bool is_local_cached_and_valid = covered::accessClosestCache(cur_key, clientidx, cache_name, fetched_value);
-
-                    // Check if any other edge node caches the object
-                    covered::Hitflag curobj_hitflag = covered::Hitflag::kGlobalMiss;
-                    if (!is_local_cached_and_valid) // Local miss
-                    {
-                        bool is_remote_hit = false;
-                        uint32_t target_edge_idx = 0;
-
-                        // Simulate content discovery (refer to src/cooperation/directory_table.c::lookup())
-                        covered::contentDiscovery(cur_key, clientidx, cache_name, edgecnt, is_remote_hit, target_edge_idx);
-
-                        if (is_remote_hit) // Remote hit
-                        {
-                            // Access local cache in the remote edge node to simulate request redirection for remote hit (update cache statistics in the remote edge node) (refer to src/edge/cache_server/basic_cache_server_redirection_processor.c::processReqForRedirectedGet_())
-                            covered::requestRedirection(cur_key, target_edge_idx, cache_name, fetched_value);
-
-                            // Update warmup status
-                            warmup_interval_remote_hitcnt += 1;
-
-                            curobj_hitflag = covered::Hitflag::kCooperativeHit;
-                        } // End of remote hit
-                        else // Global miss
-                        {
-                            // Copy dataset value to fetched_value to simulate cloud access
-                            fetched_value = cur_value;
-
-                            curobj_hitflag = covered::Hitflag::kGlobalMiss;
-                        } // End of global miss
-                    } // End of local miss
-                    else // Local hit
-                    {
-                        // NOTE: fetched_value has already been set by accessClosestCache() before
-
-                        // Update warmup status
-                        warmup_interval_local_hitcnt += 1;
-
-                        curobj_hitflag = covered::Hitflag::kLocalHit;
-                    } // End of local hit
-
-                    // Access local cache in the closest edge node to simulate value validation if necessary for fetched value (update value-related statistics in the closest edge node) (refer to src/edge/cache_server/basic_cache_server_worker.c::tryToUpdateInvalidLocalEdgeCache_())
-                    covered::validateClosestEdgeForFetchedValue(cur_key, fetched_value, clientidx, cache_name, curobj_hitflag);
-
-                    // Trigger cache management
-                    if (cache_name == covered::Util::COVERED_CACHE_NAME) // COVERED
-                    {
-                        // Try to simulate popularity aggregation
-                        bool is_tracked_after_fetch_value = covered::coveredTryPopularityAggregationForClosestEdge(cur_key, clientidx);
-
-                        if (is_tracked_after_fetch_value) // Local uncached yet tracked object
-                        {
-                            // Simulate fast cache placement in the beacon node (refer to src/core/covered_cache_manager.c::placementCalculation_())
-                            bool has_best_placement = false;
-                            std::unordered_set<uint32_t> best_placement_edgeset;
-                            covered::coveredPlacementCalculation(cur_key, covered_topk_edgecnt, has_best_placement, best_placement_edgeset);
-
-                            if (has_best_placement)
-                            {
-                                covered::coveredPlacementDeployment(cur_key, fetched_value, best_placement_edgeset, curobj_hitflag, cache_name);
-                            }
-                        }
-                    } // End of COVERED
-                    else if (cache_name == covered::Util::BESTGUESS_CACHE_NAME) // BestGuess (Hint)
-                    {
-                        if (curobj_hitflag == covered::Hitflag::kGlobalMiss)
-                        {
-                            // TODO: BestGuess will evict with approximate global LRU
-                        }
-                    }
-                    else // Single-node caches, shark-like caches, and magnet-like caches
-                    {
-                        // TODO: Trigger local admission/eviction of most baselines in the current closest cache node
-                        // TODO: Pass cache miss latency for LA-Cache
-                    }
-                } // End of GET request
-                else if (cur_workload_item_type == covered::WorkloadItemType::kWorkloadItemPut || cur_workload_item_type == covered::WorkloadItemType::kWorkloadItemDel)
-                {
-                    // NOTE: NO need to acquire writelock, invalidate caches, write cloud, and release writelock
-
-                    // TODO: Access local cache in each involved edge node to simulate cache update after write acknowledgement (update cache statistics in the closest edge node)
-                    // TODO: Evict for PUT requests
-
-                    // TODO: Trigger cache management
-                    // TODO: -> Encapsulate and invoke triggerCacheMangement()
-
-                    // TODO: Update warmup status
-                    // NOTE: write MUST be cache miss
-                }
-                else
-                {
-                    std::ostringstream oss;
-                    oss << "invalid workload item type: " << covered::WorkloadItem::workloadItemTypeToString(cur_workload_item_type);
-                    covered::Util::dumpErrorMsg(main_class_name, oss.str());
-                    exit(1);
-                }
+                
+                covered::processRequest(cur_workload_item, clientidx, cache_name, edgecnt, covered_topk_edgecnt, warmup_interval_reqcnt, warmup_interval_local_hitcnt, warmup_interval_remote_hitcnt, warmup_interval_avg_latency);
             }
         }
 
-        // Calculate delta time to determine whether to dump warmup status
+        // Calculate delta time to determine whether to dump warmup statistics during current interval
         warmup_cur_timestamp = covered::Util::getCurrentTimespec();
         double warmup_delta_us = covered::Util::getDeltaTimeUs(warmup_cur_timestamp, warmup_prev_timestamp);
         if (warmup_delta_us >= static_cast<double>(warmup_interval_us))
         {
-            // TODO: Dump warmup status per interval
+            // Calculate warmup statistics
+            double warmup_local_hitratio = static_cast<double>(warmup_interval_local_hitcnt) / static_cast<double>(warmup_interval_reqcnt);
+            double warmup_remote_hitratio = static_cast<double>(warmup_interval_remote_hitcnt) / static_cast<double>(warmup_interval_reqcnt);
+            double warmup_global_hitratio = warmup_local_hitratio + warmup_remote_hitratio;
 
-            // Reset warmup status
+            // Dump warmup statistics per interval
+            std::ostringstream oss;
+            oss << "[Warmup Statistics at Interval " << warmup_interval_idx << "]" << std::endl;
+            oss << "Reqcnt: " << warmup_interval_reqcnt << ", LocalHitcnt: " << warmup_interval_local_hitcnt << ", RemoteHitcnt: " << warmup_interval_remote_hitcnt << std::endl;
+            oss << "| Global Hit Ratio (Local + Remote) | Average Latency (us) |" << std::endl;
+            oss << "| " << warmup_global_hitratio << " (" << warmup_local_hitratio << " + " << warmup_remote_hitratio << ") | " << warmup_interval_avg_latency << " |" << std::endl << std::endl;
+            std::cout << oss.str();
+
+            // Reset warmup statistics
             warmup_prev_timestamp = warmup_cur_timestamp;
             warmup_interval_reqcnt = 0;
             warmup_interval_local_hitcnt = 0;
             warmup_interval_remote_hitcnt = 0;
+            warmup_interval_avg_latency = 0;
+
+            warmup_interval_idx += 1;
         }
     }
 
-    // (4) TODO: Stresstest phase
+    // (4) Stresstest phase
 
-    // TODO: Encapsulate and invoke requestProcess()
+    // Used to dump stresstest statistics during the whole stresstest phase
+    uint32_t stresstest_interval_idx = 0;
+    const uint32_t stresstest_interval_us = SEC2US(1);
+    struct timespec stresstest_start_timestamp = covered::Util::getCurrentTimespec();
+    struct timespec stresstest_cur_timestamp = stresstest_start_timestamp;
+    struct timespec stresstest_prev_timestamp = stresstest_start_timestamp;
+    uint32_t stresstest_total_reqcnt = 0;
+    uint32_t stresstest_total_local_hitcnt = 0;
+    uint32_t stresstest_total_remote_hitcnt = 0;
+    uint64_t stresstest_total_avg_latency = 0; // Calculated latency (calculated performance, yet NOT absolute performance)
+
+    // Generate requests via workload generators one by one to simulate cache access until stresstest duration finishes
+    while (true)
+    {
+        // Each client worker continues to generate requests for stresstest
+        for (uint32_t clientidx = 0; clientidx < clientcnt; clientidx++)
+        {
+            // Simulate the corresponding client node
+            covered::WorkloadWrapperBase* curclient_workload_wrapper_ptr = covered::workload_wrapper_ptrs[clientidx];
+
+            for (uint32_t local_client_worker_idx = 0; local_client_worker_idx < perclient_workercnt; local_client_worker_idx++)
+            {
+                covered::WorkloadItem cur_workload_item = curclient_workload_wrapper_ptr->generateWorkloadItem(local_client_worker_idx);
+                
+                covered::processRequest(cur_workload_item, clientidx, cache_name, edgecnt, covered_topk_edgecnt, stresstest_total_reqcnt, stresstest_total_local_hitcnt, stresstest_total_remote_hitcnt, stresstest_total_avg_latency);
+            }
+        }
+
+        // Calculate delta time to determine whether to dump stresstest statistics until the current interval
+        stresstest_cur_timestamp = covered::Util::getCurrentTimespec();
+        double stresstest_delta_us = covered::Util::getDeltaTimeUs(stresstest_cur_timestamp, stresstest_prev_timestamp);
+        double stresstest_whole_us = covered::Util::getDeltaTimeUs(stresstest_cur_timestamp, stresstest_start_timestamp);
+        if (stresstest_delta_us >= static_cast<double>(stresstest_interval_us) || stresstest_whole_us >= static_cast<double>(SEC2US(stresstest_duration_sec)))
+        {
+            const bool is_finish = stresstest_whole_us >= static_cast<double>(SEC2US(stresstest_duration_sec));
+
+            // Calculate stresstest statistics
+            double stresstest_local_hitratio = static_cast<double>(stresstest_total_local_hitcnt) / static_cast<double>(stresstest_total_reqcnt);
+            double stresstest_remote_hitratio = static_cast<double>(stresstest_total_remote_hitcnt) / static_cast<double>(stresstest_total_reqcnt);
+            double stresstest_global_hitratio = stresstest_local_hitratio + stresstest_remote_hitratio;
+
+            // Dump stresstest statistics until the current interval
+            std::ostringstream oss;
+            if (!is_finish)
+            {
+                oss << "[Stresstest Statistics until Interval " << stresstest_interval_idx << "]" << std::endl;
+            }
+            else
+            {
+                oss << "[Final Stresstest Statistics]" << std::endl;
+            }
+            oss << "Reqcnt: " << stresstest_total_reqcnt << ", LocalHitcnt: " << stresstest_total_local_hitcnt << ", RemoteHitcnt: " << stresstest_total_remote_hitcnt << std::endl;
+            oss << "| Global Hit Ratio (Local + Remote) | Average Latency (us) |" << std::endl;
+            oss << "| " << stresstest_global_hitratio << " (" << stresstest_local_hitratio << " + " << stresstest_remote_hitratio << ") | " << stresstest_total_avg_latency << " |" << std::endl << std::endl;
+            std::cout << oss.str();
+
+            // Reset stresstest statistics
+            stresstest_prev_timestamp = stresstest_cur_timestamp;
+
+            stresstest_interval_idx += 1;
+
+            if (is_finish)
+            {
+                break;
+            }
+        } // End of dump statistics
+    } // End of while (true)
 
     // (5) Free global variables
 
@@ -384,6 +386,12 @@ int main(int argc, char **argv) {
         delete covered::workload_wrapper_ptrs[clientidx];
         covered::workload_wrapper_ptrs[clientidx] = NULL;
     }
+
+    // (6) Dump finish symbol (refer to src/evaluator.c)
+
+    covered::Util::dumpNormalMsg(main_class_name, covered::EvaluatorWrapper::EVALUATOR_FINISH_BENCHMARK_SYMBOL);
+
+    return;
 }
 
 namespace covered
@@ -396,6 +404,21 @@ namespace covered
     {
         std::unordered_map<Key, GlobalCachedObjinfo, KeyHasher>::const_iterator key_global_cached_objinfo_map_iter = key_global_cached_objinfo_map.find(key);
         return (key_global_cached_objinfo_map_iter != key_global_cached_objinfo_map.end());
+    }
+
+    bool PerkeyGlobalCachedObjinfo::isNeighborCached(const Key& key, const uint32_t& edgeidx) const
+    {
+        std::unordered_map<Key, GlobalCachedObjinfo, KeyHasher>::const_iterator key_global_cached_objinfo_map_iter = key_global_cached_objinfo_map.find(key);
+        const std::vector<uint32_t>& edge_node_idxes = key_global_cached_objinfo_map_iter->second.edge_node_idxes;
+        for (uint32_t i = 0; i < edge_node_idxes.size(); i++)
+        {
+            if (edge_node_idxes[i] != edgeidx)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     bool PerkeyGlobalCachedObjinfo::getEdgeNodeIdxes(const Key& key, std::vector<uint32_t>& edge_node_idxes) const
@@ -506,7 +529,7 @@ namespace covered
 
     void PerkeyLocalUncachedObjinfo::tryToRemoveLocalUncachedPopularityForEdge(const Key& key, const uint32_t edgeidx)
     {
-        std::unordered_map<covered::Key, covered::LocalUncachedObjinfo, covered::KeyHasher>::iterator key_local_uncached_objinfo_map_iter = key_local_uncached_objinfo_map.find(key);
+        std::unordered_map<Key, LocalUncachedObjinfo, KeyHasher>::iterator key_local_uncached_objinfo_map_iter = key_local_uncached_objinfo_map.find(key);
         if (key_local_uncached_objinfo_map_iter != key_local_uncached_objinfo_map.end())
         {
             bool is_empty = key_local_uncached_objinfo_map_iter->second.remove(edgeidx);
@@ -521,7 +544,7 @@ namespace covered
 
     void PerkeyLocalUncachedObjinfo::addLocalUncachedPopularityForEdge(const Key& key, const uint32_t edgeidx, const CollectedPopularity& collected_popularity)
     {
-        std::unordered_map<covered::Key, covered::LocalUncachedObjinfo, covered::KeyHasher>::iterator key_local_uncached_objinfo_map_iter = key_local_uncached_objinfo_map.find(key);
+        std::unordered_map<Key, LocalUncachedObjinfo, KeyHasher>::iterator key_local_uncached_objinfo_map_iter = key_local_uncached_objinfo_map.find(key);
         if (key_local_uncached_objinfo_map_iter == key_local_uncached_objinfo_map.end()) // New local uncached object
         {
             LocalUncachedObjinfo tmp_local_uncached_objinfo;
@@ -585,7 +608,7 @@ namespace covered
 
 namespace covered
 {
-    // (1) Common helper functions
+    // (1) Utility functions
 
     uint32_t getClosestEdgeidx(const uint32_t& clientidx)
     {
@@ -633,21 +656,209 @@ namespace covered
         return beacon_edge_wrapper_ptr;
     }
 
+    bool isLocalBeacon(const Key& cur_key, const uint32_t& clientidx)
+    {
+        const uint32_t closest_edge_idx = getClosestEdgeidx(clientidx);
+        const uint32_t beacon_edge_idx = getBeaconEdgeidx(cur_key);
+        return closest_edge_idx == beacon_edge_idx;
+    }
+
+    // (2) Common helper functions
+
+    void processRequest(const WorkloadItem& cur_workload_item, const uint32_t& clientidx, const std::string& cache_name, const uint32_t& edgecnt, const uint32_t& covered_topk_edgecnt, uint32_t& reqcnt, uint32_t& local_hitcnt, uint32_t& remote_hitcnt, uint64_t avg_latency_us)
+    {
+        covered::WorkloadItemType cur_workload_item_type = cur_workload_item.getItemType();
+        covered::Key cur_key = cur_workload_item.getKey();
+        covered::Value cur_value = cur_workload_item.getValue();
+        covered::Value fetched_value;
+
+        // Simulate the corresponding closest edge node
+        covered::EdgeWrapperBase* curclient_closest_edge_wrapper_ptr = covered::getClosestEdgeWrapperPtr(clientidx);
+
+        // Used to calculate latency (calculated performance, yet NOT absolute performance)
+        uint32_t local_access_latency_us = 0;
+        uint32_t content_discovery_latency_us = 0;
+        uint32_t request_redirection_latency_us = 0;
+        uint32_t cloud_access_latency_us = 0;
+        uint32_t acquire_writelock_latency_us = 0;
+        uint32_t release_writelock_latency_us = 0;
+        uint64_t total_latency_us = 0; // ONLY used for LA-Cache
+
+        // Update statistics
+        reqcnt += 1;
+
+        if (cur_workload_item_type == covered::WorkloadItemType::kWorkloadItemGet)
+        {
+            // Access local cache in the closest edge node for local hit/miss (update cache statistics in the closest edge node) (refer to src/edge/cache_server/basic_edge_wrapper.c::getLocalEdgeCache_())
+            bool is_local_cached_and_valid = covered::accessClosestCache(cur_key, clientidx, cache_name, fetched_value);
+            local_access_latency_us = curclient_closest_edge_wrapper_ptr->getEdgeToclientPropagationSimulatorParamPtr()->genPropagationLatency();
+
+            // Check if any other edge node caches the object
+            covered::Hitflag curobj_hitflag = covered::Hitflag::kGlobalMiss;
+            if (!is_local_cached_and_valid) // Local miss
+            {
+                bool is_remote_hit = false;
+                uint32_t target_edge_idx = 0;
+
+                // Simulate content discovery (refer to src/cooperation/directory_table.c::lookup())
+                covered::contentDiscovery(cur_key, clientidx, cache_name, edgecnt, is_remote_hit, target_edge_idx);
+                if (!covered::isLocalBeacon(cur_key, clientidx))
+                {
+                    content_discovery_latency_us = curclient_closest_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency();
+                }
+
+                if (is_remote_hit) // Remote hit
+                {
+                    // Access local cache in the remote edge node to simulate request redirection for remote hit (update cache statistics in the remote edge node) (refer to src/edge/cache_server/basic_cache_server_redirection_processor.c::processReqForRedirectedGet_())
+                    covered::requestRedirection(cur_key, target_edge_idx, cache_name, fetched_value);
+                    request_redirection_latency_us = curclient_closest_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency();
+
+                    // Update statistics
+                    remote_hitcnt += 1;
+
+                    curobj_hitflag = covered::Hitflag::kCooperativeHit;
+                } // End of remote hit
+                else // Global miss
+                {
+                    // Copy dataset value to fetched_value to simulate cloud access
+                    fetched_value = cur_value;
+                    cloud_access_latency_us = curclient_closest_edge_wrapper_ptr->getEdgeTocloudPropagationSimulatorParamPtr()->genPropagationLatency();
+
+                    curobj_hitflag = covered::Hitflag::kGlobalMiss;
+                } // End of global miss
+            } // End of local miss
+            else // Local hit
+            {
+                // NOTE: fetched_value has already been set by accessClosestCache() before
+
+                // Update statistics
+                local_hitcnt += 1;
+
+                curobj_hitflag = covered::Hitflag::kLocalHit;
+            } // End of local hit
+
+            // Access local cache in the closest edge node to simulate value validation if necessary for fetched value (update value-related statistics in the closest edge node) (refer to src/edge/cache_server/basic_cache_server_worker.c::tryToUpdateInvalidLocalEdgeCache_())
+            covered::validateClosestEdgeForFetchedValue(cur_key, fetched_value, clientidx, cache_name, curobj_hitflag);
+
+            // Calculate cache miss latency for LA-Cache and update COVERED's parameters based on hitflag
+            total_latency_us = covered::calcReadLatencyBeforeCacheManagement(cur_key, clientidx, local_access_latency_us, content_discovery_latency_us, request_redirection_latency_us, cloud_access_latency_us, curobj_hitflag, cache_name);
+
+            // Trigger cache management
+            covered::triggerCacheManagement(cur_key, fetched_value, clientidx, curobj_hitflag, cache_name, total_latency_us, covered_topk_edgecnt);
+
+            // Update statistics
+            avg_latency_us = (avg_latency_us * (reqcnt - 1) + total_latency_us) / reqcnt;
+        } // End of GET request
+        else if (cur_workload_item_type == covered::WorkloadItemType::kWorkloadItemPut || cur_workload_item_type == covered::WorkloadItemType::kWorkloadItemDel)
+        {
+            // NOTE: NO need to acquire writelock, invalidate caches, write cloud, and release writelock (but still simulate the latency)
+            // For MSI protocol (with WAN delays ONLY if the object is cached by other cache nodes and beacon node is remote)c
+            const bool is_local_beacon = covered::isLocalBeacon(cur_key, clientidx);
+            const bool is_neighbor_cached = covered::perkey_global_cached_objinfo.isNeighborCached(cur_key, covered::getClosestEdgeidx(clientidx));
+            if (is_neighbor_cached && !is_local_beacon)
+            {
+                acquire_writelock_latency_us = curclient_closest_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency();
+                release_writelock_latency_us = curclient_closest_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency();
+            }
+
+            // Simulate cloud update for write acknowledgement
+            if (cur_workload_item_type == covered::WorkloadItemType::kWorkloadItemPut)
+            {
+                fetched_value = cur_value;
+            }
+            else
+            {
+                fetched_value = covered::Value(); // is_deleted is true by default
+            }
+            cloud_access_latency_us = curclient_closest_edge_wrapper_ptr->getEdgeTocloudPropagationSimulatorParamPtr()->genPropagationLatency();
+
+            // Access local cache in each involved edge node to simulate cache update after write acknowledgement (update cache statistics in the closest edge node)
+            covered::writeClosestCache(cur_key, fetched_value, clientidx, cache_name, cur_workload_item_type);
+            local_access_latency_us = curclient_closest_edge_wrapper_ptr->getEdgeToclientPropagationSimulatorParamPtr()->genPropagationLatency();
+
+            // Calculate cache miss latency for LA-Cache and update COVERED's parameters based on remote beacon access
+            total_latency_us = covered::calcWriteLatencyBeforeCacheManagement(cur_key, clientidx, local_access_latency_us, acquire_writelock_latency_us, release_writelock_latency_us, cloud_access_latency_us, cache_name);
+
+            // Trigger cache management
+            covered::Hitflag curobj_hitflag = covered::Hitflag::kGlobalMiss;
+            if (cache_name == covered::Util::BESTGUESS_CACHE_NAME && covered::perkey_global_cached_objinfo.isGlobalCached(cur_key))
+            {
+                // NOTE: BestGuess does NOT admit the object if it has been cached by other cache nodes
+                curobj_hitflag = covered::Hitflag::kCooperativeHit;
+            }
+            covered::triggerCacheManagement(cur_key, fetched_value, clientidx, curobj_hitflag, cache_name, total_latency_us, covered_topk_edgecnt);
+
+            // Update statistics (NOTE: write MUST be cache miss -> NO need to update local hitcnt and remote hitcnt)
+            avg_latency_us = (avg_latency_us * (reqcnt - 1) + total_latency_us) / reqcnt;
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "invalid workload item type: " << covered::WorkloadItem::workloadItemTypeToString(cur_workload_item_type);
+            covered::Util::dumpErrorMsg("processRequest()", oss.str());
+            exit(1);
+        }
+    }
+
     bool accessClosestCache(const Key& cur_key, const uint32_t& clientidx, const std::string& cache_name, Value& fetched_value)
     {
+        const uint32_t closest_edgeidx = getClosestEdgeidx(clientidx);
         CacheWrapper* curclient_closest_edge_cache_wrapper_ptr = getClosestEdgeCacheWrapperPtr(clientidx);
 
         bool closest_edge_is_redirected = false;
         bool affect_victim_tracker = false;
         bool is_local_cached_and_valid = curclient_closest_edge_cache_wrapper_ptr->get(cur_key, closest_edge_is_redirected, fetched_value, affect_victim_tracker);
 
-        // Simulate victim synchronization of closest edge node (refer to src/edge/covered_edge_wrapper.c::updateCacheManagerForLocalSyncedVictimsInternal_())
         if (cache_name == Util::COVERED_CACHE_NAME && affect_victim_tracker)
         {
-            coveredVictimSynchronizationForEdge(getClosestEdgeidx(clientidx), false);
+            // Simulate victim synchronization of closest edge node (refer to src/edge/covered_edge_wrapper.c::updateCacheManagerForLocalSyncedVictimsInternal_())
+            coveredVictimSynchronizationForEdge(closest_edgeidx, false);
+        }
+        else if (cache_name == Util::BESTGUESS_CACHE_NAME)
+        {
+            // Simulate vtime synchronization of closest edge node for BestGuess
+            bestguessVtimeSynchronizationForEdge(closest_edgeidx);
         }
 
         return is_local_cached_and_valid;
+    }
+
+    void writeClosestCache(const Key& cur_key, const Value& fetched_value, const uint32_t& clientidx, const std::string& cache_name, const WorkloadItemType& cur_workload_item_type)
+    {
+        const uint32_t closest_edgeidx = getClosestEdgeidx(clientidx);
+        CacheWrapper* curclient_closest_edge_cache_wrapper_ptr = getClosestEdgeCacheWrapperPtr(clientidx);
+
+        // Update closest cache if the object is locally cached based on the request type (refer to src/edge/cache_server/cache_server_worker_base.c::processLocalWriteRequest_())
+        bool unused_is_local_cached_and_invalid = false;
+        bool is_global_cached = perkey_global_cached_objinfo.isGlobalCached(cur_key);
+        bool affect_victim_tracker = false;
+        if (cur_workload_item_type == WorkloadItemType::kWorkloadItemDel) // value is deleted
+        {
+            assert(fetched_value.isDeleted());
+
+            unused_is_local_cached_and_invalid = curclient_closest_edge_cache_wrapper_ptr->removeIfInvalidForGetrsp(cur_key, is_global_cached, affect_victim_tracker); // remove will NOT trigger eviction
+        }
+        else // non-deleted value
+        {
+            unused_is_local_cached_and_invalid = curclient_closest_edge_cache_wrapper_ptr->updateIfInvalidForGetrsp(cur_key, fetched_value, is_global_cached, affect_victim_tracker);
+            
+            // NOTE: update may trigger eviction (see CacheServerWorkerBase::processLocalGetRequest_())
+            evictForCapacity(getClosestEdgeidx(clientidx), cache_name);
+        }
+        UNUSED(unused_is_local_cached_and_invalid);
+
+        if (cache_name == Util::COVERED_CACHE_NAME)
+        {
+            // Simulate victim synchronization of closest edge node (refer to src/edge/covered_edge_wrapper.c::updateCacheManagerForLocalSyncedVictimsInternal_())
+            coveredVictimSynchronizationForEdge(closest_edgeidx, !affect_victim_tracker);
+        }
+        else if (cache_name == Util::BESTGUESS_CACHE_NAME)
+        {
+            // Simulate vtime synchronization of closest edge node for BestGuess
+            bestguessVtimeSynchronizationForEdge(closest_edgeidx);
+        }
+
+        return;
     }
 
     void contentDiscovery(const Key& cur_key, const uint32_t& clientidx, const std::string& cache_name, const uint32_t& edgecnt, bool& is_remote_hit, uint32_t& target_edge_idx)
@@ -737,10 +948,15 @@ namespace covered
         bool affect_victim_tracker = false;
         bool is_cooperative_cached_and_valid = curobj_target_edge_cache_wrapper_ptr->get(cur_key, target_edge_is_redirected, fetched_value, affect_victim_tracker);
 
-        // Simulate victim synchronization of target edge node (refer to src/edge/covered_edge_wrapper.c::updateCacheManagerForLocalSyncedVictimsInternal_())
         if (cache_name == Util::COVERED_CACHE_NAME && affect_victim_tracker)
         {
+            // Simulate victim synchronization of target edge node (refer to src/edge/covered_edge_wrapper.c::updateCacheManagerForLocalSyncedVictimsInternal_())
             coveredVictimSynchronizationForEdge(target_edge_idx, false);
+        }
+        else if (cache_name == Util::BESTGUESS_CACHE_NAME)
+        {
+            // Simulate vtime synchronization of target edge node for BestGuess
+            bestguessVtimeSynchronizationForEdge(target_edge_idx);
         }
 
         assert(is_cooperative_cached_and_valid);
@@ -750,6 +966,7 @@ namespace covered
 
     void validateClosestEdgeForFetchedValue(const Key& cur_key, const Value& fetched_value, const uint32_t& clientidx, const std::string& cache_name, const Hitflag& curobj_hitflag)
     {
+        const uint32_t closest_edgeidx = getClosestEdgeidx(clientidx);
         CacheWrapper* curclient_closest_edge_cache_wrapper_ptr = getClosestEdgeCacheWrapperPtr(clientidx);
 
         bool unused_is_local_cached_and_invalid = false;
@@ -768,16 +985,168 @@ namespace covered
         }
         UNUSED(unused_is_local_cached_and_invalid);
 
-        // Simulate victim synchronization of closest edge node (refer to src/edge/covered_edge_wrapper.c::updateCacheManagerForLocalSyncedVictimsInternal_())
         if (cache_name == Util::COVERED_CACHE_NAME)
         {
-            coveredVictimSynchronizationForEdge(getClosestEdgeidx(clientidx), !affect_victim_tracker);
+            // Simulate victim synchronization of closest edge node (refer to src/edge/covered_edge_wrapper.c::updateCacheManagerForLocalSyncedVictimsInternal_())
+            coveredVictimSynchronizationForEdge(closest_edgeidx, !affect_victim_tracker);
+        }
+        else if (cache_name == Util::BESTGUESS_CACHE_NAME)
+        {
+            // Simulate vtime synchronization of closest edge node for BestGuess
+            bestguessVtimeSynchronizationForEdge(closest_edgeidx);
         }
 
         return;
     }
 
-    void admitIntoEdge(const Key& cur_key, const Value& fetched_value, const uint32_t& placement_edgeidx, const Hitflag& hitflag, const std::string& cache_name)
+    uint64_t calcReadLatencyBeforeCacheManagement(const Key& cur_key, const uint32_t& clientidx, const uint32_t& local_access_latency_us, const uint32_t& content_discovery_latency_us, const uint32_t& request_redirection_latency_us, const uint32_t& cloud_access_latency_us, const Hitflag& hitflag, const std::string& cache_name)
+    {
+        // Calculate total response latency based on hitflag
+        uint64_t total_latency_us = 0;
+        if (hitflag == Hitflag::kLocalHit)
+        {
+            total_latency_us = local_access_latency_us;
+        }
+        else if (hitflag == Hitflag::kCooperativeHit)
+        {
+            total_latency_us = local_access_latency_us + content_discovery_latency_us + request_redirection_latency_us;
+        }
+        else // Global miss
+        {
+            total_latency_us = local_access_latency_us + content_discovery_latency_us + cloud_access_latency_us;
+        }
+
+        // Update COVERED's parameters
+        if (cache_name == Util::COVERED_CACHE_NAME)
+        {
+            EdgeWrapperBase* closest_edge_wrapper_ptr = getClosestEdgeWrapperPtr(clientidx);
+
+            // Update probability p (refer to src/edge/cache_server/covered_cache_server_worker.c::lookupLocalDirectory_() and getReqToLookupBeaconDirectory_())
+            WeightTuner& weight_tuner_ref = closest_edge_wrapper_ptr->getWeightTunerRef();
+            const bool is_local_beacon = isLocalBeacon(cur_key, clientidx);
+            if (is_local_beacon)
+            {
+                weight_tuner_ref.incrLocalBeaconAccessCnt();
+            }
+            else
+            {
+                weight_tuner_ref.incrRemoteBeaconAccessCnt();
+            }
+
+            // Update WAN delays (refer to src/edge/cache_server/covered_cache_server_worker.c and src/edge/cache_server/covered_cache_server.c)
+            if (hitflag == Hitflag::kLocalHit)
+            {
+                // Do nothing
+            }
+            else if (hitflag == Hitflag::kCooperativeHit)
+            {
+                if (!is_local_beacon)
+                {
+                    weight_tuner_ref.updateEwmaCrossedgeLatency(content_discovery_latency_us);
+                }
+                weight_tuner_ref.updateEwmaCrossedgeLatency(request_redirection_latency_us);
+            }
+            else // Global miss
+            {
+                if (!is_local_beacon)
+                {
+                    weight_tuner_ref.updateEwmaCrossedgeLatency(content_discovery_latency_us);
+                }
+                weight_tuner_ref.updateEwmaEdgecloudLatency(cloud_access_latency_us);
+            }
+        }
+
+        return total_latency_us;
+    }
+
+    uint64_t calcWriteLatencyBeforeCacheManagement(const Key& cur_key, const uint32_t& clientidx, const uint32_t& local_access_latency_us, const uint32_t& acquire_writelock_latency_us, const uint32_t& release_writelock_latency_us, const uint32_t& cloud_access_latency_us, const std::string& cache_name)
+    {
+        const bool is_local_beacon = covered::isLocalBeacon(cur_key, clientidx);
+        const bool is_neighbor_cached = covered::perkey_global_cached_objinfo.isNeighborCached(cur_key, covered::getClosestEdgeidx(clientidx));
+        const bool is_access_remote_beacon = is_neighbor_cached && !is_local_beacon;
+
+        // Calculate total response latency based on hitflag
+        uint64_t total_latency_us = local_access_latency_us + cloud_access_latency_us;
+        if (is_access_remote_beacon)
+        {
+            total_latency_us += (acquire_writelock_latency_us + release_writelock_latency_us);
+        }
+
+        // Update COVERED's parameters
+        if (cache_name == Util::COVERED_CACHE_NAME)
+        {
+            EdgeWrapperBase* closest_edge_wrapper_ptr = getClosestEdgeWrapperPtr(clientidx);
+
+            // Update probability p (refer to src/edge/cache_server/covered_cache_server_worker.c::lookupLocalDirectory_() and getReqToLookupBeaconDirectory_())
+            WeightTuner& weight_tuner_ref = closest_edge_wrapper_ptr->getWeightTunerRef();
+            if (is_local_beacon)
+            {
+                weight_tuner_ref.incrLocalBeaconAccessCnt();
+            }
+            else
+            {
+                weight_tuner_ref.incrRemoteBeaconAccessCnt();
+            }
+
+            // Update WAN delays (refer to src/edge/cache_server/covered_cache_server_worker.c and src/edge/cache_server/covered_cache_server.c)
+            if (is_access_remote_beacon)
+            {
+                weight_tuner_ref.updateEwmaCrossedgeLatency(acquire_writelock_latency_us);
+                weight_tuner_ref.updateEwmaCrossedgeLatency(release_writelock_latency_us);
+            }
+            weight_tuner_ref.updateEwmaEdgecloudLatency(cloud_access_latency_us);
+        }
+
+        return total_latency_us;
+    }
+
+    void triggerCacheManagement(const Key& cur_key, const Value& fetched_value, const uint32_t& clientidx, const Hitflag& curobj_hitflag, const std::string& cache_name, const uint64_t& total_latency_us, const uint32_t& covered_topk_edgecnt)
+    {
+        const uint32_t curclient_closest_edgeidx = getClosestEdgeidx(clientidx);
+
+        if (cache_name == Util::COVERED_CACHE_NAME) // COVERED
+        {
+            // Try to simulate popularity aggregation
+            bool is_tracked_after_fetch_value = coveredTryPopularityAggregationForClosestEdge(cur_key, clientidx);
+
+            if (is_tracked_after_fetch_value) // Local uncached yet tracked object
+            {
+                // Simulate fast cache placement in the beacon node (refer to src/core/covered_cache_manager.c::placementCalculation_())
+                bool has_best_placement = false;
+                std::unordered_set<uint32_t> best_placement_edgeset;
+                coveredPlacementCalculation(cur_key, covered_topk_edgecnt, has_best_placement, best_placement_edgeset);
+
+                if (has_best_placement)
+                {
+                    coveredPlacementDeployment(cur_key, fetched_value, best_placement_edgeset, curobj_hitflag, cache_name, total_latency_us);
+                }
+            }
+        } // End of COVERED
+        else if (cache_name == Util::BESTGUESS_CACHE_NAME) // BestGuess (Hint)
+        {
+            if (curobj_hitflag == Hitflag::kGlobalMiss) // ONLY for global uncached objects
+            {
+                // BestGuess evicts with approximate global LRU
+                uint32_t placement_edgeidx = bestguessGetEdgeidxWithSmallestVtime();
+                admitIntoEdge(cur_key, fetched_value, placement_edgeidx, curobj_hitflag, cache_name, total_latency_us);
+            }
+        }
+        else if (Util::isMagnetLikeCache(cache_name)) // MagNet-like caches
+        {
+            if (curobj_hitflag == Hitflag::kGlobalMiss)
+            {
+                admitIntoEdge(cur_key, fetched_value, curclient_closest_edgeidx, curobj_hitflag, cache_name, total_latency_us);
+            }
+        }
+        else // Single-node caches and Shark-like caches
+        {
+            admitIntoEdge(cur_key, fetched_value, curclient_closest_edgeidx, curobj_hitflag, cache_name, total_latency_us);
+        }
+
+        return;
+    }
+
+    void admitIntoEdge(const Key& cur_key, const Value& fetched_value, const uint32_t& placement_edgeidx, const Hitflag& hitflag, const std::string& cache_name, const uint64_t& miss_latency_us)
     {
         assert(placement_edgeidx < edge_wrapper_ptrs.size());
         const uint32_t beacon_edgeidx = getBeaconEdgeidx(cur_key);
@@ -807,21 +1176,6 @@ namespace covered
             }
         }
 
-        // Calculate cache miss latency based on hitflag
-        assert(hitflag != Hitflag::kLocalHit);
-        uint64_t miss_latency_us = 0; // ONLY used for LA-Cache
-        uint32_t content_discovery_latency_us = placement_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency();
-        uint32_t request_redirection_latency_us = placement_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency();
-        uint32_t cloud_access_latency_us = placement_edge_wrapper_ptr->getEdgeTocloudPropagationSimulatorParamPtr()->genPropagationLatency();
-        if (hitflag == Hitflag::kCooperativeHit)
-        {
-            miss_latency_us = content_discovery_latency_us + request_redirection_latency_us;
-        }
-        else
-        {
-            miss_latency_us = content_discovery_latency_us + cloud_access_latency_us;
-        }
-
         // Admit object into the given placement edge node and evict if necessary (refer to src/edge/cache_server/basic_cache_server.c::admitLocalEdgeCache_())
         bool affect_victim_tracker = false; // If key is a local synced victim now
         const bool is_valid = true; // must NOT being written in single-node simulator
@@ -846,6 +1200,11 @@ namespace covered
                 const bool is_neighbor_cached = true; // Enable is_neighbor_cached flag
                 coveredMetadataUpdate(cur_key, notify_edgeidx, is_neighbor_cached);
             }
+        }
+        else if (cache_name == Util::BESTGUESS_CACHE_NAME) // ONLY for BestGuess
+        {
+            // Update vtime information of placement edge node for BestGuess after admission
+            bestguessVtimeSynchronizationForEdge(placement_edgeidx);
         }
 
         // Evict after admission
@@ -922,11 +1281,16 @@ namespace covered
                 }
             }
         }
+        else if (cache_name == Util::BESTGUESS_CACHE_NAME) // ONLY for BestGuess
+        {
+            // Update vtime information of current edge node for BestGuess after eviction
+            bestguessVtimeSynchronizationForEdge(edgeidx);
+        }
 
         return;
     }
 
-    // (2) COVERED's helper functions
+    // (3) COVERED's helper functions
 
     bool coveredTryPopularityAggregationForClosestEdge(const Key& cur_key, const uint32_t& clientidx)
     {
@@ -1218,14 +1582,14 @@ namespace covered
         return;
     }
 
-    void coveredPlacementDeployment(const Key& cur_key, const Value& fetched_value, const std::unordered_set<uint32_t>& best_placement_edgeset, const Hitflag& hitflag, const std::string& cache_name)
+    void coveredPlacementDeployment(const Key& cur_key, const Value& fetched_value, const std::unordered_set<uint32_t>& best_placement_edgeset, const Hitflag& hitflag, const std::string& cache_name, const uint64_t miss_latency_us)
     {
         assert(best_placement_edgeset.size() > 0);
 
         for (std::unordered_set<uint32_t>::const_iterator best_placement_edgeset_iter = best_placement_edgeset.begin(); best_placement_edgeset_iter != best_placement_edgeset.end(); best_placement_edgeset_iter++)
         {
             const uint32_t tmp_placement_edgeidx = *best_placement_edgeset_iter;
-            admitIntoEdge(cur_key, fetched_value, tmp_placement_edgeidx, hitflag, cache_name);
+            admitIntoEdge(cur_key, fetched_value, tmp_placement_edgeidx, hitflag, cache_name, miss_latency_us);
         }
 
         return;
@@ -1242,5 +1606,50 @@ namespace covered
         notify_edge_cache_wrapper_ptr->customFunc(UpdateIsNeighborCachedFlagFuncParam::FUNCNAME, &tmp_param);
 
         return;
+    }
+
+    // (4) BestGuess's helper functions
+
+    void bestguessVtimeSynchronizationForEdge(const uint32_t& edgeidx)
+    {
+        // Update vtime information for BestGuess (many use cases, e.g., refer to src/edge/cache_server/basic_cache_server_worker.c::getReqToLookupBeaconDirectory_())
+
+        EdgeWrapperBase* edge_wrapper_ptr = getEdgeWrapperPtr(edgeidx);
+
+        // Get local victim vtime for vtime synchronization
+        GetLocalVictimVtimeFuncParam tmp_param_for_vtimesync;
+        edge_wrapper_ptr->getEdgeCachePtr()->constCustomFunc(GetLocalVictimVtimeFuncParam::FUNCNAME, &tmp_param_for_vtimesync);
+        const uint64_t& local_victim_vtime = tmp_param_for_vtimesync.getLocalVictimVtimeRef();
+
+        // Update vtime for the given edge node
+        std::unordered_map<uint32_t, uint64_t>::iterator peredge_victim_vtime_iter = peredge_victim_vtime.find(edgeidx);
+        if (peredge_victim_vtime_iter == peredge_victim_vtime.end())
+        {
+            peredge_victim_vtime.insert(std::make_pair(edgeidx, local_victim_vtime));
+        }
+        else
+        {
+            peredge_victim_vtime_iter->second = local_victim_vtime;
+        }
+
+        return;
+    }
+
+    uint32_t bestguessGetEdgeidxWithSmallestVtime()
+    {
+        assert(peredge_victim_vtime.size() > 0);
+
+        uint32_t placement_edgeidx = 0;
+        uint64_t minimum_vtime = 0;
+        for (std::unordered_map<uint32_t, uint64_t>::iterator peredge_victim_vtime_iter = peredge_victim_vtime.begin(); peredge_victim_vtime_iter != peredge_victim_vtime.end(); peredge_victim_vtime_iter++)
+        {
+            if (peredge_victim_vtime_iter == peredge_victim_vtime.begin() || minimum_vtime > peredge_victim_vtime_iter->second)
+            {
+                placement_edgeidx = peredge_victim_vtime_iter->first;
+                minimum_vtime = peredge_victim_vtime_iter->second;
+            }
+        }
+
+        return placement_edgeidx;
     }
 }

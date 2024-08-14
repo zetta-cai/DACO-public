@@ -4,13 +4,14 @@
 # (1) Import the correpsonding module you need
 
 # from .utils.dataset_loader import *
-from .utils.prototype import *
-# from .utils.simulator import *
+# from .utils.prototype import *
+# from .utils.single_node_prototype import *
+from .utils.single_node_simulator import *
 # from .utils.total_statistics_loader import *
 
 # (2) Define the settings for the experiment
 
-# Test COVERED's small LRU cache
+# Test single-node simulator
 simple_example_settings = {
     "clientcnt": 12,
     "edgecnt": 12,
@@ -19,6 +20,16 @@ simple_example_settings = {
     "cache_name": "covered", # covered, shark+gdsf, shark+lhd
     "workload_name": "facebook"
 }
+
+# # Test COVERED's small LRU cache
+# simple_example_settings = {
+#     "clientcnt": 12,
+#     "edgecnt": 12,
+#     "keycnt": 1000000,
+#     "capacity_mb": 1024,
+#     "cache_name": "covered", # covered, shark+gdsf, shark+lhd
+#     "workload_name": "facebook"
+# }
 
 # # Test Akamai's traces with 25% memory
 # simple_example_settings = {
@@ -125,12 +136,16 @@ simple_example_settings = {
 #dataset_loader_instance.run()
 
 # For prototype
-prototype_instance = Prototype(**simple_example_settings)
-prototype_instance.run()
+# prototype_instance = Prototype(**simple_example_settings)
+# prototype_instance.run()
 
-# For simulator
-#simulator_instance = Simulator(**simple_example_settings)
-#simulator_instance.run()
+# For single-node prototype
+#single_node_prototype_instance = SingleNodePrototype(**simple_example_settings)
+#single_node_prototype_instance.run()
+
+# For single-node simulator
+single_node_simulator_instance = SingleNodeSimulator(**simple_example_settings)
+single_node_simulator_instance.run()
 
 # For total statistics loader
 #total_statistics_loader_instance = TotalStatisticsLoader(**simple_example_settings)

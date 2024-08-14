@@ -52,7 +52,7 @@ namespace covered
         return value_;
     }
 
-    WorkloadItemType WorkloadItem::getItemType()
+    WorkloadItemType WorkloadItem::getItemType() const
     {
         return item_type_;
     }
