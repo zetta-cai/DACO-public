@@ -64,6 +64,7 @@ namespace covered
 
         assert(needWorkloadItems_()); // Must be clients for evaluation
         assert(local_client_worker_idx < client_worker_item_randgen_ptrs_.size());
+        assert(local_client_worker_idx < client_worker_workload_key_indices_.size());
 
         // Get a workload index randomly
         std::mt19937_64* request_randgen_ptr = client_worker_item_randgen_ptrs_[local_client_worker_idx];
@@ -73,7 +74,7 @@ namespace covered
         const uint32_t tmp_workload_index = (*request_dist_ptr)(*request_randgen_ptr);
 
         // Get the key index
-        const uint32_t tmp_key_index = workload_key_indices_[tmp_workload_index];
+        const uint32_t tmp_key_index = client_worker_workload_key_indices_[local_client_worker_idx][tmp_workload_index];
         assert(tmp_key_index < dataset_keys_.size());
 
         // Get key
@@ -338,18 +339,27 @@ namespace covered
             // Prepare workloads for the current client
             tmp_client_idx = getClientIdx_();
             const uint32_t perclient_opcnt = getPerclientOpcnt_();
-            workload_key_indices_.resize(perclient_opcnt);
+            const uint32_t perclient_workercnt = getPerclientWorkercnt_();
 
-            // Use client idx as random seed to generate workload items for the current client
-            std::mt19937_64 tmp_randgen(tmp_client_idx);
-            std::discrete_distribution<uint32_t> tmp_dist(dataset_probs_.begin(), dataset_probs_.end());
-            for (uint32_t i = 0; i < perclient_opcnt; i++)
+            client_worker_workload_key_indices_.resize(perclient_workercnt);
+            for (uint32_t local_client_worker_idx = 0; local_client_worker_idx < perclient_workercnt; local_client_worker_idx++)
             {
-                uint32_t tmp_key_index = tmp_dist(tmp_randgen);
-                assert(tmp_key_index < dataset_keys_.size());
-                assert(dataset_keys_[tmp_key_index] == tmp_key_index + 1);
+                client_worker_workload_key_indices_[local_client_worker_idx].resize(perclient_opcnt);
 
-                workload_key_indices_[i] = tmp_key_index;
+                // Use client idx as random seed to generate workload items for the current client
+                // NOTE: pre-generate workload items for each client worker to fix memory issue of large-scale exp by single-node simulator -> NOT affect previous evaluation results of other experiments due to perclient_workercnt = 1 and local_client_workeridx = 0 by default (i.e., global_client_worker_idx = clientidx * perclient_workercnt + local_client_worker_idx = clientidx)
+                uint32_t global_client_worker_idx = tmp_client_idx * perclient_workercnt + local_client_worker_idx;
+                // std::mt19937_64 tmp_randgen(tmp_client_idx);
+                std::mt19937_64 tmp_randgen(global_client_worker_idx);
+                std::discrete_distribution<uint32_t> tmp_dist(dataset_probs_.begin(), dataset_probs_.end());
+                for (uint32_t i = 0; i < perclient_opcnt; i++)
+                {
+                    uint32_t tmp_key_index = tmp_dist(tmp_randgen);
+                    assert(tmp_key_index < dataset_keys_.size());
+                    assert(dataset_keys_[tmp_key_index] == tmp_key_index + 1);
+
+                    client_worker_workload_key_indices_[local_client_worker_idx][i] = tmp_key_index;
+                }
             }
         }
         else // Dataset loader and cloud

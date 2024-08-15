@@ -13,12 +13,14 @@ from .utils.single_node_simulator import *
 
 # Test single-node simulator
 simple_example_settings = {
-    "clientcnt": 12,
-    "edgecnt": 12,
-    "keycnt": 1000000,
+    "clientcnt": 128, # 128, 1024
+    "edgecnt": 128, # 128, 1024
+    "keycnt": 10000000, # 1000000, 10000000
     "capacity_mb": 1024,
-    "cache_name": "covered", # covered, shark, shark+gdsf, gdsf, shark+lhd, lhd, magnet, bestguess
-    "workload_name": "facebook"
+    "cache_name": "shark+gdsf", # covered, shark+gdsf, shark+lhd
+    "workload_name": "facebook",
+    "simulator_workloadcnt": 1,
+    "simulator_randomness": 0
 }
 
 # # Test COVERED's small LRU cache

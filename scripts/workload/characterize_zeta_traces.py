@@ -49,8 +49,10 @@ for tmp_workload_name in workload_names:
         tmp_trace_loader = TraceLoader(Common.trace_dirpath, tmp_filename_list, tmp_workload_name)
 
         # Curvefit the statistics by Zipfian distribution for the workload name
-        tmp_sorted_frequency_list = tmp_trace_loader.getSortedFrequencyList()
-        tmp_zipf_curvefit = ZetaCurvefit(tmp_sorted_frequency_list)
+        # tmp_sorted_frequency_list = tmp_trace_loader.getSortedFrequencyList()
+        # tmp_zipf_curvefit = ZetaCurvefit(tmp_sorted_frequency_list)
+        tmp_rank_frequency_map = tmp_trace_loader.getRankFrequencyMap()
+        tmp_zipf_curvefit = ZetaCurvefit(tmp_rank_frequency_map)
 
         # Dump the characteristics (Zipfian constant, key size distribution, and value size distribution) for the workload name
         LogUtil.prompt(Common.scriptname, "dump characteristics for workload {} into {}...".format(tmp_workload_name, tmp_workload_characteristic_filepath))
@@ -72,7 +74,8 @@ for tmp_workload_name in workload_names:
         
         # Avoid memory overflow
         del tmp_trace_loader
-        del tmp_sorted_frequency_list
+        # del tmp_sorted_frequency_list
+        del tmp_rank_frequency_map
         del tmp_zipf_curvefit
 
     # (2) Copy characteristics file to cloud machine if not exist

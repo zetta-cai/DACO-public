@@ -32,16 +32,17 @@ namespace covered {
 
 class WorkloadGenerator : public covered::GeneratorBase {
  public:
-  explicit WorkloadGenerator(const StressorConfig& config, const uint32_t& client_idx, const bool& is_zipf_generator = false, const float& zipf_alpha = 0.7f); // is_zipf_generator means whether we use zipf distribution to generate workload items
+  explicit WorkloadGenerator(const StressorConfig& config, const uint32_t& client_idx, const uint32_t& perclient_workercnt, const bool& is_zipf_generator = false, const float& zipf_alpha = 0.7f); // is_zipf_generator means whether we use zipf distribution to generate workload items
   virtual ~WorkloadGenerator() {}
 
   virtual const facebook::cachelib::cachebench::Request& getReq(
+      const uint32_t& local_client_worker_idx,
       uint8_t poolId,
       std::mt19937_64& gen,
       std::optional<uint64_t> lastRequestId = std::nullopt) override;
   
   // Siyuan: get dataset item of a specific index
-  virtual const facebook::cachelib::cachebench::Request& getReq(uint8_t poolId, uint32_t itemidx) override;
+  virtual const facebook::cachelib::cachebench::Request& getDatasetReq(uint32_t itemidx) override;
 
   virtual const std::vector<std::string>& getAllKeys() const override { return keys_; }
 
@@ -72,6 +73,7 @@ class WorkloadGenerator : public covered::GeneratorBase {
 
   const StressorConfig config_;
   const uint32_t client_idx_;
+  const uint32_t perclient_workercnt_;
   std::vector<std::string> keys_; // Siyuan: dataset keys
   std::vector<std::vector<size_t>> sizes_; // Siyuan: dataset object sizes
   std::unordered_map<std::string, uint32_t> dataset_lookup_table_; // Siyuan: to support quick operations for warmup speedup
@@ -81,9 +83,9 @@ class WorkloadGenerator : public covered::GeneratorBase {
   // @keyIndicesForPoo_ which contains all the key indices that each operation
   // in a pool. @keyGenForPool_ contains uniform distributions to select indices
   // contained in @keyIndicesForPool_.
-  std::vector<uint32_t> firstKeyIndexForPool_;
-  std::vector<std::vector<uint32_t>> keyIndicesForPool_; // Siyuan: operations or requests (workload items)
-  std::vector<std::uniform_int_distribution<uint32_t>> keyGenForPool_;
+  std::vector<uint32_t> firstKeyIndexForPool_; // pool id -> first key index (as we only have 1 pool by default, it only contains two intergers: 0 and numkeys-1)
+  std::vector<std::vector<std::vector<uint32_t>>> perworkerKeyIndicesForPool_; // Siyuan: operations or requests (pre-generated workload items to approximate workload distribution); local client worker index -> pool id -> key indices
+  std::vector<std::vector<std::uniform_int_distribution<uint32_t>>> perworkerKeyGenForPool_; // local client worker index -> pool id -> uniform distribution to select key indices
 
   std::vector<WorkloadDistribution> workloadDist_; // Siyuan: only 1 workload dist due to 1 pool -> includes key size dist (for dataset items), value size dist (for dataset items), and operation disk (for workload items)
   

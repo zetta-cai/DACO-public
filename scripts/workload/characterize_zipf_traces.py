@@ -9,7 +9,7 @@ from .utils.zipf_curvefit import *
 from ..exps.utils.exputil import *
 
 # Power-law Zipfian constant: [0.7351769996271038, 1.0128733530793717, 0.6645665328056994, 0.6566908883710469, 0.42495198192158434 (OBSOLETE due to too small object sizes), 0.5831482696346101 (OBSOLETE due to too small object sizes)]
-workload_names = [TraceLoader.ZIPF_WIKITEXT_WORKLOADNAME, TraceLoader.ZIPF_WIKIIMAGE_WORKLOADNAME, TraceLoader.ZIPF_TENCENTPHOTO1_WORKLOADNAME, TraceLoader.ZIPF_TENCENTPHOTO2_WORKLOADNAME, TraceLoader.ZIPF_TWITTERKV2_WORKLOADNAME, TraceLoader.ZIPF_TWITTERKV4_WORKLOADNAME]
+workload_names = [TraceLoader.ZIPF_WIKITEXT_WORKLOADNAME, TraceLoader.ZIPF_WIKIIMAGE_WORKLOADNAME, TraceLoader.ZIPF_TENCENTPHOTO1_WORKLOADNAME, TraceLoader.ZIPF_TENCENTPHOTO2_WORKLOADNAME, TraceLoader.ZIPF_TWITTERKV2_WORKLOADNAME, TraceLoader.ZIPF_TWITTERKV4_WORKLOADNAME, TraceLoader.ZIPF_FACEBOOKPHOTO_WORKLOADNAME]
 
 # Get dirpath of trace files
 client_machine_idxes = JsonUtil.getValueForKeystr(Common.scriptname, "client_machine_indexes")
@@ -46,6 +46,8 @@ for tmp_workload_name in workload_names:
             tmp_filename_list = JsonUtil.getValueForKeystr(Common.scriptname, "trace_dirpath_relative_twitterkv2_trace_filepaths")
         elif tmp_workload_name == TraceLoader.ZIPF_TWITTERKV4_WORKLOADNAME:
             tmp_filename_list = JsonUtil.getValueForKeystr(Common.scriptname, "trace_dirpath_relative_twitterkv4_trace_filepaths")
+        elif tmp_workload_name == TraceLoader.ZIPF_FACEBOOKPHOTO_WORKLOADNAME:
+            tmp_filename_list = [TraceLoader.PLACEHOLDER_FILEPATH] # NOTE: Facebook photo cache has NO trace files
         else:
             LogUtil.die(Common.scriptname, "unknown workload {}!".format(workload_name))
 
@@ -53,8 +55,10 @@ for tmp_workload_name in workload_names:
         tmp_trace_loader = TraceLoader(Common.trace_dirpath, tmp_filename_list, tmp_workload_name)
 
         # Curvefit the statistics by Zipfian distribution for the workload name
-        tmp_sorted_frequency_list = tmp_trace_loader.getSortedFrequencyList()
-        tmp_zipf_curvefit = ZipfCurvefit(tmp_sorted_frequency_list)
+        # tmp_sorted_frequency_list = tmp_trace_loader.getSortedFrequencyList()
+        # tmp_zipf_curvefit = ZipfCurvefit(tmp_sorted_frequency_list)
+        tmp_rank_frequency_map = tmp_trace_loader.getRankFrequencyMap()
+        tmp_zipf_curvefit = ZipfCurvefit(tmp_rank_frequency_map)
 
         # Open the file
         f = open(tmp_workload_characteristic_filepath, "wb")
@@ -100,7 +104,8 @@ for tmp_workload_name in workload_names:
         
         # Avoid memory overflow
         del tmp_trace_loader
-        del tmp_sorted_frequency_list
+        # del tmp_sorted_frequency_list
+        del tmp_rank_frequency_map
         del tmp_zipf_curvefit
 
     # (2) Copy characteristics file to cloud machine if not exist

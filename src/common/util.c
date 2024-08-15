@@ -40,6 +40,7 @@ namespace covered
     const std::string Util::ZIPF_WIKIPEDIA_TEXT_WORKLOAD_NAME("zipf_wikitext"); // Power-law Zipfian Wikipedia text workload generator
     const std::string Util::ZIPF_TENCENT_PHOTO1_WORKLOAD_NAME("zipf_tencentphoto1"); // Power-law Zipfian Tencent photo1 workload generator
     const std::string Util::ZIPF_TENCENT_PHOTO2_WORKLOAD_NAME("zipf_tencentphoto2"); // Power-law Zipfian Tencent photo2 workload generator
+    const std::string Util::ZIPF_FBPHOTO_WORKLOAD_NAME("zipf_fbphoto"); // Power-law Zipfian Facebook photo caching workload generator (based on Zipfian power-law distribution)
     const std::string Util::ZIPF_TWITTERKV2_WORKLOAD_NAME("zipf_twitterkv2"); // Power-law Zipfian Twitter KV cluster2 workload generator
     const std::string Util::ZIPF_TWITTERKV4_WORKLOAD_NAME("zipf_twitterkv4"); // Power-law Zipfian Twitter KV cluster4 workload generator
     const std::string Util::ZETA_WIKIPEDIA_IMAGE_WORKLOAD_NAME("zeta_wikiimage"); // Zipfian Wikipedia image workload generator (based on Zeta distribution)

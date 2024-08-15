@@ -15,24 +15,47 @@ class ZetaCurvefit:
 
     CURVEFIT_SAMPLE_COUNT = 1 * 1000 * 1000 # 1M samples for curvefit
 
-    # Curvefit the given sorted frequency list to get Zipfian constant
+    # Curvefit the given rank-frequency map list to get Zipfian constant
     # NOTE: sample the given rank-frequency pairs to reduce curvefit computation overhead -> just an impl trick and the sampled rank-frequency pairs are still based on the entire trace (instead, using partial trace will get smaller ranks and frequencies for a given sampled object)
-    def __init__(self, sorted_frequency_list):
+    def __init__(self, rank_frequency_map):
         np.random.seed(0)
 
-        sorted_probabilities_list = sorted_frequency_list / sorted_frequency_list.sum()
+        # (1) Normalize to get relative frequencies
+
+        # sorted_probabilities_list = sorted_frequency_list / sorted_frequency_list.sum()
+
+        i = 1
+        frequency_sum = float(0)
+        for tmp_rank, tmp_frequency in rank_frequency_map.items():
+            if tmp_rank != i:
+                LogUtil.die(Common.scriptname, "ZetaCurvefit requires continuous ranks starting from 1 to calculate probabilities, while rank {} is missing!".format(i))
+            i += 1
+            frequency_sum += tmp_frequency
+
+        sorted_ranks_array = [] # Ascending order of ranks
+        sorted_probabilities_array = [] # Descending order of frequencies
+        for tmp_rank, tmp_frequency in rank_frequency_map.items(): # rank_frequency_map follows insertion order of rank-frequency pairs (see scripts/workload/utils/trace_loader.py::getRankFrequencyMap())
+            sorted_ranks_array.append(tmp_rank)
+            sorted_probabilities_array.append(float(tmp_frequency) / float(frequency_sum))
+        
+        # (2) Sample input if necessary
+
+        # sorted_indices_array = np.arange(len(sorted_probabilities_list))
 
         # Generate sampled indices
-        sorted_indices_array = np.arange(len(sorted_probabilities_list))
+        sorted_indices_array = np.arange(len(sorted_ranks_array))
         if len(sorted_indices_array) > ZetaCurvefit.CURVEFIT_SAMPLE_COUNT:
             LogUtil.dump(Common.scriptname, "sample {} points from {} points...".format(ZetaCurvefit.CURVEFIT_SAMPLE_COUNT, len(sorted_indices_array)))
             sampled_indices_array = np.random.choice(sorted_indices_array, ZetaCurvefit.CURVEFIT_SAMPLE_COUNT, replace=False) # Each indice can only be sampled once
         else:
             sampled_indices_array = sorted_indices_array
 
+        # sampled_ranks_array = sampled_indices_array + 1
+        # sampled_probabilities_array = np.array(sorted_probabilities_list)[sampled_indices_array]
+
         # NOTE: NO need to sort sampled indices, as curvefit does NOT require ordered input, i.e., <(x0, y0), <x1, y1>> has the same curve as <(x1, y1), (x0, y0)>
-        sampled_ranks_array = sampled_indices_array + 1
-        sampled_probabilities_array = np.array(sorted_probabilities_list)[sampled_indices_array]
+        sampled_ranks_array = np.array(sorted_ranks_array)[sampled_indices_array]
+        sampled_probabilities_array = np.array(sorted_probabilities_array)[sampled_indices_array]
 
         # Curvefit based on Zipfian distribution
         LogUtil.prompt(Common.scriptname, "Perform curvefitting...")

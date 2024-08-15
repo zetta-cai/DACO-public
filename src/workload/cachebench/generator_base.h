@@ -26,12 +26,12 @@ class GeneratorBase {
   // @param gen random number generator
   // @param lastRequestId generator may generate next request based on last
   // request, e.g., piecewise caching in bigcache.
-  virtual const facebook::cachelib::cachebench::Request& getReq(uint8_t /*poolId*/,
+  virtual const facebook::cachelib::cachebench::Request& getReq(const uint32_t& local_client_worker_idx, uint8_t /*poolId*/,
                                 std::mt19937_64& /*gen*/,
                                 std::optional<uint64_t> /*lastRequestId*/) = 0;
   
   // Siyuan: get dataset item of a specific index
-  virtual const facebook::cachelib::cachebench::Request& getReq(uint8_t poolId, uint32_t itemidx) = 0;
+  virtual const facebook::cachelib::cachebench::Request& getDatasetReq(uint32_t itemidx) = 0;
 
   // Notify the workload generator about the result of the request.
   // Note the workload generator may release the memory for the request.

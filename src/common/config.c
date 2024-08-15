@@ -1073,6 +1073,12 @@ namespace covered
     
     void Config::portVerification(const uint16_t& startport, const uint16_t& finalport)
     {
+        if (isSimulation())
+        {
+            // NOTE: NO need to verify ports for single-node simulator, which does NOT launch any compnents
+            return;
+        }
+
         std::map<uint16_t, std::string>::const_iterator startport_keystr_map_const_iter = startport_keystr_map_.find(startport);
         if (startport_keystr_map_const_iter == startport_keystr_map_.end())
         {

@@ -56,7 +56,7 @@ namespace covered
         // (1) Facebook-specific helper functions
 
         // For role of clients, dataset loader, and cloud
-        std::unique_ptr<covered::GeneratorBase> makeGenerator_(const StressorConfig& config, const uint32_t& client_idx);
+        std::unique_ptr<covered::GeneratorBase> makeGenerator_(const StressorConfig& config, const uint32_t& client_idx, const uint32_t& perclient_workercnt);
 
         // Common utilities
         void checkPointers_() const;

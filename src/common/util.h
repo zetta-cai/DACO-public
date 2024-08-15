@@ -86,6 +86,7 @@ namespace covered
         static const std::string ZIPF_WIKIPEDIA_TEXT_WORKLOAD_NAME; // Workload generator type (power-law Zipf-based Wikipedia text workload)
         static const std::string ZIPF_TENCENT_PHOTO1_WORKLOAD_NAME; // Workload generator type (power-law Zipf-based Tencent photo1 workload)
         static const std::string ZIPF_TENCENT_PHOTO2_WORKLOAD_NAME; // Workload generator type (power-law Zipf-based Tencent photo2 workload)
+        static const std::string ZIPF_FBPHOTO_WORKLOAD_NAME; // Workload generator type (power-law Zipf-based Facebook photo caching workload)
         static const std::string ZIPF_TWITTERKV2_WORKLOAD_NAME; // Workload generator type (power-law Zipf-based Twitter KV cluster2 workload)
         static const std::string ZIPF_TWITTERKV4_WORKLOAD_NAME; // Workload generator type (power-law Zipf-based Twitter KV cluster2 workload)
         static const std::string ZETA_WIKIPEDIA_IMAGE_WORKLOAD_NAME; // (NOT use scripts/workload/characterize_zeta_traces.py by default) Workload generator type (zeta-based Zipf-based Wikipedia image workload)
