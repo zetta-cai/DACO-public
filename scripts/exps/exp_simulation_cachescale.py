@@ -25,7 +25,7 @@ exp_default_settings = {
 }
 
 # cache_names = ["covered", "shark+gdsf", "shark+lhd", "shark", "gdsf", "lhd", "magnet", "bestguess"]
-cache_names = ["covered", "shark+gdsf", "shark+lhd"] # NOTE: just for fast evaluation -> you can add more methods if with time
+cache_names = ["covered", "shark+gdsf", "shark+lhd", "magnet", "bestguess"] # NOTE: just for fast evaluation -> you can add more methods if with time
 # edgecnt_list = [32, 64, 128, 256, 512, 1024]
 edgecnt_list = [12] # TMPDEBUG24
 
