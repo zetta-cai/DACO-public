@@ -12,7 +12,7 @@ namespace covered
     const uint32_t ReplayedWorkloadWrapperBase::PHASE_FOR_WORKLOAD_SAMPLE_RATIO = 0;
     const uint32_t ReplayedWorkloadWrapperBase::PHASE_FOR_WORKLOAD_SAMPLE = 1;
 
-    ReplayedWorkloadWrapperBase::ReplayedWorkloadWrapperBase(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role) : WorkloadWrapperBase(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role)
+    ReplayedWorkloadWrapperBase::ReplayedWorkloadWrapperBase(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const uint32_t& workload_randombase) : WorkloadWrapperBase(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role, workload_randombase)
     {
         // Differentiate workload generator in different clients
         std::ostringstream oss;

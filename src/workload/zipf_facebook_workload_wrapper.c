@@ -16,7 +16,7 @@ namespace covered
 {
     const std::string ZipfFacebookWorkloadWrapper::kClassName("ZipfFacebookWorkloadWrapper");
 
-    ZipfFacebookWorkloadWrapper::ZipfFacebookWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const float& zipf_alpha) : WorkloadWrapperBase(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role), zipf_alpha_(zipf_alpha)
+    ZipfFacebookWorkloadWrapper::ZipfFacebookWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const float& zipf_alpha, const uint32_t& workload_randombase) : WorkloadWrapperBase(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role, workload_randombase), zipf_alpha_(zipf_alpha)
     {
         // NOTE: Facebook CDN is not replayed trace and NO need for trace preprocessing (also NO need to dump dataset file)
         assert(!needAllTraceFiles_()); // Must NOT trace preprocessor
@@ -258,9 +258,9 @@ namespace covered
 
                 // Each per-client worker uses worker_idx as deterministic seed to create a random generator and get different requests
                 // NOTE: we use global_client_worker_idx to randomly generate requests from workload items
-                std::mt19937_64* tmp_client_worker_item_randgen_ptr_ = new std::mt19937_64(tmp_global_client_worker_idx);
+                std::mt19937_64* tmp_client_worker_item_randgen_ptr_ = new std::mt19937_64(tmp_global_client_worker_idx + getWorkloadRandombase_());
                 // (OBSOLETE: homogeneous cache access patterns is a WRONG assumption -> we should ONLY follow homogeneous workload distribution yet still with heterogeneous cache access patterns) NOTE: we use WORKLOAD_KVPAIR_GENERATION_SEED to generate requests with homogeneous cache access patterns
-                //std::mt19937_64* tmp_client_worker_item_randgen_ptr_ = new std::mt19937_64(Util::WORKLOAD_KVPAIR_GENERATION_SEED);
+                //std::mt19937_64* tmp_client_worker_item_randgen_ptr_ = new std::mt19937_64(Util::WORKLOAD_KVPAIR_GENERATION_SEED + getWorkloadRandombase_());
                 if (tmp_client_worker_item_randgen_ptr_ == NULL)
                 {
                     Util::dumpErrorMsg(instance_name_, "failed to create a random generator for requests!");

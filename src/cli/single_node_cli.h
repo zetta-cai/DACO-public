@@ -25,10 +25,19 @@ namespace covered
         SingleNodeCLI(int argc, char **argv);
         virtual ~SingleNodeCLI();
 
+        // ONLY for single-node simulator
+        uint32_t getSimulatorWorkloadcnt() const;
+        uint32_t getSimulatorRandomness() const;
+
         std::string toCliString(); // NOT virtual for cilutil
         virtual void clearIsToCliString(); // Idempotent operation: clear is_to_cli_string_ for the next toCliString()
     private:
+        static const uint32_t DEFAULT_SIMULATOR_WORKLOADCNT;
+        static const uint32_t DEFAULT_SIMULATOR_RANDOMNESS;
+
         static const std::string kClassName;
+
+        void verifyIntegrity_() const;
 
         bool is_add_cli_parameters_;
         bool is_set_param_and_config_;
@@ -36,6 +45,10 @@ namespace covered
         bool is_create_required_directories_;
 
         bool is_to_cli_string_;
+
+        // ONLY for single-node simulator
+        uint32_t simulator_workloadcnt_; // NOTE: workloadcnt may affect absolute performance, yet does NOT affect simulator results!
+        uint32_t simulator_randomness_; // NOTE: randomness introduces variances, yet does NOT affector simulator results!
     protected:
         virtual void addCliParameters_() override;
         virtual void setParamAndConfig_(const std::string& main_class_name) override;

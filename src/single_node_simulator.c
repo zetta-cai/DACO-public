@@ -46,10 +46,10 @@ namespace covered
     struct PerkeyGlobalCachedObjinfo
     {
         bool isGlobalCached(const Key& key) const;
-        bool isNeighborCached(const Key& key, const uint32_t& edgeidx) const;
+        bool isNeighborCached(const Key& key, const uint32_t& given_edgeidx) const;
         bool getEdgeNodeIdxes(const Key& key, std::vector<uint32_t>& edge_node_idxes) const;
-        void addEdgeNode(const Key& key, const uint32_t& edgeidx);
-        void removeEdgeNode(const Key& key, const uint32_t& edgeidx);
+        void addEdgeNode(const Key& key, const uint32_t& given_edgeidx);
+        void removeEdgeNode(const Key& key, const uint32_t& given_edgeidx);
 
         std::unordered_map<Key, GlobalCachedObjinfo, KeyHasher> key_global_cached_objinfo_map; // For global cached objects
     };
@@ -63,8 +63,8 @@ namespace covered
         LocalUncachedObjinfo();
         LocalUncachedObjinfo(const LocalUncachedObjinfo& others); // NOTE: we need to redefine copy constructor due to the same reason as follows (see comment of copy assignment operator)
 
-        void update(const uint32_t& edgeidx, const CollectedPopularity& collected_popularity);
-        bool remove(const uint32_t& edgeidx);
+        void update(const uint32_t& given_edgeidx, const CollectedPopularity& collected_popularity);
+        bool remove(const uint32_t& given_edgeidx);
         void getTopkLocalUncachedPopularities(const uint32_t& covered_topk_edgecnt, std::vector<std::pair<uint32_t, float>>& topk_local_uncached_popularities) const;
 
         // NOTE: default copy assignment operator will copy others.sorted_popularity_map_t::iterator, which could point to sorted_popularity_map_t of temporary variable in the stack and incur segmentation fault -> we must rebuild lookup_map_t based on sorted_popularity_map_t of the current variable
@@ -79,8 +79,8 @@ namespace covered
     struct PerkeyLocalUncachedObjinfo
     {
         bool getLocalUncachedObjinfo(const Key& key, LocalUncachedObjinfo& local_uncached_objinfo) const;
-        void tryToRemoveLocalUncachedPopularityForEdge(const Key& key, const uint32_t edgeidx);
-        void addLocalUncachedPopularityForEdge(const Key& key, const uint32_t edgeidx, const CollectedPopularity& collected_popularity);
+        void tryToRemoveLocalUncachedPopularityForEdge(const Key& key, const uint32_t given_edgeidx);
+        void addLocalUncachedPopularityForEdge(const Key& key, const uint32_t given_edgeidx, const CollectedPopularity& collected_popularity);
 
         std::unordered_map<Key, LocalUncachedObjinfo, KeyHasher> key_local_uncached_objinfo_map; // For local uncached objects (ONLY for COVERED)
     };
@@ -95,9 +95,9 @@ namespace covered
     // EvictNodeinfo of all edge nodes (ONLY for COVERED)
     struct PeredgeEvictNodeinfo
     {
-        bool getEvictinfo(const uint32_t& edgeidx, EvictNodeinfo& evictinfo) const;
-        void updateCacheMarginBytesOnly(const uint32_t& edgeidx, const uint64_t cache_margin_bytes);
-        void updateEvictinfo(const uint32_t& edgeidx, const uint64_t cache_margin_bytes, const std::list<VictimCacheinfo>& victim_cacheinfos);
+        bool getEvictinfo(const uint32_t& given_edgeidx, EvictNodeinfo& evictinfo) const;
+        void updateCacheMarginBytesOnly(const uint32_t& given_edgeidx, const uint64_t cache_margin_bytes);
+        void updateEvictinfo(const uint32_t& given_edgeidx, const uint64_t cache_margin_bytes, const std::list<VictimCacheinfo>& victim_cacheinfos);
 
         std::unordered_map<uint32_t, EvictNodeinfo> edgeidx_evictinfo_map; // For all edge nodes (ONLY for COVERED)
     };
@@ -114,7 +114,7 @@ namespace covered
     std::vector<EdgeWrapperBase*> edge_wrapper_ptrs;
 
     // An array of workload wrappers to simulate multiple client nodes (NO need metadata, e.g., is_warmup and closest edge index, in client (worker) wrapper, which will be maintained by single-node simulator itself)
-    std::vector<WorkloadWrapperBase*> workload_wrapper_ptrs;
+    std::vector<WorkloadWrapperBase*> workload_wrapper_ptrs; // NOTE: determined by workloadcnt instead of clientcnt to fix memory issue of large-scale simulation (yet each client worker still has an individual workload worker), yet NOT affect simulation results!
     std::vector<uint32_t> closest_edge_idxes; // Closest edge node index for each client node
 
     // Evaluation variables
@@ -125,8 +125,9 @@ namespace covered
 {
     // (1) Utility functions
 
+    WorkloadItem genWorkloadItemForClientWorker(const uint32_t& client_workeridx, const uint32_t& clientidx, const uint32_t& perclient_workercnt, const uint32_t& client_workercnt, const uint32_t& perworkload_workercnt, const uint32_t& simulator_workloadcnt);
     uint32_t getClosestEdgeidx(const uint32_t& clientidx);
-    EdgeWrapperBase* getEdgeWrapperPtr(const uint32_t& edgeidx);
+    EdgeWrapperBase* getEdgeWrapperPtr(const uint32_t& given_edgeidx);
     EdgeWrapperBase* getClosestEdgeWrapperPtr(const uint32_t& clientidx);
     CacheWrapper* getClosestEdgeCacheWrapperPtr(const uint32_t& clientidx);
     uint32_t getBeaconEdgeidx(const Key& cur_key);
@@ -138,28 +139,30 @@ namespace covered
     void processRequest(const WorkloadItem& cur_workload_item, const uint32_t& clientidx, const std::string& cache_name, const uint32_t& edgecnt, const uint32_t& covered_topk_edgecnt, uint32_t& reqcnt, uint32_t& local_hitcnt, uint32_t& remote_hitcnt, uint64_t& latency_sum_us);
 
     bool accessClosestCache(const Key& cur_key, const uint32_t& clientidx, const std::string& cache_name, Value& fetched_value); // Return is_local_cached_and_valid
-    void writeClosestCache(const Key& cur_key, const Value& fetched_value, const uint32_t& clientidx, const std::string& cache_name, const WorkloadItemType& cur_workload_item_type);
+    void writeClosestCache(const Key& cur_key, const Value& fetched_value, const uint32_t& clientidx, const std::string& cache_name, const WorkloadItemType& cur_workload_item_type, bool& is_evict);
     void contentDiscovery(const Key& cur_key, const uint32_t& clientidx, const std::string& cache_name, const uint32_t& edgecnt, bool& is_remote_hit, uint32_t& target_edge_idx);
     void requestRedirection(const Key& cur_key, const uint32_t& target_edge_idx, const std::string& cache_name, Value& fetched_value);
-    void validateClosestEdgeForFetchedValue(const Key& cur_key, const Value& fetched_value, const uint32_t& clientidx, const std::string& cache_name, const Hitflag& curobj_hitflag);
+    void validateClosestEdgeForFetchedValue(const Key& cur_key, const Value& fetched_value, const uint32_t& clientidx, const std::string& cache_name, const Hitflag& curobj_hitflag, bool& is_evict);
     uint64_t calcReadLatencyBeforeCacheManagement(const Key& cur_key, const uint32_t& clientidx, const uint32_t& local_access_latency_us, const uint32_t& content_discovery_latency_us, const uint32_t& request_redirection_latency_us, const uint32_t& cloud_access_latency_us, const Hitflag& hitflag, const std::string& cache_name);
     uint64_t calcWriteLatencyBeforeCacheManagement(const Key& cur_key, const uint32_t& clientidx, const uint32_t& local_access_latency_us, const uint32_t& acquire_writelock_latency_us, const uint32_t& release_writelock_latency_us, const uint32_t& cloud_access_latency_us, const std::string& cache_name);
-    void triggerCacheManagement(const Key& cur_key, const Value& fetched_value, const uint32_t& clientidx, const Hitflag& curobj_hitflag, const std::string& cache_name, const uint64_t& total_latency_us, const uint32_t& covered_topk_edgecnt);
-    void admitIntoEdge(const Key& cur_key, const Value& fetched_value, const uint32_t& placement_edgeidx, const Hitflag& hitflag, const std::string& cache_name, const uint64_t& miss_latency_us);
-    void evictForCapacity(const uint32_t& placement_edgeidx, const std::string& cache_name);
+    void triggerCacheManagement(const Key& cur_key, const Value& fetched_value, const uint32_t& clientidx, const Hitflag& curobj_hitflag, const std::string& cache_name, const uint64_t& total_latency_us, const uint32_t& covered_topk_edgecnt, bool& is_admit, bool& is_evict);
+    void updateTotalLatencyAfterCacheManagement(const Key& cur_key, const uint32_t& clientidx, const uint32_t& directory_admit_latency_us, const uint32_t& directory_evict_latency_us, const std::string& cache_name, uint64_t& total_latency_us);
+    void admitIntoEdge(const Key& cur_key, const Value& fetched_value, const uint32_t& placement_edgeidx, const Hitflag& hitflag, const std::string& cache_name, const uint64_t& miss_latency_us, bool& is_evict);
+    void evictForCapacity(const uint32_t& placement_edgeidx, const std::string& cache_name, bool& is_evict);
+    uint32_t getDirectoryUpdateLatency(const Key& cur_key, const uint32_t& clientidx, const std::string& cache_name);
 
     // (3) COVERED's helper functions
 
     bool coveredTryPopularityAggregationForClosestEdge(const Key& cur_key, const uint32_t& clientidx); // Return is_tracked_after_fetch_value
-    void coveredVictimSynchronizationForEdge(const uint32_t& edgeidx, const bool& only_update_cache_margin_bytes);
+    void coveredVictimSynchronizationForEdge(const uint32_t& given_edgeidx, const bool& only_update_cache_margin_bytes);
     float coveredCalcEvictionCost(const Key& cur_key, const uint32_t& object_size, const std::unordered_set<uint32_t>& placement_edgeset);
     void coveredPlacementCalculation(const Key& cur_key, const uint32_t& covered_topk_edgecnt, bool& has_best_placement, std::unordered_set<uint32_t>& best_placement_edgeset);
-    void coveredPlacementDeployment(const Key& key, const Value& fetched_value, const std::unordered_set<uint32_t>& best_placement_edgeset, const Hitflag& hitflag, const std::string& cache_name, const uint64_t miss_latency_us);
+    void coveredPlacementDeployment(const Key& key, const Value& fetched_value, const std::unordered_set<uint32_t>& best_placement_edgeset, const Hitflag& hitflag, const std::string& cache_name, const uint64_t miss_latency_us, bool& is_evict);
     void coveredMetadataUpdate(const Key& cur_key, const uint32_t& notify_edgeidx, const bool& is_neighbor_cached);
 
     // (4) BestGuess's helper functions
 
-    void bestguessVtimeSynchronizationForEdge(const uint32_t& edgeidx);
+    void bestguessVtimeSynchronizationForEdge(const uint32_t& given_edgeidx);
     uint32_t bestguessGetEdgeidxWithSmallestVtime();
 }
 
@@ -194,8 +197,23 @@ int main(int argc, char **argv) {
     const uint32_t clientcnt = single_node_cli.getClientcnt();
     const uint32_t perclient_opcnt = single_node_cli.getPerclientOpcnt();
     const uint32_t perclient_workercnt = single_node_cli.getPerclientWorkercnt(); // Affect single-node simulation, as each client worker has its own index information in the workload generator
+    const uint32_t client_workercnt = clientcnt * perclient_workercnt;
     const std::string workload_name = single_node_cli.getWorkloadName();
     const float zipf_alpha = single_node_cli.getZipfAlpha();
+
+    // Workload configurations
+    uint32_t simulator_workloadcnt = single_node_cli.getSimulatorWorkloadcnt(); // physical workloadidx is in [0, simulator_workloadcnt - 1] (used to locate workload generator)
+    if (simulator_workloadcnt > clientcnt) // Unnecessary to maintain more than clientcnt workload generators
+    {
+        simulator_workloadcnt = clientcnt;
+    }
+    const uint32_t simulator_randomness = single_node_cli.getSimulatorRandomness();
+    // NOTE: generate sufficient workload workers, each corresponding to an edge node
+    const uint32_t perworkload_workercnt = (client_workercnt - 1) / simulator_workloadcnt + 1; // global_workload_workeridx = local_workload_workeridx + perworkload_workercnt * workloadidx (used to generate request with the specific randgen; each client worker MUST correspond to a specific workload worker)
+    assert(perworkload_workercnt * simulator_workloadcnt >= client_workercnt);
+    // NOTE: ONLY used for random seeds in workload generators
+    const uint32_t workload_random_factor = 1000;
+    const uint32_t workload_randombase = simulator_randomness * workload_random_factor;
 
     // NOTE: NO need to simulate cloud, as we only focus on hit ratios and can assume that we have global information of the dataset -> just get objects based on workload generator
 
@@ -225,15 +243,22 @@ int main(int argc, char **argv) {
         assert(covered::edge_wrapper_ptrs[edgeidx] != NULL);
     }
 
+    // Initialize for workload generators (refer to src/benchmark/client_wrapper.c::launchClient())
+    // NOTE: if workloadcnt = clientcnt (i.e., perworkload_workercnt = perclient_workercnt), each client has an individual workload generator corresponding to the closest edge node -> here we just use a reasonable workloadcnt to fix the memory issue of large-scale exps (but each client worker ALWAYS has an individual workload worker corresponding to the closest edge node)
+    // NOTE: this is acceptable as we only focus on hit ratios and calculated performance instead of absolute performance in single-node simulator, while we have verified that workloadcnt does NOT affect the simulator results (affect absolute performance yet NOT concerned by single-node simulator)
+    covered::workload_wrapper_ptrs.resize(simulator_workloadcnt, NULL);
+    for (uint32_t workloadidx = 0; workloadidx < simulator_workloadcnt; workloadidx++)
+    {
+        // NOTE: NOT use ClientWrapper::launchEdge, which will invoke NodeWrapperBase::start() to launch multiple threads for absolute performance!
+        // NOTE: use covered::Util::DATASET_KVPAIR_GENERATION_SEED to generate dataset, use workloadidx to pre-generate workload items to approximate workload distribution (if any), and use global_workload_workeridx + randombase to generate requests for the given workload worker
+        covered::workload_wrapper_ptrs[workloadidx] = covered::WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(simulator_workloadcnt, workloadidx, keycnt, perclient_opcnt, perworkload_workercnt, workload_name, covered::WorkloadWrapperBase::WORKLOAD_USAGE_ROLE_CLIENT, zipf_alpha, simulator_randomness);
+        assert(covered::workload_wrapper_ptrs[workloadidx] != NULL);
+    }
+
     // Initialize for client nodes (refer to src/benchmark/client_wrapper.c::launchClient())
-    covered::workload_wrapper_ptrs.resize(clientcnt, NULL);
     covered::closest_edge_idxes.resize(clientcnt, 0);
     for (uint32_t clientidx = 0; clientidx < clientcnt; clientidx++)
     {
-        // NOTE: NOT use ClientWrapper::launchEdge, which will invoke NodeWrapperBase::start() to launch multiple threads for absolute performance!
-        covered::workload_wrapper_ptrs[clientidx] = covered::WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(clientcnt, clientidx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, covered::WorkloadWrapperBase::WORKLOAD_USAGE_ROLE_CLIENT, zipf_alpha);
-        assert(covered::workload_wrapper_ptrs[clientidx] != NULL);
-
         // Calculate closest edge node index for each client node (refer to src/benchmark/client_worker_wrapper.c::ClientWorkerWrapper())
         covered::closest_edge_idxes[clientidx] = covered::Util::getClosestEdgeIdx(clientidx, clientcnt, edgecnt);
         assert(covered::closest_edge_idxes[clientidx] >= 0);
@@ -266,12 +291,10 @@ int main(int argc, char **argv) {
         // Each client worker needs to generate warmup_reqcnt_limit requests for warmup
         for (uint32_t clientidx = 0; clientidx < clientcnt; clientidx++)
         {
-            // Simulate the corresponding client node
-            covered::WorkloadWrapperBase* curclient_workload_wrapper_ptr = covered::workload_wrapper_ptrs[clientidx];
-
             for (uint32_t local_client_worker_idx = 0; local_client_worker_idx < perclient_workercnt; local_client_worker_idx++)
             {
-                covered::WorkloadItem cur_workload_item = curclient_workload_wrapper_ptr->generateWorkloadItem(local_client_worker_idx);
+                // Generate workload item by the workload worker to simulate the client worker
+                covered::WorkloadItem cur_workload_item = covered::genWorkloadItemForClientWorker(local_client_worker_idx, clientidx, perclient_workercnt, client_workercnt, perworkload_workercnt, simulator_workloadcnt);
                 
                 covered::processRequest(cur_workload_item, clientidx, cache_name, edgecnt, covered_topk_edgecnt, warmup_interval_reqcnt, warmup_interval_local_hitcnt, warmup_interval_remote_hitcnt, warmup_interval_latency_sum);
             }
@@ -328,12 +351,10 @@ int main(int argc, char **argv) {
         // Each client worker continues to generate requests for stresstest
         for (uint32_t clientidx = 0; clientidx < clientcnt; clientidx++)
         {
-            // Simulate the corresponding client node
-            covered::WorkloadWrapperBase* curclient_workload_wrapper_ptr = covered::workload_wrapper_ptrs[clientidx];
-
             for (uint32_t local_client_worker_idx = 0; local_client_worker_idx < perclient_workercnt; local_client_worker_idx++)
             {
-                covered::WorkloadItem cur_workload_item = curclient_workload_wrapper_ptr->generateWorkloadItem(local_client_worker_idx);
+                // Generate workload item by the workload worker to simulate the client worker
+                covered::WorkloadItem cur_workload_item = covered::genWorkloadItemForClientWorker(local_client_worker_idx, clientidx, perclient_workercnt, client_workercnt, perworkload_workercnt, simulator_workloadcnt);
                 
                 covered::processRequest(cur_workload_item, clientidx, cache_name, edgecnt, covered_topk_edgecnt, stresstest_total_reqcnt, stresstest_total_local_hitcnt, stresstest_total_remote_hitcnt, stresstest_total_latency_sum);
             }
@@ -389,11 +410,11 @@ int main(int argc, char **argv) {
         covered::edge_wrapper_ptrs[edgeidx] = NULL;
     }
 
-    for (uint32_t clientidx = 0; clientidx < clientcnt; clientidx++)
+    for (uint32_t workloadidx = 0; workloadidx < simulator_workloadcnt; workloadidx++)
     {
-        assert(covered::workload_wrapper_ptrs[clientidx] != NULL);
-        delete covered::workload_wrapper_ptrs[clientidx];
-        covered::workload_wrapper_ptrs[clientidx] = NULL;
+        assert(covered::workload_wrapper_ptrs[workloadidx] != NULL);
+        delete covered::workload_wrapper_ptrs[workloadidx];
+        covered::workload_wrapper_ptrs[workloadidx] = NULL;
     }
 
     // (6) Dump finish symbol (refer to src/evaluator.c)
@@ -415,13 +436,13 @@ namespace covered
         return (key_global_cached_objinfo_map_iter != key_global_cached_objinfo_map.end());
     }
 
-    bool PerkeyGlobalCachedObjinfo::isNeighborCached(const Key& key, const uint32_t& edgeidx) const
+    bool PerkeyGlobalCachedObjinfo::isNeighborCached(const Key& key, const uint32_t& given_edgeidx) const
     {
         std::unordered_map<Key, GlobalCachedObjinfo, KeyHasher>::const_iterator key_global_cached_objinfo_map_iter = key_global_cached_objinfo_map.find(key);
         const std::vector<uint32_t>& edge_node_idxes = key_global_cached_objinfo_map_iter->second.edge_node_idxes;
         for (uint32_t i = 0; i < edge_node_idxes.size(); i++)
         {
-            if (edge_node_idxes[i] != edgeidx)
+            if (edge_node_idxes[i] != given_edgeidx)
             {
                 return true;
             }
@@ -443,7 +464,7 @@ namespace covered
         return is_exist;
     }
 
-    void PerkeyGlobalCachedObjinfo::addEdgeNode(const Key& key, const uint32_t& edgeidx)
+    void PerkeyGlobalCachedObjinfo::addEdgeNode(const Key& key, const uint32_t& given_edgeidx)
     {
         std::unordered_map<Key, GlobalCachedObjinfo, KeyHasher>::iterator key_global_cached_objinfo_map_iter = key_global_cached_objinfo_map.find(key);
 
@@ -451,12 +472,12 @@ namespace covered
         {
             key_global_cached_objinfo_map_iter = key_global_cached_objinfo_map.insert(std::pair<Key, GlobalCachedObjinfo>(key, GlobalCachedObjinfo())).first;
         }
-        key_global_cached_objinfo_map_iter->second.edge_node_idxes.push_back(edgeidx);
+        key_global_cached_objinfo_map_iter->second.edge_node_idxes.push_back(given_edgeidx);
 
         return;
     }
 
-    void PerkeyGlobalCachedObjinfo::removeEdgeNode(const Key& key, const uint32_t& edgeidx)
+    void PerkeyGlobalCachedObjinfo::removeEdgeNode(const Key& key, const uint32_t& given_edgeidx)
     {
         std::unordered_map<Key, GlobalCachedObjinfo, KeyHasher>::iterator key_global_cached_objinfo_map_iter = key_global_cached_objinfo_map.find(key);
 
@@ -465,7 +486,7 @@ namespace covered
             std::vector<uint32_t>& edge_node_idxes_ref = key_global_cached_objinfo_map_iter->second.edge_node_idxes;
             for (uint32_t i = 0; i < edge_node_idxes_ref.size(); i++)
             {
-                if (edge_node_idxes_ref[i] == edgeidx)
+                if (edge_node_idxes_ref[i] == given_edgeidx)
                 {
                     edge_node_idxes_ref.erase(edge_node_idxes_ref.begin() + i);
                     break;
@@ -495,27 +516,27 @@ namespace covered
         this->operator=(others);
     }
 
-    void LocalUncachedObjinfo::update(const uint32_t& edgeidx, const CollectedPopularity& collected_popularity)
+    void LocalUncachedObjinfo::update(const uint32_t& given_edgeidx, const CollectedPopularity& collected_popularity)
     {
         objsize = collected_popularity.getObjectSize();
 
         const float tmp_local_uncached_popularity = collected_popularity.getLocalUncachedPopularity();
 
-        lookup_map_t::iterator lookup_map_iter = edgeidx_multimapiter_lookup_map.find(edgeidx);
+        lookup_map_t::iterator lookup_map_iter = edgeidx_multimapiter_lookup_map.find(given_edgeidx);
         if (lookup_map_iter == edgeidx_multimapiter_lookup_map.end())
         {
-            sorted_popularity_map_t::iterator sorted_popularity_map_iter = sorted_local_uncached_popularity_edgeidx_map.insert(std::pair<float, uint32_t>(tmp_local_uncached_popularity, edgeidx)); // Descending order
-            lookup_map_iter = edgeidx_multimapiter_lookup_map.insert(std::pair<uint32_t, sorted_popularity_map_t::iterator>(edgeidx, sorted_popularity_map_iter)).first;
+            sorted_popularity_map_t::iterator sorted_popularity_map_iter = sorted_local_uncached_popularity_edgeidx_map.insert(std::pair<float, uint32_t>(tmp_local_uncached_popularity, given_edgeidx)); // Descending order
+            lookup_map_iter = edgeidx_multimapiter_lookup_map.insert(std::pair<uint32_t, sorted_popularity_map_t::iterator>(given_edgeidx, sorted_popularity_map_iter)).first;
         }
         else
         {
             sorted_popularity_map_t::iterator sorted_popularity_map_iter = lookup_map_iter->second;
             assert(sorted_popularity_map_iter != sorted_local_uncached_popularity_edgeidx_map.end());
-            assert(sorted_popularity_map_iter->second == edgeidx);
+            assert(sorted_popularity_map_iter->second == given_edgeidx);
 
             // Replace with the latest local uncached popularity
             sorted_local_uncached_popularity_edgeidx_map.erase(sorted_popularity_map_iter);
-            sorted_popularity_map_iter = sorted_local_uncached_popularity_edgeidx_map.insert(std::pair<float, uint32_t>(tmp_local_uncached_popularity, edgeidx)); // Descending order
+            sorted_popularity_map_iter = sorted_local_uncached_popularity_edgeidx_map.insert(std::pair<float, uint32_t>(tmp_local_uncached_popularity, given_edgeidx)); // Descending order
 
             lookup_map_iter->second = sorted_popularity_map_iter;
         }
@@ -523,16 +544,16 @@ namespace covered
         return;
     }
     
-    bool LocalUncachedObjinfo::remove(const uint32_t& edgeidx)
+    bool LocalUncachedObjinfo::remove(const uint32_t& given_edgeidx)
     {
         bool is_empty = false;
 
-        lookup_map_t::iterator lookup_map_iter = edgeidx_multimapiter_lookup_map.find(edgeidx);
+        lookup_map_t::iterator lookup_map_iter = edgeidx_multimapiter_lookup_map.find(given_edgeidx);
         if (lookup_map_iter != edgeidx_multimapiter_lookup_map.end())
         {
             sorted_popularity_map_t::iterator sorted_popularity_map_iter = lookup_map_iter->second;
             assert(sorted_popularity_map_iter != sorted_local_uncached_popularity_edgeidx_map.end());
-            assert(sorted_popularity_map_iter->second == edgeidx);
+            assert(sorted_popularity_map_iter->second == given_edgeidx);
 
             sorted_local_uncached_popularity_edgeidx_map.erase(sorted_popularity_map_iter);
             edgeidx_multimapiter_lookup_map.erase(lookup_map_iter);
@@ -607,12 +628,12 @@ namespace covered
         return is_exist;
     }
 
-    void PerkeyLocalUncachedObjinfo::tryToRemoveLocalUncachedPopularityForEdge(const Key& key, const uint32_t edgeidx)
+    void PerkeyLocalUncachedObjinfo::tryToRemoveLocalUncachedPopularityForEdge(const Key& key, const uint32_t given_edgeidx)
     {
         std::unordered_map<Key, LocalUncachedObjinfo, KeyHasher>::iterator key_local_uncached_objinfo_map_iter = key_local_uncached_objinfo_map.find(key);
         if (key_local_uncached_objinfo_map_iter != key_local_uncached_objinfo_map.end())
         {
-            bool is_empty = key_local_uncached_objinfo_map_iter->second.remove(edgeidx);
+            bool is_empty = key_local_uncached_objinfo_map_iter->second.remove(given_edgeidx);
             if (is_empty)
             {
                 key_local_uncached_objinfo_map.erase(key_local_uncached_objinfo_map_iter);
@@ -622,18 +643,18 @@ namespace covered
         return;
     }
 
-    void PerkeyLocalUncachedObjinfo::addLocalUncachedPopularityForEdge(const Key& key, const uint32_t edgeidx, const CollectedPopularity& collected_popularity)
+    void PerkeyLocalUncachedObjinfo::addLocalUncachedPopularityForEdge(const Key& key, const uint32_t given_edgeidx, const CollectedPopularity& collected_popularity)
     {
         std::unordered_map<Key, LocalUncachedObjinfo, KeyHasher>::iterator key_local_uncached_objinfo_map_iter = key_local_uncached_objinfo_map.find(key);
         if (key_local_uncached_objinfo_map_iter == key_local_uncached_objinfo_map.end()) // New local uncached object
         {
             LocalUncachedObjinfo tmp_local_uncached_objinfo;
-            tmp_local_uncached_objinfo.update(edgeidx, collected_popularity);
+            tmp_local_uncached_objinfo.update(given_edgeidx, collected_popularity);
             key_local_uncached_objinfo_map.insert(std::pair<Key, LocalUncachedObjinfo>(key, tmp_local_uncached_objinfo));
         }
         else // Existing local uncached object
         {
-            key_local_uncached_objinfo_map_iter->second.update(edgeidx, collected_popularity);
+            key_local_uncached_objinfo_map_iter->second.update(given_edgeidx, collected_popularity);
         }
 
         return;
@@ -641,9 +662,9 @@ namespace covered
 
     // PeredgeEvictNodeinfo
 
-    bool PeredgeEvictNodeinfo::getEvictinfo(const uint32_t& edgeidx, EvictNodeinfo& evictinfo) const
+    bool PeredgeEvictNodeinfo::getEvictinfo(const uint32_t& given_edgeidx, EvictNodeinfo& evictinfo) const
     {
-        std::unordered_map<uint32_t, EvictNodeinfo>::const_iterator edgeidx_evictinfo_map_iter = edgeidx_evictinfo_map.find(edgeidx);
+        std::unordered_map<uint32_t, EvictNodeinfo>::const_iterator edgeidx_evictinfo_map_iter = edgeidx_evictinfo_map.find(given_edgeidx);
         
         bool is_exist = (edgeidx_evictinfo_map_iter != edgeidx_evictinfo_map.end());
         if (is_exist)
@@ -654,10 +675,10 @@ namespace covered
         return is_exist;
     }
 
-    void PeredgeEvictNodeinfo::updateCacheMarginBytesOnly(const uint32_t& edgeidx, const uint64_t cache_margin_bytes)
+    void PeredgeEvictNodeinfo::updateCacheMarginBytesOnly(const uint32_t& given_edgeidx, const uint64_t cache_margin_bytes)
     {
         // Update cache margin bytes ONLY -> NOT affect victim information -> evictinfo of the given edge node MUST exist
-        std::unordered_map<uint32_t, EvictNodeinfo>::iterator edgeidx_evictinfo_map_iter = edgeidx_evictinfo_map.find(edgeidx);
+        std::unordered_map<uint32_t, EvictNodeinfo>::iterator edgeidx_evictinfo_map_iter = edgeidx_evictinfo_map.find(given_edgeidx);
         assert(edgeidx_evictinfo_map_iter != edgeidx_evictinfo_map.end());
 
         edgeidx_evictinfo_map_iter->second.cache_margin_bytes = cache_margin_bytes;
@@ -665,16 +686,16 @@ namespace covered
         return;
     }
     
-    void PeredgeEvictNodeinfo::updateEvictinfo(const uint32_t& edgeidx, const uint64_t cache_margin_bytes, const std::list<VictimCacheinfo>& victim_cacheinfos)
+    void PeredgeEvictNodeinfo::updateEvictinfo(const uint32_t& given_edgeidx, const uint64_t cache_margin_bytes, const std::list<VictimCacheinfo>& victim_cacheinfos)
     {
-        std::unordered_map<uint32_t, EvictNodeinfo>::iterator edgeidx_evictinfo_map_iter = edgeidx_evictinfo_map.find(edgeidx);
+        std::unordered_map<uint32_t, EvictNodeinfo>::iterator edgeidx_evictinfo_map_iter = edgeidx_evictinfo_map.find(given_edgeidx);
         
         if (edgeidx_evictinfo_map_iter == edgeidx_evictinfo_map.end()) // New edge node
         {
             EvictNodeinfo tmp_evictinfo;
             tmp_evictinfo.cache_margin_bytes = cache_margin_bytes;
             tmp_evictinfo.victim_cacheinfos = victim_cacheinfos;
-            edgeidx_evictinfo_map.insert(std::pair<uint32_t, EvictNodeinfo>(edgeidx, tmp_evictinfo));
+            edgeidx_evictinfo_map.insert(std::pair<uint32_t, EvictNodeinfo>(given_edgeidx, tmp_evictinfo));
         }
         else // Existing edge node
         {
@@ -690,6 +711,27 @@ namespace covered
 {
     // (1) Utility functions
 
+    WorkloadItem genWorkloadItemForClientWorker(const uint32_t& client_workeridx, const uint32_t& clientidx, const uint32_t& perclient_workercnt, const uint32_t& client_workercnt, const uint32_t& perworkload_workercnt, const uint32_t& simulator_workloadcnt)
+    {
+        uint32_t global_client_workeridx = client_workeridx + clientidx * perclient_workercnt;
+        assert(global_client_workeridx < client_workercnt); // Must < client_workercnt
+
+        // NOTE: we need to calculate workloadidx and local_workload_workeridx, as clientcnt may NOT equal to workloadcnt in single-node simulator and we cannot directly use clientidx and local_client_workeridx to generate workload items
+
+        // Get workload generator
+        uint32_t workloadidx = global_client_workeridx / perworkload_workercnt;
+        assert(workloadidx < simulator_workloadcnt); // Must < simulator_workloadcnt
+        WorkloadWrapperBase* cur_client_worker_workload_wrapper_ptr = workload_wrapper_ptrs[workloadidx];
+        assert(cur_client_worker_workload_wrapper_ptr != NULL);
+
+        // Get workload item
+        uint32_t local_workload_workeridx = global_client_workeridx % perworkload_workercnt;
+        assert(local_workload_workeridx < perworkload_workercnt); // Must < perworkload_workercnt
+        WorkloadItem cur_workload_item = cur_client_worker_workload_wrapper_ptr->generateWorkloadItem(local_workload_workeridx);
+
+        return cur_workload_item;
+    }
+
     uint32_t getClosestEdgeidx(const uint32_t& clientidx)
     {
         assert(clientidx < closest_edge_idxes.size());
@@ -698,11 +740,11 @@ namespace covered
         return curclient_closest_edge_idx;
     }
 
-    EdgeWrapperBase* getEdgeWrapperPtr(const uint32_t& edgeidx)
+    EdgeWrapperBase* getEdgeWrapperPtr(const uint32_t& given_edgeidx)
     {
-        EdgeWrapperBase* cur_edge_wrapper_ptr = edge_wrapper_ptrs[edgeidx];
-        assert(cur_edge_wrapper_ptr != NULL);
-        return cur_edge_wrapper_ptr;
+        EdgeWrapperBase* given_edge_wrapper_ptr = edge_wrapper_ptrs[given_edgeidx];
+        assert(given_edge_wrapper_ptr != NULL);
+        return given_edge_wrapper_ptr;
     }
 
     EdgeWrapperBase* getClosestEdgeWrapperPtr(const uint32_t& clientidx)
@@ -756,12 +798,20 @@ namespace covered
         EdgeWrapperBase* curclient_closest_edge_wrapper_ptr = getClosestEdgeWrapperPtr(clientidx);
 
         // Used to calculate latency (calculated performance, yet NOT absolute performance)
+        bool is_admit = false;
+        bool is_evict = false;
+        // Common latency
         uint32_t local_access_latency_us = 0;
+        uint32_t cloud_access_latency_us = 0;
+        uint32_t directory_admit_latency_us = 0;
+        uint32_t directory_evict_latency_us = 0;
+        // For read request
         uint32_t content_discovery_latency_us = 0;
         uint32_t request_redirection_latency_us = 0;
-        uint32_t cloud_access_latency_us = 0;
+        // For write request
         uint32_t acquire_writelock_latency_us = 0;
         uint32_t release_writelock_latency_us = 0;
+        // Total latency
         uint64_t total_latency_us = 0; // ONLY used for LA-Cache
 
         // Update statistics
@@ -818,13 +868,31 @@ namespace covered
             } // End of local hit
 
             // Access local cache in the closest edge node to simulate value validation if necessary for fetched value (update value-related statistics in the closest edge node) (refer to src/edge/cache_server/basic_cache_server_worker.c::tryToUpdateInvalidLocalEdgeCache_())
-            validateClosestEdgeForFetchedValue(cur_key, fetched_value, clientidx, cache_name, curobj_hitflag);
+            validateClosestEdgeForFetchedValue(cur_key, fetched_value, clientidx, cache_name, curobj_hitflag, is_evict);
+            if (is_evict)
+            {
+                directory_evict_latency_us += getDirectoryUpdateLatency(cur_key, clientidx, cache_name); // NOTE: may trigger multiple times of eviction for a request (each time is parallel)
+                is_evict = false;
+            }
 
             // Calculate cache miss latency for LA-Cache and update COVERED's parameters based on hitflag
             total_latency_us = calcReadLatencyBeforeCacheManagement(cur_key, clientidx, local_access_latency_us, content_discovery_latency_us, request_redirection_latency_us, cloud_access_latency_us, curobj_hitflag, cache_name);
 
             // Trigger cache management
-            triggerCacheManagement(cur_key, fetched_value, clientidx, curobj_hitflag, cache_name, total_latency_us, covered_topk_edgecnt);
+            triggerCacheManagement(cur_key, fetched_value, clientidx, curobj_hitflag, cache_name, total_latency_us, covered_topk_edgecnt, is_admit, is_evict);
+            if (is_admit)
+            {
+                directory_admit_latency_us = getDirectoryUpdateLatency(cur_key, clientidx, cache_name);
+                is_admit = false;
+            }
+            if (is_evict)
+            {
+                directory_evict_latency_us += getDirectoryUpdateLatency(cur_key, clientidx, cache_name); // NOTE: may trigger multiple times of eviction for a request (each time is parallel)
+                is_evict = false;
+            }
+
+            // Update total latency with directory update latencies
+            updateTotalLatencyAfterCacheManagement(cur_key, clientidx, directory_admit_latency_us, directory_evict_latency_us, cache_name, total_latency_us);
 
             // Update statistics
             latency_sum_us += total_latency_us;
@@ -853,8 +921,13 @@ namespace covered
             cloud_access_latency_us = curclient_closest_edge_wrapper_ptr->getEdgeTocloudPropagationSimulatorParamPtr()->genPropagationLatency();
 
             // Access local cache in each involved edge node to simulate cache update after write acknowledgement (update cache statistics in the closest edge node)
-            writeClosestCache(cur_key, fetched_value, clientidx, cache_name, cur_workload_item_type);
+            writeClosestCache(cur_key, fetched_value, clientidx, cache_name, cur_workload_item_type, is_evict);
             local_access_latency_us = curclient_closest_edge_wrapper_ptr->getEdgeToclientPropagationSimulatorParamPtr()->genPropagationLatency();
+            if (is_evict)
+            {
+                directory_evict_latency_us += getDirectoryUpdateLatency(cur_key, clientidx, cache_name); // NOTE: may trigger multiple times of eviction for a request (each time is parallel)
+                is_evict = false;
+            }
 
             // Calculate cache miss latency for LA-Cache and update COVERED's parameters based on remote beacon access
             total_latency_us = calcWriteLatencyBeforeCacheManagement(cur_key, clientidx, local_access_latency_us, acquire_writelock_latency_us, release_writelock_latency_us, cloud_access_latency_us, cache_name);
@@ -866,7 +939,20 @@ namespace covered
                 // NOTE: BestGuess does NOT admit the object if it has been cached by other cache nodes
                 curobj_hitflag = Hitflag::kCooperativeHit;
             }
-            triggerCacheManagement(cur_key, fetched_value, clientidx, curobj_hitflag, cache_name, total_latency_us, covered_topk_edgecnt);
+            triggerCacheManagement(cur_key, fetched_value, clientidx, curobj_hitflag, cache_name, total_latency_us, covered_topk_edgecnt, is_admit, is_evict);
+            if (is_admit)
+            {
+                directory_admit_latency_us = getDirectoryUpdateLatency(cur_key, clientidx, cache_name);
+                is_admit = false;
+            }
+            if (is_evict)
+            {
+                directory_evict_latency_us += getDirectoryUpdateLatency(cur_key, clientidx, cache_name); // NOTE: may trigger multiple times of eviction for a request (each time is parallel)
+                is_evict = false;
+            }
+
+            // Update total latency with directory update latencies
+            updateTotalLatencyAfterCacheManagement(cur_key, clientidx, directory_admit_latency_us, directory_evict_latency_us, cache_name, total_latency_us);
 
             // Update statistics (NOTE: write MUST be cache miss -> NO need to update local hitcnt and remote hitcnt)
             latency_sum_us += total_latency_us;
@@ -905,7 +991,7 @@ namespace covered
         return is_local_cached_and_valid;
     }
 
-    void writeClosestCache(const Key& cur_key, const Value& fetched_value, const uint32_t& clientidx, const std::string& cache_name, const WorkloadItemType& cur_workload_item_type)
+    void writeClosestCache(const Key& cur_key, const Value& fetched_value, const uint32_t& clientidx, const std::string& cache_name, const WorkloadItemType& cur_workload_item_type, bool& is_evict)
     {
         const uint32_t closest_edgeidx = getClosestEdgeidx(clientidx);
         CacheWrapper* curclient_closest_edge_cache_wrapper_ptr = getClosestEdgeCacheWrapperPtr(clientidx);
@@ -925,7 +1011,7 @@ namespace covered
             unused_is_local_cached_and_invalid = curclient_closest_edge_cache_wrapper_ptr->updateIfInvalidForGetrsp(cur_key, fetched_value, is_global_cached, affect_victim_tracker);
             
             // NOTE: update may trigger eviction (see CacheServerWorkerBase::processLocalGetRequest_())
-            evictForCapacity(getClosestEdgeidx(clientidx), cache_name);
+            evictForCapacity(getClosestEdgeidx(clientidx), cache_name, is_evict);
         }
         UNUSED(unused_is_local_cached_and_invalid);
 
@@ -1046,7 +1132,7 @@ namespace covered
         return;
     }
 
-    void validateClosestEdgeForFetchedValue(const Key& cur_key, const Value& fetched_value, const uint32_t& clientidx, const std::string& cache_name, const Hitflag& curobj_hitflag)
+    void validateClosestEdgeForFetchedValue(const Key& cur_key, const Value& fetched_value, const uint32_t& clientidx, const std::string& cache_name, const Hitflag& curobj_hitflag, bool& is_evict)
     {
         const uint32_t closest_edgeidx = getClosestEdgeidx(clientidx);
         CacheWrapper* curclient_closest_edge_cache_wrapper_ptr = getClosestEdgeCacheWrapperPtr(clientidx);
@@ -1063,7 +1149,7 @@ namespace covered
             unused_is_local_cached_and_invalid = curclient_closest_edge_cache_wrapper_ptr->updateIfInvalidForGetrsp(cur_key, fetched_value, is_global_cached, affect_victim_tracker);
             
             // NOTE: update may trigger eviction (see CacheServerWorkerBase::processLocalGetRequest_())
-            evictForCapacity(getClosestEdgeidx(clientidx), cache_name);
+            evictForCapacity(getClosestEdgeidx(clientidx), cache_name, is_evict);
         }
         UNUSED(unused_is_local_cached_and_invalid);
 
@@ -1103,7 +1189,7 @@ namespace covered
         {
             EdgeWrapperBase* closest_edge_wrapper_ptr = getClosestEdgeWrapperPtr(clientidx);
 
-            // Update probability p (refer to src/edge/cache_server/covered_cache_server_worker.c::lookupLocalDirectory_() and getReqToLookupBeaconDirectory_())
+            // Update probability p (ONLY for content discovery) (refer to src/edge/cache_server/covered_cache_server_worker.c::lookupLocalDirectory_() and getReqToLookupBeaconDirectory_())
             WeightTuner& weight_tuner_ref = closest_edge_wrapper_ptr->getWeightTunerRef();
             const bool is_local_beacon = isLocalBeacon(cur_key, clientidx);
             if (is_local_beacon)
@@ -1159,18 +1245,8 @@ namespace covered
         {
             EdgeWrapperBase* closest_edge_wrapper_ptr = getClosestEdgeWrapperPtr(clientidx);
 
-            // Update probability p (refer to src/edge/cache_server/covered_cache_server_worker.c::lookupLocalDirectory_() and getReqToLookupBeaconDirectory_())
-            WeightTuner& weight_tuner_ref = closest_edge_wrapper_ptr->getWeightTunerRef();
-            if (is_local_beacon)
-            {
-                weight_tuner_ref.incrLocalBeaconAccessCnt();
-            }
-            else
-            {
-                weight_tuner_ref.incrRemoteBeaconAccessCnt();
-            }
-
             // Update WAN delays (refer to src/edge/cache_server/covered_cache_server_worker.c and src/edge/cache_server/covered_cache_server.c)
+            WeightTuner& weight_tuner_ref = closest_edge_wrapper_ptr->getWeightTunerRef();
             if (is_access_remote_beacon)
             {
                 weight_tuner_ref.updateEwmaCrossedgeLatency(acquire_writelock_latency_us);
@@ -1182,8 +1258,11 @@ namespace covered
         return total_latency_us;
     }
 
-    void triggerCacheManagement(const Key& cur_key, const Value& fetched_value, const uint32_t& clientidx, const Hitflag& curobj_hitflag, const std::string& cache_name, const uint64_t& total_latency_us, const uint32_t& covered_topk_edgecnt)
+    void triggerCacheManagement(const Key& cur_key, const Value& fetched_value, const uint32_t& clientidx, const Hitflag& curobj_hitflag, const std::string& cache_name, const uint64_t& total_latency_us, const uint32_t& covered_topk_edgecnt, bool& is_admit, bool& is_evict)
     {
+        is_admit = false;
+        is_evict = false;
+
         const uint32_t curclient_closest_edgeidx = getClosestEdgeidx(clientidx);
         CacheWrapper* curclient_closest_edge_cache_wrapper_ptr = getClosestEdgeCacheWrapperPtr(clientidx);
 
@@ -1201,7 +1280,8 @@ namespace covered
 
                 if (has_best_placement)
                 {
-                    coveredPlacementDeployment(cur_key, fetched_value, best_placement_edgeset, curobj_hitflag, cache_name, total_latency_us);
+                    is_admit = true;
+                    coveredPlacementDeployment(cur_key, fetched_value, best_placement_edgeset, curobj_hitflag, cache_name, total_latency_us, is_evict);
                 }
             }
         } // End of COVERED
@@ -1209,9 +1289,11 @@ namespace covered
         {
             if (curobj_hitflag == Hitflag::kGlobalMiss) // ONLY for global uncached objects
             {
+                is_admit = true;
+
                 // BestGuess evicts with approximate global LRU
                 uint32_t placement_edgeidx = bestguessGetEdgeidxWithSmallestVtime();
-                admitIntoEdge(cur_key, fetched_value, placement_edgeidx, curobj_hitflag, cache_name, total_latency_us);
+                admitIntoEdge(cur_key, fetched_value, placement_edgeidx, curobj_hitflag, cache_name, total_latency_us, is_evict);
             }
         }
         else if (Util::isMagnetLikeCache(cache_name)) // MagNet-like caches
@@ -1220,7 +1302,8 @@ namespace covered
             {
                 if (curclient_closest_edge_cache_wrapper_ptr->needIndependentAdmit(cur_key, fetched_value))
                 {
-                    admitIntoEdge(cur_key, fetched_value, curclient_closest_edgeidx, curobj_hitflag, cache_name, total_latency_us);
+                    is_admit = true;
+                    admitIntoEdge(cur_key, fetched_value, curclient_closest_edgeidx, curobj_hitflag, cache_name, total_latency_us, is_evict);
                 }
             }
         }
@@ -1228,15 +1311,47 @@ namespace covered
         {
             if (curclient_closest_edge_cache_wrapper_ptr->needIndependentAdmit(cur_key, fetched_value))
             {
-                admitIntoEdge(cur_key, fetched_value, curclient_closest_edgeidx, curobj_hitflag, cache_name, total_latency_us);
+                is_admit = true;
+                admitIntoEdge(cur_key, fetched_value, curclient_closest_edgeidx, curobj_hitflag, cache_name, total_latency_us, is_evict);
             }
         }
 
         return;
     }
 
-    void admitIntoEdge(const Key& cur_key, const Value& fetched_value, const uint32_t& placement_edgeidx, const Hitflag& hitflag, const std::string& cache_name, const uint64_t& miss_latency_us)
+    void updateTotalLatencyAfterCacheManagement(const Key& cur_key, const uint32_t& clientidx, const uint32_t& directory_admit_latency_us, const uint32_t& directory_evict_latency_us, const std::string& cache_name, uint64_t& total_latency_us)
     {
+        total_latency_us += (directory_admit_latency_us + directory_evict_latency_us);
+
+        // Update COVERED's parameters
+        if (cache_name == Util::COVERED_CACHE_NAME)
+        {
+            EdgeWrapperBase* closest_edge_wrapper_ptr = getClosestEdgeWrapperPtr(clientidx);
+            const bool is_local_beacon = isLocalBeacon(cur_key, clientidx);
+
+            // Update WAN delays (refer to src/edge/cache_server/covered_cache_server_worker.c and src/edge/cache_server/covered_cache_server.c)
+            WeightTuner& weight_tuner_ref = closest_edge_wrapper_ptr->getWeightTunerRef();
+            if (!is_local_beacon)
+            {
+                if (directory_admit_latency_us > 0)
+                {
+                    weight_tuner_ref.updateEwmaCrossedgeLatency(directory_admit_latency_us);
+                }
+
+                if (directory_evict_latency_us > 0)
+                {
+                    weight_tuner_ref.updateEwmaCrossedgeLatency(directory_evict_latency_us);
+                }
+            }
+        }
+
+        return;
+    }
+
+    void admitIntoEdge(const Key& cur_key, const Value& fetched_value, const uint32_t& placement_edgeidx, const Hitflag& hitflag, const std::string& cache_name, const uint64_t& miss_latency_us, bool& is_evict)
+    {
+        is_evict = false;
+
         assert(placement_edgeidx < edge_wrapper_ptrs.size());
         const uint32_t beacon_edgeidx = getBeaconEdgeidx(cur_key);
         EdgeWrapperBase* placement_edge_wrapper_ptr = getEdgeWrapperPtr(placement_edgeidx);
@@ -1296,16 +1411,18 @@ namespace covered
         }
 
         // Evict after admission
-        evictForCapacity(placement_edgeidx, cache_name);
+        evictForCapacity(placement_edgeidx, cache_name, is_evict);
 
         return;
     }
 
-    void evictForCapacity(const uint32_t& edgeidx, const std::string& cache_name)
+    void evictForCapacity(const uint32_t& placement_edgeidx, const std::string& cache_name, bool& is_evict)
     {
         // Refer to src/edge/cache_server/cache_server_base.c::evictForCapacity_()
 
-        EdgeWrapperBase* edge_wrapper_ptr = getEdgeWrapperPtr(edgeidx);
+        is_evict = false;
+
+        EdgeWrapperBase* edge_wrapper_ptr = getEdgeWrapperPtr(placement_edgeidx);
         CacheWrapper* edge_cache_wrapper_ptr = edge_wrapper_ptr->getEdgeCachePtr();
         assert(edge_cache_wrapper_ptr != NULL);
 
@@ -1338,20 +1455,22 @@ namespace covered
             }
         }
 
+        is_evict = total_victims.size() > 0;
+
         // Update global cached information of placement edge node for all methods after eviction
         for (std::unordered_map<Key, Value, KeyHasher>::iterator total_victims_iter = total_victims.begin(); total_victims_iter != total_victims.end(); total_victims_iter++)
         {
-            perkey_global_cached_objinfo.removeEdgeNode(total_victims_iter->first, edgeidx);
+            perkey_global_cached_objinfo.removeEdgeNode(total_victims_iter->first, placement_edgeidx);
         }
 
         if (cache_name == Util::COVERED_CACHE_NAME) // ONLY for COVERED
         {
             // NOTE: NO need to update local uncached information of the victims in the current edge node for COVERED after eviction, as the victims were a local cached object (i.e., NO local uncached infomration) before
-            // (FUTURE) TODO: Add the current edgeidx into local uncached information of each selected victim for COVERED after eviction, if using metadata preservation
+            // (FUTURE) TODO: Add the current placement_edgeidx into local uncached information of each selected victim for COVERED after eviction, if using metadata preservation
 
             // Update victim information of the current edge node for COVERED after eviction
             // NOTE: victims MUST be changed
-            coveredVictimSynchronizationForEdge(edgeidx, false);
+            coveredVictimSynchronizationForEdge(placement_edgeidx, false);
 
             // Metadata update (disable is_neighghbor_cached of each victim) for COVERED after eviction (refer to src/edge/covered_edge_wrapper.c::processMetadataUpdateRequirementInternal_() and src/edge/cache_server/cache_server_metadata_update_processor.c::processMetadataUpdateRequest_())
             for (std::unordered_map<Key, Value, KeyHasher>::iterator total_victims_iter = total_victims.begin(); total_victims_iter != total_victims.end(); total_victims_iter++)
@@ -1373,10 +1492,27 @@ namespace covered
         else if (cache_name == Util::BESTGUESS_CACHE_NAME) // ONLY for BestGuess
         {
             // Update vtime information of current edge node for BestGuess after eviction
-            bestguessVtimeSynchronizationForEdge(edgeidx);
+            bestguessVtimeSynchronizationForEdge(placement_edgeidx);
         }
 
         return;
+    }
+
+    uint32_t getDirectoryUpdateLatency(const Key& cur_key, const uint32_t& clientidx, const std::string& cache_name)
+    {
+        uint32_t directory_update_latency_us = 0;
+
+        const bool is_local_beacon = isLocalBeacon(cur_key, clientidx);
+        if (!is_local_beacon)
+        {
+            // NOTE: single-node caches do NOT need to update directory information; COVERED and BestGuess use non-blocking directory update due to beacon-triggered cache management (refer to src/edge/cache_server/cache_server_worker_base.c::admitObject_())
+            if (!Util::isSingleNodeCache(cache_name) && cache_name != Util::COVERED_CACHE_NAME && cache_name != Util::BESTGUESS_CACHE_NAME)
+            {
+                directory_update_latency_us = getClosestEdgeWrapperPtr(clientidx)->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency();
+            }
+        }
+
+        return directory_update_latency_us;
     }
 
     // (3) COVERED's helper functions
@@ -1406,23 +1542,23 @@ namespace covered
         return is_tracked_after_fetch_value;
     }
 
-    void coveredVictimSynchronizationForEdge(const uint32_t& edgeidx, const bool& only_update_cache_margin_bytes)
+    void coveredVictimSynchronizationForEdge(const uint32_t& given_edgeidx, const bool& only_update_cache_margin_bytes)
     {
-        EdgeWrapperBase* given_edge_wrapper_ptr = getEdgeWrapperPtr(edgeidx);
+        EdgeWrapperBase* given_edge_wrapper_ptr = getEdgeWrapperPtr(given_edgeidx);
         CacheWrapper* given_edge_cache_wrapper_ptr = given_edge_wrapper_ptr->getEdgeCachePtr();
         assert(given_edge_cache_wrapper_ptr != NULL);
 
         uint64_t local_cache_margin_bytes = given_edge_wrapper_ptr->getCacheMarginBytes();
         if (only_update_cache_margin_bytes) // Update cache margin bytes ONLY
         {
-            peredge_evictinfo.updateCacheMarginBytesOnly(edgeidx, local_cache_margin_bytes);
+            peredge_evictinfo.updateCacheMarginBytesOnly(given_edgeidx, local_cache_margin_bytes);
         }
         else
         {
             GetLocalSyncedVictimCacheinfosParam tmp_param;
             given_edge_cache_wrapper_ptr->constCustomFunc(GetLocalSyncedVictimCacheinfosParam::FUNCNAME, &tmp_param); // NOTE: victim cacheinfos from local edge cache MUST be complete
             
-            peredge_evictinfo.updateEvictinfo(edgeidx, local_cache_margin_bytes, tmp_param.getVictimCacheinfosConstRef());
+            peredge_evictinfo.updateEvictinfo(given_edgeidx, local_cache_margin_bytes, tmp_param.getVictimCacheinfosConstRef());
         }
 
         return;
@@ -1670,14 +1806,14 @@ namespace covered
         return;
     }
 
-    void coveredPlacementDeployment(const Key& cur_key, const Value& fetched_value, const std::unordered_set<uint32_t>& best_placement_edgeset, const Hitflag& hitflag, const std::string& cache_name, const uint64_t miss_latency_us)
+    void coveredPlacementDeployment(const Key& cur_key, const Value& fetched_value, const std::unordered_set<uint32_t>& best_placement_edgeset, const Hitflag& hitflag, const std::string& cache_name, const uint64_t miss_latency_us, bool& is_evict)
     {
         assert(best_placement_edgeset.size() > 0);
 
         for (std::unordered_set<uint32_t>::const_iterator best_placement_edgeset_iter = best_placement_edgeset.begin(); best_placement_edgeset_iter != best_placement_edgeset.end(); best_placement_edgeset_iter++)
         {
             const uint32_t tmp_placement_edgeidx = *best_placement_edgeset_iter;
-            admitIntoEdge(cur_key, fetched_value, tmp_placement_edgeidx, hitflag, cache_name, miss_latency_us);
+            admitIntoEdge(cur_key, fetched_value, tmp_placement_edgeidx, hitflag, cache_name, miss_latency_us, is_evict);
         }
 
         return;
@@ -1697,11 +1833,11 @@ namespace covered
 
     // (4) BestGuess's helper functions
 
-    void bestguessVtimeSynchronizationForEdge(const uint32_t& edgeidx)
+    void bestguessVtimeSynchronizationForEdge(const uint32_t& given_edgeidx)
     {
         // Update vtime information for BestGuess (many use cases, e.g., refer to src/edge/cache_server/basic_cache_server_worker.c::getReqToLookupBeaconDirectory_())
 
-        EdgeWrapperBase* edge_wrapper_ptr = getEdgeWrapperPtr(edgeidx);
+        EdgeWrapperBase* edge_wrapper_ptr = getEdgeWrapperPtr(given_edgeidx);
 
         // Get local victim vtime for vtime synchronization
         GetLocalVictimVtimeFuncParam tmp_param_for_vtimesync;
@@ -1709,10 +1845,10 @@ namespace covered
         const uint64_t& local_victim_vtime = tmp_param_for_vtimesync.getLocalVictimVtimeRef();
 
         // Update vtime for the given edge node
-        std::unordered_map<uint32_t, uint64_t>::iterator peredge_victim_vtime_iter = peredge_victim_vtime.find(edgeidx);
+        std::unordered_map<uint32_t, uint64_t>::iterator peredge_victim_vtime_iter = peredge_victim_vtime.find(given_edgeidx);
         if (peredge_victim_vtime_iter == peredge_victim_vtime.end())
         {
-            peredge_victim_vtime.insert(std::pair<uint32_t, uint64_t>(edgeidx, local_victim_vtime));
+            peredge_victim_vtime.insert(std::pair<uint32_t, uint64_t>(given_edgeidx, local_victim_vtime));
         }
         else
         {

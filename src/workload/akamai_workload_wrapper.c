@@ -10,7 +10,7 @@ namespace covered
     const std::string AkamaiWorkloadWrapper::kClassName("AkamaiWorkloadWrapper");
     const uint32_t AkamaiWorkloadWrapper::TRAGEN_VALSIZE_UNIT = 1024; // 1KiB
 
-    AkamaiWorkloadWrapper::AkamaiWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role) : WorkloadWrapperBase(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role)
+    AkamaiWorkloadWrapper::AkamaiWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const uint32_t& workload_randombase) : WorkloadWrapperBase(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role, workload_randombase)
     {
         UNUSED(perclient_opcnt); // NO need to pre-generate workload items for approximate workload distribution, as Akamai traces have workload files
 

@@ -13,7 +13,7 @@ namespace covered
     const uint32_t ZetaWorkloadWrapper::RIEMANN_ZETA_PRECISION = 1000000; // Precision for Riemann Zeta function calculation
 
     //, zipf_alpha_(zipf_alpha)
-    ZetaWorkloadWrapper::ZetaWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const float& zipf_alpha) : WorkloadWrapperBase(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role)
+    ZetaWorkloadWrapper::ZetaWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const float& zipf_alpha, const uint32_t& workload_randombase) : WorkloadWrapperBase(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role, workload_randombase)
     {
         // NOTE: perclient_opcnt is ONLY used by Zipfian/original Facebook CDN workload and Facebook photo caching workload (OBSOLETE) to represent workload distribution by pre-generated workload items (see src/workload/cachebench/workload_generator.* and src/workload/fbphoto_workload_wrapper.*), yet NOT used by others including Zipfian Wikipedia traces with Zeta workload distribution (NO need to pre-generate workload items for approximate workload distribution representation), TRAGEN-generated Akamai traces with workload requests loaded from files, and replayed Wikipedia traces with fixed number of sampled requests (OBSOLETE)
 
@@ -516,9 +516,9 @@ namespace covered
 
                 // Each per-client worker uses worker_idx as deterministic seed to create a random generator and get different requests
                 // NOTE: we use global_client_worker_idx to randomly generate requests from workload items
-                std::mt19937_64* tmp_client_worker_item_randgen_ptr_ = new std::mt19937_64(tmp_global_client_worker_idx);
+                std::mt19937_64* tmp_client_worker_item_randgen_ptr_ = new std::mt19937_64(tmp_global_client_worker_idx + getWorkloadRandombase_());
                 // (OBSOLETE: homogeneous cache access patterns is a WRONG assumption -> we should ONLY follow homogeneous workload distribution yet still with heterogeneous cache access patterns) NOTE: we use WORKLOAD_KVPAIR_GENERATION_SEED to generate requests with homogeneous cache access patterns
-                //std::mt19937_64* tmp_client_worker_item_randgen_ptr_ = new std::mt19937_64(Util::WORKLOAD_KVPAIR_GENERATION_SEED);
+                //std::mt19937_64* tmp_client_worker_item_randgen_ptr_ = new std::mt19937_64(Util::WORKLOAD_KVPAIR_GENERATION_SEED + getWorkloadRandombase_());
                 if (tmp_client_worker_item_randgen_ptr_ == NULL)
                 {
                     Util::dumpErrorMsg(instance_name_, "failed to create a random generator for requests!");

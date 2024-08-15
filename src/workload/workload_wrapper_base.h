@@ -26,10 +26,10 @@ namespace covered
         static const std::string WORKLOAD_USAGE_ROLE_CLIENT;
         static const std::string WORKLOAD_USAGE_ROLE_CLOUD;
 
-        static WorkloadWrapperBase* getWorkloadGeneratorByWorkloadName(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const float& zipf_alpha);
+        static WorkloadWrapperBase* getWorkloadGeneratorByWorkloadName(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const float& zipf_alpha, const uint32_t& workload_randombase = 0);
         // static WorkloadWrapperBase* getWorkloadGeneratorByWorkloadName(const uint64_t& capacity_bytes, const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role); // (OBSOLETE due to already checking objsize in LocalCacheBase)
 
-        WorkloadWrapperBase(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role);
+        WorkloadWrapperBase(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const uint32_t& workload_randombase);
         virtual ~WorkloadWrapperBase();
 
         // Access by the single thread of client wrapper (NO need to be thread safe)
@@ -74,6 +74,7 @@ namespace covered
         const uint32_t keycnt_;
         const std::string workload_name_;
         const std::string workload_usage_role_; // Distinguish different roles to avoid file I/O overhead of loading all trace files (for dataset loader and clients during loading/evaluation), and avoid disk I/O overhead of accessing rocksdb (for cloud during warmup)
+        const uint32_t workload_randombase_;
     protected:
         // Getters for const shared variables coming from Param
         // ONLY for clients
@@ -85,6 +86,7 @@ namespace covered
         const uint32_t getKeycnt_() const;
         const std::string getWorkloadName_() const;
         const std::string getWorkloadUsageRole_() const;
+        const uint32_t getWorkloadRandombase_() const;
 
         // (2) Other common utilities
 

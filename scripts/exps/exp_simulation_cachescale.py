@@ -19,10 +19,13 @@ exp_default_settings = {
     "keycnt": 1000000,
     "capacity_mb": 1024,
     "cache_name": "covered",
-    "workload_name": "facebook"
+    "workload_name": "facebook",
+    "simulator_workloadcnt": 1,
+    "simulator_randomness": 0
 }
 
-cache_names = ["covered", "shark+gdsf", "shark+lhd", "shark", "gdsf", "lhd", "magnet", "bestguess"]
+# cache_names = ["covered", "shark+gdsf", "shark+lhd", "shark", "gdsf", "lhd", "magnet", "bestguess"]
+cache_names = ["covered", "shark+gdsf", "shark+lhd"] # NOTE: just for fast evaluation -> you can add more methods if with time
 # edgecnt_list = [32, 64, 128, 256, 512, 1024]
 edgecnt_list = [12] # TMPDEBUG24
 
@@ -36,6 +39,8 @@ for tmp_round_index in round_indexes:
         LogUtil.prompt(Common.scriptname, "Create log dirpath {} for the current round {}...".format(tmp_log_dirpath, tmp_round_index))
         SubprocessUtil.tryToCreateDirectory(Common.scriptname, tmp_log_dirpath, keep_silent = True)
     
+    simulator_randomness = 0 # TMPDEBUG24
+
     # Run single-node simulator for each cache name
     for tmp_cache_name in cache_names:
 
@@ -57,6 +62,8 @@ for tmp_round_index in round_indexes:
             tmp_exp_settings["clientcnt"] = tmp_edgecnt
             tmp_exp_settings["edgecnt"] = tmp_edgecnt
             tmp_exp_settings["cache_name"] = tmp_cache_name
+            tmp_exp_settings["simulator_randomness"] = simulator_randomness # TMPDEBUG24
+            simulator_randomness += 1 # TMPDEBUG24
 
             # Launch single-node simulator
             LogUtil.prompt(Common.scriptname, "Run single-node simulator of {} w/ {} edgecnt for the current round {}...".format(tmp_cache_name, tmp_edgecnt, tmp_round_index))
