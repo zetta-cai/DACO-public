@@ -17,7 +17,7 @@ simple_example_settings = {
     "edgecnt": 128, # 128, 1024
     "keycnt": 10000000, # 1000000, 10000000
     "capacity_mb": 1024,
-    "cache_name": "shark+gdsf", # covered, shark+gdsf, shark+lhd
+    "cache_name": "shark+lhd", # covered, shark+gdsf, shark+lhd
     "workload_name": "facebook",
     "simulator_workloadcnt": 1,
     "simulator_randomness": 0

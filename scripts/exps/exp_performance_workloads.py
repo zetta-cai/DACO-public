@@ -28,7 +28,7 @@ exp_default_settings = {
 cache_names = ["covered", "shark+gdsf", "shark+lhd"] # NOTE: just for fast evaluation -> you can use the above cache list if with time
 # NOTE: NO need to run facebook, which has been done in previous experiments (performance against existing methods and extended methods)
 # workloads = ["zeta_wikiimage", "zeta_wikitext", "zeta_tencentphoto1", "zeta_tencentphoto2"]
-workloads = ["zipf_wikiimage", "zipf_wikitext", "zipf_tencentphoto1", "zipf_tencentphoto2"] # Use power-law Zipf distribution for consistency with zipf_facebook
+workloads = ["zipf_wikiimage", "zipf_wikitext", "zipf_tencentphoto1", "zipf_tencentphoto2", "zipf_fbphoto"] # Use power-law Zipf distribution for consistency with zipf_facebook
 
 # Run the experiments with multiple rounds
 for tmp_round_index in round_indexes:

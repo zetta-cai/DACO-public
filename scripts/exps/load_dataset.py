@@ -59,7 +59,7 @@ load_dataset(tmp_workload, tmp_keycnt, tmp_zipf_alpha)
 #     load_dataset(tmp_workload, tmp_keycnt)
 
 # (3) Load dataset into Rocksdb for power-law Zipf workloads (non-replayed traces; statistics are extracted from trace files)
-zipf_workloads = ["zipf_wikitext", "zipf_wikiimage", "zipf_tencentphoto1", "zipf_tencentphoto2"]
+zipf_workloads = ["zipf_wikitext", "zipf_wikiimage", "zipf_tencentphoto1", "zipf_tencentphoto2", "zipf_fbphoto"]
 for tmp_workload in zipf_workloads:
     tmp_keycnt = 1000000 # 1M by default
     load_dataset(tmp_workload, tmp_keycnt)

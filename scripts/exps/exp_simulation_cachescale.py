@@ -22,11 +22,10 @@ exp_default_settings = {
     "simulator_randomness": 0
 }
 
-largescale_keycnt = 1000000 # TMPDEBUG24
+largescale_keycnt = 10 * 1000000 # 10M (default 1M is too small for large-scale exps that all methods will achieve nearly full hit ratio)
 # cache_names = ["covered", "shark+gdsf", "shark+lhd", "shark", "gdsf", "lhd", "magnet", "bestguess"]
 cache_names = ["covered", "shark+gdsf", "shark+lhd", "magnet", "bestguess"] # NOTE: just for fast evaluation -> you can add more methods if with time
-# edgecnt_list = [32, 64, 128, 256, 512, 1024]
-edgecnt_list = [12] # TMPDEBUG24
+edgecnt_list = [32, 64, 128, 256, 512, 1024]
 
 # Run the experiments with multiple rounds
 for tmp_round_index in round_indexes:
