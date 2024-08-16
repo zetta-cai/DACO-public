@@ -319,7 +319,7 @@ int main(int argc, char **argv) {
             oss << "Reqcnt: " << warmup_interval_reqcnt << ", LocalHitcnt: " << warmup_interval_local_hitcnt << ", RemoteHitcnt: " << warmup_interval_remote_hitcnt << std::endl;
             oss << "| Global Hit Ratio (Local + Remote) | Average Latency (us) |" << std::endl;
             oss << "| " << warmup_global_hitratio << " (" << warmup_local_hitratio << " + " << warmup_remote_hitratio << ") | " << warmup_interval_avg_latency << " |" << std::endl << std::endl;
-            std::cout << oss.str();
+            std::cout << oss.str() << std::flush;
 
             // Reset warmup statistics
             warmup_prev_timestamp = warmup_cur_timestamp;
@@ -387,7 +387,7 @@ int main(int argc, char **argv) {
             oss << "Reqcnt: " << stresstest_total_reqcnt << ", LocalHitcnt: " << stresstest_total_local_hitcnt << ", RemoteHitcnt: " << stresstest_total_remote_hitcnt << std::endl;
             oss << "| Global Hit Ratio (Local + Remote) | Average Latency (us) |" << std::endl;
             oss << "| " << stresstest_global_hitratio << " (" << stresstest_local_hitratio << " + " << stresstest_remote_hitratio << ") | " << stresstest_total_avg_latency << " |" << std::endl << std::endl;
-            std::cout << oss.str();
+            std::cout << oss.str() << std::flush;
 
             // Reset stresstest statistics
             stresstest_prev_timestamp = stresstest_cur_timestamp;
