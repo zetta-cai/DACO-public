@@ -318,7 +318,7 @@ int main(int argc, char **argv) {
             oss << "Total reqcnt: " << warmup_total_reqcnt << std::endl;
             oss << "Reqcnt: " << warmup_interval_reqcnt << ", LocalHitcnt: " << warmup_interval_local_hitcnt << ", RemoteHitcnt: " << warmup_interval_remote_hitcnt << std::endl;
             oss << "| Global Hit Ratio (%) (Local + Remote) | Average Latency (ms) |" << std::endl;
-            oss << "| " << warmup_global_hitratio * 100 << " (" << warmup_local_hitratio * 100 << " + " << warmup_remote_hitratio * 100 << ") | " << warmup_interval_avg_latency / 1000 << " |" << std::endl << std::endl;
+            oss << "| " << warmup_global_hitratio * 100 << " (" << warmup_local_hitratio * 100 << " + " << warmup_remote_hitratio * 100 << ") | " << static_cast<double>(warmup_interval_avg_latency) / 1000 << " |" << std::endl << std::endl;
             std::cout << oss.str() << std::flush;
 
             // Reset warmup statistics
@@ -386,7 +386,7 @@ int main(int argc, char **argv) {
             }
             oss << "Reqcnt: " << stresstest_total_reqcnt << ", LocalHitcnt: " << stresstest_total_local_hitcnt << ", RemoteHitcnt: " << stresstest_total_remote_hitcnt << std::endl;
             oss << "| Global Hit Ratio (%) (Local + Remote) | Average Latency (ms) |" << std::endl;
-            oss << "| " << stresstest_global_hitratio * 100 << " (" << stresstest_local_hitratio * 100 << " + " << stresstest_remote_hitratio * 100 << ") | " << stresstest_total_avg_latency / 1000 << " |" << std::endl << std::endl;
+            oss << "| " << stresstest_global_hitratio * 100 << " (" << stresstest_local_hitratio * 100 << " + " << stresstest_remote_hitratio * 100 << ") | " << static_cast<double>(stresstest_total_avg_latency) / 1000 << " |" << std::endl << std::endl;
             std::cout << oss.str() << std::flush;
 
             // Reset stresstest statistics
