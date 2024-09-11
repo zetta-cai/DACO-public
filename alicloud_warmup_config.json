@@ -82,7 +82,7 @@
             "private_ipstr": "121.40.31.238",
             "public_ipstr": "172.31.137.42",
             "cpu_dedicated_corecnt": 8,
-            "cpu_shared_corecnt": 4
+            "cpu_shared_corecnt": 0
         }
     ]
 }

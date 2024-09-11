@@ -176,8 +176,8 @@ namespace covered
 
     const uint32_t WorkloadWrapperBase::getPerclientWorkercnt_() const
     {
-        // ONLY for clients
-        assert(workload_usage_role_ == WORKLOAD_USAGE_ROLE_CLIENT);
+        // ONLY for clients or dataset loaders
+        assert(workload_usage_role_ == WORKLOAD_USAGE_ROLE_CLIENT || workload_usage_role_ == WORKLOAD_USAGE_ROLE_LOADER);
 
         assert(perclient_workercnt_ > 0);
         
