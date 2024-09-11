@@ -55,32 +55,32 @@
     "version": "1.0",
     "physical_machines": [
         {
-            "private_ipstr": "116.62.24.95",
-            "public_ipstr": "172.31.137.43",
+            "private_ipstr": "172.31.137.43",
+            "public_ipstr": "116.62.24.95",
             "cpu_dedicated_corecnt": 2,
             "cpu_shared_corecnt": 0
         },
         {
-            "private_ipstr": "47.97.209.63",
-            "public_ipstr": "172.31.137.45",
+            "private_ipstr": "172.31.137.45",
+            "public_ipstr": "47.97.209.63",
             "cpu_dedicated_corecnt": 8,
             "cpu_shared_corecnt": 0
         },
         {
-            "private_ipstr": "47.96.16.243",
-            "public_ipstr": "172.31.137.41",
+            "private_ipstr": "172.31.137.41",
+            "public_ipstr": "47.96.16.243",
             "cpu_dedicated_corecnt": 8,
             "cpu_shared_corecnt": 0
         },
         {
-            "private_ipstr": "120.26.8.38",
-            "public_ipstr": "172.31.137.44",
+            "private_ipstr": "172.31.137.44",
+            "public_ipstr": "120.26.8.38",
             "cpu_dedicated_corecnt": 8,
             "cpu_shared_corecnt": 0
         },
         {
-            "private_ipstr": "47.251.111.24",
-            "public_ipstr": "172.18.148.122",
+            "private_ipstr": "172.18.148.122",
+            "public_ipstr": "47.251.111.24",
             "cpu_dedicated_corecnt": 8,
             "cpu_shared_corecnt": 4
         }

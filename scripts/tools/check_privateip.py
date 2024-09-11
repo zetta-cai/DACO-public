@@ -39,8 +39,22 @@ def check_duplicate_private_ips_from_file(file_path):
         print(f"An error occurred: {e}")
         return None
 
+print("Check duplicate private IPs in config.json ...")
 check_duplicate_private_ips_from_file("config.json")
+print("")
+
+print("Check duplicate private IPs in alicloud_warmup_config.json ...")
 check_duplicate_private_ips_from_file("alicloud_warmup_config.json")
+print("")
+
+print("Check duplicate private IPs in alicloud_eval_config.json ...")
 check_duplicate_private_ips_from_file("shanghai_alicloud_eval_config.json")
+print("")
+
+print("Check duplicate private IPs in alicloud_eval_config.json ...")
 check_duplicate_private_ips_from_file("silicon_alicloud_eval_config.json")
+print("")
+
+print("Check duplicate private IPs in alicloud_eval_config.json ...")
 check_duplicate_private_ips_from_file("singapore_alicloud_eval_config.json")
+print("")
