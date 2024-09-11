@@ -22,8 +22,13 @@ namespace covered
     PropagationSimulatorParam::PropagationSimulatorParam(NodeWrapperBase* node_wrapper_ptr, const std::string& propagation_latency_distname, const uint32_t& propagation_latency_lbound_us, const uint32_t& propagation_latency_avg_us, const uint32_t& propagation_latency_rbound_us, const uint32_t& propagation_latency_random_seed, const uint32_t& propagation_item_buffer_size, const std::string& realnet_option) : SubthreadParamBase(), node_wrapper_ptr_(node_wrapper_ptr), propagation_latency_distname_(propagation_latency_distname), propagation_latency_lbound_us_(propagation_latency_lbound_us), propagation_latency_avg_us_(propagation_latency_avg_us), propagation_latency_rbound_us_(propagation_latency_rbound_us), propagation_latency_random_seed_(propagation_latency_random_seed), rwlock_for_propagation_item_buffer_("rwlock_for_propagation_item_buffer_"), is_first_item_(true), prev_timespec_(), propagation_latency_randgen_(propagation_latency_random_seed)
     {
         assert(node_wrapper_ptr != NULL);
-        assert(propagation_latency_lbound_us <= propagation_latency_avg_us);
-        assert(propagation_latency_avg_us <= propagation_latency_rbound_us);
+
+        // ONLY need to check for non-constant distributions
+        if (propagation_latency_distname != Util::PROPAGATION_SIMULATION_CONSTANT_DISTNAME)
+        {
+            assert(propagation_latency_lbound_us <= propagation_latency_avg_us);
+            assert(propagation_latency_avg_us <= propagation_latency_rbound_us);
+        }
 
         realnet_option_ = realnet_option;
 
