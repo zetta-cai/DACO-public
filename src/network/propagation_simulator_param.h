@@ -27,7 +27,7 @@ namespace covered
     {
     public:
         PropagationSimulatorParam();
-        PropagationSimulatorParam(NodeWrapperBase* node_wrapper_ptr, const std::string& propagation_latency_distname, const uint32_t& propagation_latency_lbound_us, const uint32_t& propagation_latency_avg_us, const uint32_t& propagation_latency_rbound_us, const uint32_t& propagation_latency_random_seed, const uint32_t& propagation_item_buffer_size);
+        PropagationSimulatorParam(NodeWrapperBase* node_wrapper_ptr, const std::string& propagation_latency_distname, const uint32_t& propagation_latency_lbound_us, const uint32_t& propagation_latency_avg_us, const uint32_t& propagation_latency_rbound_us, const uint32_t& propagation_latency_random_seed, const uint32_t& propagation_item_buffer_size, const std::string& realnet_option);
         ~PropagationSimulatorParam();
 
         const NodeWrapperBase* getNodeWrapperPtr() const;
@@ -50,6 +50,7 @@ namespace covered
         uint32_t propagation_latency_avg_us_;
         uint32_t propagation_latency_rbound_us_;
         uint32_t propagation_latency_random_seed_;
+        std::string realnet_option_;
         std::string instance_name_;
 
         // Ensure the atomicity of all non-const variables due to multiple providers (all subthreads of a client/edge/cloud node)

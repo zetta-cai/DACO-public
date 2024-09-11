@@ -11,6 +11,7 @@ namespace covered
 
     PropagationSimulatorParam::PropagationSimulatorParam() : SubthreadParamBase(), node_wrapper_ptr_(NULL), propagation_latency_distname_(""), propagation_latency_lbound_us_(0), propagation_latency_avg_us_(0), propagation_latency_rbound_us_(0), propagation_latency_random_seed_(0), rwlock_for_propagation_item_buffer_("rwlock_for_propagation_item_buffer_"), is_first_item_(true), prev_timespec_(), propagation_latency_randgen_(0)
     {
+        realnet_option_ = "";
         instance_name_ = "";
 
         propagation_item_buffer_ptr_ = NULL;
@@ -18,11 +19,13 @@ namespace covered
         propagation_latency_dist_ptr_ = NULL;
     }
 
-    PropagationSimulatorParam::PropagationSimulatorParam(NodeWrapperBase* node_wrapper_ptr, const std::string& propagation_latency_distname, const uint32_t& propagation_latency_lbound_us, const uint32_t& propagation_latency_avg_us, const uint32_t& propagation_latency_rbound_us, const uint32_t& propagation_latency_random_seed, const uint32_t& propagation_item_buffer_size) : SubthreadParamBase(), node_wrapper_ptr_(node_wrapper_ptr), propagation_latency_distname_(propagation_latency_distname), propagation_latency_lbound_us_(propagation_latency_lbound_us), propagation_latency_avg_us_(propagation_latency_avg_us), propagation_latency_rbound_us_(propagation_latency_rbound_us), propagation_latency_random_seed_(propagation_latency_random_seed), rwlock_for_propagation_item_buffer_("rwlock_for_propagation_item_buffer_"), is_first_item_(true), prev_timespec_(), propagation_latency_randgen_(propagation_latency_random_seed)
+    PropagationSimulatorParam::PropagationSimulatorParam(NodeWrapperBase* node_wrapper_ptr, const std::string& propagation_latency_distname, const uint32_t& propagation_latency_lbound_us, const uint32_t& propagation_latency_avg_us, const uint32_t& propagation_latency_rbound_us, const uint32_t& propagation_latency_random_seed, const uint32_t& propagation_item_buffer_size, const std::string& realnet_option) : SubthreadParamBase(), node_wrapper_ptr_(node_wrapper_ptr), propagation_latency_distname_(propagation_latency_distname), propagation_latency_lbound_us_(propagation_latency_lbound_us), propagation_latency_avg_us_(propagation_latency_avg_us), propagation_latency_rbound_us_(propagation_latency_rbound_us), propagation_latency_random_seed_(propagation_latency_random_seed), rwlock_for_propagation_item_buffer_("rwlock_for_propagation_item_buffer_"), is_first_item_(true), prev_timespec_(), propagation_latency_randgen_(propagation_latency_random_seed)
     {
         assert(node_wrapper_ptr != NULL);
         assert(propagation_latency_lbound_us <= propagation_latency_avg_us);
         assert(propagation_latency_avg_us <= propagation_latency_rbound_us);
+
+        realnet_option_ = realnet_option;
 
         // Differential propagation simulator parameter of different nodes
         std::ostringstream oss;
@@ -96,6 +99,10 @@ namespace covered
         {
             // skip_propagation_latency = true means the message is enabled with warmup speedup under warmup phase
             sleep_us = 0;
+        }
+        else if (realnet_option_ == Util::REALNET_LOAD_OPTION_NAME) // Real-net stresstest phase
+        {
+            sleep_us = 0; // NOTE: NO need to sleep manually -> we use the real-cloud transmission latency
         }
         else // Stresstest phase
         {

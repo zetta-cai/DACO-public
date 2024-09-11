@@ -44,7 +44,7 @@ namespace covered
     public:
         static void* launchCloud(void* cloud_wrapper_param_ptr);
 
-        CloudWrapper(const uint32_t& cloud_idx, const std::string& cloud_storage, const uint32_t& keycnt, const CLILatencyInfo& cli_latency_info, const std::string& workload_name, const float& zipf_alpha);
+        CloudWrapper(const uint32_t& cloud_idx, const std::string& cloud_storage, const uint32_t& keycnt, const CLILatencyInfo& cli_latency_info, const std::string& workload_name, const float& zipf_alpha, const std::string& realnet_option);
         ~CloudWrapper();
 
         WorkloadWrapperBase* getWorkloadGeneratorPtr() const;
