@@ -63,7 +63,7 @@
         {
             "private_ipstr": "172.31.137.45",
             "public_ipstr": "47.97.209.63",
-            "cpu_dedicated_corecnt": 8,
+            "cpu_dedicated_corecnt": 2,
             "cpu_shared_corecnt": 0
         },
         {
