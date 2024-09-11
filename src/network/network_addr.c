@@ -176,7 +176,7 @@ namespace covered
 			std::ostringstream oss;
 			oss << "invalid port of " << port_ << " which should be >= " << Util::UDP_MIN_PORT << "!";	
 			Util::dumpErrorMsg(kClassName, oss.str());
-			exit(1);
+			// exit(1);
 		}
         return;
     }

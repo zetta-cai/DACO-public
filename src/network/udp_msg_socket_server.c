@@ -58,10 +58,22 @@ namespace covered
 			{
 				break;
 			}
+			else if (tmp_pkt_payload.getSize() == 0) // Empty UDP packet
+			{
+				Util::dumpErrorMsg(kClassName, "receive an empty UDP packet (NOT exit)!");
+				is_timeout = true;
+				break;
+			}
 			else // not timeout (receive a UDP packet)
 			{
 				// Deserialize fragment header from currently received packet payload
 				UdpFragHdr fraghdr(tmp_pkt_payload);
+				if (fraghdr.getSourceAddr().getPort() <= Util::UDP_MIN_PORT)
+				{
+					Util::dumpErrorMsg(kClassName, "receive an UDP packet with invalid port (NOT exit)!");
+					is_timeout = true;
+					break;
+				}
 				NetworkAddr source_addr = fraghdr.getSourceAddr();
 
 				// Use MsgFragStats to track fragment statistics of each message
