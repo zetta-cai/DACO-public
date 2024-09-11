@@ -32,18 +32,8 @@ exp_default_settings = {
 # NOTE: run lrb, glcache, and segcache at last due to slow warmup issue of lrb (may be caused by model retraining), and memory usage issue of segcache and glcache (may be caused by bugs on segment-level memory management) -> TODO: if no results of the above baselines due to program crashes, please provide more DRAM memory (or swap memory), and run them again with sufficient time (may be in units of hours or days) for warmup and cache stable performance
 # cache_names = ["covered", "shark", "bestguess", "shark+arc", "shark+cachelib", "shark+fifo", "shark+frozenhot", "shark+gdsf", "shark+lfu", "shark+lhd", "shark+s3fifo", "shark+sieve", "shark+wtinylfu", "shark+lrb", "shark+glcache", "shark+segcache"]
 cache_names = ["covered", "shark+gdsf", "shark+lhd"] # TMPDEBUG
-
-current_origin_name = "shanghai" # shanghai, singapore, silicon
-
-current_alicloud_avg_edgecloud_latency_us_list = []
-if current_origin_name == "shanghai":
-    current_alicloud_avg_edgecloud_latency_us_list = Common.shanghai_alicloud_avg_edgecloud_latency_us_list
-elif current_origin_name == "singapore":
-    current_alicloud_avg_edgecloud_latency_us_list = Common.singapore_alicloud_avg_edgecloud_latency_us_list
-elif current_origin_name == "silicon":
-    current_alicloud_avg_edgecloud_latency_us_list = Common.silicon_alicloud_avg_edgecloud_latency_us_list
-else:
-    LogUtil.die(Common.scriptname, "Invalid current_origin_name: {}".format(current_origin_name))
+# origin_name_list = ["shanghai", "singapore", "silicon"]
+origin_name_list = ["shanghai"] # TMPDEBUG
 
 # Run the experiments with multiple rounds
 for tmp_round_index in round_indexes:
@@ -59,28 +49,40 @@ for tmp_round_index in round_indexes:
     for tmp_cache_name in cache_names:
 
         # Run prototype for the current origin
-        tmp_log_filepath = "{}/tmp_evaluator_for_{}_{}.out".format(tmp_log_dirpath, tmp_cache_name, current_origin_name)
-        SubprocessUtil.tryToCreateDirectory(Common.scriptname, os.path.dirname(tmp_log_filepath))
+        for current_origin_name in origin_name_list:
 
-        # Check log filepath
-        if os.path.exists(tmp_log_filepath):
-            LogUtil.prompt(Common.scriptname, "Log filepath {} already exists, skip {} w/ origin {} MiB for the current round {}...".format(tmp_log_filepath, tmp_cache_name, current_origin_name, tmp_round_index))
-            continue
+            current_alicloud_avg_edgecloud_latency_us_list = []
+            if current_origin_name == "shanghai":
+                current_alicloud_avg_edgecloud_latency_us_list = Common.shanghai_alicloud_avg_edgecloud_latency_us_list.copy()
+            elif current_origin_name == "singapore":
+                current_alicloud_avg_edgecloud_latency_us_list = Common.singapore_alicloud_avg_edgecloud_latency_us_list.copy()
+            elif current_origin_name == "silicon":
+                current_alicloud_avg_edgecloud_latency_us_list = Common.silicon_alicloud_avg_edgecloud_latency_us_list.copy()
+            else:
+                LogUtil.die(Common.scriptname, "Invalid current_origin_name: {}".format(current_origin_name))
+        
+            tmp_log_filepath = "{}/tmp_evaluator_for_{}_{}.out".format(tmp_log_dirpath, tmp_cache_name, current_origin_name)
+            SubprocessUtil.tryToCreateDirectory(Common.scriptname, os.path.dirname(tmp_log_filepath))
 
-        # NOTE: Log filepath MUST NOT exist here
+            # Check log filepath
+            if os.path.exists(tmp_log_filepath):
+                LogUtil.prompt(Common.scriptname, "Log filepath {} already exists, skip {} w/ origin {} MiB for the current round {}...".format(tmp_log_filepath, tmp_cache_name, current_origin_name, tmp_round_index))
+                continue
 
-        # Prepare settings for the current cache name
-        tmp_exp_settings = exp_default_settings.copy()
-        tmp_exp_settings["cache_name"] = tmp_cache_name
-        tmp_exp_settings["realnet_expname"] = "exp_alicloud_round{}_{}_{}".format(tmp_round_index, tmp_cache_name, current_origin_name)
-        tmp_exp_settings["propagation_latency_clientedge_avg_us"] = Common.alicloud_avg_clientedge_latency_us_list[tmp_round_index]
-        tmp_exp_settings["propagation_latency_crossedge_avg_us"] = Common.alicloud_avg_crossedge_latency_us_list[tmp_round_index]
-        tmp_exp_settings["propagation_latency_edgecloud_avg_us"] = current_alicloud_avg_edgecloud_latency_us_list[tmp_round_index]
+            # NOTE: Log filepath MUST NOT exist here
 
-        # Launch prototype
-        LogUtil.prompt(Common.scriptname, "Run prototype of {} w/ origin {} for the current round {}...".format(tmp_cache_name, current_origin_name, tmp_round_index))
-        prototype_instance = Prototype(evaluator_logfile = tmp_log_filepath, **tmp_exp_settings)
-        prototype_instance.run()
+            # Prepare settings for the current cache name
+            tmp_exp_settings = exp_default_settings.copy()
+            tmp_exp_settings["cache_name"] = tmp_cache_name
+            tmp_exp_settings["realnet_expname"] = "exp_alicloud_round{}_{}_{}".format(tmp_round_index, tmp_cache_name, current_origin_name)
+            tmp_exp_settings["propagation_latency_clientedge_avg_us"] = Common.alicloud_avg_clientedge_latency_us_list[tmp_round_index]
+            tmp_exp_settings["propagation_latency_crossedge_avg_us"] = Common.alicloud_avg_crossedge_latency_us_list[tmp_round_index]
+            tmp_exp_settings["propagation_latency_edgecloud_avg_us"] = current_alicloud_avg_edgecloud_latency_us_list[tmp_round_index]
+
+            # Launch prototype
+            LogUtil.prompt(Common.scriptname, "Run prototype of {} w/ origin {} for the current round {}...".format(tmp_cache_name, current_origin_name, tmp_round_index))
+            prototype_instance = Prototype(evaluator_logfile = tmp_log_filepath, **tmp_exp_settings)
+            prototype_instance.run()
 
 # Hint users to check warmup statistics of cache peformance in log files
 LogUtil.emphasize(Common.scriptname, "Please check cache warmup statistics in log files (at the end of each log file) in the following directories:\n{}".format(log_dirpaths))
