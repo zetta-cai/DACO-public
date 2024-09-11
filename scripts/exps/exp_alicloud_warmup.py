@@ -16,8 +16,8 @@ round_indexes = range(0, Common.exp_round_number) # [0, ..., exp_round_number-1]
 
 # Prepare settings for current experiment
 exp_default_settings = {
-    "clientcnt": 2,
-    "edgecnt": 2,
+    "clientcnt": 16,
+    "edgecnt": 16,
     "keycnt": 1000000,
     "capacity_mb": 1024,
     "cache_name": "covered",
@@ -32,8 +32,7 @@ exp_default_settings = {
 # NOTE: run lrb, glcache, and segcache at last due to slow warmup issue of lrb (may be caused by model retraining), and memory usage issue of segcache and glcache (may be caused by bugs on segment-level memory management) -> TODO: if no results of the above baselines due to program crashes, please provide more DRAM memory (or swap memory), and run them again with sufficient time (may be in units of hours or days) for warmup and cache stable performance
 # cache_names = ["covered", "shark", "bestguess", "shark+arc", "shark+cachelib", "shark+fifo", "shark+frozenhot", "shark+gdsf", "shark+lfu", "shark+lhd", "shark+s3fifo", "shark+sieve", "shark+wtinylfu", "shark+lrb", "shark+glcache", "shark+segcache"]
 cache_names = ["covered", "shark+gdsf", "shark+lhd"] # TMPDEBUG
-# origin_name_list = ["shanghai", "singapore", "silicon"]
-origin_name_list = ["shanghai"] # TMPDEBUG
+origin_name_list = ["shanghai", "singapore", "silicon"]
 
 # Run the experiments with multiple rounds
 for tmp_round_index in round_indexes:
