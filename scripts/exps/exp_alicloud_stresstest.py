@@ -23,9 +23,9 @@ exp_default_settings = {
     "cache_name": "covered",
     "workload_name": "facebook",
     "propagation_latency_distname": "constant", # NOTE: NOT used during real-net stresstest phase
-    "propagation_latency_clientedge_us": 1000, # NOTE: NOT used during real-net stresstest phase
-    "propagation_latency_crossedge_us": 10000, # NOTE: NOT used during real-net stresstest phase
-    "propagation_latency_edgecloud_us": 100000, # NOTE: NOT used during real-net stresstest phase
+    "propagation_latency_clientedge_avg_us": 1000, # NOTE: NOT used during real-net stresstest phase
+    "propagation_latency_crossedge_avg_us": 10000, # NOTE: NOT used during real-net stresstest phase
+    "propagation_latency_edgecloud_avg_us": 100000, # NOTE: NOT used during real-net stresstest phase
     "realnet_option": "load",
     "realnet_expname": "",
 }
