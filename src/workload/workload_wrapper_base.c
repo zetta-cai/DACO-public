@@ -179,7 +179,10 @@ namespace covered
         // ONLY for clients or dataset loaders
         assert(workload_usage_role_ == WORKLOAD_USAGE_ROLE_CLIENT || workload_usage_role_ == WORKLOAD_USAGE_ROLE_LOADER);
 
-        assert(perclient_workercnt_ > 0);
+        if (workload_usage_role_ == WORKLOAD_USAGE_ROLE_CLIENT)
+        {
+            assert(perclient_workercnt_ > 0);
+        }
         
         return perclient_workercnt_;
     }
