@@ -64,7 +64,7 @@ for tmp_round_index in round_indexes:
 
         # Check log filepath
         if os.path.exists(tmp_log_filepath):
-            LogUtil.prompt(Common.scriptname, "Log filepath {} already exists, skip {} w/ origin {} MiB for the current round {}...".format(tmp_log_filepath, tmp_cache_name, tmp_capacity_mb, tmp_round_index))
+            LogUtil.prompt(Common.scriptname, "Log filepath {} already exists, skip {} w/ origin {} MiB for the current round {}...".format(tmp_log_filepath, tmp_cache_name, current_origin_name, tmp_round_index))
             continue
 
         # NOTE: Log filepath MUST NOT exist here
