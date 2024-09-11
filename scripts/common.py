@@ -104,8 +104,9 @@ class Common:
 
     # Initialized round-trip time (RTT) (TODO: update based on your real-network testbed)
     # NOTE: used for the five rounds respectively
-    alicloud_avg_clientedge_latency_us_list = []
-    alicloud_avg_crossedge_latency_us_list = []
-    shanghai_alicloud_avg_edgecloud_latency_us_list = [] # For origin in Shanghai
-    singapore_alicloud_avg_edgecloud_latency_us_list = [] # For origin in Singapore
-    silicon_alicloud_avg_edgecloud_latency_us_list = [] # For origin in Silicon Valley
+    # NOTE: just used for warmup, which do NOT affect eval results!!!
+    alicloud_avg_clientedge_latency_us_list = [263, 251, 269, 266, 253]
+    alicloud_avg_crossedge_latency_us_list = [263, 247, 238, 270, 240]
+    shanghai_alicloud_avg_edgecloud_latency_us_list = [8474, 8457, 8454, 9512, 9490] # For origin in Shanghai
+    singapore_alicloud_avg_edgecloud_latency_us_list = [61000, 60780, 60779, 60795, 60693] # For origin in Singapore
+    silicon_alicloud_avg_edgecloud_latency_us_list = [135605, 135590, 135599, 152409, 152393] # For origin in Silicon Valley
