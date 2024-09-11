@@ -73,9 +73,9 @@ for tmp_round_index in round_indexes:
         tmp_exp_settings = exp_default_settings.copy()
         tmp_exp_settings["cache_name"] = tmp_cache_name
         tmp_exp_settings["realnet_expname"] = "exp_alicloud_round{}_{}_{}".format(tmp_round_index, tmp_cache_name, current_origin_name)
-        tmp_exp_settings["propagation_latency_clientedge_us"] = Common.alicloud_avg_clientedge_latency_us_list[tmp_round_index]
-        tmp_exp_settings["propagation_latency_crossedge_us"] = Common.alicloud_avg_crossedge_latency_us_list[tmp_round_index]
-        tmp_exp_settings["propagation_latency_edgecloud_us"] = current_alicloud_avg_edgecloud_latency_us_list[tmp_round_index]
+        tmp_exp_settings["propagation_latency_clientedge_avg_us"] = Common.alicloud_avg_clientedge_latency_us_list[tmp_round_index]
+        tmp_exp_settings["propagation_latency_crossedge_avg_us"] = Common.alicloud_avg_crossedge_latency_us_list[tmp_round_index]
+        tmp_exp_settings["propagation_latency_edgecloud_avg_us"] = current_alicloud_avg_edgecloud_latency_us_list[tmp_round_index]
 
         # Launch prototype
         LogUtil.prompt(Common.scriptname, "Run prototype of {} w/ origin {} for the current round {}...".format(tmp_cache_name, current_origin_name, tmp_round_index))
