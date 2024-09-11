@@ -9,7 +9,7 @@ from ..common import *
 is_clear_tarball = False # whether to clear intermediate tarball files
 
 # Variables to control whether to install the corresponding softwares
-is_install_xgboost = True
+is_install_xgboost = True # Used by GL-Cache
 is_install_boost = True
 is_install_cachelib = True
 is_install_lrucache = True # Completely use hacked version
@@ -40,6 +40,12 @@ if is_install_xgboost:
 
     xgboost_target_commit = "c03a4d5"
     SubprocessUtil.checkoutCommit(Common.scriptname, xgboost_clone_dirpath, xgboost_software_name, xgboost_target_commit)
+
+    # Submodules (dmlc: ea21135; gputreeshap: 787259b)
+    dmlc_target_commit = "ea21135"
+    SubprocessUtil.checkoutCommit(Common.scriptname, os.path.join(xgboost_clone_dirpath, "dmlc-core"), "dmlc", dmlc_target_commit)
+    gputreeshap_target_commit = "787259b"
+    SubprocessUtil.checkoutCommit(Common.scriptname, os.path.join(xgboost_clone_dirpath, "gputreeshap"), "gputreeshap", gputreeshap_target_commit)
 
     xgboost_install_dirpath = "/usr/local/lib/libxgboost.so" # NOTE: lib/xgboost/build/cmake_install.cmake sets CMAKE_INSTALL_PREFIX as /usr/local by default to install header files, libxgboost.so, and XGBoostTargets.cmake
     xgboost_install_tool = "mkdir build && cd build && cmake .. && make -j && sudo make install"
@@ -308,6 +314,10 @@ if is_install_frozenhot:
 
     frozenhot_target_commit = "eabb2b9"
     SubprocessUtil.checkoutCommit(Common.scriptname, frozenhot_clone_dirpath, frozenhot_software_name, frozenhot_target_commit)
+
+    # Submodules (CLHT: 2240b69)
+    clht_target_commit = "2240b69"
+    SubprocessUtil.checkoutCommit(Common.scriptname, os.path.join(frozenhot_clone_dirpath, "CLHT"), "CLHT", clht_target_commit)
 
     # Compile CLHT
     clht_target_filepath = "{}/CLHT/libclht.a".format(frozenhot_clone_dirpath)
