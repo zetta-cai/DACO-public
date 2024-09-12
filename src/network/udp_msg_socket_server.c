@@ -3,6 +3,8 @@
 #include <assert.h>
 #include <sstream>
 
+#include <boost/stacktrace.hpp>
+
 #include "common/util.h"
 #include "network/udp_frag_hdr.h"
 
