@@ -58,9 +58,11 @@ namespace covered
 			{
 				break;
 			}
-			else if (tmp_pkt_payload.getSize() == 0) // Empty UDP packet
+			else if (tmp_pkt_payload.getSize() < UdpFragHdr().getudpFragHdrPayloadSize()) // Crashed UDP packet
 			{
-				Util::dumpErrorMsg(kClassName, "receive an empty UDP packet (NOT exit)!");
+				std::ostringstream oss;
+				oss << "receive a crashed UDP packet with only " << tmp_pkt_payload.getSize() << " bytes < UdpFragHdr's payload size " << UdpFragHdr().getudpFragHdrPayloadSize() << " bytes!" << std::endl << boost::stacktrace::stacktrace();
+				Util::dumpWarnMsg(kClassName, oss.str());
 				is_timeout = true;
 				break;
 			}
@@ -70,7 +72,9 @@ namespace covered
 				UdpFragHdr fraghdr(tmp_pkt_payload);
 				if (fraghdr.getSourceAddr().getPort() <= Util::UDP_MIN_PORT)
 				{
-					Util::dumpErrorMsg(kClassName, "receive an UDP packet with invalid port (NOT exit)!");
+					std::ostringstream oss;
+					oss << "receive an UDP packet with invalid port !" << std::endl << boost::stacktrace::stacktrace();
+					Util::dumpWarnMsg(kClassName, oss.str());
 					is_timeout = true;
 					break;
 				}
