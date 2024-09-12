@@ -33,6 +33,7 @@ namespace covered
         uint32_t deserialize(const DynamicArray& pkt_payload);
 
         uint32_t getudpFragHdrPayloadSize() const;
+        static uint32_t staticGetudpFragHdrPayloadSize();
     private:
         static const std::string kClassName;
 

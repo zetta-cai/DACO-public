@@ -105,4 +105,12 @@ namespace covered
         udp_fraghdr_payload_size += source_addr_.getAddrPayloadSize(); // source_addr_
         return udp_fraghdr_payload_size;
     }
+
+    uint32_t UdpFragHdr::staticGetudpFragHdrPayloadSize()
+    {
+        uint32_t udp_fraghdr_payload_size = 0;
+        udp_fraghdr_payload_size += sizeof(uint32_t) * 4; // fragment_idx_, fragment_cnt_, msg_payload_size_, msg_seqnum_
+        udp_fraghdr_payload_size += NetworkAddr().getAddrPayloadSize(); // source_addr_
+        return udp_fraghdr_payload_size;
+    }
 }

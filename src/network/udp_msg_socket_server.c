@@ -60,10 +60,10 @@ namespace covered
 			{
 				break;
 			}
-			else if (tmp_pkt_payload.getSize() < UdpFragHdr().getudpFragHdrPayloadSize()) // Crashed UDP packet
+			else if (tmp_pkt_payload.getSize() < UdpFragHdr::staticGetudpFragHdrPayloadSize()) // Crashed UDP packet
 			{
 				std::ostringstream oss;
-				oss << "receive a crashed UDP packet with only " << tmp_pkt_payload.getSize() << " bytes < UdpFragHdr's payload size " << UdpFragHdr().getudpFragHdrPayloadSize() << " bytes!" << std::endl << boost::stacktrace::stacktrace();
+				oss << "receive a crashed UDP packet with only " << tmp_pkt_payload.getSize() << " bytes < UdpFragHdr's payload size " << UdpFragHdr::staticGetudpFragHdrPayloadSize() << " bytes!" << std::endl << boost::stacktrace::stacktrace();
 				Util::dumpWarnMsg(kClassName, oss.str());
 				is_timeout = true;
 				break;
