@@ -5,7 +5,7 @@
     "client_recvmsg_startport": 4100,
     "client_worker_recvrsp_startport": 4200,
     "cloud_dedicated_corecnt": 2,
-    "cloud_machine_index": 4,
+    "cloud_machine_index": 0,
     "cloud_recvmsg_startport": 4300,
     "cloud_recvreq_startport": 4400,
     "cloud_rocksdb_basedir": "/tmp/cloud",
@@ -55,10 +55,10 @@
     "version": "1.0",
     "physical_machines": [
         {
-            "private_ipstr": "192.168.11.215",
-            "public_ipstr": "192.168.11.215",
-            "cpu_dedicated_corecnt": 32,
-            "cpu_shared_corecnt": 0
+            "private_ipstr": "192.168.11.25",
+            "public_ipstr": "192.168.11.25",
+            "cpu_dedicated_corecnt": 16,
+            "cpu_shared_corecnt": 8
         },
         {
             "private_ipstr": "192.168.11.15",
@@ -77,12 +77,6 @@
             "public_ipstr": "192.168.11.14",
             "cpu_dedicated_corecnt": 36,
             "cpu_shared_corecnt": 4
-        },
-        {
-            "private_ipstr": "192.168.11.25",
-            "public_ipstr": "192.168.11.25",
-            "cpu_dedicated_corecnt": 16,
-            "cpu_shared_corecnt": 8
         }
     ]
 }
