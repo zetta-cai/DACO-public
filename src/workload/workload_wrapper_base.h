@@ -62,6 +62,11 @@ namespace covered
         virtual void overwriteWorkloadParameters_() = 0; // overwrite some workload patermers based on covered::Config and covered::Param
         virtual void createWorkloadGenerator_() = 0; // create workload generator based on overwritten workload parameters
 
+        // Utility functions for dynamic workload patterns
+        virtual uint32_t getLargestRank_(const uint32_t local_client_worker_idx) = 0;
+        virtual void getRankedKeys_(const uint32_t local_client_worker_idx, const uint32_t start_rank, const uint32_t ranked_keycnt, std::vector<std::string>& ranked_keys) = 0;
+        virtual void getRandomKeys_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<std::string>& random_keys) = 0;
+
         // Const shared variables
         std::string base_instance_name_;
         bool is_valid_;
@@ -82,6 +87,9 @@ namespace covered
         const uint32_t dynamic_change_period_;
         const uint32_t dynamic_change_keycnt_;
     protected:
+        // Utility functions for dynamic workload patterns
+        void checkStartRank_(const uint32_t start_rank, const uint32_t largest_rank) const;
+
         // Getters for const shared variables coming from Param
         // ONLY for clients
         const uint32_t getClientcnt_() const;

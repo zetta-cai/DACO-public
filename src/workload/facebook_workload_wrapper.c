@@ -311,6 +311,24 @@ namespace covered
         workload_generator_ = makeGenerator_(facebook_stressor_config_, tmp_client_idx, getPerclientWorkercnt_());
     }
 
+    // Utility functions for dynamic workload patterns
+
+    uint32_t FacebookWorkloadWrapper::getLargestRank_(const uint32_t local_client_worker_idx)
+    {
+        return workload_generator_->getLargestRank(local_client_worker_idx, 0); // poolId MUST be 0
+    }
+
+    void FacebookWorkloadWrapper::getRankedKeys_(const uint32_t local_client_worker_idx, const uint32_t start_rank, const uint32_t ranked_keycnt, std::vector<std::string>& ranked_keys)
+    {
+        workload_generator_->getRankedKeys(local_client_worker_idx, 0, start_rank, ranked_keycnt, ranked_keys); // poolId MUST be 0
+        return;
+    }
+
+    void FacebookWorkloadWrapper::getRandomKeys_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<std::string>& random_keys)
+    {
+        // TODO
+    }
+
     // (1) For the role of clients, dataset loader, and cloud
 
     // The same makeGenerator as in lib/CacheLib/cachelib/cachebench/runner/Stressor.cpp

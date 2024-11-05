@@ -597,15 +597,15 @@ namespace covered
 
                 // Each per-client worker uses worker_idx as deterministic seed to create a random generator and get different requests
                 // NOTE: we use global_client_worker_idx to randomly generate requests from workload items
-                std::mt19937_64* tmp_client_worker_item_randgen_ptr_ = new std::mt19937_64(tmp_global_client_worker_idx + getWorkloadRandombase_());
+                std::mt19937_64* tmp_client_worker_item_randgen_ptr = new std::mt19937_64(tmp_global_client_worker_idx + getWorkloadRandombase_());
                 // (OBSOLETE: homogeneous cache access patterns is a WRONG assumption -> we should ONLY follow homogeneous workload distribution yet still with heterogeneous cache access patterns) NOTE: we use WORKLOAD_KVPAIR_GENERATION_SEED to generate requests with homogeneous cache access patterns
-                //std::mt19937_64* tmp_client_worker_item_randgen_ptr_ = new std::mt19937_64(Util::WORKLOAD_KVPAIR_GENERATION_SEED + getWorkloadRandombase_());
-                if (tmp_client_worker_item_randgen_ptr_ == NULL)
+                //std::mt19937_64* tmp_client_worker_item_randgen_ptr = new std::mt19937_64(Util::WORKLOAD_KVPAIR_GENERATION_SEED + getWorkloadRandombase_());
+                if (tmp_client_worker_item_randgen_ptr == NULL)
                 {
                     Util::dumpErrorMsg(instance_name_, "failed to create a random generator for requests!");
                     exit(1);
                 }
-                client_worker_item_randgen_ptrs_[tmp_local_client_worker_idx] = tmp_client_worker_item_randgen_ptr_;
+                client_worker_item_randgen_ptrs_[tmp_local_client_worker_idx] = tmp_client_worker_item_randgen_ptr;
 
                 client_worker_reqdist_ptrs_[tmp_local_client_worker_idx] = new std::discrete_distribution<uint32_t>(dataset_probs_.begin(), dataset_probs_.end());
                 assert(client_worker_reqdist_ptrs_[tmp_local_client_worker_idx] != NULL);

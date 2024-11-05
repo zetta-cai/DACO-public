@@ -46,6 +46,11 @@ namespace covered
         virtual void overwriteWorkloadParameters_() override;
         virtual void createWorkloadGenerator_() override;
 
+        // Utility functions for dynamic workload patterns
+        virtual uint32_t getLargestRank_(const uint32_t local_client_worker_idx) override;
+        virtual void getRankedKeys_(const uint32_t local_client_worker_idx, const uint32_t start_rank, const uint32_t ranked_keycnt, std::vector<std::string>& ranked_keys) override;
+        virtual void getRandomKeys_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<std::string>& random_keys) override;
+
         // (1) Akamai-specific helper functions
 
         // For role of clients, dataset loader, and cloud
@@ -81,6 +86,9 @@ namespace covered
         // For role of clients during evaluation
         std::vector<std::vector<int64_t>> curclient_perworker_workload_objids_; // Object IDs of workload sequence for each client worker in the current client
         std::vector<uint32_t> curclient_perworker_workloadidx_; // To-be-accessed workload index for each client worker in the current client
+        std::vector<std::vector<int64_t>> curclient_perworker_ranked_objids_; // Ranked object IDs for each client worker in the current client (used for dynamic workload patterns)
+        std::vector<std::mt19937_64*> curclient_perworker_dynamic_randgen_ptrs_; // Random generators to get random keys from ranked object IDs (used for dynamic workload patterns)
+        std::vector<std::uniform_int_distribution<uint32_t>*> curclient_perworker_dynamic_dist_ptrs_; // Uniform distributions to get random keys from ranked object IDs (used for dynamic workload patterns)
     };
 }
 

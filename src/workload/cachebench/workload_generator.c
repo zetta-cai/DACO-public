@@ -151,6 +151,47 @@ void WorkloadGenerator::quickDatasetDel(const std::string& key)
   return;
 }
 
+// Siyuan: For dynamic workload patterns
+
+uint32_t WorkloadGenerator::getLargestRank(const uint32_t local_client_worker_idx, uint8_t poolId)
+{
+  // Get the const reference of current client worker's ranked key indices
+  assert(local_client_worker_idx < perworker_perpool_ranked_key_indices_.size());
+  const std::vector<uint32_t>& tmp_ranked_key_indices_const_ref = perworker_perpool_ranked_key_indices_[local_client_worker_idx][poolId];
+  const uint32_t tmp_ranked_key_indices_size = tmp_ranked_key_indices_const_ref.size();
+
+  // Get the largest rank
+  return tmp_ranked_key_indices_size - 1;
+}
+
+void WorkloadGenerator::getRankedKeys(const uint32_t local_client_worker_idx, uint8_t poolId, const uint32_t start_rank, const uint32_t ranked_keycnt, std::vector<std::string>& ranked_keys)
+{
+  // Get the const reference of current client worker's ranked key indices
+  assert(local_client_worker_idx < perworker_perpool_ranked_key_indices_.size());
+  const std::vector<uint32_t>& tmp_ranked_key_indices_const_ref = perworker_perpool_ranked_key_indices_[local_client_worker_idx][poolId];
+  const uint32_t tmp_ranked_key_indices_size = tmp_ranked_key_indices_const_ref.size();
+
+  // Check start_rank
+  assert(start_rank >= 0);
+  assert(start_rank < tmp_ranked_key_indices_size);
+
+  // Get object IDs in [start_rank, start_rank + ranked_keycnt - 1] within the range of [0, tmp_ranked_objids_size - 1]
+  ranked_keys.clear();
+  for (int i = 0; i < ranked_keycnt; i++)
+  {
+      const uint32_t tmp_ranked_key_indices_idx = (start_rank + i) % tmp_ranked_key_indices_size;
+      const uint32_t tmp_ranked_key_indice = tmp_ranked_key_indices_const_ref[tmp_ranked_key_indices_idx];
+      ranked_keys.push_back(reqs_[tmp_ranked_key_indice].key);
+  }
+
+  return;
+}
+
+void WorkloadGenerator::getRandomKeys(const uint32_t local_client_worker_idx, uint8_t poolId, const uint32_t random_keycnt, std::vector<std::string>& random_keys)
+{
+  // TODO
+}
+
 void WorkloadGenerator::generateKeys() {
   uint8_t pid = 0;
   auto fn = [pid, this](size_t start, size_t end, size_t local_thread_idx) -> void {
@@ -318,6 +359,9 @@ void WorkloadGenerator::generateKeyDistributions() {
   {
     std::vector<std::vector<uint32_t>> tmp_key_indices_for_pool;
     std::vector<std::uniform_int_distribution<uint32_t>> tmp_key_gen_for_pool;
+
+    // Siyuan: For dynamic workload patterns
+    std::vector<std::vector<uint32_t>> tmp_ranked_key_indices_for_pool;
     
     for (uint64_t i = 0; i < config_.opPoolDistribution.size(); i++) {
       auto left = firstKeyIndexForPool_[i];
@@ -369,6 +413,11 @@ void WorkloadGenerator::generateKeyDistributions() {
             },
             tmp_num_threads, numOpsForPool);
             //config_.numThreads, numOpsForPool);
+        
+        // (2) Siyuan: Identify object ranks from default workload distribution for dynamic workload patterns
+        std::vector<uint32_t> descending_sorted_key_indices;
+        getDescendingSortedKeyIndices_(tmp_key_indices_for_pool[i], descending_sorted_key_indices);
+        tmp_ranked_key_indices_for_pool.push_back(descending_sorted_key_indices);
       } // End of !is_zipf_generator_
       else // Use zipf workload generator to generate "synthetic" workloads
       {
@@ -403,30 +452,9 @@ void WorkloadGenerator::generateKeyDistributions() {
             tmp_num_threads, numOpsForPool);
 
         // (2) Siyuan: Identify object ranks from default workload distribution
-        std::map<uint32_t, uint32_t> tmp_keyindex_freq_map;
-        for (uint32_t tmp_i = 0; tmp_i < tmp_default_key_indices.size(); tmp_i++)
-        {
-          const uint32_t tmp_keyindex = tmp_default_key_indices[tmp_i];
-          if (tmp_keyindex_freq_map.find(tmp_keyindex) == tmp_keyindex_freq_map.end())
-          {
-            tmp_keyindex_freq_map.insert(std::pair(tmp_keyindex, 1));
-          }
-          else
-          {
-            tmp_keyindex_freq_map[tmp_keyindex]++;
-          }
-        }
-        std::vector<std::pair<uint32_t, uint32_t>> tmp_keyindex_freq_vec;
-        for (std::map<uint32_t, uint32_t>::iterator tmp_iter = tmp_keyindex_freq_map.begin(); tmp_iter != tmp_keyindex_freq_map.end(); tmp_iter++)
-        {
-          tmp_keyindex_freq_vec.push_back(std::pair(tmp_iter->first, tmp_iter->second));
-        }
-        sort(tmp_keyindex_freq_vec.begin(), tmp_keyindex_freq_vec.end(), descendingSortByValue);
         std::vector<uint32_t> descending_sorted_key_indices;
-        for (uint32_t tmp_i = 0; tmp_i < tmp_keyindex_freq_vec.size(); tmp_i++)
-        {
-          descending_sorted_key_indices.push_back(tmp_keyindex_freq_vec[tmp_i].first);
-        }
+        getDescendingSortedKeyIndices_(tmp_default_key_indices, descending_sorted_key_indices);
+        tmp_ranked_key_indices_for_pool.push_back(descending_sorted_key_indices);
 
         // (3) Siyuan: generate probs based on Zipf's law mentioned in CacheLib paper
         const uint32_t tmp_rank_cnt = descending_sorted_key_indices.size(); // E.g., descending_sorted_key_indices[0] = A for the rank 1
@@ -461,12 +489,47 @@ void WorkloadGenerator::generateKeyDistributions() {
 
     perworkerKeyIndicesForPool_.push_back(tmp_key_indices_for_pool);
     perworkerKeyGenForPool_.push_back(tmp_key_gen_for_pool);
+
+    // Siyuan: For dynamic workload patterns
+    perworker_perpool_ranked_key_indices_.push_back(tmp_ranked_key_indices_for_pool);
   } // End of loop for each local client worker
 
   // Siyuan: disable unnecessary outputs
   //std::cout << folly::sformat("Generated access patterns in {:.2f} mins",
   //                            duration.count() / 60.)
   //          << std::endl;
+}
+
+void WorkloadGenerator::getDescendingSortedKeyIndices_(const std::vector<uint32_t>& key_indices, std::vector<uint32_t>& descending_sorted_key_indices)
+{
+  std::map<uint32_t, uint32_t> tmp_keyindex_freq_map;
+  for (uint32_t tmp_i = 0; tmp_i < key_indices.size(); tmp_i++)
+  {
+    const uint32_t tmp_keyindex = key_indices[tmp_i];
+    if (tmp_keyindex_freq_map.find(tmp_keyindex) == tmp_keyindex_freq_map.end())
+    {
+      tmp_keyindex_freq_map.insert(std::pair(tmp_keyindex, 1));
+    }
+    else
+    {
+      tmp_keyindex_freq_map[tmp_keyindex]++;
+    }
+  }
+
+  std::vector<std::pair<uint32_t, uint32_t>> tmp_keyindex_freq_vec;
+  for (std::map<uint32_t, uint32_t>::iterator tmp_iter = tmp_keyindex_freq_map.begin(); tmp_iter != tmp_keyindex_freq_map.end(); tmp_iter++)
+  {
+    tmp_keyindex_freq_vec.push_back(std::pair(tmp_iter->first, tmp_iter->second));
+  }
+  sort(tmp_keyindex_freq_vec.begin(), tmp_keyindex_freq_vec.end(), descendingSortByValue);
+
+  descending_sorted_key_indices.clear();
+  for (uint32_t tmp_i = 0; tmp_i < tmp_keyindex_freq_vec.size(); tmp_i++)
+  {
+    descending_sorted_key_indices.push_back(tmp_keyindex_freq_vec[tmp_i].first);
+  }
+
+  return;
 }
 
 bool WorkloadGenerator::descendingSortByValue(std::pair<uint32_t, uint32_t>& a, std::pair<uint32_t, uint32_t>& b)

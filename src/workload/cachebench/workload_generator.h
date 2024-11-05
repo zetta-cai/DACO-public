@@ -59,6 +59,11 @@ class WorkloadGenerator : public covered::GeneratorBase {
   virtual void quickDatasetPut(const std::string& key, const uint32_t& value_size) override;
   virtual void quickDatasetDel(const std::string& key) override;
 
+  // Siyuan: For dynamic workload patterns
+  virtual uint32_t getLargestRank(const uint32_t local_client_worker_idx, uint8_t poolId) override;
+  virtual void getRankedKeys(const uint32_t local_client_worker_idx, uint8_t poolId, const uint32_t start_rank, const uint32_t ranked_keycnt, std::vector<std::string>& ranked_keys) override;
+  virtual void getRandomKeys(const uint32_t local_client_worker_idx, uint8_t poolId, const uint32_t random_keycnt, std::vector<std::string>& random_keys) override;
+
  private:
   static const std::string kClassName;
 
@@ -68,6 +73,9 @@ class WorkloadGenerator : public covered::GeneratorBase {
   void generateKeyDistributions();
   // if there is only one workloadDistribution, use it for everything.
   size_t workloadIdx(size_t i) { return workloadDist_.size() > 1 ? i : 0; }
+
+  // Utility function
+  void getDescendingSortedKeyIndices_(const std::vector<uint32_t>& key_indices, std::vector<uint32_t>& descending_sorted_key_indices); // Siyuan: convert opscnt duplicate key indices into unique key indices sorted by descending order of freq
 
   static bool descendingSortByValue(std::pair<uint32_t, uint32_t>& a, std::pair<uint32_t, uint32_t>& b); // Siyuan: used to get object ranks from default workload distribution
 
@@ -88,6 +96,9 @@ class WorkloadGenerator : public covered::GeneratorBase {
   std::vector<std::vector<std::uniform_int_distribution<uint32_t>>> perworkerKeyGenForPool_; // local client worker index -> pool id -> uniform distribution to select key indices
 
   std::vector<WorkloadDistribution> workloadDist_; // Siyuan: only 1 workload dist due to 1 pool -> includes key size dist (for dataset items), value size dist (for dataset items), and operation disk (for workload items)
+
+  // Siyuan: For dynamic workload patterns
+  std::vector<std::vector<std::vector<uint32_t>>> perworker_perpool_ranked_key_indices_; // Siyuan: local client worker index -> pool id -> ranked key indices
   
   // Siyuan: average/min/max dataset key/value size
   double avg_dataset_keysize_;

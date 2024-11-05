@@ -140,6 +140,20 @@ namespace covered
         return;
     }
 
+    // Utility functions for dynamic workload patterns
+
+    void WorkloadWrapperBase::checkStartRank_(const uint32_t start_rank, const uint32_t largest_rank) const
+    {
+        if (start_rank < 0 || start_rank > largest_rank)
+        {
+            std::ostringstream oss;
+            oss << "invalid start_rank " << start_rank << " for largest_rank " << largest_rank << "!";
+            Util::dumpErrorMsg(base_instance_name_, oss.str());
+            exit(1);
+        }
+        return;
+    }
+
     // Getters for const shared variables coming from Param
 
     const uint32_t WorkloadWrapperBase::getClientcnt_() const

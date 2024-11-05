@@ -62,6 +62,11 @@ namespace covered
         virtual void overwriteWorkloadParameters_() override;
         virtual void createWorkloadGenerator_() override;
 
+        // Utility functions for dynamic workload patterns
+        virtual uint32_t getLargestRank_(const uint32_t local_client_worker_idx) override;
+        virtual void getRankedKeys_(const uint32_t local_client_worker_idx, const uint32_t start_rank, const uint32_t ranked_keycnt, std::vector<std::string>& ranked_keys) override;
+        virtual void getRandomKeys_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<std::string>& random_keys) override;
+
         // (1) Facebook-specific helper functions
 
         // For role of clients, dataset loader, and cloud

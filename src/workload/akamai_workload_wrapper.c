@@ -1,6 +1,7 @@
 #include "workload/akamai_workload_wrapper.h"
 
 #include <assert.h>
+#include <unordered_set>
 
 #include "common/config.h"
 #include "common/util.h"
@@ -35,13 +36,36 @@ namespace covered
         // For clients
         curclient_perworker_workload_objids_.resize(perclient_workercnt, std::vector<int64_t>());
         curclient_perworker_workloadidx_.resize(perclient_workercnt, 0);
+        curclient_perworker_ranked_objids_.resize(perclient_workercnt, std::vector<int64_t>());
+        curclient_perworker_dynamic_randgen_ptrs_.resize(perclient_workercnt, NULL);
+        curclient_perworker_dynamic_dist_ptrs_.resize(perclient_workercnt, NULL);
     }
 
     AkamaiWorkloadWrapper::~AkamaiWorkloadWrapper()
     {
         // For clients, dataset loader, and cloud
 
-        // Nothing to release
+        if (needWorkloadItems_()) // Clients
+        {
+            for (uint32_t i = 0; i < curclient_perworker_dynamic_randgen_ptrs_.size(); i++)
+            {
+                if (curclient_perworker_dynamic_randgen_ptrs_[i] != NULL)
+                {
+                    delete curclient_perworker_dynamic_randgen_ptrs_[i];
+                    curclient_perworker_dynamic_randgen_ptrs_[i] = NULL;
+                }
+            }
+
+            for (uint32_t i = 0; i < curclient_perworker_dynamic_dist_ptrs_.size(); i++)
+            {
+                if (curclient_perworker_dynamic_dist_ptrs_[i] != NULL)
+                {
+                    delete curclient_perworker_dynamic_dist_ptrs_[i];
+                    curclient_perworker_dynamic_dist_ptrs_[i] = NULL;
+                }
+            }
+        }
+
         return;
     }
 
@@ -220,10 +244,25 @@ namespace covered
             for (uint32_t tmp_local_client_worker_idx = 0; tmp_local_client_worker_idx < tmp_perclient_workercnt; tmp_local_client_worker_idx++)
             {
                 // Load workload items into curclient_perworker_workload_objids_[tmp_local_client_worker_idx]
+                // Also update ranked objids into curclient_perworker_ranked_objids_[tmp_local_client_worker_idx] (used for dynamic workload patterns)
                 loadWorkloadFile_(tmp_local_client_worker_idx);
 
                 // Start from the first workload item
                 curclient_perworker_workloadidx_[tmp_local_client_worker_idx] = 0;
+
+                // Create random generators to get random keys for dynamic workload patterns
+                uint32_t tmp_global_client_worker_idx = Util::getGlobalClientWorkerIdx(getClientIdx_(), tmp_local_client_worker_idx, getPerclientWorkercnt_());
+                std::mt19937_64* tmp_client_worker_dynamic_randgen_ptr_ = new std::mt19937_64(tmp_global_client_worker_idx + getWorkloadRandombase_());
+                if (tmp_client_worker_dynamic_randgen_ptr_ == NULL)
+                {
+                    Util::dumpErrorMsg(instance_name_, "failed to create a random generator for dynamic workload patterns!");
+                    exit(1);
+                }
+                curclient_perworker_dynamic_randgen_ptrs_[tmp_local_client_worker_idx] = tmp_client_worker_dynamic_randgen_ptr_;
+
+                // Create uniform distribution to get random keys for dynamic workload patterns
+                // NOTE: curclient_perworker_ranked_objids_[tmp_local_client_worker_idx] has already been set by loadWorkloadFile_() before
+                curclient_perworker_dynamic_dist_ptrs_[tmp_local_client_worker_idx] = new std::uniform_int_distribution<uint32_t>(0, curclient_perworker_ranked_objids_[tmp_local_client_worker_idx].size() - 1);
             }
         }
 
@@ -240,6 +279,75 @@ namespace covered
     void AkamaiWorkloadWrapper::createWorkloadGenerator_()
     {
         // NOT need pre-generated workload items for approximate workload distribution due to directly loadings workload items from workload files
+
+        return;
+    }
+
+    // Utility functions for dynamic workload patterns
+
+    uint32_t AkamaiWorkloadWrapper::getLargestRank_(const uint32_t local_client_worker_idx)
+    {
+        assert(local_client_worker_idx < curclient_perworker_ranked_objids_.size());
+        const std::vector<int64_t>& tmp_ranked_objids_const_ref = curclient_perworker_ranked_objids_[local_client_worker_idx];
+        return tmp_ranked_objids_const_ref.size() - 1;
+    }
+    
+    void AkamaiWorkloadWrapper::getRankedKeys_(const uint32_t local_client_worker_idx, const uint32_t start_rank, const uint32_t ranked_keycnt, std::vector<std::string>& ranked_keys)
+    {
+        // Get the const reference of current client worker's ranked objids
+        assert(local_client_worker_idx < curclient_perworker_ranked_objids_.size());
+        const std::vector<int64_t>& tmp_ranked_objids_const_ref = curclient_perworker_ranked_objids_[local_client_worker_idx];
+        const uint32_t tmp_ranked_objids_size = tmp_ranked_objids_const_ref.size();
+
+        // Check start_rank
+        checkStartRank_(start_rank, tmp_ranked_objids_size - 1);
+
+        // Get object IDs in [start_rank, start_rank + ranked_keycnt - 1] within the range of [0, tmp_ranked_objids_size - 1]
+        ranked_keys.clear();
+        for (int i = 0; i < ranked_keycnt; i++)
+        {
+            const uint32_t tmp_ranked_objid_idx = (start_rank + i) % tmp_ranked_objids_size;
+            const int64_t tmp_ranked_objid = tmp_ranked_objids_const_ref[tmp_ranked_objid_idx];
+            Key tmp_key = getKeyFromObjid_(tmp_ranked_objid);
+            ranked_keys.push_back(tmp_key.getKeystr());
+        }
+
+        return;
+    }
+
+    void AkamaiWorkloadWrapper::getRandomKeys_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<std::string>& random_keys)
+    {
+        // Get the const reference of current client worker's ranked objids
+        assert(local_client_worker_idx < curclient_perworker_ranked_objids_.size());
+        const std::vector<int64_t>& tmp_ranked_objids_const_ref = curclient_perworker_ranked_objids_[local_client_worker_idx];
+        const uint32_t tmp_ranked_objids_size = tmp_ranked_objids_const_ref.size();
+
+        // Get the random generator
+        assert(local_client_worker_idx < curclient_perworker_dynamic_randgen_ptrs_.size());
+        std::mt19937_64* tmp_randgen_ptr = curclient_perworker_dynamic_randgen_ptrs_[local_client_worker_idx];
+        assert(tmp_randgen_ptr != NULL);
+
+        // Get the uniform distribution
+        assert(local_client_worker_idx < curclient_perworker_dynamic_dist_ptrs_.size());
+        std::uniform_int_distribution<uint32_t>* tmp_dist_ptr = curclient_perworker_dynamic_dist_ptrs_[local_client_worker_idx];
+        assert(tmp_dist_ptr != NULL);
+
+        // Get random object IDs without duplication
+        std::unordered_set<int64_t> tmp_random_objids_set;
+        while (tmp_random_objids_set.size() < random_keycnt)
+        {
+            const uint32_t tmp_rand_idx = (*tmp_dist_ptr)(*tmp_randgen_ptr);
+            const int64_t tmp_rand_objid = tmp_ranked_objids_const_ref[tmp_rand_idx];
+            tmp_random_objids_set.insert(tmp_rand_objid);
+        }
+
+        // Set random keys
+        random_keys.clear();
+        for (std::unordered_set<int64_t>::const_iterator it = tmp_random_objids_set.begin(); it != tmp_random_objids_set.end(); it++)
+        {
+            Key tmp_key = getKeyFromObjid_(*it);
+            random_keys.push_back(tmp_key.getKeystr());
+        }
 
         return;
     }
@@ -359,6 +467,9 @@ namespace covered
 
         std::vector<int64_t>& curclient_curworker_workload_objids_ref = curclient_perworker_workload_objids_[local_client_worker_index];
 
+        // Count objid-freq map (used for dynamic workload patterns)
+        std::unordered_map<int64_t, uint32_t> tmp_freqmap;
+
         // Read workload file line by line
         std::fstream* fs_ptr = Util::openFile(tmp_workload_filepath, std::ios_base::in);
         assert(fs_ptr != NULL);
@@ -379,7 +490,18 @@ namespace covered
                 assert(objid >= 0);
 
                 // Update workload objid of the local client worker in current client
-                curclient_curworker_workload_objids_ref.push_back(objid);   
+                curclient_curworker_workload_objids_ref.push_back(objid);  
+
+                // Update obj-freq map
+                std::unordered_map<int64_t, uint32_t>::iterator tmp_freqmap_iter = tmp_freqmap.find(objid);
+                if (tmp_freqmap_iter == tmp_freqmap.end())
+                {
+                    tmp_freqmap[objid] = 1;
+                }
+                else
+                {
+                    tmp_freqmap[objid]++;
+                }
             }
 
             // Check if achieving the end of the file
@@ -387,6 +509,20 @@ namespace covered
             {
                 break;
             }
+        }
+
+        // Get freq-objid sorted map (sorted by freq in a descending order)
+        std::multimap<uint32_t, int64_t, std::greater<uint32_t>> tmp_freqmap_sorted;
+        for (std::unordered_map<int64_t, uint32_t>::iterator tmp_freqmap_iter = tmp_freqmap.begin(); tmp_freqmap_iter != tmp_freqmap.end(); tmp_freqmap_iter++)
+        {
+            tmp_freqmap_sorted.insert(std::pair<uint32_t, int64_t>(tmp_freqmap_iter->second, tmp_freqmap_iter->first));
+        }
+
+        // Update ranked objids of the local client worker in current client (used for dynamic workload patterns)
+        std::vector<int64_t>& curclient_curworker_ranked_objids_ref = curclient_perworker_ranked_objids_[local_client_worker_index];
+        for (std::multimap<uint32_t, int64_t>::iterator tmp_freqmap_sorted_iter = tmp_freqmap_sorted.begin(); tmp_freqmap_sorted_iter != tmp_freqmap_sorted.end(); tmp_freqmap_sorted_iter++)
+        {
+            curclient_curworker_ranked_objids_ref.push_back(tmp_freqmap_sorted_iter->second);
         }
 
         // Close file and release ifstream
@@ -440,7 +576,7 @@ namespace covered
         // Get the keystr (8B)
         std::string tmp_keystr((const char*)&objid, objid_bytecnt); // 8B
 
-        return tmp_keystr;
+        return Key(tmp_keystr);
     }
 
     int64_t AkamaiWorkloadWrapper::getObjidFromKey_(const Key& key) const
