@@ -315,18 +315,56 @@ namespace covered
 
     uint32_t FacebookWorkloadWrapper::getLargestRank_(const uint32_t local_client_worker_idx)
     {
-        return workload_generator_->getLargestRank(local_client_worker_idx, 0); // poolId MUST be 0
+        checkDynamicPatterns_();
+
+        const std::vector<uint32_t>& tmp_ranked_key_indices_const_ref = workload_generator_->getRankedKeyIndicesConstRef(local_client_worker_idx, 0); // poolId MUST be 0
+        return tmp_ranked_key_indices_const_ref.size() - 1; // poolId MUST be 0
     }
 
     void FacebookWorkloadWrapper::getRankedKeys_(const uint32_t local_client_worker_idx, const uint32_t start_rank, const uint32_t ranked_keycnt, std::vector<std::string>& ranked_keys)
     {
-        workload_generator_->getRankedKeys(local_client_worker_idx, 0, start_rank, ranked_keycnt, ranked_keys); // poolId MUST be 0
+        checkDynamicPatterns_();
+
+        // Get ranked indexes
+        std::vector<uint32_t> tmp_ranked_idxes;
+        getRankedIdxes_(local_client_worker_idx, start_rank, ranked_keycnt, tmp_ranked_idxes);
+
+        // Get the const reference of current client worker's ranked key indices
+        const std::vector<uint32_t>& tmp_ranked_key_indices_const_ref = workload_generator_->getRankedKeyIndicesConstRef(local_client_worker_idx, 0); // poolId MUST be 0
+
+        // Set ranked keys based on the ranked indexes
+        ranked_keys.clear();
+        for (int i = 0; i < tmp_ranked_idxes.size(); i++)
+        {
+            const uint32_t tmp_ranked_key_indices_idx = tmp_ranked_idxes[i];
+            const uint32_t tmp_ranked_key_indice = tmp_ranked_key_indices_const_ref[tmp_ranked_key_indices_idx];
+            ranked_keys.push_back(workload_generator_->getDatasetReq(tmp_ranked_key_indice).key);
+        }
+
         return;
     }
 
     void FacebookWorkloadWrapper::getRandomKeys_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<std::string>& random_keys)
     {
-        // TODO
+        checkDynamicPatterns_();
+
+        // Get random indexes
+        std::vector<uint32_t> tmp_random_idxes;
+        getRandomIdxes_(local_client_worker_idx, random_keycnt, tmp_random_idxes);
+
+        // Get the const reference of current client worker's ranked key indices
+        const std::vector<uint32_t>& tmp_ranked_key_indices_const_ref = workload_generator_->getRankedKeyIndicesConstRef(local_client_worker_idx, 0); // poolId MUST be 0
+
+        // Set random keys based on the random indexes
+        random_keys.clear();
+        for (int i = 0; i < tmp_random_idxes.size(); i++)
+        {
+            const uint32_t tmp_rand_key_indices_idx = tmp_random_idxes[i];
+            const int64_t tmp_rand_key_indice = tmp_ranked_key_indices_const_ref[tmp_rand_key_indices_idx];
+            random_keys.push_back(workload_generator_->getDatasetReq(tmp_rand_key_indice).key);
+        }
+
+        return;
     }
 
     // (1) For the role of clients, dataset loader, and cloud

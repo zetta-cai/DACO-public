@@ -89,7 +89,7 @@ namespace covered
     //     return workload_ptr;
     // }
 
-    WorkloadWrapperBase::WorkloadWrapperBase(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const std::string& workload_pattern_name, const uint32_t& dynamic_change_period, const uint32_t& dynamic_change_keycnt, const uint32_t& workload_randombase) : clientcnt_(clientcnt), client_idx_(client_idx), perclient_opcnt_(perclient_opcnt), perclient_workercnt_(perclient_workercnt), keycnt_(keycnt), workload_name_(workload_name), workload_usage_role_(workload_usage_role), workload_pattern_name_(workload_pattern_name), dynamic_change_period_(dynamic_change_period), dynamic_change_keycnt(dynamic_change_keycnt), workload_randombase_(workload_randombase)
+    WorkloadWrapperBase::WorkloadWrapperBase(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const std::string& workload_pattern_name, const uint32_t& dynamic_change_period, const uint32_t& dynamic_change_keycnt, const uint32_t& workload_randombase) : clientcnt_(clientcnt), client_idx_(client_idx), perclient_opcnt_(perclient_opcnt), perclient_workercnt_(perclient_workercnt), keycnt_(keycnt), workload_name_(workload_name), workload_usage_role_(workload_usage_role), workload_pattern_name_(workload_pattern_name), dynamic_change_period_(dynamic_change_period), dynamic_change_keycnt_(dynamic_change_keycnt), workload_randombase_(workload_randombase)
     {
         // Differentiate workload generator in different clients
         std::ostringstream oss;
@@ -115,9 +115,37 @@ namespace covered
             Util::dumpErrorMsg(base_instance_name_, oss.str());
             exit(1);
         }
+
+        curclient_perworker_dynamic_randgen_ptrs_.resize(perclient_workercnt, NULL);
+        curclient_perworker_dynamic_dist_ptrs_.resize(perclient_workercnt, NULL);
     }
 
-    WorkloadWrapperBase::~WorkloadWrapperBase() {}
+    WorkloadWrapperBase::~WorkloadWrapperBase()
+    {
+        if (needWorkloadItems_()) // Clients
+        {
+            if (Util::isDynamicWorkloadPattern(workload_pattern_name_)) // Dynamic patterns
+            {
+                for (uint32_t i = 0; i < curclient_perworker_dynamic_randgen_ptrs_.size(); i++)
+                {
+                    if (curclient_perworker_dynamic_randgen_ptrs_[i] != NULL)
+                    {
+                        delete curclient_perworker_dynamic_randgen_ptrs_[i];
+                        curclient_perworker_dynamic_randgen_ptrs_[i] = NULL;
+                    }
+                }
+
+                for (uint32_t i = 0; i < curclient_perworker_dynamic_dist_ptrs_.size(); i++)
+                {
+                    if (curclient_perworker_dynamic_dist_ptrs_[i] != NULL)
+                    {
+                        delete curclient_perworker_dynamic_dist_ptrs_[i];
+                        curclient_perworker_dynamic_dist_ptrs_[i] = NULL;
+                    }
+                }
+            }
+        }
+    }
 
     void WorkloadWrapperBase::validate()
     {
@@ -131,6 +159,9 @@ namespace covered
             overwriteWorkloadParameters_();
             createWorkloadGenerator_();
 
+            // NOTE: key rank information has already been set in the above steps
+            prepareForDynamicPatterns_();
+
             is_valid_ = true;
         }
         else
@@ -140,10 +171,49 @@ namespace covered
         return;
     }
 
+    void WorkloadWrapperBase::prepareForDynamicPatterns_()
+    {
+        if (needWorkloadItems_()) // Clients
+        {
+            if (Util::isDynamicWorkloadPattern(workload_pattern_name_)) // Dynamic patterns
+            {
+                for (uint32_t tmp_local_client_worker_idx = 0; tmp_local_client_worker_idx < perclient_workercnt_; tmp_local_client_worker_idx++)
+                {
+                    // Create random generators to get random keys for dynamic workload patterns
+                    uint32_t tmp_global_client_worker_idx = Util::getGlobalClientWorkerIdx(getClientIdx_(), tmp_local_client_worker_idx, getPerclientWorkercnt_());
+                    std::mt19937_64* tmp_client_worker_dynamic_randgen_ptr_ = new std::mt19937_64(tmp_global_client_worker_idx + workload_randombase_);
+                    if (tmp_client_worker_dynamic_randgen_ptr_ == NULL)
+                    {
+                        Util::dumpErrorMsg(base_instance_name_, "failed to create a random generator for dynamic workload patterns!");
+                        exit(1);
+                    }
+                    curclient_perworker_dynamic_randgen_ptrs_[tmp_local_client_worker_idx] = tmp_client_worker_dynamic_randgen_ptr_;
+
+                    // Create uniform distribution to get random keys for dynamic workload patterns
+                    // NOTE: rank information has already been set in validate() before this function
+                    const uint32_t tmp_largest_rank = getLargestRank_(tmp_local_client_worker_idx);
+                    curclient_perworker_dynamic_dist_ptrs_[tmp_local_client_worker_idx] = new std::uniform_int_distribution<uint32_t>(0, tmp_largest_rank);
+                }
+            }
+        }
+        return;
+    }
+
     // Utility functions for dynamic workload patterns
 
-    void WorkloadWrapperBase::checkStartRank_(const uint32_t start_rank, const uint32_t largest_rank) const
+    void WorkloadWrapperBase::checkDynamicPatterns_() const
     {
+        assert(needWorkloadItems_()); // Clients
+        assert(Util::isDynamicWorkloadPattern(workload_pattern_name_)); // Dynamic patterns
+        return;
+    }
+
+    void WorkloadWrapperBase::getRankedIdxes_(const uint32_t local_client_worker_idx, const uint32_t start_rank, const uint32_t ranked_keycnt, std::vector<uint32_t>& ranked_idxes)
+    {
+        checkDynamicPatterns_();
+
+        // Check start_rank
+        const uint32_t largest_rank = getLargestRank_(local_client_worker_idx);
         if (start_rank < 0 || start_rank > largest_rank)
         {
             std::ostringstream oss;
@@ -151,6 +221,47 @@ namespace covered
             Util::dumpErrorMsg(base_instance_name_, oss.str());
             exit(1);
         }
+
+        // Get indexes of [start_rank, start_rank + ranked_keycnt - 1] within the range of [0, largest_rank]
+        ranked_idxes.clear();
+        for (int i = 0; i < ranked_keycnt; i++)
+        {
+            const uint32_t tmp_ranked_idx = (start_rank + i) % (largest_rank + 1);
+            ranked_idxes.push_back(tmp_ranked_idx);
+        }
+
+        return;
+    }
+
+    void WorkloadWrapperBase::getRandomIdxes_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<uint32_t>& random_idxes)
+    {
+        checkDynamicPatterns_();
+
+        // Get the random generator
+        assert(local_client_worker_idx < curclient_perworker_dynamic_randgen_ptrs_.size());
+        std::mt19937_64* tmp_randgen_ptr = curclient_perworker_dynamic_randgen_ptrs_[local_client_worker_idx];
+        assert(tmp_randgen_ptr != NULL);
+
+        // Get the uniform distribution
+        assert(local_client_worker_idx < curclient_perworker_dynamic_dist_ptrs_.size());
+        std::uniform_int_distribution<uint32_t>* tmp_dist_ptr = curclient_perworker_dynamic_dist_ptrs_[local_client_worker_idx];
+        assert(tmp_dist_ptr != NULL);
+
+        // Get random indexes without duplication
+        std::unordered_set<uint32_t> tmp_random_idxes_set;
+        while (tmp_random_idxes_set.size() < random_keycnt)
+        {
+            const uint32_t tmp_rand_idx = (*tmp_dist_ptr)(*tmp_randgen_ptr);
+            tmp_random_idxes_set.insert(tmp_rand_idx);
+        }
+
+        // Set random indexes
+        random_idxes.clear();
+        for (std::unordered_set<uint32_t>::const_iterator it = tmp_random_idxes_set.begin(); it != tmp_random_idxes_set.end(); it++)
+        {
+            random_idxes.push_back(*it);
+        }
+
         return;
     }
 

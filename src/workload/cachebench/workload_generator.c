@@ -153,43 +153,11 @@ void WorkloadGenerator::quickDatasetDel(const std::string& key)
 
 // Siyuan: For dynamic workload patterns
 
-uint32_t WorkloadGenerator::getLargestRank(const uint32_t local_client_worker_idx, uint8_t poolId)
+const std::vector<uint32_t>& WorkloadGenerator::getRankedKeyIndicesConstRef(const uint32_t local_client_worker_idx, const uint8_t poolId)
 {
   // Get the const reference of current client worker's ranked key indices
   assert(local_client_worker_idx < perworker_perpool_ranked_key_indices_.size());
-  const std::vector<uint32_t>& tmp_ranked_key_indices_const_ref = perworker_perpool_ranked_key_indices_[local_client_worker_idx][poolId];
-  const uint32_t tmp_ranked_key_indices_size = tmp_ranked_key_indices_const_ref.size();
-
-  // Get the largest rank
-  return tmp_ranked_key_indices_size - 1;
-}
-
-void WorkloadGenerator::getRankedKeys(const uint32_t local_client_worker_idx, uint8_t poolId, const uint32_t start_rank, const uint32_t ranked_keycnt, std::vector<std::string>& ranked_keys)
-{
-  // Get the const reference of current client worker's ranked key indices
-  assert(local_client_worker_idx < perworker_perpool_ranked_key_indices_.size());
-  const std::vector<uint32_t>& tmp_ranked_key_indices_const_ref = perworker_perpool_ranked_key_indices_[local_client_worker_idx][poolId];
-  const uint32_t tmp_ranked_key_indices_size = tmp_ranked_key_indices_const_ref.size();
-
-  // Check start_rank
-  assert(start_rank >= 0);
-  assert(start_rank < tmp_ranked_key_indices_size);
-
-  // Get object IDs in [start_rank, start_rank + ranked_keycnt - 1] within the range of [0, tmp_ranked_objids_size - 1]
-  ranked_keys.clear();
-  for (int i = 0; i < ranked_keycnt; i++)
-  {
-      const uint32_t tmp_ranked_key_indices_idx = (start_rank + i) % tmp_ranked_key_indices_size;
-      const uint32_t tmp_ranked_key_indice = tmp_ranked_key_indices_const_ref[tmp_ranked_key_indices_idx];
-      ranked_keys.push_back(reqs_[tmp_ranked_key_indice].key);
-  }
-
-  return;
-}
-
-void WorkloadGenerator::getRandomKeys(const uint32_t local_client_worker_idx, uint8_t poolId, const uint32_t random_keycnt, std::vector<std::string>& random_keys)
-{
-  // TODO
+  return perworker_perpool_ranked_key_indices_[local_client_worker_idx][poolId];
 }
 
 void WorkloadGenerator::generateKeys() {

@@ -61,6 +61,7 @@ namespace covered
         virtual void initWorkloadParameters_() = 0; // initialize workload parameters (e.g., by default or by loading config file)
         virtual void overwriteWorkloadParameters_() = 0; // overwrite some workload patermers based on covered::Config and covered::Param
         virtual void createWorkloadGenerator_() = 0; // create workload generator based on overwritten workload parameters
+        void prepareForDynamicPatterns_(); // prepare for dynamic workload patterns
 
         // Utility functions for dynamic workload patterns
         virtual uint32_t getLargestRank_(const uint32_t local_client_worker_idx) = 0;
@@ -86,9 +87,15 @@ namespace covered
         const std::string workload_pattern_name_;
         const uint32_t dynamic_change_period_;
         const uint32_t dynamic_change_keycnt_;
+
+        // To generate random indexes and hence keys for dynamic workload patterns
+        std::vector<std::mt19937_64*> curclient_perworker_dynamic_randgen_ptrs_; // Random generators to get random keys from ranked object IDs (used for dynamic workload patterns)
+        std::vector<std::uniform_int_distribution<uint32_t>*> curclient_perworker_dynamic_dist_ptrs_; // Uniform distributions to get random keys from ranked object IDs (used for dynamic workload patterns)
     protected:
         // Utility functions for dynamic workload patterns
-        void checkStartRank_(const uint32_t start_rank, const uint32_t largest_rank) const;
+        void checkDynamicPatterns_() const;
+        void getRankedIdxes_(const uint32_t local_client_worker_idx, const uint32_t start_rank, const uint32_t ranked_keycnt, std::vector<uint32_t>& ranked_idxes);
+        void getRandomIdxes_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<uint32_t>& random_idxes);
 
         // Getters for const shared variables coming from Param
         // ONLY for clients
