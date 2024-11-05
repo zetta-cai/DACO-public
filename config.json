@@ -13,6 +13,7 @@
     "covered_local_uncached_lru_max_ratio": 0.01,
     "covered_popularity_aggregation_max_mem_usage_ratio": 0.01,
     "dataset_loader_sleep_for_compaction_sec": 60,
+    "dynamic_rulecnt": 10000,
     "edge_beacon_server_recvreq_startport": 4500,
     "edge_beacon_server_recvrsp_startport": 4600,
     "edge_cache_server_data_request_buffer_size": 10000,

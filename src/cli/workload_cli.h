@@ -25,6 +25,10 @@ namespace covered
         std::string getWorkloadName() const;
         float getZipfAlpha() const;
 
+        std::string getWorkloadPatternName() const;
+        uint32_t getDynamicChangePeriod() const;
+        uint32_t getDynamicChangeKeycnt() const;
+
         std::string toCliString(); // NOT virtual for cilutil
         virtual void clearIsToCliString(); // Idempotent operation: clear is_to_cli_string_ for the next toCliString()
     private:
@@ -32,9 +36,14 @@ namespace covered
         static const std::string DEFAULT_WORKLOAD_NAME;
         static const float DEFAULT_ZIPF_ALPHA;
 
+        static const std::string DEFAULT_WORKLOAD_PATTERN_NAME;
+        static const uint32_t DEFAULT_DYNAMIC_CHANGE_PERIOD;
+        static const uint32_t DEFAULT_DYNAMIC_CHANGE_KEYCNT;
+
         static const std::string kClassName;
 
         void checkWorkloadName_() const;
+        void checkWorkloadPatternName_() const;
         void verifyIntegrity_(const std::string& main_class_name) const;
 
         bool is_add_cli_parameters_;
@@ -46,6 +55,11 @@ namespace covered
         uint32_t keycnt_;
         std::string workload_name_;
         float zipf_alpha_;
+
+        // For dynamic workload patterns
+        std::string workload_pattern_name_; // Patterns: static or dynamic (hotin, hotout, and random)
+        uint32_t dynamic_change_period_; // In units of seconds
+        uint32_t dynamic_change_keycnt_; // The number of changed keys for each dynamic change period
     protected:
         virtual void addCliParameters_() override;
         virtual void setParamAndConfig_(const std::string& main_class_name) override;

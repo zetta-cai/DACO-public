@@ -84,6 +84,7 @@ namespace covered
     const std::string Config::COVERED_LOCAL_UNCACHED_LRU_MAX_RATIO_KEYSTR("covered_local_uncached_lru_max_ratio");
     const std::string Config::COVERED_POPULARITY_AGGREGATION_MAX_MEM_USAGE_RATIO_KEYSTR("covered_popularity_aggregation_max_mem_usage_ratio");
     const std::string Config::DATASET_LOADER_SLEEP_FOR_COMPACTION_SEC_KEYSTR("dataset_loader_sleep_for_compaction_sec");
+    const std::string Config::DYNAMIC_RULECNT_KEYSTR("dynamic_rulecnt");
     const std::string Config::EDGE_BEACON_SERVER_RECVREQ_STARTPORT_KEYSTR("edge_beacon_server_recvreq_startport");
     const std::string Config::EDGE_BEACON_SERVER_RECVRSP_STARTPORT_KEYSTR("edge_beacon_server_recvrsp_startport");
     const std::string Config::EDGE_CACHE_SERVER_DATA_REQUEST_BUFFER_SIZE_KEYSTR("edge_cache_server_data_request_buffer_size");
@@ -148,6 +149,7 @@ namespace covered
     double Config::covered_local_uncached_lru_max_ratio_ = 0.01;
     double Config::covered_popularity_aggregation_max_mem_usage_ratio_ = 0.01;
     uint32_t Config::dataset_loader_sleep_for_compaction_sec_ = 30;
+    uint32_t Config::dynamic_rulecnt_ = 10000;
     uint16_t Config::edge_beacon_server_recvreq_startport_ = 4500; // [4096, 65536]
     uint16_t Config::edge_beacon_server_recvrsp_startport_ = 4600; // [4096, 65536]
     uint32_t Config::edge_cache_server_data_request_buffer_size_ = 10000;
@@ -276,6 +278,12 @@ namespace covered
                 {
                     int64_t tmp_sec = kv_ptr->value().get_int64();
                     dataset_loader_sleep_for_compaction_sec_ = Util::toUint32(tmp_sec);
+                }
+                kv_ptr = find_(DYNAMIC_RULECNT_KEYSTR);
+                if (kv_ptr != NULL)
+                {
+                    int64_t tmp_rulecnt = kv_ptr->value().get_int64();
+                    dynamic_rulecnt_ = Util::toUint32(tmp_rulecnt);
                 }
                 tryToFindStartport_(EDGE_BEACON_SERVER_RECVREQ_STARTPORT_KEYSTR, &edge_beacon_server_recvreq_startport_);
                 tryToFindStartport_(EDGE_BEACON_SERVER_RECVRSP_STARTPORT_KEYSTR, &edge_beacon_server_recvrsp_startport_);
@@ -634,6 +642,12 @@ namespace covered
     {
         checkIsValid_();
         return dataset_loader_sleep_for_compaction_sec_;
+    }
+
+    uint32_t Config::getDynamicRulecnt()
+    {
+        checkIsValid_();
+        return dynamic_rulecnt_;
     }
 
     uint16_t Config::getEdgeBeaconServerRecvreqStartport()
@@ -1127,6 +1141,7 @@ namespace covered
         oss << "Covered local uncached LRU max ratio: " << covered_local_uncached_lru_max_ratio_ << std::endl; // ONLY used by COVERED
         oss << "Covered popularity aggregation max mem usage ratio: " << covered_popularity_aggregation_max_mem_usage_ratio_ << std::endl; // ONLY used by COVERED
         oss << "Dataset loader sleep for compaction seconds: " << dataset_loader_sleep_for_compaction_sec_ << std::endl;
+        oss << "Dynamic rulecnt: " << dynamic_rulecnt_ << std::endl;
         oss << "Edge beacon server recvreq startport: " << edge_beacon_server_recvreq_startport_ << std::endl;
         oss << "Edge cache server data request buffer size: " << edge_cache_server_data_request_buffer_size_ << std::endl;
         oss << "Edge cache server recvreq startport: " << edge_cache_server_recvreq_startport_ << std::endl;

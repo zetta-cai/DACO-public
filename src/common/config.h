@@ -67,6 +67,7 @@ namespace covered
         static const std::string COVERED_LOCAL_UNCACHED_LRU_MAX_RATIO_KEYSTR;
         static const std::string COVERED_POPULARITY_AGGREGATION_MAX_MEM_USAGE_RATIO_KEYSTR;
         static const std::string DATASET_LOADER_SLEEP_FOR_COMPACTION_SEC_KEYSTR;
+        static const std::string DYNAMIC_RULECNT_KEYSTR;
         static const std::string EDGE_BEACON_SERVER_RECVREQ_STARTPORT_KEYSTR;
         static const std::string EDGE_BEACON_SERVER_RECVRSP_STARTPORT_KEYSTR;
         static const std::string EDGE_CACHE_SERVER_DATA_REQUEST_BUFFER_SIZE_KEYSTR;
@@ -128,6 +129,7 @@ namespace covered
         static double getCoveredLocalUncachedLruMaxRatio();
         static double getCoveredPopularityAggregationMaxMemUsageRatio();
         static uint32_t getDatasetLoaderSleepForCompactionSec();
+        static uint32_t getDynamicRulecnt();
         static uint16_t getEdgeBeaconServerRecvreqStartport();
         static uint16_t getEdgeBeaconServerRecvrspStartport();
         static uint32_t getEdgeCacheServerDataRequestBufferSize();
@@ -226,6 +228,7 @@ namespace covered
         static double covered_local_uncached_lru_max_ratio_; // The maximum memory usage ratio for local uncached LRU (ONLY used for COVERED if enabled)
         static double covered_popularity_aggregation_max_mem_usage_ratio_; // The maximum memory usage ratio for popularity aggregation (ONLY used by COVERED)
         static uint32_t dataset_loader_sleep_for_compaction_sec_; // Sleep time for dataset loader to wait for compaction in units of seconds
+        static uint32_t dynamic_rulecnt_; // The number of rules maintained by workload wrapper for dynamic workload patterns (NOTE: under skewed workloads, dynamic_rulecnt_ does NOT need to be too large; otherwise it will incur large rule update overhead under dynamic workload patterns)
         static uint16_t edge_beacon_server_recvreq_startport_; // Start UDP port for edge beacon server to receive cooperation control requests
         static uint16_t edge_beacon_server_recvrsp_startport_; // Start UDP port for edge beacon server to receive cooperation control responses
         static uint32_t edge_cache_server_data_request_buffer_size_; // Buffer size for edge cache server to store local/redirected data requests (for cache server workers and processors; placement processor has a message ring buffer and local admission ring buffer)

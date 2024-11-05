@@ -10,6 +10,10 @@ namespace covered
     const std::string WorkloadCLI::DEFAULT_WORKLOAD_NAME = "facebook"; // NOTE: NOT use UTil::FACEBOOK_WORKLOAD_NAME due to undefined initialization order of C++ static variables
     const float WorkloadCLI::DEFAULT_ZIPF_ALPHA = 0.0; // Zipfian distribution parameter
 
+    const std::string WorkloadCLI::DEFAULT_WORKLOAD_PATTERN_NAME = "static"; // Static workload pattern by default
+    const uint32_t WorkloadCLI::DEFAULT_DYNAMIC_CHANGE_PERIOD = 10; // 10 seconds for dynamic workload pattern
+    const uint32_t WorkloadCLI::DEFAULT_DYNAMIC_CHANGE_KEYCNT = 200; // 200 changed keys for each dynamic change period
+
     const std::string WorkloadCLI::kClassName("WorkloadCLI");
 
     WorkloadCLI::WorkloadCLI() : CLIBase(), is_add_cli_parameters_(false), is_set_param_and_config_(false), is_dump_cli_parameters_(false), is_to_cli_string_(false)
@@ -17,6 +21,10 @@ namespace covered
         keycnt_ = 0;
         workload_name_ = "";
         zipf_alpha_ = 0.0;
+
+        workload_pattern_name_ = "";
+        dynamic_change_period_ = 0;
+        dynamic_change_keycnt_ = 0;
     }
 
     WorkloadCLI::~WorkloadCLI() {}
@@ -34,6 +42,21 @@ namespace covered
     float WorkloadCLI::getZipfAlpha() const
     {
         return zipf_alpha_;
+    }
+
+    std::string WorkloadCLI::getWorkloadPatternName() const
+    {
+        return workload_pattern_name_;
+    }
+
+    uint32_t WorkloadCLI::getDynamicChangePeriod() const
+    {
+        return dynamic_change_period_;
+    }
+
+    uint32_t WorkloadCLI::getDynamicChangeKeycnt() const
+    {
+        return dynamic_change_keycnt_;
     }
 
     std::string WorkloadCLI::toCliString()
@@ -58,6 +81,18 @@ namespace covered
             if (zipf_alpha_ != DEFAULT_ZIPF_ALPHA)
             {
                 oss << " --zipf_alpha " << zipf_alpha_;
+            }
+            if (workload_pattern_name_ != DEFAULT_WORKLOAD_PATTERN_NAME)
+            {
+                oss << " --workload_pattern_name " << workload_pattern_name_;
+            }
+            if (dynamic_change_period_ != DEFAULT_DYNAMIC_CHANGE_PERIOD)
+            {
+                oss << " --dynamic_change_period " << dynamic_change_period_;
+            }
+            if (dynamic_change_keycnt_ != DEFAULT_DYNAMIC_CHANGE_KEYCNT)
+            {
+                oss << " --dynamic_change_keycnt " << dynamic_change_keycnt_;
             }
 
             is_to_cli_string_ = true;
@@ -88,11 +123,16 @@ namespace covered
             std::string workload_name_descstr = "workload name (e.g., " + Util::FACEBOOK_WORKLOAD_NAME + ", " + Util::ZIPF_FACEBOOK_WORKLOAD_NAME + ", " + Util::ZIPF_WIKIPEDIA_IMAGE_WORKLOAD_NAME + ", " + Util::ZIPF_WIKIPEDIA_TEXT_WORKLOAD_NAME + ", " + Util::ZIPF_TENCENT_PHOTO1_WORKLOAD_NAME + ", " + Util::ZIPF_TENCENT_PHOTO2_WORKLOAD_NAME + ", " + Util::ZIPF_FBPHOTO_WORKLOAD_NAME + ", " + Util::ZIPF_TWITTERKV2_WORKLOAD_NAME + ", and " + Util::ZIPF_TWITTERKV4_WORKLOAD_NAME + ")";
             std::string zipf_alpha_descstr = "Zipf's law alpha (ONLY for the workload of " + Util::ZIPF_FACEBOOK_WORKLOAD_NAME + ")"; // NOTE: zipf_alpha does NOT affect zipf_wikiimage/wikitext/tencentphoto1/tencentphoto2, whose Zipfian constants are fixed
 
+            std::string workload_pattern_name_descstr = "workload pattern name (e.g., " + Util::STATIC_WORKLOAD_PATTERN_NAME + ", " + Util::HOTIN_WORKLOAD_PATTERN_NAME + ", " + Util::HOTOUT_WORKLOAD_PATTERN_NAME + ", and " + Util::RANDOM_WORKLOAD_PATTERN_NAME + ")";
+
             // Dynamic configurations for client
             argument_desc_.add_options()
                 ("keycnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_KEYCNT), keycnt_descstr.c_str())
                 ("workload_name", boost::program_options::value<std::string>()->default_value(DEFAULT_WORKLOAD_NAME), workload_name_descstr.c_str())
                 ("zipf_alpha", boost::program_options::value<float>()->default_value(DEFAULT_ZIPF_ALPHA), zipf_alpha_descstr.c_str())
+                ("workload_pattern_name", boost::program_options::value<std::string>()->default_value(DEFAULT_WORKLOAD_PATTERN_NAME), workload_pattern_name_descstr.c_str())
+                ("dynamic_change_period", boost::program_options::value<uint32_t>()->default_value(DEFAULT_DYNAMIC_CHANGE_PERIOD), "the period of changing dynamic rules (in units of seconds)")
+                ("dynamic_change_keycnt", boost::program_options::value<uint32_t>()->default_value(DEFAULT_DYNAMIC_CHANGE_KEYCNT), "the number of changed keys for each dynamic change period");
             ;
 
             is_add_cli_parameters_ = true;
@@ -113,6 +153,10 @@ namespace covered
             std::string workload_name = argument_info_["workload_name"].as<std::string>();
             float zipf_alpha = argument_info_["zipf_alpha"].as<float>();
 
+            std::string workload_pattern_name = argument_info_["workload_pattern_name"].as<std::string>();
+            uint32_t dynamic_change_period = argument_info_["dynamic_change_period"].as<uint32_t>();
+            uint32_t dynamic_change_keycnt = argument_info_["dynamic_change_keycnt"].as<uint32_t>();
+
             // Store workload CLI parameters for dynamic configurations
             if (main_class_name == Util::TRACE_PREPROCESSOR_MAIN_NAME) // (OBSOLETE due to no geographical information of replayed workloads) Replayed workloads are NOT preprocessed yet
             {
@@ -130,6 +174,10 @@ namespace covered
             workload_name_ = workload_name;
             zipf_alpha_ = zipf_alpha;
 
+            workload_pattern_name_ = workload_pattern_name;
+            dynamic_change_period_ = dynamic_change_period;
+            dynamic_change_keycnt_ = dynamic_change_keycnt;
+
             is_set_param_and_config_ = true;
         }
 
@@ -143,6 +191,7 @@ namespace covered
             CLIBase::verifyAndDumpCliParameters_(main_class_name);
 
             checkWorkloadName_();
+            checkWorkloadPatternName_();
             verifyIntegrity_(main_class_name);
 
             // (6) Dump stored CLI parameters and parsed config information if debug
@@ -154,6 +203,14 @@ namespace covered
             if (workload_name_ == Util::ZIPF_FACEBOOK_WORKLOAD_NAME)
             {
                 oss << " (Zipf's law alpha: " << zipf_alpha_ << ")";
+            }
+            oss << std::endl;
+            oss << "Workload pattern name: " << workload_pattern_name_;
+            if (Util::isDynamicWorkloadPattern(workload_pattern_name_))
+            {
+                oss << std::endl;
+                oss << "Dynamic change period: " << dynamic_change_period_ << " seconds" << std::endl;
+                oss << "Dynamic change key count: " << dynamic_change_keycnt_;
             }
             Util::dumpDebugMsg(kClassName, oss.str());
 
@@ -171,6 +228,18 @@ namespace covered
         {
             std::ostringstream oss;
             oss << "workload name " << workload_name_ << " is not supported!";
+            Util::dumpErrorMsg(kClassName, oss.str());
+            exit(1);
+        }
+        return;
+    }
+
+    void WorkloadCLI::checkWorkloadPatternName_() const
+    {
+        if (workload_pattern_name_ != Util::STATIC_WORKLOAD_PATTERN_NAME && workload_pattern_name_ != Util::HOTIN_WORKLOAD_PATTERN_NAME && workload_pattern_name_ != Util::HOTOUT_WORKLOAD_PATTERN_NAME && workload_pattern_name_ != Util::RANDOM_WORKLOAD_PATTERN_NAME)
+        {
+            std::ostringstream oss;
+            oss << "workload pattern name " << workload_pattern_name_ << " is not supported!";
             Util::dumpErrorMsg(kClassName, oss.str());
             exit(1);
         }
@@ -207,6 +276,24 @@ namespace covered
             {
                 std::ostringstream oss;
                 oss << "invalid key count " << keycnt_ << " for non-replayed workload " << workload_name_ << "!";
+                Util::dumpErrorMsg(kClassName, oss.str());
+                exit(1);
+            }
+        }
+
+        if (Util::isDynamicWorkloadPattern(workload_pattern_name_))
+        {
+            if (dynamic_change_period_ <= 0)
+            {
+                std::ostringstream oss;
+                oss << "dynamic change period " << dynamic_change_period_ << " is NOT positive!";
+                Util::dumpErrorMsg(kClassName, oss.str());
+                exit(1);
+            }
+            if (dynamic_change_keycnt_ <= 0)
+            {
+                std::ostringstream oss;
+                oss << "dynamic change key count " << dynamic_change_keycnt_ << " is NOT positive!";
                 Util::dumpErrorMsg(kClassName, oss.str());
                 exit(1);
             }

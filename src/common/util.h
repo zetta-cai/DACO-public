@@ -97,6 +97,12 @@ namespace covered
         static const std::string WIKIPEDIA_TEXT_WORKLOAD_NAME; // (OBSOLETE due to no geographical information) WIkipedia text replayed traces (single-node)
         static const std::string FBPHOTO_WORKLOAD_NAME; // (OBSOLETE due to not open-sourced and hence NO total frequency information for probability calculation and curvefitting) Workload generator type (Facebook photo caching workload)
 
+        // Workload pattern
+        static const std::string STATIC_WORKLOAD_PATTERN_NAME;
+        static const std::string HOTIN_WORKLOAD_PATTERN_NAME;
+        static const std::string HOTOUT_WORKLOAD_PATTERN_NAME;
+        static const std::string RANDOM_WORKLOAD_PATTERN_NAME;
+
         // Cloud storage
         static const std::string HDD_NAME; // NOTE: a single RocksDB size on HDD should NOT exceed 500 GiB
 
@@ -237,6 +243,8 @@ namespace covered
         static bool isReplayedWorkload(const std::string workload_name); // Will disable effects of keycnt/opcnt for replayed workloads (NO tunable workload parameters)
         static std::string getReplayedWorkloadHintstr(); // Used by CLI module to dump hint information
         static bool needOptypeRatios(const std::string workload_name); // Will load and use optype ratios for workloads requring them
+
+        static bool isDynamicWorkloadPattern(const std::string workload_pattern_name);
 
         // (1) I/O
 

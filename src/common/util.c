@@ -51,6 +51,12 @@ namespace covered
     const std::string Util::WIKIPEDIA_TEXT_WORKLOAD_NAME("wikitext"); // (OBSOLETE) Replayed wikipedian text traces (single-node)
     const std::string Util::FBPHOTO_WORKLOAD_NAME("fbphoto"); // (OBSOLETE) Zipfian Facebook photo caching workload generator (based on Zeta distribution)
 
+    // Workload pattern
+    const std::string Util::STATIC_WORKLOAD_PATTERN_NAME("static");
+    const std::string Util::HOTIN_WORKLOAD_PATTERN_NAME("hotin");
+    const std::string Util::HOTOUT_WORKLOAD_PATTERN_NAME("hotout");
+    const std::string Util::RANDOM_WORKLOAD_PATTERN_NAME("random");
+
     // Cloud storage
     const std::string Util::HDD_NAME = "hdd";
 
@@ -255,6 +261,15 @@ namespace covered
             return true;
         }
         
+        return false;
+    }
+
+    bool Util::isDynamicWorkloadPattern(const std::string workload_pattern_name)
+    {
+        if (workload_pattern_name == HOTIN_WORKLOAD_PATTERN_NAME || workload_pattern_name == HOTOUT_WORKLOAD_PATTERN_NAME || workload_pattern_name == RANDOM_WORKLOAD_PATTERN_NAME) {
+            return true;
+        }
+
         return false;
     }
 
