@@ -28,10 +28,10 @@ namespace covered
         
         // NOTE: add workload_randombase to introduce variances for single-node simulator -> yet NOT affect previous evaluation results of other experiments due to default randomness = 0!!!
 
-        static WorkloadWrapperBase* getWorkloadGeneratorByWorkloadName(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const float& zipf_alpha, const uint32_t& workload_randombase = 0);
+        static WorkloadWrapperBase* getWorkloadGeneratorByWorkloadName(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const float& zipf_alpha, const std::string& workload_pattern_name, const uint32_t& dynamic_change_period, const uint32_t& dynamic_change_keycnt, const uint32_t& workload_randombase = 0);
         // static WorkloadWrapperBase* getWorkloadGeneratorByWorkloadName(const uint64_t& capacity_bytes, const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role); // (OBSOLETE due to already checking objsize in LocalCacheBase)
 
-        WorkloadWrapperBase(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const uint32_t& workload_randombase);
+        WorkloadWrapperBase(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const std::string& workload_pattern_name, const uint32_t& dynamic_change_period, const uint32_t& dynamic_change_keycnt, const uint32_t& workload_randombase);
         virtual ~WorkloadWrapperBase();
 
         // Access by the single thread of client wrapper (NO need to be thread safe)
@@ -77,6 +77,10 @@ namespace covered
         const std::string workload_name_;
         const std::string workload_usage_role_; // Distinguish different roles to avoid file I/O overhead of loading all trace files (for dataset loader and clients during loading/evaluation), and avoid disk I/O overhead of accessing rocksdb (for cloud during warmup)
         const uint32_t workload_randombase_;
+        // For dynamic workload patterns
+        const std::string workload_pattern_name_;
+        const uint32_t dynamic_change_period_;
+        const uint32_t dynamic_change_keycnt_;
     protected:
         // Getters for const shared variables coming from Param
         // ONLY for clients
@@ -89,6 +93,10 @@ namespace covered
         const std::string getWorkloadName_() const;
         const std::string getWorkloadUsageRole_() const;
         const uint32_t getWorkloadRandombase_() const;
+        // For dynamic workload patterns
+        const std::string getWorkloadPatternName_() const;
+        const uint32_t getDynamicChangePeriod_() const;
+        const uint32_t getDynamicChangeKeycnt_() const;
 
         // (2) Other common utilities
 

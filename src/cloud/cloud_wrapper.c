@@ -59,14 +59,14 @@ namespace covered
         uint32_t cloud_idx = cloud_wrapper_param.getCloudIdx();
         CloudCLI* cloud_cli_ptr = cloud_wrapper_param.getCloudCLIPtr();
 
-        CloudWrapper local_cloud(cloud_idx, cloud_cli_ptr->getCloudStorage(), cloud_cli_ptr->getKeycnt(), cloud_cli_ptr->getCLILatencyInfo(), cloud_cli_ptr->getWorkloadName(), cloud_cli_ptr->getZipfAlpha(), cloud_cli_ptr->getRealnetOption());
+        CloudWrapper local_cloud(cloud_idx, cloud_cli_ptr->getCloudStorage(), cloud_cli_ptr->getKeycnt(), cloud_cli_ptr->getCLILatencyInfo(), cloud_cli_ptr->getWorkloadName(), cloud_cli_ptr->getZipfAlpha(), cloud_cli_ptr->getWorkloadPatternName(), cloud_cli_ptr->getDynamicChangePeriod(), cloud_cli_ptr->getDynamicChangeKeycnt(), cloud_cli_ptr->getRealnetOption());
         local_cloud.start();
         
         pthread_exit(NULL);
         return NULL;
     }
 
-    CloudWrapper::CloudWrapper(const uint32_t& cloud_idx, const std::string& cloud_storage, const uint32_t& keycnt, const CLILatencyInfo& cli_latency_info, const std::string& workload_name, const float& zipf_alpha, const std::string& realnet_option) : NodeWrapperBase(NodeWrapperBase::CLOUD_NODE_ROLE, cloud_idx, 1, true)
+    CloudWrapper::CloudWrapper(const uint32_t& cloud_idx, const std::string& cloud_storage, const uint32_t& keycnt, const CLILatencyInfo& cli_latency_info, const std::string& workload_name, const float& zipf_alpha, const std::string& workload_pattern_name, const uint32_t& dynamic_change_period, const uint32_t& dynamic_change_keycnt, const std::string& realnet_option) : NodeWrapperBase(NodeWrapperBase::CLOUD_NODE_ROLE, cloud_idx, 1, true)
     {
         assert(cloud_idx == 0); // TODO: only support 1 cloud node now!
 
@@ -81,7 +81,8 @@ namespace covered
         const uint32_t tmp_client_idx = 0; // No need workload items
         const uint32_t tmp_perclient_workercnt = 0; // No need workload items
         const uint32_t tmp_perclient_opcnt = 0; // No need workload items
-        workload_generator_ptr_ = WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(tmp_clientcnt, tmp_client_idx, keycnt, tmp_perclient_opcnt, tmp_perclient_workercnt, workload_name, covered::WorkloadWrapperBase::WORKLOAD_USAGE_ROLE_CLOUD, zipf_alpha); // Track dataset items to support quick operations for warmup speedup (skip disk I/O latency in cloud)
+        // NOTE: dynamic workload parameters are only used by clients to generate workload items during stresstest phase, rather than by cloud wrappers in warmup phase for warmup speedup
+        workload_generator_ptr_ = WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(tmp_clientcnt, tmp_client_idx, keycnt, tmp_perclient_opcnt, tmp_perclient_workercnt, workload_name, covered::WorkloadWrapperBase::WORKLOAD_USAGE_ROLE_CLOUD, zipf_alpha, workload_pattern_name, dynamic_change_period, dynamic_change_keycnt); // Track dataset items to support quick operations for warmup speedup (skip disk I/O latency in cloud)
         assert(workload_generator_ptr_ != NULL);
         
         // Open local RocksDB KVS (maybe time-consuming -> introduce NodeParamBase::node_initialized_)

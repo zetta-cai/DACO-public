@@ -94,6 +94,10 @@ int main(int argc, char **argv) {
     const uint32_t keycnt = dataset_loader_cli.getKeycnt();
     const std::string workload_name = dataset_loader_cli.getWorkloadName();
     const float zipf_alpha = dataset_loader_cli.getZipfAlpha();
+    // NOTE: dynamic workload parameters are only used by clients to generate workload items during stresstest phase, rather than by data loaders during loading phase
+    const std::string workload_pattern_name = dataset_loader_cli.getWorkloadPatternName();
+    const uint32_t dynamic_change_period = dataset_loader_cli.getDynamicChangePeriod();
+    const uint32_t dynamic_change_keycnt = dataset_loader_cli.getDynamicChangeKeycnt();
 
     // (2) Prepare dataset loader parameters
 
@@ -113,7 +117,7 @@ int main(int argc, char **argv) {
     //const uint32_t perclient_opcnt = clientcnt * perclient_workercnt; // dataset_loadercnt
     const uint32_t perclient_workercnt = 0; // No need workload items
     const uint32_t perclient_opcnt = 0; // No need workload items
-    covered::WorkloadWrapperBase* workload_generator_ptr = covered::WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, covered::WorkloadWrapperBase::WORKLOAD_USAGE_ROLE_LOADER, zipf_alpha); // Track dataset items
+    covered::WorkloadWrapperBase* workload_generator_ptr = covered::WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, covered::WorkloadWrapperBase::WORKLOAD_USAGE_ROLE_LOADER, zipf_alpha, workload_pattern_name, dynamic_change_period, dynamic_change_keycnt); // Track dataset items
     assert(workload_generator_ptr != NULL);
 
     // Create dataset loader parameters

@@ -22,39 +22,39 @@ namespace covered
 
     const std::string WorkloadWrapperBase::kClassName("WorkloadWrapperBase");
 
-    WorkloadWrapperBase* WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const float& zipf_alpha, const uint32_t& workload_randombase)
+    WorkloadWrapperBase* WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const float& zipf_alpha, const std::string& workload_pattern_name, const uint32_t& dynamic_change_period, const uint32_t& dynamic_change_keycnt, const uint32_t& workload_randombase)
     {
         WorkloadWrapperBase* workload_ptr = NULL;
         if (workload_name == Util::AKAMAI_WEB_WORKLOAD_NAME || workload_name == Util::AKAMAI_VIDEO_WORKLOAD_NAME) // Akamai's web/video trace
         {
-            workload_ptr = new AkamaiWorkloadWrapper(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role, workload_randombase);
+            workload_ptr = new AkamaiWorkloadWrapper(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role, workload_pattern_name, dynamic_change_period, dynamic_change_keycnt, workload_randombase);
         }
         else if (workload_name == Util::FACEBOOK_WORKLOAD_NAME) // Facebook/Meta CDN
         {
-            workload_ptr = new FacebookWorkloadWrapper(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role, workload_randombase);
+            workload_ptr = new FacebookWorkloadWrapper(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role, workload_pattern_name, dynamic_change_period, dynamic_change_keycnt, workload_randombase);
         }
         else if (workload_name == Util::FBPHOTO_WORKLOAD_NAME) // (OBSOLETE due to not open-sourced and hence NO total frequency information for probability calculation and curvefitting) Facebook photo caching
         {
-            workload_ptr = new FbphotoWorkloadWrapper(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role, workload_randombase);
+            workload_ptr = new FbphotoWorkloadWrapper(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role, workload_pattern_name, dynamic_change_period, dynamic_change_keycnt, workload_randombase);
         }
         else if (workload_name == Util::WIKIPEDIA_IMAGE_WORKLOAD_NAME || workload_name == Util::WIKIPEDIA_TEXT_WORKLOAD_NAME) // (OBSOLETE due to no geographical information) Wiki image/text CDN
         {
-            workload_ptr = new WikipediaWorkloadWrapper(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role, workload_randombase);
+            workload_ptr = new WikipediaWorkloadWrapper(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role, workload_pattern_name, dynamic_change_period, dynamic_change_keycnt, workload_randombase);
         }
         else if (workload_name == Util::ZIPF_FACEBOOK_WORKLOAD_NAME) // Zipf-based Facebook CDN (based on power law; using key/value size distribution in cachebench)
         {
             assert(zipf_alpha > 0.0);
-            workload_ptr = new ZipfFacebookWorkloadWrapper(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role, zipf_alpha, workload_randombase);
+            workload_ptr = new ZipfFacebookWorkloadWrapper(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role, zipf_alpha, workload_pattern_name, dynamic_change_period, dynamic_change_keycnt, workload_randombase);
         }
         else if (workload_name == Util::ZETA_WIKIPEDIA_IMAGE_WORKLOAD_NAME || workload_name == Util::ZETA_WIKIPEDIA_TEXT_WORKLOAD_NAME || workload_name == Util::ZETA_TENCENT_PHOTO1_WORKLOAD_NAME || workload_name == Util::ZETA_TENCENT_PHOTO2_WORKLOAD_NAME) // Zipf-based workloads including Wikipedia image/text and Tencent photo caching dataset1/2 (based on zeta distribution; using key/value size distribution in characteristics files)
         {
             UNUSED(zipf_alpha);
-            workload_ptr = new ZetaWorkloadWrapper(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role, zipf_alpha, workload_randombase);
+            workload_ptr = new ZetaWorkloadWrapper(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role, zipf_alpha, workload_pattern_name, dynamic_change_period, dynamic_change_keycnt, workload_randombase);
         }
         else if (workload_name == Util::ZIPF_WIKIPEDIA_IMAGE_WORKLOAD_NAME || workload_name == Util::ZIPF_WIKIPEDIA_TEXT_WORKLOAD_NAME || workload_name == Util::ZIPF_TENCENT_PHOTO1_WORKLOAD_NAME || workload_name == Util::ZIPF_TENCENT_PHOTO2_WORKLOAD_NAME || workload_name == Util::ZIPF_FBPHOTO_WORKLOAD_NAME || workload_name == Util::ZIPF_TWITTERKV2_WORKLOAD_NAME || workload_name == Util::ZIPF_TWITTERKV4_WORKLOAD_NAME) // Zipf-based workloads including Wikipedia image/text and Tencent photo caching dataset1/2 (based on power-law distribution; using key/value size distribution in characteristics files)
         {
             UNUSED(zipf_alpha);
-            workload_ptr = new ZipfWorkloadWrapper(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role, zipf_alpha, workload_randombase);
+            workload_ptr = new ZipfWorkloadWrapper(clientcnt, client_idx, keycnt, perclient_opcnt, perclient_workercnt, workload_name, workload_usage_role, zipf_alpha, workload_pattern_name, dynamic_change_period, dynamic_change_keycnt, workload_randombase);
         }
         else
         {
@@ -89,7 +89,7 @@ namespace covered
     //     return workload_ptr;
     // }
 
-    WorkloadWrapperBase::WorkloadWrapperBase(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const uint32_t& workload_randombase) : clientcnt_(clientcnt), client_idx_(client_idx), perclient_opcnt_(perclient_opcnt), perclient_workercnt_(perclient_workercnt), keycnt_(keycnt), workload_name_(workload_name), workload_usage_role_(workload_usage_role), workload_randombase_(workload_randombase)
+    WorkloadWrapperBase::WorkloadWrapperBase(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const std::string& workload_pattern_name, const uint32_t& dynamic_change_period, const uint32_t& dynamic_change_keycnt, const uint32_t& workload_randombase) : clientcnt_(clientcnt), client_idx_(client_idx), perclient_opcnt_(perclient_opcnt), perclient_workercnt_(perclient_workercnt), keycnt_(keycnt), workload_name_(workload_name), workload_usage_role_(workload_usage_role), workload_pattern_name_(workload_pattern_name), dynamic_change_period_(dynamic_change_period), dynamic_change_keycnt(dynamic_change_keycnt), workload_randombase_(workload_randombase)
     {
         // Differentiate workload generator in different clients
         std::ostringstream oss;
@@ -220,6 +220,24 @@ namespace covered
     {
         // For all roles
         return workload_randombase_;
+    }
+
+    const std::string WorkloadWrapperBase::getWorkloadPatternName_() const
+    {
+        // For dynamic workload patterns
+        return workload_pattern_name_;
+    }
+
+    const uint32_t WorkloadWrapperBase::getDynamicChangePeriod_() const
+    {
+        // For dynamic workload patterns
+        return dynamic_change_period_;
+    }
+
+    const uint32_t WorkloadWrapperBase::getDynamicChangeKeycnt_() const
+    {
+        // For dynamic workload patterns
+        return dynamic_change_keycnt;
     }
 
     // (2) Other common utilities

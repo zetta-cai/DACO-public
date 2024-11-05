@@ -27,7 +27,7 @@ namespace covered
     class WikipediaWorkloadWrapper : public ReplayedWorkloadWrapperBase
     {
     public:
-        WikipediaWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const uint32_t& workload_randombase);
+        WikipediaWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const std::string& workload_pattern_name, const uint32_t& dynamic_change_period, const uint32_t& dynamic_change_keycnt, const uint32_t& workload_randombase);
         virtual ~WikipediaWorkloadWrapper();
 
         virtual WorkloadItem generateWorkloadItem(const uint32_t& local_client_worker_idx) override; // NOTE: basically the same as ReplayedWorkloadWrapperBase::generateWorkloadItem, yet Wiki CDN is read-only (just used similar as SOSP'23 S3-FIFO and NSDI'24 SIEVE) -> different value sizes of the same key may be caused by hash collisions of different image/text paths, as keys in trace files are hashed values of Wiki paths

@@ -200,6 +200,9 @@ int main(int argc, char **argv) {
     const uint32_t client_workercnt = clientcnt * perclient_workercnt;
     const std::string workload_name = single_node_cli.getWorkloadName();
     const float zipf_alpha = single_node_cli.getZipfAlpha();
+    const std::string workload_pattern_name = single_node_cli.getWorkloadPatternName();
+    const uint32_t dynamic_change_period = single_node_cli.getDynamicChangePeriod();
+    const uint32_t dynamic_change_keycnt = single_node_cli.getDynamicChangeKeycnt();
 
     // Workload configurations
     uint32_t simulator_workloadcnt = single_node_cli.getSimulatorWorkloadcnt(); // physical workloadidx is in [0, simulator_workloadcnt - 1] (used to locate workload generator)
@@ -251,7 +254,7 @@ int main(int argc, char **argv) {
     {
         // NOTE: NOT use ClientWrapper::launchEdge, which will invoke NodeWrapperBase::start() to launch multiple threads for absolute performance!
         // NOTE: use covered::Util::DATASET_KVPAIR_GENERATION_SEED to generate dataset, use workloadidx to pre-generate workload items to approximate workload distribution (if any), and use global_workload_workeridx + randombase to generate requests for the given workload worker
-        covered::workload_wrapper_ptrs[workloadidx] = covered::WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(simulator_workloadcnt, workloadidx, keycnt, perclient_opcnt, perworkload_workercnt, workload_name, covered::WorkloadWrapperBase::WORKLOAD_USAGE_ROLE_CLIENT, zipf_alpha, simulator_randomness);
+        covered::workload_wrapper_ptrs[workloadidx] = covered::WorkloadWrapperBase::getWorkloadGeneratorByWorkloadName(simulator_workloadcnt, workloadidx, keycnt, perclient_opcnt, perworkload_workercnt, workload_name, covered::WorkloadWrapperBase::WORKLOAD_USAGE_ROLE_CLIENT, zipf_alpha, workload_pattern_name, dynamic_change_period, dynamic_change_keycnt, simulator_randomness);
         assert(covered::workload_wrapper_ptrs[workloadidx] != NULL);
     }
 

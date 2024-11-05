@@ -50,7 +50,7 @@ namespace covered
     public:
         static void* launchClient(void* client_wrapper_param_ptr);
 
-        ClientWrapper(const uint64_t& capacity_bytes, const uint32_t& client_idx, const uint32_t& clientcnt, const bool& is_warmup_speedup, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const CLILatencyInfo& cli_latency_info, const std::string& realnet_option, const uint32_t& warmup_reqcnt_scale, const std::string& workload_name, const float& zipf_alpha);
+        ClientWrapper(const uint64_t& capacity_bytes, const uint32_t& client_idx, const uint32_t& clientcnt, const bool& is_warmup_speedup, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const CLILatencyInfo& cli_latency_info, const std::string& realnet_option, const uint32_t& warmup_reqcnt_scale, const std::string& workload_name, const float& zipf_alpha, const std::string& workload_pattern_name, const uint32_t& dynamic_change_period, const uint32_t& dynamic_change_keycnt);
         virtual ~ClientWrapper();
 
         // (1) Const getters
