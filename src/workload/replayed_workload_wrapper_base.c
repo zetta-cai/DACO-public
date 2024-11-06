@@ -41,6 +41,7 @@ namespace covered
         // For clients
         curclient_workload_keys_.clear();
         curclient_workload_value_sizes_.clear();
+        curclient_ranked_unique_keys_.clear();
 
         per_client_worker_workload_idx_.resize(perclient_workercnt);
         for (uint32_t i = 0; i < perclient_workercnt; i++)
@@ -295,6 +296,57 @@ namespace covered
     void ReplayedWorkloadWrapperBase::createWorkloadGenerator_()
     {
         // NOTE: nothing to create for Wikipedia workload
+        return;
+    }
+
+    // Utility functions for dynamic workload patterns
+
+    uint32_t ReplayedWorkloadWrapperBase::getLargestRank_(const uint32_t local_client_worker_idx)
+    {
+        checkDynamicPatterns_();
+
+        UNUSED(local_client_worker_idx);
+
+        return curclient_ranked_unique_keys_.size() - 1;
+    }
+    
+    void ReplayedWorkloadWrapperBase::getRankedKeys_(const uint32_t local_client_worker_idx, const uint32_t start_rank, const uint32_t ranked_keycnt, std::vector<std::string>& ranked_keys)
+    {
+        checkDynamicPatterns_();
+
+        // Get ranked indexes
+        std::vector<uint32_t> tmp_ranked_idxes;
+        getRankedIdxes_(local_client_worker_idx, start_rank, ranked_keycnt, tmp_ranked_idxes);
+
+        // Set ranked keys based on the ranked indexes
+        ranked_keys.clear();
+        for (int i = 0; i < tmp_ranked_idxes.size(); i++)
+        {
+            const uint32_t tmp_ranked_keys_idx = tmp_ranked_idxes[i];
+            const Key& tmp_key = curclient_ranked_unique_keys_[tmp_ranked_keys_idx];
+            ranked_keys.push_back(tmp_key.getKeystr());
+        }
+
+        return;
+    }
+
+    void ReplayedWorkloadWrapperBase::getRandomKeys_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<std::string>& random_keys)
+    {
+        checkDynamicPatterns_();
+
+        // Get random indexes
+        std::vector<uint32_t> tmp_random_idxes;
+        getRandomIdxes_(local_client_worker_idx, random_keycnt, tmp_random_idxes);
+
+        // Set random keys based on the random indexes
+        random_keys.clear();
+        for (int i = 0; i < tmp_random_idxes.size(); i++)
+        {
+            const uint32_t tmp_rand_keys_idx = tmp_random_idxes[i];
+            const Key& tmp_key = curclient_ranked_unique_keys_[tmp_rand_keys_idx];
+            random_keys.push_back(tmp_key.getKeystr());
+        }
+
         return;
     }
 
@@ -606,6 +658,9 @@ namespace covered
         std::fstream* fs_ptr = Util::openFile(tmp_sampled_workload_filepath, std::ios_base::in | std::ios_base::binary);
         assert(fs_ptr != NULL);
 
+        // Count per-key freq for dynamic workload patterns
+        std::unordered_map<Key, uint32_t, KeyHasher> tmp_key_freq_map;
+
         // Load sampled workload key-valuesize pairs from dataset file
         // Format: sampled workload size, key, coded value size, key, coded value size, ...
         uint32_t size = 0;
@@ -629,6 +684,30 @@ namespace covered
             // Update current client workload key-value pairs
             curclient_workload_keys_.push_back(tmp_key);
             curclient_workload_value_sizes_.push_back(tmp_coded_value_size);
+
+            // Update per-key freq map for dynamic workload patterns
+            if (tmp_key_freq_map.find(tmp_key) == tmp_key_freq_map.end())
+            {
+                tmp_key_freq_map.insert(std::pair<Key, uint32_t>(tmp_key, 1));
+            }
+            else
+            {
+                tmp_key_freq_map[tmp_key] += 1;
+            }
+        }
+
+        // Sort per-key freq map by freq in descending order
+        std::multimap<uint32_t, Key, std::greater<uint32_t>> tmp_sorted_key_freq_map;
+        for (std::unordered_map<Key, uint32_t, KeyHasher>::const_iterator iter = tmp_key_freq_map.begin(); iter != tmp_key_freq_map.end(); iter++)
+        {
+            tmp_sorted_key_freq_map.insert(std::pair<uint32_t, Key>(iter->second, iter->first));
+        }
+
+        // Update rank information for dynamic workload patterns
+        curclient_ranked_unique_keys_.clear(); // Clear for safety
+        for (std::multimap<uint32_t, Key, std::greater<uint32_t>>::const_iterator iter = tmp_sorted_key_freq_map.begin(); iter != tmp_sorted_key_freq_map.end(); iter++)
+        {
+            curclient_ranked_unique_keys_.push_back(iter->second);
         }
 
         // Close file and release ifstream

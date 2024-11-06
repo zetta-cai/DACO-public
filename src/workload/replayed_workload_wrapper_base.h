@@ -51,6 +51,11 @@ namespace covered
         virtual void overwriteWorkloadParameters_() override;
         virtual void createWorkloadGenerator_() override;
 
+        // Utility functions for dynamic workload patterns
+        virtual uint32_t getLargestRank_(const uint32_t local_client_worker_idx) override;
+        virtual void getRankedKeys_(const uint32_t local_client_worker_idx, const uint32_t start_rank, const uint32_t ranked_keycnt, std::vector<std::string>& ranked_keys) override;
+        virtual void getRandomKeys_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<std::string>& random_keys) override;
+
         // Helper functions (ONLY for replayed traces)
 
         // (1) For role of trace preprocessor
@@ -99,6 +104,7 @@ namespace covered
         // (C) For role of clients during evaluation
         std::vector<Key> curclient_workload_keys_; // Keys of workload in the current client
         std::vector<int> curclient_workload_value_sizes_; // Value sizes of workload in the current client (< 0: read; = 0: delete; > 0: write)
+        std::vector<Key> curclient_ranked_unique_keys_; // Ranked unique keys in the current client (used for dynamic workload patterns)
 
         // Non-const individual variables
         std::vector<uint32_t> per_client_worker_workload_idx_; // Track per-clientworker workload index

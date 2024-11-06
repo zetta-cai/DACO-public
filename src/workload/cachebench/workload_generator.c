@@ -153,11 +153,11 @@ void WorkloadGenerator::quickDatasetDel(const std::string& key)
 
 // Siyuan: For dynamic workload patterns
 
-const std::vector<uint32_t>& WorkloadGenerator::getRankedKeyIndicesConstRef(const uint32_t local_client_worker_idx, const uint8_t poolId)
+const std::vector<uint32_t>& WorkloadGenerator::getRankedUniqueKeyIndicesConstRef(const uint32_t local_client_worker_idx, const uint8_t poolId)
 {
   // Get the const reference of current client worker's ranked key indices
-  assert(local_client_worker_idx < perworker_perpool_ranked_key_indices_.size());
-  return perworker_perpool_ranked_key_indices_[local_client_worker_idx][poolId];
+  assert(local_client_worker_idx < perworker_perpool_ranked_unique_key_indices_.size());
+  return perworker_perpool_ranked_unique_key_indices_[local_client_worker_idx][poolId];
 }
 
 void WorkloadGenerator::generateKeys() {
@@ -459,7 +459,7 @@ void WorkloadGenerator::generateKeyDistributions() {
     perworkerKeyGenForPool_.push_back(tmp_key_gen_for_pool);
 
     // Siyuan: For dynamic workload patterns
-    perworker_perpool_ranked_key_indices_.push_back(tmp_ranked_key_indices_for_pool);
+    perworker_perpool_ranked_unique_key_indices_.push_back(tmp_ranked_key_indices_for_pool);
   } // End of loop for each local client worker
 
   // Siyuan: disable unnecessary outputs

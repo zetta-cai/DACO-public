@@ -60,7 +60,7 @@ class WorkloadGenerator : public covered::GeneratorBase {
   virtual void quickDatasetDel(const std::string& key) override;
 
   // Siyuan: For dynamic workload patterns
-  virtual const std::vector<uint32_t>& getRankedKeyIndicesConstRef(const uint32_t local_client_worker_idx, const uint8_t poolId) override;
+  virtual const std::vector<uint32_t>& getRankedUniqueKeyIndicesConstRef(const uint32_t local_client_worker_idx, const uint8_t poolId) override;
 
  private:
   static const std::string kClassName;
@@ -96,7 +96,7 @@ class WorkloadGenerator : public covered::GeneratorBase {
   std::vector<WorkloadDistribution> workloadDist_; // Siyuan: only 1 workload dist due to 1 pool -> includes key size dist (for dataset items), value size dist (for dataset items), and operation disk (for workload items)
 
   // Siyuan: For dynamic workload patterns
-  std::vector<std::vector<std::vector<uint32_t>>> perworker_perpool_ranked_key_indices_; // Siyuan: local client worker index -> pool id -> ranked key indices
+  std::vector<std::vector<std::vector<uint32_t>>> perworker_perpool_ranked_unique_key_indices_; // Siyuan: local client worker index -> pool id -> ranked unique key indices
   
   // Siyuan: average/min/max dataset key/value size
   double avg_dataset_keysize_;

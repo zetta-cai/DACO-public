@@ -53,7 +53,7 @@ class GeneratorBase {
   virtual void quickDatasetDel(const std::string& key) = 0;
 
   // Siyuan: For dynamic workload patterns
-  virtual const std::vector<uint32_t>& getRankedKeyIndicesConstRef(const uint32_t local_client_worker_idx, const uint8_t poolId) = 0;
+  virtual const std::vector<uint32_t>& getRankedUniqueKeyIndicesConstRef(const uint32_t local_client_worker_idx, const uint8_t poolId) = 0;
 
   // Notify the workload generator that the nvm cache has already warmed up.
   virtual void setNvmCacheWarmedUp(uint64_t /*timestamp*/) {

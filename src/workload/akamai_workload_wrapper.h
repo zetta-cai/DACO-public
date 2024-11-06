@@ -86,7 +86,7 @@ namespace covered
         // For role of clients during evaluation
         std::vector<std::vector<int64_t>> curclient_perworker_workload_objids_; // Object IDs of workload sequence for each client worker in the current client
         std::vector<uint32_t> curclient_perworker_workloadidx_; // To-be-accessed workload index for each client worker in the current client
-        std::vector<std::vector<int64_t>> curclient_perworker_ranked_objids_; // Ranked object IDs for each client worker in the current client (used for dynamic workload patterns)
+        std::vector<std::vector<int64_t>> curclient_perworker_ranked_unique_objids_; // Ranked unique object IDs for each client worker in the current client (used for dynamic workload patterns)
     };
 }
 

@@ -31,6 +31,8 @@ namespace covered
         // For clients
         client_worker_item_randgen_ptrs_.resize(perclient_workercnt, NULL);
         client_worker_reqdist_ptrs_.resize(perclient_workercnt, NULL);
+        client_worker_workload_key_indices_.resize(perclient_workercnt);
+        client_worker_ranked_unique_key_indices_.resize(perclient_workercnt);
     }
 
     FbphotoWorkloadWrapper::~FbphotoWorkloadWrapper()
@@ -341,10 +343,12 @@ namespace covered
             const uint32_t perclient_opcnt = getPerclientOpcnt_();
             const uint32_t perclient_workercnt = getPerclientWorkercnt_();
 
-            client_worker_workload_key_indices_.resize(perclient_workercnt);
             for (uint32_t local_client_worker_idx = 0; local_client_worker_idx < perclient_workercnt; local_client_worker_idx++)
             {
                 client_worker_workload_key_indices_[local_client_worker_idx].resize(perclient_opcnt);
+
+                // Per-keyindex freq map for dynamic workload patterns
+                std::unordered_map<uint32_t, uint32_t> tmp_keyindex_freq_map;
 
                 // Use client idx as random seed to generate workload items for the current client
                 // NOTE: pre-generate workload items for each client worker to fix memory issue of large-scale exp by single-node simulator -> NOT affect previous evaluation results of other experiments due to perclient_workercnt = 1 and local_client_workeridx = 0 by default (i.e., global_client_worker_idx = clientidx * perclient_workercnt + local_client_worker_idx = clientidx)
@@ -359,6 +363,28 @@ namespace covered
                     assert(dataset_keys_[tmp_key_index] == tmp_key_index + 1);
 
                     client_worker_workload_key_indices_[local_client_worker_idx][i] = tmp_key_index;
+
+                    // Update per-keyindex freq map for dynamic workload patterns
+                    if (tmp_keyindex_freq_map.find(tmp_key_index) == tmp_keyindex_freq_map.end())
+                    {
+                        tmp_keyindex_freq_map[tmp_key_index] = 1;
+                    }
+                    else
+                    {
+                        tmp_keyindex_freq_map[tmp_key_index]++;
+                    }
+                }
+
+                // Update rank information based on per-keyindex freq map for dynamic workload patterns
+                std::multimap<uint32_t, uint32_t, std::greater<uint32_t>> sorted_freq_keyindex_map;
+                for (std::unordered_map<uint32_t, uint32_t>::iterator iter = tmp_keyindex_freq_map.begin(); iter != tmp_keyindex_freq_map.end(); iter++)
+                {
+                    sorted_freq_keyindex_map.insert(std::pair<uint32_t, uint32_t>(iter->second, iter->first));
+                }
+                client_worker_ranked_unique_key_indices_[local_client_worker_idx].clear(); // Clear for safety
+                for (std::multimap<uint32_t, uint32_t, std::greater<uint32_t>>::iterator iter = sorted_freq_keyindex_map.begin(); iter != sorted_freq_keyindex_map.end(); iter++)
+                {
+                    client_worker_ranked_unique_key_indices_[local_client_worker_idx].push_back(iter->second);
                 }
             }
         }
@@ -368,6 +394,76 @@ namespace covered
 
             // Do nothing
         }
+    }
+
+
+    // Utility functions for dynamic workload patterns
+
+    uint32_t FbphotoWorkloadWrapper::getLargestRank_(const uint32_t local_client_worker_idx)
+    {
+        checkDynamicPatterns_();
+
+        assert(local_client_worker_idx < client_worker_ranked_unique_key_indices_.size());
+        const std::vector<uint32_t>& tmp_ranked_unique_key_indices_const_ref = client_worker_ranked_unique_key_indices_[local_client_worker_idx];
+        return tmp_ranked_unique_key_indices_const_ref.size() - 1;
+    }
+    
+    void FbphotoWorkloadWrapper::getRankedKeys_(const uint32_t local_client_worker_idx, const uint32_t start_rank, const uint32_t ranked_keycnt, std::vector<std::string>& ranked_keys)
+    {
+        checkDynamicPatterns_();
+
+        // Get ranked indexes
+        std::vector<uint32_t> tmp_ranked_idxes;
+        getRankedIdxes_(local_client_worker_idx, start_rank, ranked_keycnt, tmp_ranked_idxes);
+
+        // Get the const reference of current client worker's ranked objids
+        assert(local_client_worker_idx < client_worker_ranked_unique_key_indices_.size());
+        const std::vector<uint32_t>& tmp_ranked_unique_key_indices_const_ref = client_worker_ranked_unique_key_indices_[local_client_worker_idx];
+
+        // Set ranked keys based on the ranked indexes
+        ranked_keys.clear();
+        for (int i = 0; i < tmp_ranked_idxes.size(); i++)
+        {
+            const uint32_t tmp_ranked_key_indices_idx = tmp_ranked_idxes[i];
+            const uint32_t tmp_ranked_key_indice = tmp_ranked_unique_key_indices_const_ref[tmp_ranked_key_indices_idx];
+
+            const uint32_t tmp_keyint = dataset_keys_[tmp_ranked_key_indice];
+            assert(tmp_keyint == tmp_ranked_key_indice + 1);
+            Key tmp_key(std::string((const char*)&tmp_keyint, sizeof(uint32_t)));
+
+            ranked_keys.push_back(tmp_key.getKeystr());
+        }
+
+        return;
+    }
+
+    void FbphotoWorkloadWrapper::getRandomKeys_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<std::string>& random_keys)
+    {
+        checkDynamicPatterns_();
+
+        // Get random indexes
+        std::vector<uint32_t> tmp_random_idxes;
+        getRandomIdxes_(local_client_worker_idx, random_keycnt, tmp_random_idxes);
+
+        // Get the const reference of current client worker's ranked objids
+        assert(local_client_worker_idx < client_worker_ranked_unique_key_indices_.size());
+        const std::vector<uint32_t>& tmp_ranked_unique_key_indices_const_ref = client_worker_ranked_unique_key_indices_[local_client_worker_idx];
+
+        // Set random keys based on the random indexes
+        random_keys.clear();
+        for (int i = 0; i < tmp_random_idxes.size(); i++)
+        {
+            const uint32_t tmp_rand_key_indices_idx = tmp_random_idxes[i];
+            const uint32_t tmp_rand_key_indice = tmp_ranked_unique_key_indices_const_ref[tmp_rand_key_indices_idx];
+
+            const uint32_t tmp_keyint = dataset_keys_[tmp_rand_key_indice];
+            assert(tmp_keyint == tmp_rand_key_indice + 1);
+            Key tmp_key(std::string((const char*)&tmp_keyint, sizeof(uint32_t)));
+
+            random_keys.push_back(tmp_key.getKeystr());
+        }
+
+        return;
     }
 
     // (2) Common utilities

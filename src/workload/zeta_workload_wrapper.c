@@ -43,6 +43,7 @@ namespace covered
         // For clients
         client_worker_item_randgen_ptrs_.resize(perclient_workercnt, NULL);
         client_worker_reqdist_ptrs_.resize(perclient_workercnt, NULL);
+        client_ranked_unique_key_indices_.clear();
     }
 
     ZetaWorkloadWrapper::~ZetaWorkloadWrapper()
@@ -530,6 +531,18 @@ namespace covered
                 client_worker_reqdist_ptrs_[tmp_local_client_worker_idx] = new std::discrete_distribution<uint32_t>(dataset_probs_.begin(), dataset_probs_.end());
                 assert(client_worker_reqdist_ptrs_[tmp_local_client_worker_idx] != NULL);
             }
+
+            // Update rank information for dynamic workload patterns
+            std::multimap<double, uint32_t, std::greater<double>> tmp_sorted_prob_keyindex_map;
+            for (uint32_t i = 0; i < dataset_probs_.size(); i++)
+            {
+                tmp_sorted_prob_keyindex_map.insert(std::pair<double, uint32_t>(dataset_probs_[i], i));
+            }
+            client_ranked_unique_key_indices_.clear(); // Clear for safety
+            for (std::multimap<double, uint32_t>::iterator tmp_sorted_prob_keyindex_map_iter = tmp_sorted_prob_keyindex_map.begin(); tmp_sorted_prob_keyindex_map_iter != tmp_sorted_prob_keyindex_map.end(); tmp_sorted_prob_keyindex_map_iter++)
+            {
+                client_ranked_unique_key_indices_.push_back(tmp_sorted_prob_keyindex_map_iter->second);
+            }
         }
 
         return;
@@ -545,6 +558,57 @@ namespace covered
     void ZetaWorkloadWrapper::createWorkloadGenerator_()
     {
         // NOT need pre-generated workload items for approximate workload distribution due to directly generating workload items by Zeta distribution
+
+        return;
+    }
+
+    // Utility functions for dynamic workload patterns
+
+    uint32_t ZetaWorkloadWrapper::getLargestRank_(const uint32_t local_client_worker_idx)
+    {
+        checkDynamicPatterns_();
+
+        UNUSED(local_client_worker_idx);
+
+        return client_ranked_unique_key_indices_.size() - 1;
+    }
+    
+    void ZetaWorkloadWrapper::getRankedKeys_(const uint32_t local_client_worker_idx, const uint32_t start_rank, const uint32_t ranked_keycnt, std::vector<std::string>& ranked_keys)
+    {
+        checkDynamicPatterns_();
+
+        // Get ranked indexes
+        std::vector<uint32_t> tmp_ranked_idxes;
+        getRankedIdxes_(local_client_worker_idx, start_rank, ranked_keycnt, tmp_ranked_idxes);
+
+        // Set ranked keys based on the ranked indexes
+        ranked_keys.clear();
+        for (int i = 0; i < tmp_ranked_idxes.size(); i++)
+        {
+            const uint32_t tmp_ranked_key_indices_idx = tmp_ranked_idxes[i];
+            const uint32_t tmp_ranked_key_indice = client_ranked_unique_key_indices_[tmp_ranked_key_indices_idx];
+            ranked_keys.push_back(dataset_keys_[tmp_ranked_key_indice]);
+        }
+
+        return;
+    }
+
+    void ZetaWorkloadWrapper::getRandomKeys_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<std::string>& random_keys)
+    {
+        checkDynamicPatterns_();
+
+        // Get random indexes
+        std::vector<uint32_t> tmp_random_idxes;
+        getRandomIdxes_(local_client_worker_idx, random_keycnt, tmp_random_idxes);
+
+        // Set random keys based on the random indexes
+        random_keys.clear();
+        for (int i = 0; i < tmp_random_idxes.size(); i++)
+        {
+            const uint32_t tmp_rand_key_indices_idx = tmp_random_idxes[i];
+            const int64_t tmp_rand_key_indice = client_ranked_unique_key_indices_[tmp_rand_key_indices_idx];
+            random_keys.push_back(dataset_keys_[tmp_rand_key_indice]);
+        }
 
         return;
     }
