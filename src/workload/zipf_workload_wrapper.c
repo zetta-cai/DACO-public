@@ -41,6 +41,7 @@ namespace covered
         // For clients
         client_worker_item_randgen_ptrs_.resize(perclient_workercnt, NULL);
         client_worker_reqdist_ptrs_.resize(perclient_workercnt, NULL);
+        client_ranked_unique_key_indices_.clear();
 
         // Optype ratios for workloads requiring them
         read_ratio_ = 1.0;
@@ -96,71 +97,6 @@ namespace covered
                 }
             }
         }
-    }
-
-    WorkloadItem ZipfWorkloadWrapper::generateWorkloadItem(const uint32_t& local_client_worker_idx)
-    {
-        checkIsValid_();
-        checkPointers_();
-
-        assert(needWorkloadItems_()); // Must be clients for evaluation
-        assert(local_client_worker_idx < client_worker_item_randgen_ptrs_.size());
-
-        // Get optype if necessary
-        const std::string tmp_workload_name = getWorkloadName_();
-        WorkloadItemType tmp_optype = WorkloadItemType::kWorkloadItemGet; // Default to GET
-        if (Util::needOptypeRatios(tmp_workload_name))
-        {
-            std::uniform_real_distribution<double>* optype_dist_ptr = client_worker_optype_dist_ptrs_[local_client_worker_idx];
-            assert(optype_dist_ptr != NULL);
-            std::mt19937_64* optype_randgen_ptr = client_worker_optype_randgen_ptrs_[local_client_worker_idx];
-            assert(optype_randgen_ptr != NULL);
-
-            const double tmp_optype_real = (*optype_dist_ptr)(*optype_randgen_ptr);
-            assert(tmp_optype_real >= 0 && tmp_optype_real <= 1); // Must be [0, 1]
-            if (tmp_optype_real <= read_ratio_)
-            {
-                tmp_optype = WorkloadItemType::kWorkloadItemGet;
-            }
-            else if (tmp_optype_real > read_ratio_ && tmp_optype_real <= read_ratio_ + update_ratio_)
-            {
-                tmp_optype = WorkloadItemType::kWorkloadItemPut;
-            }
-            else if (tmp_optype_real > read_ratio_ + update_ratio_ && tmp_optype_real <= read_ratio_ + update_ratio_ + delete_ratio_)
-            {
-                tmp_optype = WorkloadItemType::kWorkloadItemDel;
-            }
-            else
-            {
-                // TODO: we should use WorkloadItemType::kWorkloadItemPut for a newly-inserted item, and assign keysize, valuesize, and prob for the new item (also need to update quickDatasetPut() accordingly)
-                // tmp_optype = WorkloadItemType::kWorkloadItemPut;
-
-                std::ostringstream oss;
-                oss << "NOT support insert operation for workload " << tmp_workload_name << " now!";
-                Util::dumpErrorMsg(instance_name_, oss.str());
-                exit(1);
-            }
-        }
-        if (tmp_optype != WorkloadItemType::kWorkloadItemGet && !Util::needOptypeRatios(tmp_workload_name))
-        {
-            std::ostringstream oss;
-            oss << "should NOT have non-GET operation for workload " << tmp_workload_name << " without requirements on optype ratios!";
-            Util::dumpErrorMsg(instance_name_, oss.str());
-            exit(1);
-        }
-
-        // Get a workload index randomly
-        std::mt19937_64* request_randgen_ptr = client_worker_item_randgen_ptrs_[local_client_worker_idx];
-        assert(request_randgen_ptr != NULL);
-        std::discrete_distribution<uint32_t>* request_dist_ptr = client_worker_reqdist_ptrs_[local_client_worker_idx];
-        assert(request_dist_ptr != NULL);
-        const uint32_t tmp_key_index = (*request_dist_ptr)(*request_randgen_ptr); // NOTE: here we directly use power-law distribution to select item from dataset as workload item, instead of selecting item from pre-generated workload items (approximate workload distribution as in src/workload/fbphoto_workload_wrapper.c)
-        assert(tmp_key_index < dataset_keys_.size());
-
-        // Get key
-        Key tmp_key(dataset_keys_[tmp_key_index]);
-        
-        return WorkloadItem(tmp_key, Value(dataset_valsizes_[tmp_key_index]), tmp_optype); // NOT found read-write ratio in the paper -> treat as read-only for all methods with fair comparisons
     }
 
     uint32_t ZipfWorkloadWrapper::getPracticalKeycnt() const
@@ -625,6 +561,18 @@ namespace covered
                     assert(client_worker_optype_dist_ptrs_[tmp_local_client_worker_idx] != NULL);
                 }
             }
+
+            // Update rank information for dynamic workload patterns
+            std::multimap<double, uint32_t, std::greater<double>> tmp_sorted_prob_keyindex_map;
+            for (uint32_t i = 0; i < dataset_probs_.size(); i++)
+            {
+                tmp_sorted_prob_keyindex_map.insert(std::pair<double, uint32_t>(dataset_probs_[i], i));
+            }
+            client_ranked_unique_key_indices_.clear(); // Clear for safety
+            for (std::multimap<double, uint32_t>::iterator tmp_sorted_prob_keyindex_map_iter = tmp_sorted_prob_keyindex_map.begin(); tmp_sorted_prob_keyindex_map_iter != tmp_sorted_prob_keyindex_map.end(); tmp_sorted_prob_keyindex_map_iter++)
+            {
+                client_ranked_unique_key_indices_.push_back(tmp_sorted_prob_keyindex_map_iter->second);
+            }
         }
 
         return;
@@ -640,6 +588,124 @@ namespace covered
     void ZipfWorkloadWrapper::createWorkloadGenerator_()
     {
         // NOT need pre-generated workload items for approximate workload distribution due to directly generating workload items by power-law Zipf distribution
+
+        return;
+    }
+
+    // Access by multiple client workers (thread safe)
+
+    WorkloadItem ZipfWorkloadWrapper::generateWorkloadItem_(const uint32_t& local_client_worker_idx)
+    {
+        checkIsValid_();
+        checkPointers_();
+
+        assert(needWorkloadItems_()); // Must be clients for evaluation
+        assert(local_client_worker_idx < client_worker_item_randgen_ptrs_.size());
+
+        // Get optype if necessary
+        const std::string tmp_workload_name = getWorkloadName_();
+        WorkloadItemType tmp_optype = WorkloadItemType::kWorkloadItemGet; // Default to GET
+        if (Util::needOptypeRatios(tmp_workload_name))
+        {
+            std::uniform_real_distribution<double>* optype_dist_ptr = client_worker_optype_dist_ptrs_[local_client_worker_idx];
+            assert(optype_dist_ptr != NULL);
+            std::mt19937_64* optype_randgen_ptr = client_worker_optype_randgen_ptrs_[local_client_worker_idx];
+            assert(optype_randgen_ptr != NULL);
+
+            const double tmp_optype_real = (*optype_dist_ptr)(*optype_randgen_ptr);
+            assert(tmp_optype_real >= 0 && tmp_optype_real <= 1); // Must be [0, 1]
+            if (tmp_optype_real <= read_ratio_)
+            {
+                tmp_optype = WorkloadItemType::kWorkloadItemGet;
+            }
+            else if (tmp_optype_real > read_ratio_ && tmp_optype_real <= read_ratio_ + update_ratio_)
+            {
+                tmp_optype = WorkloadItemType::kWorkloadItemPut;
+            }
+            else if (tmp_optype_real > read_ratio_ + update_ratio_ && tmp_optype_real <= read_ratio_ + update_ratio_ + delete_ratio_)
+            {
+                tmp_optype = WorkloadItemType::kWorkloadItemDel;
+            }
+            else
+            {
+                // TODO: we should use WorkloadItemType::kWorkloadItemPut for a newly-inserted item, and assign keysize, valuesize, and prob for the new item (also need to update quickDatasetPut() accordingly)
+                // tmp_optype = WorkloadItemType::kWorkloadItemPut;
+
+                std::ostringstream oss;
+                oss << "NOT support insert operation for workload " << tmp_workload_name << " now!";
+                Util::dumpErrorMsg(instance_name_, oss.str());
+                exit(1);
+            }
+        }
+        if (tmp_optype != WorkloadItemType::kWorkloadItemGet && !Util::needOptypeRatios(tmp_workload_name))
+        {
+            std::ostringstream oss;
+            oss << "should NOT have non-GET operation for workload " << tmp_workload_name << " without requirements on optype ratios!";
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+
+        // Get a workload index randomly
+        std::mt19937_64* request_randgen_ptr = client_worker_item_randgen_ptrs_[local_client_worker_idx];
+        assert(request_randgen_ptr != NULL);
+        std::discrete_distribution<uint32_t>* request_dist_ptr = client_worker_reqdist_ptrs_[local_client_worker_idx];
+        assert(request_dist_ptr != NULL);
+        const uint32_t tmp_key_index = (*request_dist_ptr)(*request_randgen_ptr); // NOTE: here we directly use power-law distribution to select item from dataset as workload item, instead of selecting item from pre-generated workload items (approximate workload distribution as in src/workload/fbphoto_workload_wrapper.c)
+        assert(tmp_key_index < dataset_keys_.size());
+
+        // Get key
+        Key tmp_key(dataset_keys_[tmp_key_index]);
+        
+        return WorkloadItem(tmp_key, Value(dataset_valsizes_[tmp_key_index]), tmp_optype); // NOT found read-write ratio in the paper -> treat as read-only for all methods with fair comparisons
+    }
+
+    // Utility functions for dynamic workload patterns
+
+    uint32_t ZipfWorkloadWrapper::getLargestRank_(const uint32_t local_client_worker_idx) const
+    {
+        checkDynamicPatterns_();
+
+        UNUSED(local_client_worker_idx);
+
+        return client_ranked_unique_key_indices_.size() - 1;
+    }
+    
+    void ZipfWorkloadWrapper::getRankedKeys_(const uint32_t local_client_worker_idx, const uint32_t start_rank, const uint32_t ranked_keycnt, std::vector<std::string>& ranked_keys) const
+    {
+        checkDynamicPatterns_();
+
+        // Get ranked indexes
+        std::vector<uint32_t> tmp_ranked_idxes;
+        getRankedIdxes_(local_client_worker_idx, start_rank, ranked_keycnt, tmp_ranked_idxes);
+
+        // Set ranked keys based on the ranked indexes
+        ranked_keys.clear();
+        for (int i = 0; i < tmp_ranked_idxes.size(); i++)
+        {
+            const uint32_t tmp_ranked_key_indices_idx = tmp_ranked_idxes[i];
+            const uint32_t tmp_ranked_key_indice = client_ranked_unique_key_indices_[tmp_ranked_key_indices_idx];
+            ranked_keys.push_back(dataset_keys_[tmp_ranked_key_indice]);
+        }
+
+        return;
+    }
+
+    void ZipfWorkloadWrapper::getRandomKeys_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<std::string>& random_keys) const
+    {
+        checkDynamicPatterns_();
+
+        // Get random indexes
+        std::vector<uint32_t> tmp_random_idxes;
+        getRandomIdxes_(local_client_worker_idx, random_keycnt, tmp_random_idxes);
+
+        // Set random keys based on the random indexes
+        random_keys.clear();
+        for (int i = 0; i < tmp_random_idxes.size(); i++)
+        {
+            const uint32_t tmp_rand_key_indices_idx = tmp_random_idxes[i];
+            const int64_t tmp_rand_key_indice = client_ranked_unique_key_indices_[tmp_rand_key_indices_idx];
+            random_keys.push_back(dataset_keys_[tmp_rand_key_indice]);
+        }
 
         return;
     }

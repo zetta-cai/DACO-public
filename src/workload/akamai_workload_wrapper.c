@@ -46,39 +46,6 @@ namespace covered
         // Do nothing
     }
 
-    WorkloadItem AkamaiWorkloadWrapper::generateWorkloadItem(const uint32_t& local_client_worker_idx)
-    {
-        checkIsValid_();
-        checkPointers_();
-
-        assert(needWorkloadItems_()); // Must be clients for evaluation
-
-        // Get the workload index
-        assert(local_client_worker_idx < curclient_perworker_workloadidx_.size());
-        const uint32_t tmp_workload_idx = curclient_perworker_workloadidx_[local_client_worker_idx];
-
-        // Get the workload sequence
-        assert(local_client_worker_idx < curclient_perworker_workload_objids_.size());
-        const std::vector<int64_t>& tmp_workload_objids_const_ref = curclient_perworker_workload_objids_[local_client_worker_idx];
-        const uint32_t tmp_workload_objids_cnt = tmp_workload_objids_const_ref.size();
-
-        // Get object ID and hence key
-        assert(tmp_workload_idx >= 0 && tmp_workload_idx < tmp_workload_objids_cnt);
-        const int64_t tmp_objid = tmp_workload_objids_const_ref[tmp_workload_idx];
-        Key tmp_key = getKeyFromObjid_(tmp_objid);
-
-        // Get value indexed by object ID
-        assert(tmp_objid >= 0 && tmp_objid <= dataset_valsizes_.size());
-        const uint32_t tmp_valsize = dataset_valsizes_[tmp_objid];
-        Value tmp_value(tmp_valsize);
-
-        // Update the workload index
-        const uint32_t tmp_next_workload_idx = (tmp_workload_idx + 1) % tmp_workload_objids_cnt;
-        curclient_perworker_workloadidx_[local_client_worker_idx] = tmp_next_workload_idx;
-        
-        return WorkloadItem(tmp_key, tmp_value, WorkloadItemType::kWorkloadItemGet); // TRAGEN-generated Akamai workload is read-only
-    }
-
     uint32_t AkamaiWorkloadWrapper::getPracticalKeycnt() const
     {
         checkIsValid_();
@@ -246,9 +213,44 @@ namespace covered
         return;
     }
 
+    // Access by multiple client workers (thread safe)
+
+    WorkloadItem AkamaiWorkloadWrapper::generateWorkloadItem_(const uint32_t& local_client_worker_idx)
+    {
+        checkIsValid_();
+        checkPointers_();
+
+        assert(needWorkloadItems_()); // Must be clients for evaluation
+
+        // Get the workload index
+        assert(local_client_worker_idx < curclient_perworker_workloadidx_.size());
+        const uint32_t tmp_workload_idx = curclient_perworker_workloadidx_[local_client_worker_idx];
+
+        // Get the workload sequence
+        assert(local_client_worker_idx < curclient_perworker_workload_objids_.size());
+        const std::vector<int64_t>& tmp_workload_objids_const_ref = curclient_perworker_workload_objids_[local_client_worker_idx];
+        const uint32_t tmp_workload_objids_cnt = tmp_workload_objids_const_ref.size();
+
+        // Get object ID and hence key
+        assert(tmp_workload_idx >= 0 && tmp_workload_idx < tmp_workload_objids_cnt);
+        const int64_t tmp_objid = tmp_workload_objids_const_ref[tmp_workload_idx];
+        Key tmp_key = getKeyFromObjid_(tmp_objid);
+
+        // Get value indexed by object ID
+        assert(tmp_objid >= 0 && tmp_objid <= dataset_valsizes_.size());
+        const uint32_t tmp_valsize = dataset_valsizes_[tmp_objid];
+        Value tmp_value(tmp_valsize);
+
+        // Update the workload index
+        const uint32_t tmp_next_workload_idx = (tmp_workload_idx + 1) % tmp_workload_objids_cnt;
+        curclient_perworker_workloadidx_[local_client_worker_idx] = tmp_next_workload_idx;
+        
+        return WorkloadItem(tmp_key, tmp_value, WorkloadItemType::kWorkloadItemGet); // TRAGEN-generated Akamai workload is read-only
+    }
+
     // Utility functions for dynamic workload patterns
 
-    uint32_t AkamaiWorkloadWrapper::getLargestRank_(const uint32_t local_client_worker_idx)
+    uint32_t AkamaiWorkloadWrapper::getLargestRank_(const uint32_t local_client_worker_idx) const
     {
         checkDynamicPatterns_();
 
@@ -257,7 +259,7 @@ namespace covered
         return tmp_ranked_unique_objids_const_ref.size() - 1;
     }
     
-    void AkamaiWorkloadWrapper::getRankedKeys_(const uint32_t local_client_worker_idx, const uint32_t start_rank, const uint32_t ranked_keycnt, std::vector<std::string>& ranked_keys)
+    void AkamaiWorkloadWrapper::getRankedKeys_(const uint32_t local_client_worker_idx, const uint32_t start_rank, const uint32_t ranked_keycnt, std::vector<std::string>& ranked_keys) const
     {
         checkDynamicPatterns_();
 
@@ -282,7 +284,7 @@ namespace covered
         return;
     }
 
-    void AkamaiWorkloadWrapper::getRandomKeys_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<std::string>& random_keys)
+    void AkamaiWorkloadWrapper::getRandomKeys_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<std::string>& random_keys) const
     {
         checkDynamicPatterns_();
 

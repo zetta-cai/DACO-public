@@ -59,60 +59,6 @@ namespace covered
         }
     }
 
-    WorkloadItem FacebookWorkloadWrapper::generateWorkloadItem(const uint32_t& local_client_worker_idx)
-    {
-        checkIsValid_();
-        checkPointers_();
-
-        assert(needWorkloadItems_()); // Must be clients for evaluation
-        assert(local_client_worker_idx < client_worker_item_randgen_ptrs_.size());
-
-        std::mt19937_64* request_randgen_ptr = client_worker_item_randgen_ptrs_[local_client_worker_idx];
-        assert(request_randgen_ptr != NULL);
-
-        // Must be 0 for Facebook CDN trace due to only a single operation pool (cachelib::PoolId = int8_t)
-        const uint8_t tmp_poolid = static_cast<uint8_t>((*op_pool_dist_ptr_)(*request_randgen_ptr));
-
-        const facebook::cachelib::cachebench::Request& tmp_facebook_req(workload_generator_->getReq(local_client_worker_idx, tmp_poolid, *request_randgen_ptr, last_reqid_));
-
-        // Convert facebook::cachelib::cachebench::Request to covered::Request
-        const Key tmp_covered_key(tmp_facebook_req.key);
-        const Value tmp_covered_value(static_cast<uint32_t>(*(tmp_facebook_req.sizeBegin)));
-        WorkloadItemType tmp_item_type;
-        facebook::cachelib::cachebench::OpType tmp_op_type = tmp_facebook_req.getOp();
-        switch (tmp_op_type)
-        {
-            case facebook::cachelib::cachebench::OpType::kGet:
-            case facebook::cachelib::cachebench::OpType::kLoneGet:
-            {
-                tmp_item_type = WorkloadItemType::kWorkloadItemGet;
-                break;
-            }
-            case facebook::cachelib::cachebench::OpType::kSet:
-            case facebook::cachelib::cachebench::OpType::kLoneSet:
-            case facebook::cachelib::cachebench::OpType::kUpdate:
-            {
-                tmp_item_type = WorkloadItemType::kWorkloadItemPut;
-                break;
-            }
-            case facebook::cachelib::cachebench::OpType::kDel:
-            {
-                tmp_item_type = WorkloadItemType::kWorkloadItemDel;
-                break;
-            }
-            default:
-            {
-                std::ostringstream oss;
-                oss << "facebook::cachelib::cachebench::OpType " << static_cast<uint32_t>(tmp_op_type) << " is not supported now (please refer to lib/CacheLib/cachelib/cachebench/util/Request.h for OpType)!";
-                Util::dumpErrorMsg(instance_name_, oss.str());
-                exit(1);
-            }
-        }
-
-        last_reqid_ = tmp_facebook_req.requestId;
-        return WorkloadItem(tmp_covered_key, tmp_covered_value, tmp_item_type);
-    }
-
     uint32_t FacebookWorkloadWrapper::getPracticalKeycnt() const
     {
         checkIsValid_();
@@ -311,9 +257,65 @@ namespace covered
         workload_generator_ = makeGenerator_(facebook_stressor_config_, tmp_client_idx, getPerclientWorkercnt_());
     }
 
+    // Access by multiple client workers (thread safe)
+
+    WorkloadItem FacebookWorkloadWrapper::generateWorkloadItem_(const uint32_t& local_client_worker_idx)
+    {
+        checkIsValid_();
+        checkPointers_();
+
+        assert(needWorkloadItems_()); // Must be clients for evaluation
+        assert(local_client_worker_idx < client_worker_item_randgen_ptrs_.size());
+
+        std::mt19937_64* request_randgen_ptr = client_worker_item_randgen_ptrs_[local_client_worker_idx];
+        assert(request_randgen_ptr != NULL);
+
+        // Must be 0 for Facebook CDN trace due to only a single operation pool (cachelib::PoolId = int8_t)
+        const uint8_t tmp_poolid = static_cast<uint8_t>((*op_pool_dist_ptr_)(*request_randgen_ptr));
+
+        const facebook::cachelib::cachebench::Request& tmp_facebook_req(workload_generator_->getReq(local_client_worker_idx, tmp_poolid, *request_randgen_ptr, last_reqid_));
+
+        // Convert facebook::cachelib::cachebench::Request to covered::Request
+        const Key tmp_covered_key(tmp_facebook_req.key);
+        const Value tmp_covered_value(static_cast<uint32_t>(*(tmp_facebook_req.sizeBegin)));
+        WorkloadItemType tmp_item_type;
+        facebook::cachelib::cachebench::OpType tmp_op_type = tmp_facebook_req.getOp();
+        switch (tmp_op_type)
+        {
+            case facebook::cachelib::cachebench::OpType::kGet:
+            case facebook::cachelib::cachebench::OpType::kLoneGet:
+            {
+                tmp_item_type = WorkloadItemType::kWorkloadItemGet;
+                break;
+            }
+            case facebook::cachelib::cachebench::OpType::kSet:
+            case facebook::cachelib::cachebench::OpType::kLoneSet:
+            case facebook::cachelib::cachebench::OpType::kUpdate:
+            {
+                tmp_item_type = WorkloadItemType::kWorkloadItemPut;
+                break;
+            }
+            case facebook::cachelib::cachebench::OpType::kDel:
+            {
+                tmp_item_type = WorkloadItemType::kWorkloadItemDel;
+                break;
+            }
+            default:
+            {
+                std::ostringstream oss;
+                oss << "facebook::cachelib::cachebench::OpType " << static_cast<uint32_t>(tmp_op_type) << " is not supported now (please refer to lib/CacheLib/cachelib/cachebench/util/Request.h for OpType)!";
+                Util::dumpErrorMsg(instance_name_, oss.str());
+                exit(1);
+            }
+        }
+
+        last_reqid_ = tmp_facebook_req.requestId;
+        return WorkloadItem(tmp_covered_key, tmp_covered_value, tmp_item_type);
+    }
+
     // Utility functions for dynamic workload patterns
 
-    uint32_t FacebookWorkloadWrapper::getLargestRank_(const uint32_t local_client_worker_idx)
+    uint32_t FacebookWorkloadWrapper::getLargestRank_(const uint32_t local_client_worker_idx) const
     {
         checkDynamicPatterns_();
 
@@ -321,7 +323,7 @@ namespace covered
         return tmp_ranked_unique_key_indices_const_ref.size() - 1; // poolId MUST be 0
     }
 
-    void FacebookWorkloadWrapper::getRankedKeys_(const uint32_t local_client_worker_idx, const uint32_t start_rank, const uint32_t ranked_keycnt, std::vector<std::string>& ranked_keys)
+    void FacebookWorkloadWrapper::getRankedKeys_(const uint32_t local_client_worker_idx, const uint32_t start_rank, const uint32_t ranked_keycnt, std::vector<std::string>& ranked_keys) const
     {
         checkDynamicPatterns_();
 
@@ -344,7 +346,7 @@ namespace covered
         return;
     }
 
-    void FacebookWorkloadWrapper::getRandomKeys_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<std::string>& random_keys)
+    void FacebookWorkloadWrapper::getRandomKeys_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<std::string>& random_keys) const
     {
         checkDynamicPatterns_();
 

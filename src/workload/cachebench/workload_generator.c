@@ -153,7 +153,7 @@ void WorkloadGenerator::quickDatasetDel(const std::string& key)
 
 // Siyuan: For dynamic workload patterns
 
-const std::vector<uint32_t>& WorkloadGenerator::getRankedUniqueKeyIndicesConstRef(const uint32_t local_client_worker_idx, const uint8_t poolId)
+const std::vector<uint32_t>& WorkloadGenerator::getRankedUniqueKeyIndicesConstRef(const uint32_t local_client_worker_idx, const uint8_t poolId) const
 {
   // Get the const reference of current client worker's ranked key indices
   assert(local_client_worker_idx < perworker_perpool_ranked_unique_key_indices_.size());

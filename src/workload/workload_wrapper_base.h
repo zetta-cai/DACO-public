@@ -10,6 +10,8 @@
 #ifndef WORKLOAD_WRAPPER_BASE_H
 #define WORKLOAD_WRAPPER_BASE_H
 
+#include <deque>
+#include <random> // std::mt19937_64, std::discrete_distribution
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -38,9 +40,10 @@ namespace covered
         void validate(); // Provide individual validate() as contructor cannot invoke virtual functions
 
         // Access by multiple client workers (thread safe)
-        virtual WorkloadItem generateWorkloadItem(const uint32_t& local_client_worker_idx) = 0;
+        WorkloadItem generateWorkloadItem(const uint32_t& local_client_worker_idx);
         virtual uint32_t getPracticalKeycnt() const = 0;
         virtual WorkloadItem getDatasetItem(const uint32_t itemidx) = 0; // Get a dataset key-value pair item with the index of itemidx
+        // TODO: void updateDynamicRules(); // Update dynamic rules for dynamic workload patterns
 
         // Get average/min/max dataset key/value size
         virtual double getAvgDatasetKeysize() const = 0;
@@ -61,12 +64,17 @@ namespace covered
         virtual void initWorkloadParameters_() = 0; // initialize workload parameters (e.g., by default or by loading config file)
         virtual void overwriteWorkloadParameters_() = 0; // overwrite some workload patermers based on covered::Config and covered::Param
         virtual void createWorkloadGenerator_() = 0; // create workload generator based on overwritten workload parameters
-        void prepareForDynamicPatterns_(); // prepare for dynamic workload patterns
+        void prepareForDynamicPatterns_(); // Prepare for dynamic workload patterns (mainly prepare randgen and dist for random patterns)
+        void initDynamicRules_(); // Initialize dynamic rules for dynamic workload patterns
+
+        // Access by multiple client workers (thread safe)
+        virtual WorkloadItem generateWorkloadItem_(const uint32_t& local_client_worker_idx) = 0;
+        // TODO: void applyDynamicRules_(); // Try to apply dynamic rules for dynamic workload patterns in generateWorkloadItem() after generateWorkloadItem_()
 
         // Utility functions for dynamic workload patterns
-        virtual uint32_t getLargestRank_(const uint32_t local_client_worker_idx) = 0;
-        virtual void getRankedKeys_(const uint32_t local_client_worker_idx, const uint32_t start_rank, const uint32_t ranked_keycnt, std::vector<std::string>& ranked_keys) = 0;
-        virtual void getRandomKeys_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<std::string>& random_keys) = 0;
+        virtual uint32_t getLargestRank_(const uint32_t local_client_worker_idx) const = 0;
+        virtual void getRankedKeys_(const uint32_t local_client_worker_idx, const uint32_t start_rank, const uint32_t ranked_keycnt, std::vector<std::string>& ranked_keys) const = 0;
+        virtual void getRandomKeys_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<std::string>& random_keys) const = 0;
 
         // Const shared variables
         std::string base_instance_name_;
@@ -91,11 +99,16 @@ namespace covered
         // To generate random indexes and hence keys for dynamic workload patterns
         std::vector<std::mt19937_64*> curclient_perworker_dynamic_randgen_ptrs_; // Random generators to get random keys from ranked object IDs (used for dynamic workload patterns)
         std::vector<std::uniform_int_distribution<uint32_t>*> curclient_perworker_dynamic_dist_ptrs_; // Uniform distributions to get random keys from ranked object IDs (used for dynamic workload patterns)
+
+        // Dynamic rules for dynamic workload patterns
+        uint32_t dynamic_period_idx_;
+        std::vector<std::unordered_map<std::string, std::deque<std::string>::iterator>> curclient_perworker_dynamic_rules_original_keys_; // Original keys of dynamic rules for each client worker in current client (used for dynamic workload patterns)
+        std::vector<std::deque<std::string>> curclient_perworker_dynamic_rules_mapped_keys_; // Mapped keys of dynamic rules for each client worker in current client (used for dynamic workload patterns)
     protected:
         // Utility functions for dynamic workload patterns
         void checkDynamicPatterns_() const;
-        void getRankedIdxes_(const uint32_t local_client_worker_idx, const uint32_t start_rank, const uint32_t ranked_keycnt, std::vector<uint32_t>& ranked_idxes);
-        void getRandomIdxes_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<uint32_t>& random_idxes);
+        void getRankedIdxes_(const uint32_t local_client_worker_idx, const uint32_t start_rank, const uint32_t ranked_keycnt, std::vector<uint32_t>& ranked_idxes) const;
+        void getRandomIdxes_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<uint32_t>& random_idxes) const;
 
         // Getters for const shared variables coming from Param
         // ONLY for clients

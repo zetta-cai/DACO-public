@@ -118,6 +118,10 @@ namespace covered
 
         curclient_perworker_dynamic_randgen_ptrs_.resize(perclient_workercnt, NULL);
         curclient_perworker_dynamic_dist_ptrs_.resize(perclient_workercnt, NULL);
+
+        dynamic_period_idx_ = 0;
+        curclient_perworker_dynamic_rules_original_keys_.resize(perclient_workercnt);
+        curclient_perworker_dynamic_rules_mapped_keys_.resize(perclient_workercnt);
     }
 
     WorkloadWrapperBase::~WorkloadWrapperBase()
@@ -160,7 +164,8 @@ namespace covered
             createWorkloadGenerator_();
 
             // NOTE: key rank information has already been set in the above steps
-            prepareForDynamicPatterns_();
+            prepareForDynamicPatterns_(); // Prepare variables (e.g., randgen and dist to get random keys) for dynamic workload patterns
+            initDynamicRules_(); // Initialize dynamic rules for dynamic workload patterns
 
             is_valid_ = true;
         }
@@ -169,6 +174,22 @@ namespace covered
             Util::dumpWarnMsg(base_instance_name_, "duplicate invoke of validate()!");
         }
         return;
+    }
+
+    WorkloadItem WorkloadWrapperBase::generateWorkloadItem(const uint32_t& local_client_worker_idx)
+    {
+        checkIsValid_();
+
+        assert(needWorkloadItems_()); // Must be clients for evaluation
+
+        WorkloadItem workload_item = generateWorkloadItem_(local_client_worker_idx);
+
+        if (Util::isDynamicWorkloadPattern(workload_pattern_name_))
+        {
+            // TODO: Invoke applyDynamicRules_(), which invokes checkDynamicPatterns_()
+        }
+
+        return workload_item;
     }
 
     void WorkloadWrapperBase::prepareForDynamicPatterns_()
@@ -199,6 +220,38 @@ namespace covered
         return;
     }
 
+    void WorkloadWrapperBase::initDynamicRules_()
+    {
+        const uint32_t dynamic_rulecnt = Config::getDynamicRulecnt();
+        assert(dynamic_rulecnt > 0);
+
+        for (uint32_t local_client_worker_idx = 0; local_client_worker_idx < perclient_workercnt_; local_client_worker_idx++)
+        {
+            // Get top-DYNAMIC_RULECNT hottest keys
+            std::vector<std::string> hottest_keys;
+            getRankedKeys_(local_client_worker_idx, 0, dynamic_rulecnt, hottest_keys);
+
+            // Initialize period index for the first time of updating dynamic rules later
+            dynamic_period_idx_ = 0;
+
+            // Initialize mapped keys for dynamic rules
+            for (uint32_t i = 0; i < hottest_keys.size(); i++)
+            {
+                curclient_perworker_dynamic_rules_mapped_keys_[local_client_worker_idx].push_back(hottest_keys[i]);
+            }
+
+            // Initialize original keys for dynamic rules (each original key is mapped to itself at first)
+            std::deque<std::string>::iterator tmp_iter = curclient_perworker_dynamic_rules_mapped_keys_[local_client_worker_idx].begin();
+            for (uint32_t i = 0; i < hottest_keys.size(); i++)
+            {
+                curclient_perworker_dynamic_rules_original_keys_[local_client_worker_idx].insert(std::make_pair(hottest_keys[i], tmp_iter));
+                tmp_iter++;
+            }
+        }
+
+        return;
+    }
+
     // Utility functions for dynamic workload patterns
 
     void WorkloadWrapperBase::checkDynamicPatterns_() const
@@ -208,7 +261,7 @@ namespace covered
         return;
     }
 
-    void WorkloadWrapperBase::getRankedIdxes_(const uint32_t local_client_worker_idx, const uint32_t start_rank, const uint32_t ranked_keycnt, std::vector<uint32_t>& ranked_idxes)
+    void WorkloadWrapperBase::getRankedIdxes_(const uint32_t local_client_worker_idx, const uint32_t start_rank, const uint32_t ranked_keycnt, std::vector<uint32_t>& ranked_idxes) const
     {
         checkDynamicPatterns_();
 
@@ -233,7 +286,7 @@ namespace covered
         return;
     }
 
-    void WorkloadWrapperBase::getRandomIdxes_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<uint32_t>& random_idxes)
+    void WorkloadWrapperBase::getRandomIdxes_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<uint32_t>& random_idxes) const
     {
         checkDynamicPatterns_();
 
@@ -362,7 +415,7 @@ namespace covered
     const uint32_t WorkloadWrapperBase::getDynamicChangeKeycnt_() const
     {
         // For dynamic workload patterns
-        return dynamic_change_keycnt;
+        return dynamic_change_keycnt_;
     }
 
     // (2) Other common utilities

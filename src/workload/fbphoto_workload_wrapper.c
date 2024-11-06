@@ -59,34 +59,6 @@ namespace covered
         }
     }
 
-    WorkloadItem FbphotoWorkloadWrapper::generateWorkloadItem(const uint32_t& local_client_worker_idx)
-    {
-        checkIsValid_();
-        checkPointers_();
-
-        assert(needWorkloadItems_()); // Must be clients for evaluation
-        assert(local_client_worker_idx < client_worker_item_randgen_ptrs_.size());
-        assert(local_client_worker_idx < client_worker_workload_key_indices_.size());
-
-        // Get a workload index randomly
-        std::mt19937_64* request_randgen_ptr = client_worker_item_randgen_ptrs_[local_client_worker_idx];
-        assert(request_randgen_ptr != NULL);
-        std::uniform_int_distribution<uint32_t>* request_dist_ptr = client_worker_reqdist_ptrs_[local_client_worker_idx];
-        assert(request_dist_ptr != NULL);
-        const uint32_t tmp_workload_index = (*request_dist_ptr)(*request_randgen_ptr);
-
-        // Get the key index
-        const uint32_t tmp_key_index = client_worker_workload_key_indices_[local_client_worker_idx][tmp_workload_index];
-        assert(tmp_key_index < dataset_keys_.size());
-
-        // Get key
-        const uint32_t tmp_keyint = dataset_keys_[tmp_key_index];
-        assert(tmp_keyint == tmp_key_index + 1);
-        Key tmp_key(std::string((const char*)&tmp_keyint, sizeof(uint32_t)));
-        
-        return WorkloadItem(tmp_key, Value(dataset_valsizes_[tmp_key_index]), WorkloadItemType::kWorkloadItemGet); // NOT found read-write ratio in the paper -> treat as read-only for all methods with fair comparisons
-    }
-
     uint32_t FbphotoWorkloadWrapper::getPracticalKeycnt() const
     {
         checkIsValid_();
@@ -396,10 +368,39 @@ namespace covered
         }
     }
 
+    // Access by multiple client workers (thread safe)
+
+    WorkloadItem FbphotoWorkloadWrapper::generateWorkloadItem_(const uint32_t& local_client_worker_idx)
+    {
+        checkIsValid_();
+        checkPointers_();
+
+        assert(needWorkloadItems_()); // Must be clients for evaluation
+        assert(local_client_worker_idx < client_worker_item_randgen_ptrs_.size());
+        assert(local_client_worker_idx < client_worker_workload_key_indices_.size());
+
+        // Get a workload index randomly
+        std::mt19937_64* request_randgen_ptr = client_worker_item_randgen_ptrs_[local_client_worker_idx];
+        assert(request_randgen_ptr != NULL);
+        std::uniform_int_distribution<uint32_t>* request_dist_ptr = client_worker_reqdist_ptrs_[local_client_worker_idx];
+        assert(request_dist_ptr != NULL);
+        const uint32_t tmp_workload_index = (*request_dist_ptr)(*request_randgen_ptr);
+
+        // Get the key index
+        const uint32_t tmp_key_index = client_worker_workload_key_indices_[local_client_worker_idx][tmp_workload_index];
+        assert(tmp_key_index < dataset_keys_.size());
+
+        // Get key
+        const uint32_t tmp_keyint = dataset_keys_[tmp_key_index];
+        assert(tmp_keyint == tmp_key_index + 1);
+        Key tmp_key(std::string((const char*)&tmp_keyint, sizeof(uint32_t)));
+        
+        return WorkloadItem(tmp_key, Value(dataset_valsizes_[tmp_key_index]), WorkloadItemType::kWorkloadItemGet); // NOT found read-write ratio in the paper -> treat as read-only for all methods with fair comparisons
+    }
 
     // Utility functions for dynamic workload patterns
 
-    uint32_t FbphotoWorkloadWrapper::getLargestRank_(const uint32_t local_client_worker_idx)
+    uint32_t FbphotoWorkloadWrapper::getLargestRank_(const uint32_t local_client_worker_idx) const
     {
         checkDynamicPatterns_();
 
@@ -408,7 +409,7 @@ namespace covered
         return tmp_ranked_unique_key_indices_const_ref.size() - 1;
     }
     
-    void FbphotoWorkloadWrapper::getRankedKeys_(const uint32_t local_client_worker_idx, const uint32_t start_rank, const uint32_t ranked_keycnt, std::vector<std::string>& ranked_keys)
+    void FbphotoWorkloadWrapper::getRankedKeys_(const uint32_t local_client_worker_idx, const uint32_t start_rank, const uint32_t ranked_keycnt, std::vector<std::string>& ranked_keys) const
     {
         checkDynamicPatterns_();
 
@@ -437,7 +438,7 @@ namespace covered
         return;
     }
 
-    void FbphotoWorkloadWrapper::getRandomKeys_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<std::string>& random_keys)
+    void FbphotoWorkloadWrapper::getRandomKeys_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<std::string>& random_keys) const
     {
         checkDynamicPatterns_();
 

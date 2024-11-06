@@ -60,7 +60,7 @@ class WorkloadGenerator : public covered::GeneratorBase {
   virtual void quickDatasetDel(const std::string& key) override;
 
   // Siyuan: For dynamic workload patterns
-  virtual const std::vector<uint32_t>& getRankedUniqueKeyIndicesConstRef(const uint32_t local_client_worker_idx, const uint8_t poolId) override;
+  virtual const std::vector<uint32_t>& getRankedUniqueKeyIndicesConstRef(const uint32_t local_client_worker_idx, const uint8_t poolId) const override;
 
  private:
   static const std::string kClassName;

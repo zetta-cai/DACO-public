@@ -70,28 +70,6 @@ namespace covered
         }
     }
 
-    WorkloadItem ZetaWorkloadWrapper::generateWorkloadItem(const uint32_t& local_client_worker_idx)
-    {
-        checkIsValid_();
-        checkPointers_();
-
-        assert(needWorkloadItems_()); // Must be clients for evaluation
-        assert(local_client_worker_idx < client_worker_item_randgen_ptrs_.size());
-
-        // Get a workload index randomly
-        std::mt19937_64* request_randgen_ptr = client_worker_item_randgen_ptrs_[local_client_worker_idx];
-        assert(request_randgen_ptr != NULL);
-        std::discrete_distribution<uint32_t>* request_dist_ptr = client_worker_reqdist_ptrs_[local_client_worker_idx];
-        assert(request_dist_ptr != NULL);
-        const uint32_t tmp_key_index = (*request_dist_ptr)(*request_randgen_ptr); // NOTE: here we directly use Zeta distribution to select item from dataset as workload item, instead of selecting item from pre-generated workload items (approximate workload distribution as in src/workload/fbphoto_workload_wrapper.c)
-        assert(tmp_key_index < dataset_keys_.size());
-
-        // Get key
-        Key tmp_key(dataset_keys_[tmp_key_index]);
-        
-        return WorkloadItem(tmp_key, Value(dataset_valsizes_[tmp_key_index]), WorkloadItemType::kWorkloadItemGet); // NOT found read-write ratio in the paper -> treat as read-only for all methods with fair comparisons
-    }
-
     uint32_t ZetaWorkloadWrapper::getPracticalKeycnt() const
     {
         checkIsValid_();
@@ -562,9 +540,33 @@ namespace covered
         return;
     }
 
+    // Access by multiple client workers (thread safe)
+
+    WorkloadItem ZetaWorkloadWrapper::generateWorkloadItem_(const uint32_t& local_client_worker_idx)
+    {
+        checkIsValid_();
+        checkPointers_();
+
+        assert(needWorkloadItems_()); // Must be clients for evaluation
+        assert(local_client_worker_idx < client_worker_item_randgen_ptrs_.size());
+
+        // Get a workload index randomly
+        std::mt19937_64* request_randgen_ptr = client_worker_item_randgen_ptrs_[local_client_worker_idx];
+        assert(request_randgen_ptr != NULL);
+        std::discrete_distribution<uint32_t>* request_dist_ptr = client_worker_reqdist_ptrs_[local_client_worker_idx];
+        assert(request_dist_ptr != NULL);
+        const uint32_t tmp_key_index = (*request_dist_ptr)(*request_randgen_ptr); // NOTE: here we directly use Zeta distribution to select item from dataset as workload item, instead of selecting item from pre-generated workload items (approximate workload distribution as in src/workload/fbphoto_workload_wrapper.c)
+        assert(tmp_key_index < dataset_keys_.size());
+
+        // Get key
+        Key tmp_key(dataset_keys_[tmp_key_index]);
+        
+        return WorkloadItem(tmp_key, Value(dataset_valsizes_[tmp_key_index]), WorkloadItemType::kWorkloadItemGet); // NOT found read-write ratio in the paper -> treat as read-only for all methods with fair comparisons
+    }
+
     // Utility functions for dynamic workload patterns
 
-    uint32_t ZetaWorkloadWrapper::getLargestRank_(const uint32_t local_client_worker_idx)
+    uint32_t ZetaWorkloadWrapper::getLargestRank_(const uint32_t local_client_worker_idx) const
     {
         checkDynamicPatterns_();
 
@@ -573,7 +575,7 @@ namespace covered
         return client_ranked_unique_key_indices_.size() - 1;
     }
     
-    void ZetaWorkloadWrapper::getRankedKeys_(const uint32_t local_client_worker_idx, const uint32_t start_rank, const uint32_t ranked_keycnt, std::vector<std::string>& ranked_keys)
+    void ZetaWorkloadWrapper::getRankedKeys_(const uint32_t local_client_worker_idx, const uint32_t start_rank, const uint32_t ranked_keycnt, std::vector<std::string>& ranked_keys) const
     {
         checkDynamicPatterns_();
 
@@ -593,7 +595,7 @@ namespace covered
         return;
     }
 
-    void ZetaWorkloadWrapper::getRandomKeys_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<std::string>& random_keys)
+    void ZetaWorkloadWrapper::getRandomKeys_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<std::string>& random_keys) const
     {
         checkDynamicPatterns_();
 

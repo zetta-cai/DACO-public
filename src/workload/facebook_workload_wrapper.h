@@ -39,7 +39,7 @@ namespace covered
         FacebookWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const std::string& workload_pattern_name, const uint32_t& dynamic_change_period, const uint32_t& dynamic_change_keycnt, const uint32_t& workload_randombase);
         virtual ~FacebookWorkloadWrapper();
 
-        virtual WorkloadItem generateWorkloadItem(const uint32_t& local_client_worker_idx) override; // NOTE: randomly select an item without modifying any variable -> thread safe
+        // Access by multiple client workers (thread safe)
         virtual uint32_t getPracticalKeycnt() const override;
         virtual WorkloadItem getDatasetItem(const uint32_t itemidx) override; // Get a dataset key-value pair item with the index of itemidx
 
@@ -58,14 +58,18 @@ namespace covered
     private:
         static const std::string kClassName;
 
+        // Access by the single thread of client wrapper (NO need to be thread safe)
         virtual void initWorkloadParameters_() override;
         virtual void overwriteWorkloadParameters_() override;
         virtual void createWorkloadGenerator_() override;
 
+        // Access by multiple client workers (thread safe)
+        virtual WorkloadItem generateWorkloadItem_(const uint32_t& local_client_worker_idx) override; // NOTE: randomly select an item without modifying any variable -> thread safe
+
         // Utility functions for dynamic workload patterns
-        virtual uint32_t getLargestRank_(const uint32_t local_client_worker_idx) override;
-        virtual void getRankedKeys_(const uint32_t local_client_worker_idx, const uint32_t start_rank, const uint32_t ranked_keycnt, std::vector<std::string>& ranked_keys) override;
-        virtual void getRandomKeys_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<std::string>& random_keys) override;
+        virtual uint32_t getLargestRank_(const uint32_t local_client_worker_idx) const override;
+        virtual void getRankedKeys_(const uint32_t local_client_worker_idx, const uint32_t start_rank, const uint32_t ranked_keycnt, std::vector<std::string>& ranked_keys) const override;
+        virtual void getRandomKeys_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<std::string>& random_keys) const override;
 
         // (1) Facebook-specific helper functions
 

@@ -65,38 +65,6 @@ namespace covered
         }
     }
 
-    WorkloadItem ReplayedWorkloadWrapperBase::generateWorkloadItem(const uint32_t& local_client_worker_idx)
-    {
-        checkIsValid_();
-
-        assert(needWorkloadItems_()); // Must be clients for evaluation
-        
-        uint32_t curclient_workload_idx = per_client_worker_workload_idx_[local_client_worker_idx];
-        assert(curclient_workload_idx < curclient_workload_keys_.size());
-
-        // Get key, value, and type
-        Key tmp_key = curclient_workload_keys_[curclient_workload_idx];
-        Value tmp_value;
-        WorkloadItemType tmp_type = WorkloadItemType::kWorkloadItemGet;
-        int tmp_workload_valuesize = curclient_workload_value_sizes_[curclient_workload_idx];
-        if (tmp_workload_valuesize == 0)
-        {
-            tmp_type = WorkloadItemType::kWorkloadItemDel;
-            tmp_value = Value();
-        }
-        else if (tmp_workload_valuesize > 0)
-        {
-            tmp_type = WorkloadItemType::kWorkloadItemPut;
-            tmp_value = Value(tmp_workload_valuesize);
-        }
-
-        // Update for the next workload idx
-        uint32_t next_curclient_workload_idx = (curclient_workload_idx + getPerclientWorkercnt_()) % curclient_workload_keys_.size();
-        per_client_worker_workload_idx_[local_client_worker_idx] = next_curclient_workload_idx;
-
-        return WorkloadItem(tmp_key, tmp_value, tmp_type);
-    }
-
     uint32_t ReplayedWorkloadWrapperBase::getPracticalKeycnt() const
     {
         checkIsValid_();
@@ -299,9 +267,43 @@ namespace covered
         return;
     }
 
+    // Access by multiple client workers (thread safe)
+
+    WorkloadItem ReplayedWorkloadWrapperBase::generateWorkloadItem_(const uint32_t& local_client_worker_idx)
+    {
+        checkIsValid_();
+
+        assert(needWorkloadItems_()); // Must be clients for evaluation
+        
+        uint32_t curclient_workload_idx = per_client_worker_workload_idx_[local_client_worker_idx];
+        assert(curclient_workload_idx < curclient_workload_keys_.size());
+
+        // Get key, value, and type
+        Key tmp_key = curclient_workload_keys_[curclient_workload_idx];
+        Value tmp_value;
+        WorkloadItemType tmp_type = WorkloadItemType::kWorkloadItemGet;
+        int tmp_workload_valuesize = curclient_workload_value_sizes_[curclient_workload_idx];
+        if (tmp_workload_valuesize == 0)
+        {
+            tmp_type = WorkloadItemType::kWorkloadItemDel;
+            tmp_value = Value();
+        }
+        else if (tmp_workload_valuesize > 0)
+        {
+            tmp_type = WorkloadItemType::kWorkloadItemPut;
+            tmp_value = Value(tmp_workload_valuesize);
+        }
+
+        // Update for the next workload idx
+        uint32_t next_curclient_workload_idx = (curclient_workload_idx + getPerclientWorkercnt_()) % curclient_workload_keys_.size();
+        per_client_worker_workload_idx_[local_client_worker_idx] = next_curclient_workload_idx;
+
+        return WorkloadItem(tmp_key, tmp_value, tmp_type);
+    }
+
     // Utility functions for dynamic workload patterns
 
-    uint32_t ReplayedWorkloadWrapperBase::getLargestRank_(const uint32_t local_client_worker_idx)
+    uint32_t ReplayedWorkloadWrapperBase::getLargestRank_(const uint32_t local_client_worker_idx) const
     {
         checkDynamicPatterns_();
 
@@ -310,7 +312,7 @@ namespace covered
         return curclient_ranked_unique_keys_.size() - 1;
     }
     
-    void ReplayedWorkloadWrapperBase::getRankedKeys_(const uint32_t local_client_worker_idx, const uint32_t start_rank, const uint32_t ranked_keycnt, std::vector<std::string>& ranked_keys)
+    void ReplayedWorkloadWrapperBase::getRankedKeys_(const uint32_t local_client_worker_idx, const uint32_t start_rank, const uint32_t ranked_keycnt, std::vector<std::string>& ranked_keys) const
     {
         checkDynamicPatterns_();
 
@@ -330,7 +332,7 @@ namespace covered
         return;
     }
 
-    void ReplayedWorkloadWrapperBase::getRandomKeys_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<std::string>& random_keys)
+    void ReplayedWorkloadWrapperBase::getRandomKeys_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<std::string>& random_keys) const
     {
         checkDynamicPatterns_();
 
