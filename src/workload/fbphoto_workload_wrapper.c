@@ -438,35 +438,6 @@ namespace covered
         return;
     }
 
-    void FbphotoWorkloadWrapper::getRandomKeys_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<std::string>& random_keys) const
-    {
-        checkDynamicPatterns_();
-
-        // Get random indexes
-        std::vector<uint32_t> tmp_random_idxes;
-        getRandomIdxes_(local_client_worker_idx, random_keycnt, tmp_random_idxes);
-
-        // Get the const reference of current client worker's ranked objids
-        assert(local_client_worker_idx < client_worker_ranked_unique_key_indices_.size());
-        const std::vector<uint32_t>& tmp_ranked_unique_key_indices_const_ref = client_worker_ranked_unique_key_indices_[local_client_worker_idx];
-
-        // Set random keys based on the random indexes
-        random_keys.clear();
-        for (int i = 0; i < tmp_random_idxes.size(); i++)
-        {
-            const uint32_t tmp_rand_key_indices_idx = tmp_random_idxes[i];
-            const uint32_t tmp_rand_key_indice = tmp_ranked_unique_key_indices_const_ref[tmp_rand_key_indices_idx];
-
-            const uint32_t tmp_keyint = dataset_keys_[tmp_rand_key_indice];
-            assert(tmp_keyint == tmp_rand_key_indice + 1);
-            Key tmp_key(std::string((const char*)&tmp_keyint, sizeof(uint32_t)));
-
-            random_keys.push_back(tmp_key.getKeystr());
-        }
-
-        return;
-    }
-
     // (2) Common utilities
 
     void FbphotoWorkloadWrapper::checkPointers_() const

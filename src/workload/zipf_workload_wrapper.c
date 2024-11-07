@@ -690,26 +690,6 @@ namespace covered
         return;
     }
 
-    void ZipfWorkloadWrapper::getRandomKeys_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<std::string>& random_keys) const
-    {
-        checkDynamicPatterns_();
-
-        // Get random indexes
-        std::vector<uint32_t> tmp_random_idxes;
-        getRandomIdxes_(local_client_worker_idx, random_keycnt, tmp_random_idxes);
-
-        // Set random keys based on the random indexes
-        random_keys.clear();
-        for (int i = 0; i < tmp_random_idxes.size(); i++)
-        {
-            const uint32_t tmp_rand_key_indices_idx = tmp_random_idxes[i];
-            const int64_t tmp_rand_key_indice = client_ranked_unique_key_indices_[tmp_rand_key_indices_idx];
-            random_keys.push_back(dataset_keys_[tmp_rand_key_indice]);
-        }
-
-        return;
-    }
-
     // (2) Common utilities
 
     void ZipfWorkloadWrapper::checkPointers_() const

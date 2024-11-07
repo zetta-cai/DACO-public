@@ -347,29 +347,6 @@ namespace covered
         return;
     }
 
-    void ZipfFacebookWorkloadWrapper::getRandomKeys_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<std::string>& random_keys) const
-    {
-        checkDynamicPatterns_();
-
-        // Get random indexes
-        std::vector<uint32_t> tmp_random_idxes;
-        getRandomIdxes_(local_client_worker_idx, random_keycnt, tmp_random_idxes);
-
-        // Get the const reference of current client worker's ranked key indices
-        const std::vector<uint32_t>& tmp_ranked_unique_key_indices_const_ref = workload_generator_->getRankedUniqueKeyIndicesConstRef(local_client_worker_idx, 0); // poolId MUST be 0
-
-        // Set random keys based on the random indexes
-        random_keys.clear();
-        for (int i = 0; i < tmp_random_idxes.size(); i++)
-        {
-            const uint32_t tmp_rand_key_indices_idx = tmp_random_idxes[i];
-            const int64_t tmp_rand_key_indice = tmp_ranked_unique_key_indices_const_ref[tmp_rand_key_indices_idx];
-            random_keys.push_back(workload_generator_->getDatasetReq(tmp_rand_key_indice).key);
-        }
-
-        return;
-    }
-
     // (1) For the role of clients, dataset loader, and cloud
 
     // The same makeGenerator as in lib/CacheLib/cachelib/cachebench/runner/Stressor.cpp

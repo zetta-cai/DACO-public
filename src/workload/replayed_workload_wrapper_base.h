@@ -19,11 +19,14 @@
 #include <random> // std::mt19937 and std::bernoulli_distribution
 
 #include "workload/workload_wrapper_base.h"
+#include "workload/wikipedia_workload_wrapper.h"
 
 namespace covered
 {
     class ReplayedWorkloadWrapperBase : public WorkloadWrapperBase
     {
+        friend class WikipediaWorkloadWrapper;
+        
     public:
         ReplayedWorkloadWrapperBase(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const std::string& workload_pattern_name, const uint32_t& dynamic_change_period, const uint32_t& dynamic_change_keycnt, const uint32_t& workload_randombase);
         virtual ~ReplayedWorkloadWrapperBase();
@@ -58,7 +61,6 @@ namespace covered
         // Utility functions for dynamic workload patterns
         virtual uint32_t getLargestRank_(const uint32_t local_client_worker_idx) const override;
         virtual void getRankedKeys_(const uint32_t local_client_worker_idx, const uint32_t start_rank, const uint32_t ranked_keycnt, std::vector<std::string>& ranked_keys) const override;
-        virtual void getRandomKeys_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<std::string>& random_keys) const override;
 
         // Helper functions (ONLY for replayed traces)
 

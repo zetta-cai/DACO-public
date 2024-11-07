@@ -284,31 +284,6 @@ namespace covered
         return;
     }
 
-    void AkamaiWorkloadWrapper::getRandomKeys_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<std::string>& random_keys) const
-    {
-        checkDynamicPatterns_();
-
-        // Get random indexes
-        std::vector<uint32_t> tmp_random_idxes;
-        getRandomIdxes_(local_client_worker_idx, random_keycnt, tmp_random_idxes);
-
-        // Get the const reference of current client worker's ranked objids
-        assert(local_client_worker_idx < curclient_perworker_ranked_unique_objids_.size());
-        const std::vector<int64_t>& tmp_ranked_unique_objids_const_ref = curclient_perworker_ranked_unique_objids_[local_client_worker_idx];
-
-        // Set random keys based on the random indexes
-        random_keys.clear();
-        for (int i = 0; i < tmp_random_idxes.size(); i++)
-        {
-            const uint32_t tmp_rand_objid_idx = tmp_random_idxes[i];
-            const int64_t tmp_rand_objid = tmp_ranked_unique_objids_const_ref[tmp_rand_objid_idx];
-            Key tmp_key = getKeyFromObjid_(tmp_rand_objid);
-            random_keys.push_back(tmp_key.getKeystr());
-        }
-
-        return;
-    }
-
     // (1) Akamai-specific helper functions
 
     // For role of clients, dataset loader, and cloud

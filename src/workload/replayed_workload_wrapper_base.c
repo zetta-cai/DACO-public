@@ -332,26 +332,6 @@ namespace covered
         return;
     }
 
-    void ReplayedWorkloadWrapperBase::getRandomKeys_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<std::string>& random_keys) const
-    {
-        checkDynamicPatterns_();
-
-        // Get random indexes
-        std::vector<uint32_t> tmp_random_idxes;
-        getRandomIdxes_(local_client_worker_idx, random_keycnt, tmp_random_idxes);
-
-        // Set random keys based on the random indexes
-        random_keys.clear();
-        for (int i = 0; i < tmp_random_idxes.size(); i++)
-        {
-            const uint32_t tmp_rand_keys_idx = tmp_random_idxes[i];
-            const Key& tmp_key = curclient_ranked_unique_keys_[tmp_rand_keys_idx];
-            random_keys.push_back(tmp_key.getKeystr());
-        }
-
-        return;
-    }
-
     // (1) For role of preprocessor
 
     void ReplayedWorkloadWrapperBase::verifyDatasetAndWorkloadAbsenceForPreprocessor_()

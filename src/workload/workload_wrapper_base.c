@@ -257,10 +257,13 @@ namespace covered
                     }
                     curclient_perworker_dynamic_randgen_ptrs_[tmp_local_client_worker_idx] = tmp_client_worker_dynamic_randgen_ptr_;
 
-                    // Create uniform distribution to get random keys for dynamic workload patterns
-                    // NOTE: rank information has already been set in validate() before this function
-                    const uint32_t tmp_largest_rank = getLargestRank_(tmp_local_client_worker_idx);
-                    curclient_perworker_dynamic_dist_ptrs_[tmp_local_client_worker_idx] = new std::uniform_int_distribution<uint32_t>(0, tmp_largest_rank);
+                    // // (OBSOLETE) Create uniform distribution to get random keys within [0, largest_rank] for dynamic workload patterns
+                    // // NOTE: rank information has already been set in validate() before this function
+                    // const uint32_t tmp_largest_rank = getLargestRank_(tmp_local_client_worker_idx);
+                    // curclient_perworker_dynamic_dist_ptrs_[tmp_local_client_worker_idx] = new std::uniform_int_distribution<uint32_t>(0, tmp_largest_rank);
+
+                    // Create uniform distribution to get random keys within [0, dynamic_rulecnt - 1] for dynamic workload patterns
+                    curclient_perworker_dynamic_dist_ptrs_[tmp_local_client_worker_idx] = new std::uniform_int_distribution<uint32_t>(0, Config::getDynamicRulecnt() - 1);
                 }
             }
         }
@@ -464,46 +467,38 @@ namespace covered
 
         // NOTE: NO need to acquire the rwlock for dynamic rules update, which has been done in updateDynamicRules()
 
-        // TODO
-        // for (uint32_t local_client_worker_idx = 0; local_client_worker_idx < perclient_workercnt_; local_client_worker_idx++)
-        // {
-        //     const uint32_t largest_rank = getLargestRank_(local_client_worker_idx);
+        for (uint32_t local_client_worker_idx = 0; local_client_worker_idx < perclient_workercnt_; local_client_worker_idx++)
+        {
+            const uint32_t largest_rank = getLargestRank_(local_client_worker_idx);
 
-        //     // Calculate start rank
-        //     uint32_t start_rank = Config::getDynamicRulecnt() + dynamic_period_idx_ * dynamic_change_keycnt_;
-        //     if (start_rank > largest_rank)
-        //     {
-        //         start_rank -= (largest_rank + 1);
-        //     }
+            // Calculate start rank
+            int tmp_start_rank = static_cast<int>(largest_rank);
+            tmp_start_rank = tmp_start_rank - static_cast<int>((dynamic_period_idx_ + 1) * dynamic_change_keycnt_) + 1;
+            if (tmp_start_rank < 0)
+            {
+                tmp_start_rank += static_cast<int>(largest_rank + 1);
+            }
+            uint32_t start_rank = static_cast<uint32_t>(tmp_start_rank);
 
-        //     // Get lest-hottest keys ranked in [start_rank, start_rank + dynamic_change_keycnt_ - 1]
-        //     std::vector<std::string> less_hottest_keys;
-        //     getRankedKeys_(local_client_worker_idx, start_rank, dynamic_change_keycnt_, less_hottest_keys);
+            // Get coldest keys ranked in [start_rank, start_rank + dynamic_change_keycnt_ - 1]
+            std::vector<std::string> coldest_keys;
+            getRankedKeys_(local_client_worker_idx, start_rank, dynamic_change_keycnt_, coldest_keys);
 
-        //     // Update mapped keys of dynamic rules
-        //     dynamic_rules_mapped_keys_t& tmp_mapped_keys_ref = curclient_perworker_dynamic_rules_mapped_keys_[local_client_worker_idx];
-        //     assert(tmp_mapped_keys_ref.size() >= dynamic_change_keycnt_);
-        //     for (int i = 0; i < dynamic_change_keycnt_; i++) // Pop the first dynamic_change_keycnt_ mapped keys
-        //     {
-        //         tmp_mapped_keys_ref.pop_front();
-        //     }
-        //     for (int i = 0; i < less_hottest_keys.size(); i++) // Push less-hottest keys as the last dynamic_change_keycnt_ mapped keys
-        //     {
-        //         tmp_mapped_keys_ref.push_back(less_hottest_keys[i]);
-        //     }
-        //     assert(tmp_mapped_keys_ref.size() == Config::getDynamicRulecnt());
+            // Get random indexes within [0, dynamic_rulecnt - 1] to replace
+            std::vector<uint32_t> random_indexes;
+            getRandomIdxes_(local_client_worker_idx, dynamic_change_keycnt_, random_indexes);
 
-        //     // Update lookup map of dynamic rules
-        //     std::vector<dynamic_rules_lookup_map_t::iterator>& tmp_rankptrs_ref = curclient_perworker_dynamic_rules_rankptrs_[local_client_worker_idx];
-        //     assert(tmp_rankptrs_ref.size() == Config::getDynamicRulecnt());
-        //     dynamic_rules_mapped_keys_t::iterator tmp_mapped_keys_iter = tmp_mapped_keys_ref.begin();
-        //     for (uint32_t i = 0; i < tmp_rankptrs_ref.size(); i++)
-        //     {
-        //         dynamic_rules_lookup_map_t::iterator tmp_lookup_map_iter = tmp_rankptrs_ref[i];
-        //         tmp_lookup_map_iter->second = tmp_mapped_keys_iter;
-        //         tmp_mapped_keys_iter++;
-        //     }
-        // }
+            // Update mapped keys of dynamic rules (NOTE: in-place updates in mapped keys and hence NO need to update the lookup map)
+            assert(coldest_keys.size() == random_indexes.size());
+            std::vector<dynamic_rules_lookup_map_t::iterator>& tmp_rankptrs_ref = curclient_perworker_dynamic_rules_rankptrs_[local_client_worker_idx];
+            for (int i = 0; i < dynamic_change_keycnt_; i++)
+            {
+                const uint32_t tmp_random_index = random_indexes[i];
+                dynamic_rules_lookup_map_t::iterator tmp_lookup_map_iter = tmp_rankptrs_ref[tmp_random_index];
+                dynamic_rules_mapped_keys_t::iterator tmp_mapped_keys_iter = tmp_lookup_map_iter->second;
+                *tmp_mapped_keys_iter = coldest_keys[i]; // Update the mapped key of the original key ranked at tmp_random_index with the corresponding coldest key
+            }
+        }
 
         // Update dynamic period index
         dynamic_period_idx_ += 1;
@@ -559,7 +554,7 @@ namespace covered
         std::uniform_int_distribution<uint32_t>* tmp_dist_ptr = curclient_perworker_dynamic_dist_ptrs_[local_client_worker_idx];
         assert(tmp_dist_ptr != NULL);
 
-        // Get random indexes without duplication
+        // Get random indexes within [0, dynamic_rulecnt - 1] without duplication
         std::unordered_set<uint32_t> tmp_random_idxes_set;
         while (tmp_random_idxes_set.size() < random_keycnt)
         {

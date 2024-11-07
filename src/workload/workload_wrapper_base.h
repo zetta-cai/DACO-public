@@ -82,8 +82,7 @@ namespace covered
 
         // Utility functions for dynamic workload patterns
         virtual uint32_t getLargestRank_(const uint32_t local_client_worker_idx) const = 0;
-        virtual void getRankedKeys_(const uint32_t local_client_worker_idx, const uint32_t start_rank, const uint32_t ranked_keycnt, std::vector<std::string>& ranked_keys) const = 0;
-        virtual void getRandomKeys_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<std::string>& random_keys) const = 0;
+        virtual void getRankedKeys_(const uint32_t local_client_worker_idx, const uint32_t start_rank, const uint32_t ranked_keycnt, std::vector<std::string>& ranked_keys) const = 0; // Get keys ranked in [start_rank, start_rank + ranked_keycnt - 1] within [0, largest_rank] for dynamic workload patterns
 
         // Const shared variables
         std::string base_instance_name_;
@@ -105,9 +104,9 @@ namespace covered
         const uint32_t dynamic_change_period_;
         const uint32_t dynamic_change_keycnt_;
 
-        // To generate random indexes and hence keys for dynamic workload patterns
-        std::vector<std::mt19937_64*> curclient_perworker_dynamic_randgen_ptrs_; // Random generators to get random keys ranked in [0, largest_rank] (used for dynamic workload patterns)
-        std::vector<std::uniform_int_distribution<uint32_t>*> curclient_perworker_dynamic_dist_ptrs_; // Uniform distributions to get random keys ranked in [0, largest_rank] (used for dynamic workload patterns)
+        // To generate random indexes in [0, dynamic_rulecnt - 1] and hence corresponding original keys for dynamic workload patterns
+        std::vector<std::mt19937_64*> curclient_perworker_dynamic_randgen_ptrs_; // Random generators to get random original keys ranked in [0, dynamic_rulecnt - 1] (used for dynamic workload patterns)
+        std::vector<std::uniform_int_distribution<uint32_t>*> curclient_perworker_dynamic_dist_ptrs_; // Uniform distributions to get random original keys ranked in [0, dynamic_rulecnt - 1] (used for dynamic workload patterns)
 
         // Dynamic rules for dynamic workload patterns
         typedef std::deque<std::string> dynamic_rules_mapped_keys_t;
@@ -120,8 +119,8 @@ namespace covered
     protected:
         // Utility functions for dynamic workload patterns
         void checkDynamicPatterns_() const;
-        void getRankedIdxes_(const uint32_t local_client_worker_idx, const uint32_t start_rank, const uint32_t ranked_keycnt, std::vector<uint32_t>& ranked_idxes) const;
-        void getRandomIdxes_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<uint32_t>& random_idxes) const;
+        void getRankedIdxes_(const uint32_t local_client_worker_idx, const uint32_t start_rank, const uint32_t ranked_keycnt, std::vector<uint32_t>& ranked_idxes) const; // Get indexes of [start_rank, start_rank + ranked_keycnt - 1] within [0, largest_rank] for dynamic workload patterns
+        void getRandomIdxes_(const uint32_t local_client_worker_idx, const uint32_t random_keycnt, std::vector<uint32_t>& random_idxes) const; // Get random_keycnt random indexes within [0, dynamic_rulecnt - 1] for dynamic workload patterns
 
         // Getters for const shared variables coming from Param
         // ONLY for clients
