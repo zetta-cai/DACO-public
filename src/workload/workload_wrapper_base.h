@@ -16,6 +16,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include <boost/thread/shared_mutex.hpp>
+
 #include "workload/workload_item.h"
 
 namespace covered
@@ -43,7 +45,9 @@ namespace covered
         WorkloadItem generateWorkloadItem(const uint32_t& local_client_worker_idx);
         virtual uint32_t getPracticalKeycnt() const = 0;
         virtual WorkloadItem getDatasetItem(const uint32_t itemidx) = 0; // Get a dataset key-value pair item with the index of itemidx
-        // TODO: void updateDynamicRules(); // Update dynamic rules for dynamic workload patterns
+
+        // Access by single thread of client wrapper, yet contend with multiple client workers for dynamic rules (thread safe)
+        void updateDynamicRules(); // Update dynamic rules for dynamic workload patterns
 
         // Get average/min/max dataset key/value size
         virtual double getAvgDatasetKeysize() const = 0;
@@ -69,7 +73,12 @@ namespace covered
 
         // Access by multiple client workers (thread safe)
         virtual WorkloadItem generateWorkloadItem_(const uint32_t& local_client_worker_idx) = 0;
-        // TODO: void applyDynamicRules_(); // Try to apply dynamic rules for dynamic workload patterns in generateWorkloadItem() after generateWorkloadItem_()
+        void applyDynamicRules_(const uint32_t& local_client_worker_idx, WorkloadItem& workload_item); // Try to apply dynamic rules for dynamic workload patterns in generateWorkloadItem() after generateWorkloadItem_()
+
+        // Access by single thread of client wrapper, yet contend with multiple client workers for dynamic rules (thread safe)
+        void updateDynamicRulesForHotin_();
+        void updateDynamicRulesForHotout_();
+        void updateDynamicRulesForRandom_();
 
         // Utility functions for dynamic workload patterns
         virtual uint32_t getLargestRank_(const uint32_t local_client_worker_idx) const = 0;
@@ -97,13 +106,17 @@ namespace covered
         const uint32_t dynamic_change_keycnt_;
 
         // To generate random indexes and hence keys for dynamic workload patterns
-        std::vector<std::mt19937_64*> curclient_perworker_dynamic_randgen_ptrs_; // Random generators to get random keys from ranked object IDs (used for dynamic workload patterns)
-        std::vector<std::uniform_int_distribution<uint32_t>*> curclient_perworker_dynamic_dist_ptrs_; // Uniform distributions to get random keys from ranked object IDs (used for dynamic workload patterns)
+        std::vector<std::mt19937_64*> curclient_perworker_dynamic_randgen_ptrs_; // Random generators to get random keys ranked in [0, largest_rank] (used for dynamic workload patterns)
+        std::vector<std::uniform_int_distribution<uint32_t>*> curclient_perworker_dynamic_dist_ptrs_; // Uniform distributions to get random keys ranked in [0, largest_rank] (used for dynamic workload patterns)
 
         // Dynamic rules for dynamic workload patterns
+        typedef std::deque<std::string> dynamic_rules_mapped_keys_t;
+        typedef std::unordered_map<std::string, dynamic_rules_mapped_keys_t::iterator> dynamic_rules_lookup_map_t;
+        boost::shared_mutex dynamic_rwlock_; // Ensure thread safety for dynamic rules (read by client workers of current client; written by client wrapper of current client)
         uint32_t dynamic_period_idx_;
-        std::vector<std::unordered_map<std::string, std::deque<std::string>::iterator>> curclient_perworker_dynamic_rules_original_keys_; // Original keys of dynamic rules for each client worker in current client (used for dynamic workload patterns)
-        std::vector<std::deque<std::string>> curclient_perworker_dynamic_rules_mapped_keys_; // Mapped keys of dynamic rules for each client worker in current client (used for dynamic workload patterns)
+        std::vector<std::vector<dynamic_rules_lookup_map_t::iterator>> curclient_perworker_dynamic_rules_rankptrs_; // Rank pointers (rank -> original keys' pointers in lookup map) of dynamic rules for each client worker in current client (used for dynamic workload patterns) (NOTE: NEVER changed after initialization)
+        std::vector<dynamic_rules_lookup_map_t> curclient_perworker_dynamic_rules_lookup_map_; // Lookup maps (original keys -> mapped keys' pointers) of dynamic rules for each client worker in current client (used for dynamic workload patterns) (NOTE: keys are NEVER changed after initialization, yet values will be changed when updating dynamic rules)
+        std::vector<dynamic_rules_mapped_keys_t> curclient_perworker_dynamic_rules_mapped_keys_; // Mapped keys of dynamic rules for each client worker in current client (used for dynamic workload patterns) (NOTE: partially changed when updating dynamic rules)
     protected:
         // Utility functions for dynamic workload patterns
         void checkDynamicPatterns_() const;

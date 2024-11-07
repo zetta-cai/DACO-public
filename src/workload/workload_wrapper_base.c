@@ -120,7 +120,8 @@ namespace covered
         curclient_perworker_dynamic_dist_ptrs_.resize(perclient_workercnt, NULL);
 
         dynamic_period_idx_ = 0;
-        curclient_perworker_dynamic_rules_original_keys_.resize(perclient_workercnt);
+        curclient_perworker_dynamic_rules_rankptrs_.resize(perclient_workercnt);
+        curclient_perworker_dynamic_rules_lookup_map_.resize(perclient_workercnt);
         curclient_perworker_dynamic_rules_mapped_keys_.resize(perclient_workercnt);
     }
 
@@ -184,13 +185,59 @@ namespace covered
 
         WorkloadItem workload_item = generateWorkloadItem_(local_client_worker_idx);
 
-        if (Util::isDynamicWorkloadPattern(workload_pattern_name_))
+        if (Util::isDynamicWorkloadPattern(workload_pattern_name_)) // Dynamic patterns
         {
-            // TODO: Invoke applyDynamicRules_(), which invokes checkDynamicPatterns_()
+            applyDynamicRules_(local_client_worker_idx, workload_item);
         }
 
         return workload_item;
     }
+
+    // Access by single thread of client wrapper, yet contend with multiple client workers for dynamic rules (thread safe)
+
+    void WorkloadWrapperBase::updateDynamicRules()
+    {
+        checkIsValid_();
+        
+        checkDynamicPatterns_();
+
+        // Acquire a write lock without blocking
+        while (true)
+        {
+            bool result = dynamic_rwlock_.try_lock();
+            if (result)
+            {
+                break;
+            }
+        }
+
+        if (workload_pattern_name_ == Util::HOTIN_WORKLOAD_PATTERN_NAME) // Hot-in dynamic pattern
+        {
+            updateDynamicRulesForHotin_();
+        }
+        else if (workload_pattern_name_ == Util::HOTOUT_WORKLOAD_PATTERN_NAME) // Hot-out dynamic pattern
+        {
+            updateDynamicRulesForHotout_();
+        }
+        else if (workload_name_ == Util::RANDOM_WORKLOAD_PATTERN_NAME) // Random dynamic pattern
+        {
+            updateDynamicRulesForRandom_();
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "workload pattern " << workload_pattern_name_ << " is not supported for dynamic rules update!";
+            Util::dumpErrorMsg(base_instance_name_, oss.str());
+            exit(1);
+        }
+
+        // Release a write lock
+        dynamic_rwlock_.unlock();
+
+        return;
+    }
+
+    // Access by the single thread of client wrapper (NO need to be thread safe)
 
     void WorkloadWrapperBase::prepareForDynamicPatterns_()
     {
@@ -235,19 +282,231 @@ namespace covered
             dynamic_period_idx_ = 0;
 
             // Initialize mapped keys for dynamic rules
+            dynamic_rules_mapped_keys_t& tmp_mapped_keys_ref = curclient_perworker_dynamic_rules_mapped_keys_[local_client_worker_idx];
             for (uint32_t i = 0; i < hottest_keys.size(); i++)
             {
-                curclient_perworker_dynamic_rules_mapped_keys_[local_client_worker_idx].push_back(hottest_keys[i]);
+                tmp_mapped_keys_ref.push_back(hottest_keys[i]);
             }
 
-            // Initialize original keys for dynamic rules (each original key is mapped to itself at first)
-            std::deque<std::string>::iterator tmp_iter = curclient_perworker_dynamic_rules_mapped_keys_[local_client_worker_idx].begin();
+            // Initialize lookup map and rank pointers for dynamic rules (each original key is mapped to itself at first)
+            dynamic_rules_mapped_keys_t::iterator tmp_mapped_keys_iter = tmp_mapped_keys_ref.begin();
             for (uint32_t i = 0; i < hottest_keys.size(); i++)
             {
-                curclient_perworker_dynamic_rules_original_keys_[local_client_worker_idx].insert(std::make_pair(hottest_keys[i], tmp_iter));
-                tmp_iter++;
+                dynamic_rules_lookup_map_t::iterator tmp_lookup_map_iter = curclient_perworker_dynamic_rules_lookup_map_[local_client_worker_idx].insert(std::make_pair(hottest_keys[i], tmp_mapped_keys_iter)).first;
+                curclient_perworker_dynamic_rules_rankptrs_[local_client_worker_idx].push_back(tmp_lookup_map_iter);
+                tmp_mapped_keys_iter++;
             }
         }
+
+        return;
+    }
+
+    // Access by multiple client workers (thread safe)
+
+    void WorkloadWrapperBase::applyDynamicRules_(const uint32_t& local_client_worker_idx, WorkloadItem& workload_item)
+    {
+        checkIsValid_();
+
+        checkDynamicPatterns_();
+
+        Key& workload_key_ref = workload_item.getKeyRef();
+        const std::string original_keystr = workload_key_ref.getKeystr();
+
+        // Acquire a read lock without blocking
+        while (true)
+        {
+            bool result = dynamic_rwlock_.try_lock_shared();
+            if (result)
+            {
+                break;
+            }
+        }
+
+        // Try to convert the key in workload_item according to dynamic rules
+        const dynamic_rules_lookup_map_t& tmp_lookup_map_const_ref = curclient_perworker_dynamic_rules_lookup_map_[local_client_worker_idx];
+        dynamic_rules_lookup_map_t::const_iterator tmp_lookup_map_const_iter = tmp_lookup_map_const_ref.find(original_keystr);
+        // NOTE: Do NOT convert the generated key if it does not exist in the dynamic rules
+        if (tmp_lookup_map_const_iter != tmp_lookup_map_const_ref.end()) // Corresponding dynamic rule exists
+        {
+            dynamic_rules_mapped_keys_t::iterator tmp_mapped_keys_iter = tmp_lookup_map_const_iter->second;
+            workload_key_ref = Key(*tmp_mapped_keys_iter); // Update the key from original one as mapped one in workload_item
+        }
+
+        // Release the read lock
+        dynamic_rwlock_.unlock_shared();
+
+        return;
+    }
+
+    // Access by single thread of client wrapper, yet contend with multiple client workers for dynamic rules (thread safe)
+    
+    void WorkloadWrapperBase::updateDynamicRulesForHotin_()
+    {
+        checkIsValid_();
+        
+        checkDynamicPatterns_();
+
+        assert(workload_pattern_name_ == Util::HOTIN_WORKLOAD_PATTERN_NAME); // Hot-in dynamic pattern
+
+        // NOTE: NO need to acquire the rwlock for dynamic rules update, which has been done in updateDynamicRules()
+
+        for (uint32_t local_client_worker_idx = 0; local_client_worker_idx < perclient_workercnt_; local_client_worker_idx++)
+        {
+            const uint32_t largest_rank = getLargestRank_(local_client_worker_idx);
+
+            // Calculate start rank
+            int tmp_start_rank = static_cast<int>(largest_rank);
+            tmp_start_rank = tmp_start_rank - static_cast<int>((dynamic_period_idx_ + 1) * dynamic_change_keycnt_) + 1;
+            if (tmp_start_rank < 0)
+            {
+                tmp_start_rank += static_cast<int>(largest_rank + 1);
+            }
+            uint32_t start_rank = static_cast<uint32_t>(tmp_start_rank);
+
+            // Get coldest keys ranked in [start_rank, start_rank + dynamic_change_keycnt_ - 1]
+            std::vector<std::string> coldest_keys;
+            getRankedKeys_(local_client_worker_idx, start_rank, dynamic_change_keycnt_, coldest_keys);
+
+            // Update mapped keys of dynamic rules
+            dynamic_rules_mapped_keys_t& tmp_mapped_keys_ref = curclient_perworker_dynamic_rules_mapped_keys_[local_client_worker_idx];
+            assert(tmp_mapped_keys_ref.size() >= dynamic_change_keycnt_);
+            for (int i = 0; i < dynamic_change_keycnt_; i++) // Pop the last dynamic_change_keycnt_ mapped keys
+            {
+                tmp_mapped_keys_ref.pop_back();
+            }
+            for (int i = coldest_keys.size() - 1; i >= 0; i--) // Push coldest keys as the first dynamic_change_keycnt_ mapped keys
+            {
+                tmp_mapped_keys_ref.push_front(coldest_keys[i]);
+            }
+            assert(tmp_mapped_keys_ref.size() == Config::getDynamicRulecnt());
+
+            // Update lookup map of dynamic rules
+            std::vector<dynamic_rules_lookup_map_t::iterator>& tmp_rankptrs_ref = curclient_perworker_dynamic_rules_rankptrs_[local_client_worker_idx];
+            assert(tmp_rankptrs_ref.size() == Config::getDynamicRulecnt());
+            dynamic_rules_mapped_keys_t::iterator tmp_mapped_keys_iter = tmp_mapped_keys_ref.begin();
+            for (uint32_t i = 0; i < tmp_rankptrs_ref.size(); i++)
+            {
+                dynamic_rules_lookup_map_t::iterator tmp_lookup_map_iter = tmp_rankptrs_ref[i];
+                tmp_lookup_map_iter->second = tmp_mapped_keys_iter;
+                tmp_mapped_keys_iter++;
+            }
+        }
+
+        // Update dynamic period index
+        dynamic_period_idx_ += 1;
+
+        return;
+    }
+
+    void WorkloadWrapperBase::updateDynamicRulesForHotout_()
+    {
+        checkIsValid_();
+        
+        checkDynamicPatterns_();
+
+        assert(workload_pattern_name_ == Util::HOTOUT_WORKLOAD_PATTERN_NAME); // Hot-out dynamic pattern
+
+        // NOTE: NO need to acquire the rwlock for dynamic rules update, which has been done in updateDynamicRules()
+
+        for (uint32_t local_client_worker_idx = 0; local_client_worker_idx < perclient_workercnt_; local_client_worker_idx++)
+        {
+            const uint32_t largest_rank = getLargestRank_(local_client_worker_idx);
+
+            // Calculate start rank
+            uint32_t start_rank = Config::getDynamicRulecnt() + dynamic_period_idx_ * dynamic_change_keycnt_;
+            if (start_rank > largest_rank)
+            {
+                start_rank -= (largest_rank + 1);
+            }
+
+            // Get lest-hottest keys ranked in [start_rank, start_rank + dynamic_change_keycnt_ - 1]
+            std::vector<std::string> less_hottest_keys;
+            getRankedKeys_(local_client_worker_idx, start_rank, dynamic_change_keycnt_, less_hottest_keys);
+
+            // Update mapped keys of dynamic rules
+            dynamic_rules_mapped_keys_t& tmp_mapped_keys_ref = curclient_perworker_dynamic_rules_mapped_keys_[local_client_worker_idx];
+            assert(tmp_mapped_keys_ref.size() >= dynamic_change_keycnt_);
+            for (int i = 0; i < dynamic_change_keycnt_; i++) // Pop the first dynamic_change_keycnt_ mapped keys
+            {
+                tmp_mapped_keys_ref.pop_front();
+            }
+            for (int i = 0; i < less_hottest_keys.size(); i++) // Push less-hottest keys as the last dynamic_change_keycnt_ mapped keys
+            {
+                tmp_mapped_keys_ref.push_back(less_hottest_keys[i]);
+            }
+            assert(tmp_mapped_keys_ref.size() == Config::getDynamicRulecnt());
+
+            // Update lookup map of dynamic rules
+            std::vector<dynamic_rules_lookup_map_t::iterator>& tmp_rankptrs_ref = curclient_perworker_dynamic_rules_rankptrs_[local_client_worker_idx];
+            assert(tmp_rankptrs_ref.size() == Config::getDynamicRulecnt());
+            dynamic_rules_mapped_keys_t::iterator tmp_mapped_keys_iter = tmp_mapped_keys_ref.begin();
+            for (uint32_t i = 0; i < tmp_rankptrs_ref.size(); i++)
+            {
+                dynamic_rules_lookup_map_t::iterator tmp_lookup_map_iter = tmp_rankptrs_ref[i];
+                tmp_lookup_map_iter->second = tmp_mapped_keys_iter;
+                tmp_mapped_keys_iter++;
+            }
+        }
+
+        // Update dynamic period index
+        dynamic_period_idx_ += 1;
+
+        return;
+    }
+
+    void WorkloadWrapperBase::updateDynamicRulesForRandom_()
+    {
+        checkIsValid_();
+        
+        checkDynamicPatterns_();
+
+        assert(workload_pattern_name_ == Util::RANDOM_WORKLOAD_PATTERN_NAME); // Random dynamic pattern
+
+        // NOTE: NO need to acquire the rwlock for dynamic rules update, which has been done in updateDynamicRules()
+
+        // TODO
+        // for (uint32_t local_client_worker_idx = 0; local_client_worker_idx < perclient_workercnt_; local_client_worker_idx++)
+        // {
+        //     const uint32_t largest_rank = getLargestRank_(local_client_worker_idx);
+
+        //     // Calculate start rank
+        //     uint32_t start_rank = Config::getDynamicRulecnt() + dynamic_period_idx_ * dynamic_change_keycnt_;
+        //     if (start_rank > largest_rank)
+        //     {
+        //         start_rank -= (largest_rank + 1);
+        //     }
+
+        //     // Get lest-hottest keys ranked in [start_rank, start_rank + dynamic_change_keycnt_ - 1]
+        //     std::vector<std::string> less_hottest_keys;
+        //     getRankedKeys_(local_client_worker_idx, start_rank, dynamic_change_keycnt_, less_hottest_keys);
+
+        //     // Update mapped keys of dynamic rules
+        //     dynamic_rules_mapped_keys_t& tmp_mapped_keys_ref = curclient_perworker_dynamic_rules_mapped_keys_[local_client_worker_idx];
+        //     assert(tmp_mapped_keys_ref.size() >= dynamic_change_keycnt_);
+        //     for (int i = 0; i < dynamic_change_keycnt_; i++) // Pop the first dynamic_change_keycnt_ mapped keys
+        //     {
+        //         tmp_mapped_keys_ref.pop_front();
+        //     }
+        //     for (int i = 0; i < less_hottest_keys.size(); i++) // Push less-hottest keys as the last dynamic_change_keycnt_ mapped keys
+        //     {
+        //         tmp_mapped_keys_ref.push_back(less_hottest_keys[i]);
+        //     }
+        //     assert(tmp_mapped_keys_ref.size() == Config::getDynamicRulecnt());
+
+        //     // Update lookup map of dynamic rules
+        //     std::vector<dynamic_rules_lookup_map_t::iterator>& tmp_rankptrs_ref = curclient_perworker_dynamic_rules_rankptrs_[local_client_worker_idx];
+        //     assert(tmp_rankptrs_ref.size() == Config::getDynamicRulecnt());
+        //     dynamic_rules_mapped_keys_t::iterator tmp_mapped_keys_iter = tmp_mapped_keys_ref.begin();
+        //     for (uint32_t i = 0; i < tmp_rankptrs_ref.size(); i++)
+        //     {
+        //         dynamic_rules_lookup_map_t::iterator tmp_lookup_map_iter = tmp_rankptrs_ref[i];
+        //         tmp_lookup_map_iter->second = tmp_mapped_keys_iter;
+        //         tmp_mapped_keys_iter++;
+        //     }
+        // }
+
+        // Update dynamic period index
+        dynamic_period_idx_ += 1;
 
         return;
     }

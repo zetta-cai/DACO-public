@@ -57,6 +57,11 @@ namespace covered
         return item_type_;
     }
 
+    Key& WorkloadItem::getKeyRef()
+    {
+        return key_;
+    }
+
     const WorkloadItem& WorkloadItem::operator=(const WorkloadItem& other)
     {
         key_ = other.key_;
