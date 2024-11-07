@@ -42,6 +42,8 @@ namespace covered
         kDumpSnapshotRequest,
         kDumpSnapshotResponse,
         kSimpleFinishrunResponse,
+        kUpdateRulesRequest,
+        kUpdateRulesResponse,
         // Cooperation control messages
         kAcquireWritelockRequest,
         kAcquireWritelockResponse,

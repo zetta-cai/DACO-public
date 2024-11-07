@@ -69,6 +69,7 @@ namespace covered
         bool checkWarmupStatus_(const struct timespec& start_timestamp, const struct timespec& cur_timestamp);
         void notifyClientsToFinishWarmup_();
         void notifyEdgesToDumpSnapshot_(); // Only for realnet dump evaluation
+        void notifyClientsToUpdateRules_(); // Only for dynamic workload patterns after warmup
         void notifyAllToFinishrun_(); // Finish clients first, and then edge and cloud
         void notifyClientsToFinishrun_(); // Update per-slot/stable total aggregated statistics
         void notifyEdgeCloudToFinishrun_();
@@ -96,6 +97,7 @@ namespace covered
 
         bool is_warmup_phase_;
         uint32_t target_slot_idx_;
+        uint32_t dynamic_period_idx_; // ONLY used by evaluator to dump log
 
         NetworkAddr evaluator_recvmsg_source_addr_;
         NetworkAddr* perclient_recvmsg_dst_addrs_;

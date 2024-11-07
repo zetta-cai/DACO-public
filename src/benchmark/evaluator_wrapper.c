@@ -83,6 +83,7 @@ namespace covered
             is_warmup_phase_ = true;
         }
         target_slot_idx_ = 0;
+        dynamic_period_idx_ = 0;
 
         // (1) Manage evaluation phases
 
@@ -845,6 +846,88 @@ namespace covered
         }
 
         Util::dumpNormalMsg(kClassName, "All edge nodes have dumped snapshots!");
+
+        return;
+    }
+
+    void EvaluatorWrapper::notifyClientsToUpdateRules_()
+    {
+        checkPointers_();
+
+        assert(!is_warmup_phase_); // Must finish warmup phase already
+
+        // Client ack flags
+        std::unordered_map<NetworkAddr, std::pair<bool, std::string>, NetworkAddrHasher> update_rules_acked_flags = getAckedFlagsForClients_();
+
+        std::ostringstream oss;
+        oss << "Notify all clients to update dynamic rules for period " << dynamic_period_idx_ << "...";
+        Util::dumpNormalMsg(kClassName, oss.str());
+
+        const uint64_t cur_msg_seqnum = evaluator_msg_seqnum_.fetch_add(1, Util::RMW_CONCURRENCY_ORDER); // NOTE: ONLY need one msg seqnum for multiple updaterules requests due to issuing to different clients
+
+        // Timeout-and-retry mechanism
+        uint32_t acked_cnt = 0;
+        bool is_stale_response = false; // Only recv again instead of send if with a stale response
+        while (acked_cnt < update_rules_acked_flags.size())
+        {
+            if (!is_stale_response)
+            {
+                // Issue UpdateRulesRequests to unacked clients simultaneously
+                UpdateRulesRequest tmp_update_rules_request(0, evaluator_recvmsg_source_addr_, cur_msg_seqnum);
+                issueMsgToUnackedNodes_((MessageBase*)&tmp_update_rules_request, update_rules_acked_flags);
+            }
+
+            // Receive UpdateRulesResponses for unacked clients
+            const uint32_t expected_rspcnt = update_rules_acked_flags.size() - acked_cnt;
+            for (uint32_t i = 0; i < expected_rspcnt; i++)
+            {
+                DynamicArray control_response_msg_payload;
+                bool is_timeout = evaluator_recvmsg_socket_server_ptr_->recv(control_response_msg_payload);
+                if (is_timeout)
+                {
+                    Util::dumpWarnMsg(kClassName, "timeout to wait for UpdateRulesResponse from " + Util::getAckedStatusStr(update_rules_acked_flags) + "!");
+                    is_stale_response = false; // Reset to re-send request
+                    break; // Wait until all clients have updated dynamic rules
+                }
+                else
+                {
+                    MessageBase* control_response_ptr = MessageBase::getResponseFromMsgPayload(control_response_msg_payload);
+                    assert(control_response_ptr != NULL);
+
+                    // Check if the received message is a stale response
+                    if (control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() != cur_msg_seqnum)
+                    {
+                        is_stale_response = true; // ONLY recv again instead of send if with a stale response
+
+                        std::ostringstream oss_for_stable_response;
+                        oss_for_stable_response << "stale response " << MessageBase::messageTypeToString(control_response_ptr->getMessageType()) << " with seqnum " << control_response_ptr->getExtraCommonMsghdr().getMsgSeqnum() << " != " << cur_msg_seqnum;
+                        Util::dumpWarnMsg(kClassName, oss_for_stable_response.str());
+
+                        delete control_response_ptr;
+                        control_response_ptr = NULL;
+                        break; // Jump to while loop
+                    }
+
+                    assert(control_response_ptr->getMessageType() == MessageType::kUpdateRulesResponse);
+
+                    bool is_first_rsp_for_ack = processMsgForAck_(control_response_ptr, update_rules_acked_flags);
+                    if (is_first_rsp_for_ack)
+                    {
+                        acked_cnt++;
+                    }
+
+                    delete control_response_ptr;
+                    control_response_ptr = NULL;
+                }
+            }
+        }
+
+        oss.clear();
+        oss.str("");
+        oss << "All clients have updated dynamic rules for period " << dynamic_period_idx_;
+        Util::dumpNormalMsg(kClassName, oss.str());
+
+        dynamic_period_idx_ += 1;
 
         return;
     }

@@ -20,6 +20,8 @@
 #include "message/control/benchmark/dump_snapshot_request.h"
 #include "message/control/benchmark/dump_snapshot_response.h"
 #include "message/control/benchmark/simple_finishrun_response.h"
+#include "message/control/benchmark/update_rules_request.h"
+#include "message/control/benchmark/update_rules_response.h"
 
 #include "message/control/cooperation/acquire_writelock_request.h"
 #include "message/control/cooperation/acquire_writelock_response.h"
