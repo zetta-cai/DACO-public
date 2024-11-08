@@ -11,17 +11,30 @@ from .utils.single_node_simulator import *
 
 # (2) Define the settings for the experiment
 
-# Test single-node simulator
+# Test dynamic workload patterns for preliminary results
 simple_example_settings = {
-    "clientcnt": 128, # 128, 1024
-    "edgecnt": 128, # 128, 1024
-    "keycnt": 10000000, # 1000000, 10000000
+    "clientcnt": 8,
+    "edgecnt": 8,
+    "keycnt": 1000000,
     "capacity_mb": 1024,
-    "cache_name": "shark+lhd", # covered, shark+gdsf, shark+lhd
+    "cache_name": "shark+gdsf", # covered, shark+gdsf, shark+lhd
     "workload_name": "facebook",
-    "simulator_workloadcnt": 1,
-    "simulator_randomness": 0
+    "workload_pattern_name": "hotin", # hotin, hotout, random
+    "dynamic_change_period": 10,
+    "dynamic_change_keycnt": 200
 }
+
+# # Test single-node simulator
+# simple_example_settings = {
+#     "clientcnt": 128, # 128, 1024
+#     "edgecnt": 128, # 128, 1024
+#     "keycnt": 10000000, # 1000000, 10000000
+#     "capacity_mb": 1024,
+#     "cache_name": "shark+lhd", # covered, shark+gdsf, shark+lhd
+#     "workload_name": "facebook",
+#     "simulator_workloadcnt": 1,
+#     "simulator_randomness": 0
+# }
 
 # # Test COVERED's small LRU cache
 # simple_example_settings = {
@@ -138,16 +151,16 @@ simple_example_settings = {
 #dataset_loader_instance.run()
 
 # For prototype
-# prototype_instance = Prototype(**simple_example_settings)
-# prototype_instance.run()
+prototype_instance = Prototype(**simple_example_settings)
+prototype_instance.run()
 
 # For single-node prototype
 #single_node_prototype_instance = SingleNodePrototype(**simple_example_settings)
 #single_node_prototype_instance.run()
 
 # For single-node simulator
-single_node_simulator_instance = SingleNodeSimulator(**simple_example_settings)
-single_node_simulator_instance.run()
+# single_node_simulator_instance = SingleNodeSimulator(**simple_example_settings)
+# single_node_simulator_instance.run()
 
 # For total statistics loader
 #total_statistics_loader_instance = TotalStatisticsLoader(**simple_example_settings)
