@@ -4,9 +4,9 @@
 # (1) Import the correpsonding module you need
 
 # from .utils.dataset_loader import *
-# from .utils.prototype import *
+from .utils.prototype import *
 # from .utils.single_node_prototype import *
-from .utils.single_node_simulator import *
+# from .utils.single_node_simulator import *
 # from .utils.total_statistics_loader import *
 
 # (2) Define the settings for the experiment
@@ -21,7 +21,8 @@ simple_example_settings = {
     "workload_name": "facebook",
     "workload_pattern_name": "hotin", # hotin, hotout, random
     "dynamic_change_period": 10,
-    "dynamic_change_keycnt": 200
+    "dynamic_change_keycnt": 200,
+    "stresstest_duration_sec": 600 # 10 minutes
 }
 
 # # Test single-node simulator
