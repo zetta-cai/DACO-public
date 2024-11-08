@@ -307,6 +307,10 @@ namespace covered
         {
             processFinishWarmupRequest_(control_request_ptr); // Mark is_warmup_phase_ as false
         }
+        else if (control_request_msg_type == MessageType::kUpdateRulesRequest)
+        {
+            processUpdateRulesRequest_(control_request_ptr); // Update dynamic workload rules
+        }
         else
         {
             std::ostringstream oss;
@@ -376,6 +380,18 @@ namespace covered
         // Send back FinishWarmupResponse to evaluator
         FinishWarmupResponse finish_warmup_response(node_idx_, node_recvmsg_source_addr_, EventList(), control_request_ptr->getExtraCommonMsghdr().getMsgSeqnum());
         node_sendmsg_socket_client_ptr_->send((MessageBase*)&finish_warmup_response, evaluator_recvmsg_dst_addr_);
+
+        return;
+    }
+
+    void ClientWrapper::processUpdateRulesRequest_(MessageBase* control_request_ptr)
+    {
+        // Update dynamic workload rules
+        workload_generator_ptr_->updateDynamicRules();
+
+        // Send back UpdateRulesResponse to evaluator
+        UpdateRulesResponse update_rules_response(node_idx_, node_recvmsg_source_addr_, EventList(), control_request_ptr->getExtraCommonMsghdr().getMsgSeqnum());
+        node_sendmsg_socket_client_ptr_->send((MessageBase*)&update_rules_response, evaluator_recvmsg_dst_addr_);
 
         return;
     }

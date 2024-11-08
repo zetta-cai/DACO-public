@@ -63,7 +63,7 @@ namespace covered
         EvaluatorCLI* evaluator_cli_ptr = evaluator_wrapper_param.getEvaluatorCLIPtr();
         std::string evaluator_statistics_filepath = Util::getEvaluatorStatisticsFilepath(evaluator_cli_ptr);
 
-        EvaluatorWrapper evaluator(evaluator_cli_ptr->getClientcnt(), evaluator_cli_ptr->getEdgecnt(), evaluator_cli_ptr->getKeycnt(), evaluator_cli_ptr->getWarmupReqcntScale(), evaluator_cli_ptr->getWarmupMaxDurationSec(), evaluator_cli_ptr->getStresstestDurationSec(), evaluator_statistics_filepath, evaluator_cli_ptr->getRealnetOption());
+        EvaluatorWrapper evaluator(evaluator_cli_ptr->getClientcnt(), evaluator_cli_ptr->getEdgecnt(), evaluator_cli_ptr->getKeycnt(), evaluator_cli_ptr->getWarmupReqcntScale(), evaluator_cli_ptr->getWarmupMaxDurationSec(), evaluator_cli_ptr->getStresstestDurationSec(), evaluator_statistics_filepath, evaluator_cli_ptr->getRealnetOption(), evaluator_cli_ptr->getWorkloadPatternName(), evaluator_cli_ptr->getDynamicChangePeriod());
         evaluator_wrapper_param.markFinishInitialization(); // Such that simulator or prototype will continue to launch cloud, edge, and client nodes
 
         evaluator.start();
@@ -72,7 +72,7 @@ namespace covered
         return NULL;
     }
 
-    EvaluatorWrapper::EvaluatorWrapper(const uint32_t& clientcnt, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& warmup_reqcnt_scale, const uint32_t& warmup_max_duration_sec, const uint32_t& stresstest_duration_sec, const std::string& evaluator_statistics_filepath, const std::string& realnet_option) : clientcnt_(clientcnt), edgecnt_(edgecnt), warmup_reqcnt_(keycnt * warmup_reqcnt_scale), warmup_max_duration_sec_(warmup_max_duration_sec), stresstest_duration_sec_(stresstest_duration_sec), evaluator_statistics_filepath_(evaluator_statistics_filepath), realnet_option_(realnet_option), evaluator_msg_seqnum_(0)
+    EvaluatorWrapper::EvaluatorWrapper(const uint32_t& clientcnt, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& warmup_reqcnt_scale, const uint32_t& warmup_max_duration_sec, const uint32_t& stresstest_duration_sec, const std::string& evaluator_statistics_filepath, const std::string& realnet_option, const std::string& workload_pattern_name, const uint32_t& dynamic_change_period) : clientcnt_(clientcnt), edgecnt_(edgecnt), warmup_reqcnt_(keycnt * warmup_reqcnt_scale), warmup_max_duration_sec_(warmup_max_duration_sec), stresstest_duration_sec_(stresstest_duration_sec), evaluator_statistics_filepath_(evaluator_statistics_filepath), realnet_option_(realnet_option), evaluator_msg_seqnum_(0), workload_pattern_name_(workload_pattern_name), dynamic_change_period_(dynamic_change_period)
     {
         if (realnet_option == Util::REALNET_LOAD_OPTION_NAME)
         {
@@ -326,6 +326,7 @@ namespace covered
         const uint32_t client_raw_statistics_slot_interval_sec = Config::getClientRawStatisticsSlotIntervalSec();
         struct timespec start_timestamp = Util::getCurrentTimespec(); // For max duration of warmup phase and duration of stresstest phase
         struct timespec prev_timestamp = start_timestamp; // For switch slot
+        struct timespec prev_timestamp_to_update_rules = start_timestamp; // For dynamic workload patterns
         bool is_monitored = false; // Whether to monitor messages for debugging
         while (true)
         {
@@ -346,6 +347,17 @@ namespace covered
                     notifyAllToFinishrun_(); // Update per-slot/stable total aggregated statistics
 
                     break;
+                }
+
+                // For dynamic workload patterns
+                double delta_us_to_update_rules = Util::getDeltaTimeUs(cur_timestamp, prev_timestamp_to_update_rules);
+                if (delta_us_to_update_rules >= SEC2US(dynamic_change_period_))
+                {
+                    // Notify clients to update rules
+                    notifyClientsToUpdateRules_(); // Update dynamic rules of all clients for current change period
+
+                    // Update prev_timestamp_to_update_rules for the next dynamic period
+                    prev_timestamp_to_update_rules = cur_timestamp;
                 }
             }
 
@@ -378,6 +390,9 @@ namespace covered
 
                     // Reset start_timestamp for duration of stresstest phase
                     start_timestamp = Util::getCurrentTimespec();
+
+                    // Reset prev_timestamp_to_update_rules for dynamic workload patterns during stresstest phase
+                    prev_timestamp_to_update_rules = start_timestamp;
                 } // End of finish warmup phase
             } // End if (is_warmup_phase == true)
 
@@ -484,6 +499,7 @@ namespace covered
         const uint32_t client_raw_statistics_slot_interval_sec = Config::getClientRawStatisticsSlotIntervalSec();
         struct timespec start_timestamp = Util::getCurrentTimespec(); // For max duration of warmup phase and duration of stresstest phase
         struct timespec prev_timestamp = start_timestamp; // For switch slot
+        struct timespec prev_timestamp_to_update_rules = start_timestamp; // For dynamic workload patterns
         bool is_monitored = false; // Whether to monitor messages for debugging
         while (true)
         {
@@ -506,6 +522,17 @@ namespace covered
                     notifyAllToFinishrun_(); // Update per-slot/stable total aggregated statistics
 
                     break;
+                }
+
+                // For dynamic workload patterns
+                double delta_us_to_update_rules = Util::getDeltaTimeUs(cur_timestamp, prev_timestamp_to_update_rules);
+                if (delta_us_to_update_rules >= SEC2US(dynamic_change_period_))
+                {
+                    // Notify clients to update rules
+                    notifyClientsToUpdateRules_(); // Update dynamic rules of all clients for current change period
+
+                    // Update prev_timestamp_to_update_rules for the next dynamic period
+                    prev_timestamp_to_update_rules = cur_timestamp;
                 }
             }
 
@@ -855,6 +882,7 @@ namespace covered
         checkPointers_();
 
         assert(!is_warmup_phase_); // Must finish warmup phase already
+        assert(Util::isDynamicWorkloadPattern(workload_pattern_name_)); // Must be dynamic workload patterns
 
         // Client ack flags
         std::unordered_map<NetworkAddr, std::pair<bool, std::string>, NetworkAddrHasher> update_rules_acked_flags = getAckedFlagsForClients_();

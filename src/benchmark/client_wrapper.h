@@ -78,6 +78,7 @@ namespace covered
 
         void processSwitchSlotRequest_(MessageBase* control_request_ptr);
         void processFinishWarmupRequest_(MessageBase* control_request_ptr);
+        void processUpdateRulesRequest_(MessageBase* control_request_ptr);
 
         // (3) Other utility functions
 

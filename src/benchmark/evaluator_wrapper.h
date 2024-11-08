@@ -48,7 +48,7 @@ namespace covered
         
         static void* launchEvaluator(void* evaluator_wrapper_param_ptr);
 
-        EvaluatorWrapper(const uint32_t& clientcnt, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& warmup_reqcnt_scale, const uint32_t& warmup_max_duration_sec, const uint32_t& stresstest_duration_sec, const std::string& evaluator_statistics_filepath, const std::string& realnet_option);
+        EvaluatorWrapper(const uint32_t& clientcnt, const uint32_t& edgecnt, const uint32_t& keycnt, const uint32_t& warmup_reqcnt_scale, const uint32_t& warmup_max_duration_sec, const uint32_t& stresstest_duration_sec, const std::string& evaluator_statistics_filepath, const std::string& realnet_option, const std::string& workload_pattern_name, const uint32_t& dynamic_change_period);
         ~EvaluatorWrapper();
 
         void start();
@@ -92,6 +92,8 @@ namespace covered
         const uint32_t stresstest_duration_sec_; // Come from CLI
         const std::string evaluator_statistics_filepath_; // Calculated based on CLI
         const std::string realnet_option_; // Come from CLI
+        const std::string workload_pattern_name_; // Come from CLI
+        const uint32_t dynamic_change_period_; // Come from CLI
 
         // (1) Manage evaluation phases
 
