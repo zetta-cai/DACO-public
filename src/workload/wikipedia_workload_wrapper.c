@@ -27,7 +27,7 @@ namespace covered
 
     WorkloadItem WikipediaWorkloadWrapper::generateWorkloadItem_(const uint32_t& local_client_worker_idx)
     {
-        WorkloadItem tmp_workload_item = ReplayedWorkloadWrapperBase::generateWorkloadItem_(local_client_worker_idx);
+        WorkloadItem tmp_workload_item = ReplayedWorkloadWrapperBase::generateWorkloadItemHelper_(local_client_worker_idx);
         return WorkloadItem(tmp_workload_item.getKey(), tmp_workload_item.getValue(), WorkloadItemType::kWorkloadItemGet); // Wiki CDN is read-only
     }
 

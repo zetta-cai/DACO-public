@@ -89,7 +89,7 @@ namespace covered
     //     return workload_ptr;
     // }
 
-    WorkloadWrapperBase::WorkloadWrapperBase(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const std::string& workload_pattern_name, const uint32_t& dynamic_change_period, const uint32_t& dynamic_change_keycnt, const uint32_t& workload_randombase) : clientcnt_(clientcnt), client_idx_(client_idx), perclient_opcnt_(perclient_opcnt), perclient_workercnt_(perclient_workercnt), keycnt_(keycnt), workload_name_(workload_name), workload_usage_role_(workload_usage_role), workload_pattern_name_(workload_pattern_name), dynamic_change_period_(dynamic_change_period), dynamic_change_keycnt_(dynamic_change_keycnt), workload_randombase_(workload_randombase)
+    WorkloadWrapperBase::WorkloadWrapperBase(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const std::string& workload_pattern_name, const uint32_t& dynamic_change_period, const uint32_t& dynamic_change_keycnt, const uint32_t& workload_randombase) : clientcnt_(clientcnt), client_idx_(client_idx), perclient_opcnt_(perclient_opcnt), perclient_workercnt_(perclient_workercnt), keycnt_(keycnt), workload_name_(workload_name), workload_usage_role_(workload_usage_role), workload_randombase_(workload_randombase), workload_pattern_name_(workload_pattern_name), dynamic_change_period_(dynamic_change_period), dynamic_change_keycnt_(dynamic_change_keycnt)
     {
         // Differentiate workload generator in different clients
         std::ostringstream oss;
@@ -373,7 +373,7 @@ namespace covered
             // Update mapped keys of dynamic rules
             dynamic_rules_mapped_keys_t& tmp_mapped_keys_ref = curclient_perworker_dynamic_rules_mapped_keys_[local_client_worker_idx];
             assert(tmp_mapped_keys_ref.size() >= dynamic_change_keycnt_);
-            for (int i = 0; i < dynamic_change_keycnt_; i++) // Pop the last dynamic_change_keycnt_ mapped keys
+            for (uint32_t i = 0; i < dynamic_change_keycnt_; i++) // Pop the last dynamic_change_keycnt_ mapped keys
             {
                 tmp_mapped_keys_ref.pop_back();
             }
@@ -429,11 +429,11 @@ namespace covered
             // Update mapped keys of dynamic rules
             dynamic_rules_mapped_keys_t& tmp_mapped_keys_ref = curclient_perworker_dynamic_rules_mapped_keys_[local_client_worker_idx];
             assert(tmp_mapped_keys_ref.size() >= dynamic_change_keycnt_);
-            for (int i = 0; i < dynamic_change_keycnt_; i++) // Pop the first dynamic_change_keycnt_ mapped keys
+            for (uint32_t i = 0; i < dynamic_change_keycnt_; i++) // Pop the first dynamic_change_keycnt_ mapped keys
             {
                 tmp_mapped_keys_ref.pop_front();
             }
-            for (int i = 0; i < less_hottest_keys.size(); i++) // Push less-hottest keys as the last dynamic_change_keycnt_ mapped keys
+            for (uint32_t i = 0; i < less_hottest_keys.size(); i++) // Push less-hottest keys as the last dynamic_change_keycnt_ mapped keys
             {
                 tmp_mapped_keys_ref.push_back(less_hottest_keys[i]);
             }
@@ -491,7 +491,7 @@ namespace covered
             // Update mapped keys of dynamic rules (NOTE: in-place updates in mapped keys and hence NO need to update the lookup map)
             assert(coldest_keys.size() == random_indexes.size());
             std::vector<dynamic_rules_lookup_map_t::iterator>& tmp_rankptrs_ref = curclient_perworker_dynamic_rules_rankptrs_[local_client_worker_idx];
-            for (int i = 0; i < dynamic_change_keycnt_; i++)
+            for (uint32_t i = 0; i < dynamic_change_keycnt_; i++)
             {
                 const uint32_t tmp_random_index = random_indexes[i];
                 dynamic_rules_lookup_map_t::iterator tmp_lookup_map_iter = tmp_rankptrs_ref[tmp_random_index];
@@ -531,7 +531,7 @@ namespace covered
 
         // Get indexes of [start_rank, start_rank + ranked_keycnt - 1] within the range of [0, largest_rank]
         ranked_idxes.clear();
-        for (int i = 0; i < ranked_keycnt; i++)
+        for (uint32_t i = 0; i < ranked_keycnt; i++)
         {
             const uint32_t tmp_ranked_idx = (start_rank + i) % (largest_rank + 1);
             ranked_idxes.push_back(tmp_ranked_idx);

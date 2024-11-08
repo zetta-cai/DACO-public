@@ -147,7 +147,7 @@ namespace covered
         const int64_t tmp_objid = getObjidFromKey_(key);
 
         // Get value indexed by the object ID
-        assert(tmp_objid < dataset_valsizes_.size()); // Should not access an unexisting key during warmup
+        assert(tmp_objid < static_cast<int64_t>(dataset_valsizes_.size())); // Should not access an unexisting key during warmup
         const uint32_t value_size = dataset_valsizes_[tmp_objid];
         value = Value(value_size);
 
@@ -165,7 +165,7 @@ namespace covered
         const int64_t tmp_objid = getObjidFromKey_(key);
 
         // Update value indexed by the object ID
-        assert(tmp_objid < dataset_valsizes_.size()); // Should not access an unexisting key during warmup
+        assert(tmp_objid < static_cast<int64_t>(dataset_valsizes_.size())); // Should not access an unexisting key during warmup
         dataset_valsizes_[tmp_objid] = value.getValuesize();
 
         return;
@@ -237,7 +237,7 @@ namespace covered
         Key tmp_key = getKeyFromObjid_(tmp_objid);
 
         // Get value indexed by object ID
-        assert(tmp_objid >= 0 && tmp_objid <= dataset_valsizes_.size());
+        assert(tmp_objid >= 0 && tmp_objid < static_cast<int64_t>(dataset_valsizes_.size()));
         const uint32_t tmp_valsize = dataset_valsizes_[tmp_objid];
         Value tmp_value(tmp_valsize);
 
@@ -503,7 +503,7 @@ namespace covered
 
     Key AkamaiWorkloadWrapper::getKeyFromObjid_(const int64_t& objid) const
     {
-        assert(objid >= 0 && objid < dataset_valsizes_.size());
+        assert(objid >= 0 && objid < static_cast<int64_t>(dataset_valsizes_.size()));
         const uint32_t objid_bytecnt = sizeof(int64_t); // 8B
 
         // Get the keystr (8B)
@@ -520,7 +520,7 @@ namespace covered
         // Get the object ID (8B)
         int64_t tmp_objid = 0;
         memcpy((char *)&tmp_objid, key.getKeystr().c_str(), objid_bytecnt);
-        assert(tmp_objid >= 0 && tmp_objid < dataset_valsizes_.size());
+        assert(tmp_objid >= 0 && tmp_objid < static_cast<int64_t>(dataset_valsizes_.size()));
 
         return tmp_objid;
     }

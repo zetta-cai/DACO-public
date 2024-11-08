@@ -1,5 +1,5 @@
 /*
- * (OBSOLETE) ReplayedWorkloadWrapperBase: the base class ONLY for replayed workload wrappers (replay single-node traces by sampling and partitioning).
+ * (OBSOLETE) ReplayedWorkloadWrapperBase: the base class (still an interface class due to NOT overriding generateWorkloadItem_()) ONLY for replayed workload wrappers (replay single-node traces by sampling and partitioning).
  *
  * OBSOLETE reason: unreasonable results due to incorrect trace partitioning without geographical information.
  *
@@ -19,14 +19,11 @@
 #include <random> // std::mt19937 and std::bernoulli_distribution
 
 #include "workload/workload_wrapper_base.h"
-#include "workload/wikipedia_workload_wrapper.h"
 
 namespace covered
 {
     class ReplayedWorkloadWrapperBase : public WorkloadWrapperBase
     {
-        friend class WikipediaWorkloadWrapper;
-        
     public:
         ReplayedWorkloadWrapperBase(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const std::string& workload_pattern_name, const uint32_t& dynamic_change_period, const uint32_t& dynamic_change_keycnt, const uint32_t& workload_randombase);
         virtual ~ReplayedWorkloadWrapperBase();
@@ -47,6 +44,9 @@ namespace covered
         virtual void quickDatasetGet(const Key& key, Value& value) const override;
         virtual void quickDatasetPut(const Key& key, const Value& value) override;
         virtual void quickDatasetDel(const Key& key) override;
+    protected:
+        // Access by multiple client workers (thread safe)
+        WorkloadItem generateWorkloadItemHelper_(const uint32_t& local_client_worker_idx); // NOTE: follow the real-world trace to select an item without modifying any variable -> thread safe
     private:
         static const std::string kClassName;
 
@@ -54,9 +54,6 @@ namespace covered
         virtual void initWorkloadParameters_() override;
         virtual void overwriteWorkloadParameters_() override;
         virtual void createWorkloadGenerator_() override;
-
-        // Access by multiple client workers (thread safe)
-        virtual WorkloadItem generateWorkloadItem_(const uint32_t& local_client_worker_idx) override; // NOTE: follow the real-world trace to select an item without modifying any variable -> thread safe
 
         // Utility functions for dynamic workload patterns
         virtual uint32_t getLargestRank_(const uint32_t local_client_worker_idx) const override;

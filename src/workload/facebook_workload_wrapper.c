@@ -336,7 +336,7 @@ namespace covered
 
         // Set ranked keys based on the ranked indexes
         ranked_keys.clear();
-        for (int i = 0; i < tmp_ranked_idxes.size(); i++)
+        for (uint32_t i = 0; i < tmp_ranked_idxes.size(); i++)
         {
             const uint32_t tmp_ranked_key_indices_idx = tmp_ranked_idxes[i];
             const uint32_t tmp_ranked_key_indice = tmp_ranked_unique_key_indices_const_ref[tmp_ranked_key_indices_idx];

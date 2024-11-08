@@ -19,12 +19,6 @@
 #include <unordered_map>
 #include <vector>
 
-// Forward declaration
-namespace covered
-{
-    class WikipediaWorkloadWrapper;
-}
-
 #include "workload/workload_item.h"
 #include "workload/replayed_workload_wrapper_base.h"
 
@@ -35,10 +29,11 @@ namespace covered
     public:
         WikipediaWorkloadWrapper(const uint32_t& clientcnt, const uint32_t& client_idx, const uint32_t& keycnt, const uint32_t& perclient_opcnt, const uint32_t& perclient_workercnt, const std::string& workload_name, const std::string& workload_usage_role, const std::string& workload_pattern_name, const uint32_t& dynamic_change_period, const uint32_t& dynamic_change_keycnt, const uint32_t& workload_randombase);
         virtual ~WikipediaWorkloadWrapper();
-
-        virtual WorkloadItem generateWorkloadItem_(const uint32_t& local_client_worker_idx) override; // NOTE: basically the same as ReplayedWorkloadWrapperBase::generateWorkloadItem, yet Wiki CDN is read-only (just used similar as SOSP'23 S3-FIFO and NSDI'24 SIEVE) -> different value sizes of the same key may be caused by hash collisions of different image/text paths, as keys in trace files are hashed values of Wiki paths
     private:
         static const std::string kClassName;
+
+        // Access by multiple client workers (thread safe)
+        virtual WorkloadItem generateWorkloadItem_(const uint32_t& local_client_worker_idx) override; // NOTE: basically the same as ReplayedWorkloadWrapperBase::generateWorkloadItem, yet Wiki CDN is read-only (just used similar as SOSP'23 S3-FIFO and NSDI'24 SIEVE) -> different value sizes of the same key may be caused by hash collisions of different image/text paths, as keys in trace files are hashed values of Wiki paths
 
         // Wiki-specific helper functions
 
