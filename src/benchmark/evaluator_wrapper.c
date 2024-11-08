@@ -350,14 +350,17 @@ namespace covered
                 }
 
                 // For dynamic workload patterns
-                double delta_us_to_update_rules = Util::getDeltaTimeUs(cur_timestamp, prev_timestamp_to_update_rules);
-                if (delta_us_to_update_rules >= SEC2US(dynamic_change_period_))
+                if (Util::isDynamicWorkloadPattern(workload_pattern_name_))
                 {
-                    // Notify clients to update rules
-                    notifyClientsToUpdateRules_(); // Update dynamic rules of all clients for current change period
+                    double delta_us_to_update_rules = Util::getDeltaTimeUs(cur_timestamp, prev_timestamp_to_update_rules);
+                    if (delta_us_to_update_rules >= SEC2US(dynamic_change_period_))
+                    {
+                        // Notify clients to update rules
+                        notifyClientsToUpdateRules_(); // Update dynamic rules of all clients for current change period
 
-                    // Update prev_timestamp_to_update_rules for the next dynamic period
-                    prev_timestamp_to_update_rules = cur_timestamp;
+                        // Update prev_timestamp_to_update_rules for the next dynamic period
+                        prev_timestamp_to_update_rules = cur_timestamp;
+                    }
                 }
             }
 
@@ -525,14 +528,17 @@ namespace covered
                 }
 
                 // For dynamic workload patterns
-                double delta_us_to_update_rules = Util::getDeltaTimeUs(cur_timestamp, prev_timestamp_to_update_rules);
-                if (delta_us_to_update_rules >= SEC2US(dynamic_change_period_))
+                if (Util::isDynamicWorkloadPattern(workload_pattern_name_))
                 {
-                    // Notify clients to update rules
-                    notifyClientsToUpdateRules_(); // Update dynamic rules of all clients for current change period
+                    double delta_us_to_update_rules = Util::getDeltaTimeUs(cur_timestamp, prev_timestamp_to_update_rules);
+                    if (delta_us_to_update_rules >= SEC2US(dynamic_change_period_))
+                    {
+                        // Notify clients to update rules
+                        notifyClientsToUpdateRules_(); // Update dynamic rules of all clients for current change period
 
-                    // Update prev_timestamp_to_update_rules for the next dynamic period
-                    prev_timestamp_to_update_rules = cur_timestamp;
+                        // Update prev_timestamp_to_update_rules for the next dynamic period
+                        prev_timestamp_to_update_rules = cur_timestamp;
+                    }
                 }
             }
 
