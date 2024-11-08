@@ -219,7 +219,7 @@ namespace covered
         {
             updateDynamicRulesForHotout_();
         }
-        else if (workload_name_ == Util::RANDOM_WORKLOAD_PATTERN_NAME) // Random dynamic pattern
+        else if (workload_pattern_name_ == Util::RANDOM_WORKLOAD_PATTERN_NAME) // Random dynamic pattern
         {
             updateDynamicRulesForRandom_();
         }
