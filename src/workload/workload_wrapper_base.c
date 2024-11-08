@@ -334,27 +334,8 @@ namespace covered
             // Get mapped key
             dynamic_rules_mapped_keys_t::iterator tmp_mapped_keys_iter = tmp_lookup_map_const_iter->second;
 
-            // TMPDEBUG24
-            bool is_mapped = false;
-            if (workload_key_ref.getKeystr() != *tmp_mapped_keys_iter)
-            {
-                std::ostringstream tmposs;
-                tmposs << "[period " << dynamic_period_idx_ << "]"<< " map hot key " << workload_key_ref.getKeystr() << " to " << *tmp_mapped_keys_iter;
-                Util::dumpNormalMsg(base_instance_name_, tmposs.str());
-
-                is_mapped = true;
-            }
-
             // Replace original key with mapped key
             workload_key_ref = Key(*tmp_mapped_keys_iter); // Update the key from original one as mapped one in workload_item
-
-            // TMPDEBUG24
-            if (is_mapped)
-            {
-                std::ostringstream tmposs;
-                tmposs << "workload_item.key after mapping: " << workload_item.getKey().getKeystr();
-                Util::dumpNormalMsg(base_instance_name_, tmposs.str());
-            }
         }
 
         // Release the read lock
@@ -374,9 +355,6 @@ namespace covered
         assert(workload_pattern_name_ == Util::HOTIN_WORKLOAD_PATTERN_NAME); // Hot-in dynamic pattern
 
         // NOTE: NO need to acquire the rwlock for dynamic rules update, which has been done in updateDynamicRules()
-
-        // TMPDEBUG24
-        Util::dumpNormalMsg(base_instance_name_, "update dynamic rules for hotin patterns...");
 
         for (uint32_t local_client_worker_idx = 0; local_client_worker_idx < perclient_workercnt_; local_client_worker_idx++)
         {
