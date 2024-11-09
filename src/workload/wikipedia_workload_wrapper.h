@@ -33,7 +33,7 @@ namespace covered
         static const std::string kClassName;
 
         // Access by multiple client workers (thread safe)
-        virtual WorkloadItem generateWorkloadItem_(const uint32_t& local_client_worker_idx) override; // NOTE: basically the same as ReplayedWorkloadWrapperBase::generateWorkloadItem, yet Wiki CDN is read-only (just used similar as SOSP'23 S3-FIFO and NSDI'24 SIEVE) -> different value sizes of the same key may be caused by hash collisions of different image/text paths, as keys in trace files are hashed values of Wiki paths
+        virtual WorkloadItem generateWorkloadItem_(const uint32_t& local_client_worker_idx) override; // NOTE: basically the same as ReplayedWorkloadWrapperBase::generateWorkloadItem_, yet Wiki CDN is read-only (just used similar as SOSP'23 S3-FIFO and NSDI'24 SIEVE) -> different value sizes of the same key may be caused by hash collisions of different image/text paths, as keys in trace files are hashed values of Wiki paths
 
         // Wiki-specific helper functions
 

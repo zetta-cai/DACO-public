@@ -32,7 +32,7 @@ namespace covered
         static const std::string kClassName;
 
         bool issueItemToEdge_(const WorkloadItem& workload_item, DynamicArray& local_response_msg_payload, uint32_t& rtt_us, const bool& is_warmup_phase, const bool& is_warmup_speedup, const bool& is_monitored, const uint64_t& cur_msg_seqnum); // Return is_finish
-        void processLocalResponse_(const WorkloadItem& workload_item, const DynamicArray& local_response_msg_payload, const uint32_t& rtt_us, const bool& is_stresstest_phase);
+        void processLocalResponse_(const WorkloadItem& workload_item, const DynamicArray& local_response_msg_payload, const uint32_t& rtt_us, const bool& is_stresstest_phase, const bool& is_dynamic_mapped);
 
         void checkPointers_() const;
 

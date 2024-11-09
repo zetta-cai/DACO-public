@@ -730,7 +730,7 @@ namespace covered
         // Get workload item
         uint32_t local_workload_workeridx = global_client_workeridx % perworkload_workercnt;
         assert(local_workload_workeridx < perworkload_workercnt); // Must < perworkload_workercnt
-        WorkloadItem cur_workload_item = cur_client_worker_workload_wrapper_ptr->generateWorkloadItem(local_workload_workeridx);
+        WorkloadItem cur_workload_item = cur_client_worker_workload_wrapper_ptr->generateWorkloadItem(local_workload_workeridx, nullptr);
 
         return cur_workload_item;
     }

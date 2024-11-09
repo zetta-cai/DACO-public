@@ -42,7 +42,7 @@ namespace covered
         void validate(); // Provide individual validate() as contructor cannot invoke virtual functions
 
         // Access by multiple client workers (thread safe)
-        WorkloadItem generateWorkloadItem(const uint32_t& local_client_worker_idx);
+        WorkloadItem generateWorkloadItem(const uint32_t& local_client_worker_idx, bool* is_dynamic_mapped_ptr = nullptr);
         virtual uint32_t getPracticalKeycnt() const = 0;
         virtual WorkloadItem getDatasetItem(const uint32_t itemidx) = 0; // Get a dataset key-value pair item with the index of itemidx
 
@@ -73,7 +73,7 @@ namespace covered
 
         // Access by multiple client workers (thread safe)
         virtual WorkloadItem generateWorkloadItem_(const uint32_t& local_client_worker_idx) = 0;
-        void applyDynamicRules_(const uint32_t& local_client_worker_idx, WorkloadItem& workload_item); // Try to apply dynamic rules for dynamic workload patterns in generateWorkloadItem() after generateWorkloadItem_()
+        void applyDynamicRules_(const uint32_t& local_client_worker_idx, WorkloadItem& workload_item, bool* is_dynamic_mapped_ptr); // Try to apply dynamic rules for dynamic workload patterns in generateWorkloadItem() after generateWorkloadItem_()
 
         // Access by single thread of client wrapper, yet contend with multiple client workers for dynamic rules (thread safe)
         void updateDynamicRulesForHotin_();

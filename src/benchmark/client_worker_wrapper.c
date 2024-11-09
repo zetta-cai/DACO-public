@@ -99,7 +99,7 @@ namespace covered
                 }
 
                 // Generate key-value request based on a specific workload
-                WorkloadItem workload_item = workload_generator_ptr->generateWorkloadItem(local_client_worker_idx);
+                WorkloadItem workload_item = workload_generator_ptr->generateWorkloadItem(local_client_worker_idx, nullptr);
             }
         }
         else if (realnet_option == Util::REALNET_DUMP_OPTION_NAME || realnet_option == Util::REALNET_NO_OPTION_NAME)
@@ -162,7 +162,8 @@ namespace covered
             }
 
             // Generate key-value request based on a specific workload
-            WorkloadItem workload_item = workload_generator_ptr->generateWorkloadItem(local_client_worker_idx);
+            bool is_dynamic_mapped = false;
+            WorkloadItem workload_item = workload_generator_ptr->generateWorkloadItem(local_client_worker_idx, &is_dynamic_mapped);
 
             DynamicArray local_response_msg_payload;
             uint32_t rtt_us = 0;
@@ -183,7 +184,7 @@ namespace covered
                 // TODO: as there could still exist limited warmup requests are counted in stresstest beginning slots, we can print the start slot idx of stresstest phase to drop the invalid statistics of the beginning slots
                 continue; // NOT update to avoid affecting cur-slot raw/aggregated statistics especially for warmup speedup
             }*/
-            processLocalResponse_(workload_item, local_response_msg_payload, rtt_us, is_stresstest_phase);
+            processLocalResponse_(workload_item, local_response_msg_payload, rtt_us, is_stresstest_phase, is_dynamic_mapped);
         }
 
         return;
@@ -268,7 +269,7 @@ namespace covered
         return is_finish;
     }
 
-    void ClientWorkerWrapper::processLocalResponse_(const WorkloadItem& workload_item, const DynamicArray& local_response_msg_payload, const uint32_t& rtt_us, const bool& is_stresstest_phase)
+    void ClientWorkerWrapper::processLocalResponse_(const WorkloadItem& workload_item, const DynamicArray& local_response_msg_payload, const uint32_t& rtt_us, const bool& is_stresstest_phase, const bool& is_dynamic_mapped)
     {
         checkPointers_();
         ClientWrapper* tmp_client_wrapper_ptr = client_worker_param_ptr_->getClientWrapperPtr();
@@ -392,9 +393,18 @@ namespace covered
         client_statistics_tracker_ptr_->updateBandwidthUsage(local_client_worker_idx, local_response_bandwidth_usage, is_stresstest_phase);
 
         #ifdef DEBUG_CLIENT_WORKER_WRAPPER
-        Util::dumpVariablesForDebug(instance_name_, 13, "receive a local response;", "type:", MessageBase::messageTypeToString(local_response_message_type).c_str(), "keystr", tmp_key.getKeystr().c_str(), "valuesize:", std::to_string(tmp_value.getValuesize()).c_str(), "hitflag:", MessageBase::hitflagToString(hitflag).c_str(), "latency:", std::to_string(rtt_us).c_str(), "eventlist:", local_response_ptr->getEventListRef().toString().c_str());
+        Util::dumpVariablesForDebug(instance_name_, 15, "receive a local response;", "type:", MessageBase::messageTypeToString(local_response_message_type).c_str(), "keystr", tmp_key.getKeystr().c_str(), "valuesize:", std::to_string(tmp_value.getValuesize()).c_str(), "hitflag:", MessageBase::hitflagToString(hitflag).c_str(), "latency:", std::to_string(rtt_us).c_str(), "eventlist:", local_response_ptr->getEventListRef().toString().c_str(), "is_dynamic_mapped:", Util::toString(is_dynamic_mapped).c_str());
         // "msg payload:", local_response_msg_payload.getBytesHexstr().c_str()
         #endif
+
+        // TMPDEBUG24
+        if (is_dynamic_mapped)
+        {
+            // Dump mapped key and hitflag
+            std::ostringstream oss;
+            oss << "dynamic mapped key " << tmp_key.getKeystr() << " with hitflag " << MessageBase::hitflagToString(hitflag);
+            Util::dumpWarnMsg(instance_name_, oss.str());
+        }
 
         // Release local response message
         assert(local_response_ptr != NULL);
