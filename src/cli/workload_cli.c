@@ -12,7 +12,7 @@ namespace covered
 
     const std::string WorkloadCLI::DEFAULT_WORKLOAD_PATTERN_NAME = "static"; // Static workload pattern by default
     const uint32_t WorkloadCLI::DEFAULT_DYNAMIC_CHANGE_PERIOD = 10; // 10 seconds for dynamic workload pattern
-    const uint32_t WorkloadCLI::DEFAULT_DYNAMIC_CHANGE_KEYCNT = 200; // 200 changed keys for each dynamic change period
+    const uint32_t WorkloadCLI::DEFAULT_DYNAMIC_CHANGE_KEYCNT = 1000; // 1000 changed keys for each dynamic change period
 
     const std::string WorkloadCLI::kClassName("WorkloadCLI");
 

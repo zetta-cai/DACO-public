@@ -397,15 +397,6 @@ namespace covered
         // "msg payload:", local_response_msg_payload.getBytesHexstr().c_str()
         #endif
 
-        // TMPDEBUG24
-        if (is_dynamic_mapped)
-        {
-            // Dump mapped key and hitflag
-            std::ostringstream oss;
-            oss << "dynamic mapped key " << tmp_key.getKeystr() << " with hitflag " << MessageBase::hitflagToString(hitflag);
-            Util::dumpNormalMsg(instance_name_, oss.str());
-        }
-
         // Release local response message
         assert(local_response_ptr != NULL);
         delete local_response_ptr;

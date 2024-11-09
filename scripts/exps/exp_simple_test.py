@@ -19,9 +19,9 @@ simple_example_settings = {
     "capacity_mb": 1024,
     "cache_name": "shark+gdsf", # covered, shark+gdsf, shark+lhd
     "workload_name": "facebook",
-    "workload_pattern_name": "hotin", # hotin, hotout, random
+    "workload_pattern_name": "hotin", # hotin, hotout, random, static
     "dynamic_change_period": 10,
-    "dynamic_change_keycnt": 200,
+    "dynamic_change_keycnt": 1000,
     "stresstest_duration_sec": 600 # 10 minutes
 }
 
