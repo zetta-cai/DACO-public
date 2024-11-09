@@ -403,7 +403,7 @@ namespace covered
             // Dump mapped key and hitflag
             std::ostringstream oss;
             oss << "dynamic mapped key " << tmp_key.getKeystr() << " with hitflag " << MessageBase::hitflagToString(hitflag);
-            Util::dumpWarnMsg(instance_name_, oss.str());
+            Util::dumpNormalMsg(instance_name_, oss.str());
         }
 
         // Release local response message
