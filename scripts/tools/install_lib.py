@@ -400,42 +400,75 @@ if is_install_adaptsize:
             if download_varnish_subprocess.returncode != 0:
                 LogUtil.die(Common.scriptname, "failed to download varnish for AdaptSize (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(download_varnish_subprocess)))
         
-        # Decompress varnish
+        # Decompress and patch varnish
         if not os.path.exists(varnish_decompress_dirpath):
+            # Decompress varnish
             LogUtil.prompt(Common.scriptname, "decompress varnish for AdaptSize...")
             decompress_varnish_cmd = "cd {} && tar xfvz varnish-4.1.2.tgz".format(adaptsize_clone_dirpath)
             decompress_varnish_subprocess = SubprocessUtil.runCmd(decompress_varnish_cmd)
             if decompress_varnish_subprocess.returncode != 0:
                 LogUtil.die(Common.scriptname, "failed to decompress varnish for AdaptSize (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(decompress_varnish_subprocess)))
+            
+            # Patch varnish
+            LogUtil.prompt(Common.scriptname, "patch varnish for AdaptSize...")
+            patch_varnish_cmd = "cd {} && patch varnish-4.1.2/bin/varnishd/cache/cache_req_fsm.c < VarnishPatches/cache_req_fsm.patch && patch varnish-4.1.2/include/tbl/params.h < VarnishPatches/params.patch && patch varnish-4.1.2/lib/libvarnishapi/vsl_dispatch.c < VarnishPatches/vsl_dispatch.patch".format(adaptsize_clone_dirpath)
+            patch_varnish_subprocess = SubprocessUtil.runCmd(patch_varnish_cmd)
+            if patch_varnish_subprocess.returncode != 0:
+                LogUtil.die(Common.scriptname, "failed to patch varnish for AdaptSize (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(patch_varnish_subprocess)))
         
-        # TODO: TMPDEBUG
-        # # Patch varnish
-        # LogUtil.prompt(Common.scriptname, "patch varnish for AdaptSize...")
-        # patch_varnish_cmd = "cd {} && patch varnish-4.1.2/bin/varnishd/cache/cache_req_fsm.c < VarnishPatches/cache_req_fsm.patch && patch varnish-4.1.2/include/tbl/params.h < VarnishPatches/params.patch && patch varnish-4.1.2/lib/libvarnishapi/vsl_dispatch.c < VarnishPatches/vsl_dispatch.patch".format(adaptsize_clone_dirpath)
-        # patch_varnish_subprocess = SubprocessUtil.runCmd(patch_varnish_cmd)
-        # if patch_varnish_subprocess.returncode != 0:
-        #     LogUtil.die(Common.scriptname, "failed to patch varnish for AdaptSize (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(patch_varnish_subprocess)))
+        is_adaptsize_install_success = True
+        adaptsize_install_errmsg = ""
         
         # Install varnish
-        LogUtil.prompt(Common.scriptname, "install varnish for AdaptSize...")
-        install_varnish_cmd = "cd {} && ./configure --prefix={} && make && make install".format(varnish_decompress_dirpath, varnish_install_dirpath)
-        install_varnish_subprocess = SubprocessUtil.runCmd(install_varnish_cmd, is_capture_output = False)
-        if install_varnish_subprocess.returncode != 0:
-            LogUtil.die(Common.scriptname, "failed to install varnish for AdaptSize (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(install_varnish_subprocess)))
+        if is_adaptsize_install_success:
+            LogUtil.prompt(Common.scriptname, "install varnish for AdaptSize...")
+            install_varnish_cmd = "cd {} && ./configure --prefix={} && make && make install".format(varnish_decompress_dirpath, varnish_install_dirpath)
+            install_varnish_subprocess = SubprocessUtil.runCmd(install_varnish_cmd, is_capture_output = False)
+            if install_varnish_subprocess.returncode != 0:
+                is_adaptsize_install_success = False
+                adaptsize_install_errmsg = "failed to install varnish for AdaptSize (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(install_varnish_subprocess))
         
         # Compile and install AdaptSize Vmod
-        LogUtil.prompt(Common.scriptname, "compile and install AdaptSize Vmod for AdaptSize...")
-        install_vmod_cmd = "cd {0}/AdaptSizeVmod && export PKG_CONFIG_PATH={1}/lib/pkgconfig && ./autogen.sh --prefix={1} && ./configure --prefix={1} && make && make install".format(adaptsize_clone_dirpath, varnish_install_dirpath)
-        install_vmod_subprocess = SubprocessUtil.runCmd(install_vmod_cmd, is_capture_output = False)
-        if install_vmod_subprocess.returncode != 0:
-            LogUtil.die(Common.scriptname, "failed to compile and install AdaptSize Vmod for AdaptSize (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(install_vmod_subprocess)))
+        if is_adaptsize_install_success:
+            LogUtil.prompt(Common.scriptname, "compile and install AdaptSize Vmod for AdaptSize...")
+            install_vmod_cmd = "cd {0}/AdaptSizeVmod && export PKG_CONFIG_PATH={1}/lib/pkgconfig && ./autogen.sh --prefix={1} && ./configure --prefix={1} && make && make install".format(adaptsize_clone_dirpath, varnish_install_dirpath)
+            install_vmod_subprocess = SubprocessUtil.runCmd(install_vmod_cmd, is_capture_output = False)
+            if install_vmod_subprocess.returncode != 0:
+                is_adaptsize_install_success = False
+                adaptsize_install_errmsg = "failed to compile and install AdaptSize Vmod for AdaptSize (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(install_vmod_subprocess))
+        
+        # Overwrite adaptsize.c and Makefile to fix compilation errors of tuning module
+        if is_adaptsize_install_success:
+            original_tuner_dirpath = "{}/AdaptSizeTuner".format(adaptsize_clone_dirpath)
+            correct_tuner_dirpath = "{}/scripts/adaptsize".format(Common.proj_dirname)
+            overwrite_filenames = ["adaptsize.c", "Makefile"]
+            for tmp_filename in overwrite_filenames:
+                original_tuner_filepath = "{}/{}".format(original_tuner_dirpath, tmp_filename)
+                correct_tuner_filepath = "{}/{}".format(correct_tuner_dirpath, tmp_filename)
+                LogUtil.prompt(Common.scriptname, "overwrite {} to {} to fix compilation errors of tuning module...".format(original_tuner_filepath, correct_tuner_filepath))
+                overwrite_tuner_cmd = "cp {} {}".format(correct_tuner_filepath, original_tuner_filepath)
+                overwrite_tuner_subprocess = SubprocessUtil.runCmd(overwrite_tuner_cmd)
+                if overwrite_tuner_subprocess.returncode != 0:
+                    is_adaptsize_install_success = False
+                    adaptsize_install_errmsg = "failed to overwrite {} to {} to fix compilation errors of tuning module (errmsg: {})".format(correct_tuner_filepath, original_tuner_filepath, SubprocessUtil.getSubprocessErrstr(overwrite_tuner_subprocess))
         
         # Compile AdaptSize tuning module
-        LogUtil.prompt(Common.scriptname, "compile AdaptSize tuning module for AdaptSize...")
-        install_tuner_cmd = "cd {}/AdaptSizeTuner && make".format(adaptsize_clone_dirpath)
-        install_tuner_subprocess = SubprocessUtil.runCmd(install_tuner_cmd, is_capture_output = False)
-        if install_tuner_subprocess.returncode != 0:
-            LogUtil.die(Common.scriptname, "failed to compile AdaptSize tuning module for AdaptSize (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(install_tuner_subprocess)))
+        if is_adaptsize_install_success:
+            LogUtil.prompt(Common.scriptname, "compile AdaptSize tuning module for AdaptSize...")
+            install_tuner_cmd = "cd {}/AdaptSizeTuner && make".format(adaptsize_clone_dirpath)
+            install_tuner_subprocess = SubprocessUtil.runCmd(install_tuner_cmd, is_capture_output = False)
+            if install_tuner_subprocess.returncode != 0:
+                is_adaptsize_install_success = False
+                adaptsize_install_errmsg = "failed to compile AdaptSize tuning module for AdaptSize (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(install_tuner_subprocess))
+        
+        # Clear if not install AdaptSize successfully
+        if not is_adaptsize_install_success:
+            remove_varnish_install_dirpath = "rm -rf {}".format(varnish_install_dirpath)
+            remove_varnish_install_subprocess = SubprocessUtil.runCmd(remove_varnish_install_dirpath)
+            if remove_varnish_install_subprocess.returncode != 0:
+                LogUtil.die(Common.scriptname, "failed to remove varnish install dirpath {} (errmsg: {})".format(varnish_install_dirpath, SubprocessUtil.getSubprocessErrstr(remove_varnish_install_subprocess)))
+            
+            LogUtil.die(Common.scriptname, adaptsize_install_errmsg)
 
 # (17) Others: chown of libraries and update LD_LIBRARY_PATH
 
