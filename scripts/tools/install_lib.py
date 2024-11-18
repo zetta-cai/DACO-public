@@ -26,6 +26,7 @@ is_install_lrb = True
 is_install_frozenhot = True
 is_install_tragen = True
 is_install_lacache = True
+is_install_adaptsize = True
 
 # Check input CLI parameters
 if len(sys.argv) != 2:
@@ -368,9 +369,77 @@ if is_install_lacache:
 
     # NOTE: NO need to install LA-Cache source code, as we refer to the source code to implement a practical version in src/cache/lacache for cooperative caching
 
-# (16) Others: chown of libraries and update LD_LIBRARY_PATH
+# (16) Install AdaptSize (commit ID: 6deab4b)
 
-## (16.1) Chown of libraries
+if is_install_adaptsize:
+    adaptsize_clone_dirpath = "{}/adaptsize".format(Common.lib_dirpath)
+    adaptsize_software_name = "AdaptSize"
+    adaptsize_repo_url = "https://github.com/dasebe/AdaptSize.git"
+    SubprocessUtil.cloneRepo(Common.scriptname, adaptsize_clone_dirpath, adaptsize_software_name, adaptsize_repo_url)
+
+    adaptsize_target_commit = "6deab4b"
+    SubprocessUtil.checkoutCommit(Common.scriptname, adaptsize_clone_dirpath, adaptsize_software_name, adaptsize_target_commit)
+
+    # Execute "sudo apt-get install -y autotools-dev make automake libtool pkg-config" for dependencies of Varnish and hence AdaptSize
+    LogUtil.prompt(Common.scriptname, "install dependencies for AdaptSize...")
+    dependency_install_cmd = "sudo apt-get install -y autotools-dev make automake libtool pkg-config autoconf libjemalloc-dev libedit-dev libncurses-dev libpcre3-dev python-docutils python-sphinx graphviz"
+    dependency_install_subprocess = SubprocessUtil.runCmd(dependency_install_cmd, is_capture_output = False)
+    if dependency_install_subprocess.returncode != 0:
+        LogUtil.die(Common.scriptname, "failed to install dependencies for AdaptSize (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(dependency_install_subprocess)))
+    
+    # Install AdaptSize
+    varnish_tarball_filepath = "{}/varnish-4.1.2.tgz".format(adaptsize_clone_dirpath)
+    varnish_decompress_dirpath = "{}/varnish-4.1.2".format(adaptsize_clone_dirpath)
+    varnish_install_dirpath = "{}/varnish".format(varnish_decompress_dirpath)
+    if not os.path.exists(varnish_install_dirpath):
+        # Download varnish
+        if not os.path.exists(varnish_tarball_filepath):
+            LogUtil.prompt(Common.scriptname, "download varnish for AdaptSize...")
+            download_varnish_cmd = "cd {} && wget https://varnish-cache.org/downloads/varnish-4.1.2.tgz".format(adaptsize_clone_dirpath)
+            download_varnish_subprocess = SubprocessUtil.runCmd(download_varnish_cmd, is_capture_output = False)
+            if download_varnish_subprocess.returncode != 0:
+                LogUtil.die(Common.scriptname, "failed to download varnish for AdaptSize (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(download_varnish_subprocess)))
+        
+        # Decompress varnish
+        if not os.path.exists(varnish_decompress_dirpath):
+            LogUtil.prompt(Common.scriptname, "decompress varnish for AdaptSize...")
+            decompress_varnish_cmd = "cd {} && tar xfvz varnish-4.1.2.tgz".format(adaptsize_clone_dirpath)
+            decompress_varnish_subprocess = SubprocessUtil.runCmd(decompress_varnish_cmd)
+            if decompress_varnish_subprocess.returncode != 0:
+                LogUtil.die(Common.scriptname, "failed to decompress varnish for AdaptSize (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(decompress_varnish_subprocess)))
+        
+        # TODO: TMPDEBUG
+        # # Patch varnish
+        # LogUtil.prompt(Common.scriptname, "patch varnish for AdaptSize...")
+        # patch_varnish_cmd = "cd {} && patch varnish-4.1.2/bin/varnishd/cache/cache_req_fsm.c < VarnishPatches/cache_req_fsm.patch && patch varnish-4.1.2/include/tbl/params.h < VarnishPatches/params.patch && patch varnish-4.1.2/lib/libvarnishapi/vsl_dispatch.c < VarnishPatches/vsl_dispatch.patch".format(adaptsize_clone_dirpath)
+        # patch_varnish_subprocess = SubprocessUtil.runCmd(patch_varnish_cmd)
+        # if patch_varnish_subprocess.returncode != 0:
+        #     LogUtil.die(Common.scriptname, "failed to patch varnish for AdaptSize (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(patch_varnish_subprocess)))
+        
+        # Install varnish
+        LogUtil.prompt(Common.scriptname, "install varnish for AdaptSize...")
+        install_varnish_cmd = "cd {} && ./configure --prefix={} && make && make install".format(varnish_decompress_dirpath, varnish_install_dirpath)
+        install_varnish_subprocess = SubprocessUtil.runCmd(install_varnish_cmd, is_capture_output = False)
+        if install_varnish_subprocess.returncode != 0:
+            LogUtil.die(Common.scriptname, "failed to install varnish for AdaptSize (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(install_varnish_subprocess)))
+        
+        # Compile and install AdaptSize Vmod
+        LogUtil.prompt(Common.scriptname, "compile and install AdaptSize Vmod for AdaptSize...")
+        install_vmod_cmd = "cd {0}/AdaptSizeVmod && export PKG_CONFIG_PATH={1}/lib/pkgconfig && ./autogen.sh --prefix={1} && ./configure --prefix={1} && make && make install".format(adaptsize_clone_dirpath, varnish_install_dirpath)
+        install_vmod_subprocess = SubprocessUtil.runCmd(install_vmod_cmd, is_capture_output = False)
+        if install_vmod_subprocess.returncode != 0:
+            LogUtil.die(Common.scriptname, "failed to compile and install AdaptSize Vmod for AdaptSize (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(install_vmod_subprocess)))
+        
+        # Compile AdaptSize tuning module
+        LogUtil.prompt(Common.scriptname, "compile AdaptSize tuning module for AdaptSize...")
+        install_tuner_cmd = "cd {}/AdaptSizeTuner && make".format(adaptsize_clone_dirpath)
+        install_tuner_subprocess = SubprocessUtil.runCmd(install_tuner_cmd, is_capture_output = False)
+        if install_tuner_subprocess.returncode != 0:
+            LogUtil.die(Common.scriptname, "failed to compile AdaptSize tuning module for AdaptSize (errmsg: {})".format(SubprocessUtil.getSubprocessErrstr(install_tuner_subprocess)))
+
+# (17) Others: chown of libraries and update LD_LIBRARY_PATH
+
+## (17.1) Chown of libraries
 
 LogUtil.prompt(Common.scriptname, "chown of libraries...")
 chown_cmd = "sudo chown -R {0}:{0} {1}".format(Common.username, Common.lib_dirpath)
@@ -379,7 +448,7 @@ if chown_subprocess.returncode != 0:
     chown_errstr = SubprocessUtil.getSubprocessErrstr(chown_subprocess)
     LogUtil.die(Common.scriptname, "failed to chown of libraries (errmsg: {})".format(chown_errstr))
 
-## (16.2) Update LD_LIBRARY_PATH for interactive and non-interactive shells
+## (17.2) Update LD_LIBRARY_PATH for interactive and non-interactive shells
 
 target_ld_libs = ["webcachesim", "libbf", "mongocxxdriver", "lightgbm", "glcache", "segcache", "cachelib", "boost", "x86_64-linux-gnu"]
 target_ld_lib_dirpaths = ["{}/lrb/install/webcachesim/lib".format(Common.lib_dirpath), "{}/lrb/install/libbf/lib".format(Common.lib_dirpath), "{}/lrb/install/mongocxxdriver/lib".format(Common.lib_dirpath), "{}/lrb/install/lightgbm/lib".format(Common.lib_dirpath), "{}/src/cache/glcache/micro-implementation/build/lib".format(Common.proj_dirname), "{}/src/cache/segcache/build/ccommon/lib".format(Common.proj_dirname), "{}/CacheLib/opt/cachelib/lib".format(Common.lib_dirpath), "{}/boost_1_81_0/install/lib".format(Common.lib_dirpath), "/usr/lib/x86_64-linux-gnu"]
@@ -400,7 +469,7 @@ for i in range(len(target_ld_lib_dirpaths)):
     else:
         update_bash_source_grepstr = "{}:{}".format(update_bash_source_grepstr, target_ld_lib_dirpaths[i])
 
-### (16.3) Update LD_LIBRARY_PATH for non-interactive shells
+### (17.3) Update LD_LIBRARY_PATH for non-interactive shells
 
 noninteractive_bash_source_filepath = "/home/{}/.bashrc_non_interactive".format(Common.username)
 
