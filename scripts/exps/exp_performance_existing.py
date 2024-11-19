@@ -16,15 +16,17 @@ round_indexes = range(0, Common.exp_round_number) # [0, ..., exp_round_number-1]
 
 # Prepare settings for current experiment
 exp_default_settings = {
-    "clientcnt": 12,
-    "edgecnt": 12,
+    "clientcnt": 8, # TODO: TMPDEBUG24
+    "edgecnt": 8, # TODO: TMPDEBUG24
     "keycnt": 1000000,
     "capacity_mb": 1024,
     "cache_name": "covered",
     "workload_name": "facebook"
 }
 # NOTE: run lrb, glcache, and segcache at last due to slow warmup issue of lrb (may be caused by model retraining), and memory usage issue of segcache and glcache (may be caused by bugs on segment-level memory management) -> TODO: if no results of the above baselines due to program crashes, please provide more DRAM memory (or swap memory), and run them again with sufficient time (may be in units of hours or days) for warmup and cache stable performance
-cache_names = ["covered", "shark", "bestguess", "magnet", "arc", "cachelib", "fifo", "frozenhot", "gdsf", "lacache", "lfu", "lhd", "lru", "s3fifo", "sieve", "wtinylfu", "lrb", "glcache", "segcache"] # Run 5 rounds for all statistics
+# TODO: TMPDEBUG24
+# cache_names = ["covered", "shark", "bestguess", "magnet", "adaptsize", "arc", "cachelib", "fifo", "frozenhot", "gdsf", "lacache", "lfu", "lhd", "lru", "s3fifo", "sieve", "wtinylfu", "lrb", "glcache", "segcache"] # Run 5 rounds for all statistics
+cache_names = ["covered", "adaptsize", "gdsf", "lhd"] # TODO: TMPDEBUG24
 
 # Run the experiments with multiple rounds
 for tmp_round_index in round_indexes:

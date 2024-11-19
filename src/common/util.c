@@ -62,6 +62,7 @@ namespace covered
 
     // Cache name
     // NOTE: update Util::isSingleNodeCache() accordingly if necessary
+    const std::string Util::ADAPTSIZE_CACHE_NAME("adaptsize");
     const std::string Util::ARC_CACHE_NAME("arc");
     const std::string Util::BESTGUESS_CACHE_NAME("bestguess"); // cooperative caching
     const std::string Util::CACHELIB_CACHE_NAME("cachelib");
@@ -85,6 +86,7 @@ namespace covered
     const std::string Util::COVERED_CACHE_NAME("covered");
     
     // Shark-extended cache names
+    const std::string Util::SHARK_EXTENDED_ADAPTSIZE_CACHE_NAME("shark+adaptsize");
     const std::string Util::SHARK_EXTENDED_ARC_CACHE_NAME("shark+arc");
     const std::string Util::SHARK_EXTENDED_CACHELIB_CACHE_NAME("shark+cachelib");
     const std::string Util::SHARK_EXTENDED_FIFO_CACHE_NAME("shark+fifo");
@@ -106,6 +108,7 @@ namespace covered
     const std::string Util::SHARK_EXTENDED_WTINYLFU_CACHE_NAME("shark+wtinylfu");
 
     // MagNet-extended cache names
+    const std::string Util::MAGNET_EXTENDED_ADAPTSIZE_CACHE_NAME("magnet+adaptsize");
     const std::string Util::MAGNET_EXTENDED_ARC_CACHE_NAME("magnet+arc");
     const std::string Util::MAGNET_EXTENDED_CACHELIB_CACHE_NAME("magnet+cachelib");
     const std::string Util::MAGNET_EXTENDED_FIFO_CACHE_NAME("magnet+fifo");
@@ -194,7 +197,7 @@ namespace covered
 
     bool Util::isSingleNodeCache(const std::string cache_name)
     {
-        if (cache_name == ARC_CACHE_NAME || cache_name == CACHELIB_CACHE_NAME || cache_name == FIFO_CACHE_NAME || cache_name == FROZENHOT_CACHE_NAME || cache_name == GLCACHE_CACHE_NAME || cache_name == GDSF_CACHE_NAME || cache_name == GDSIZE_CACHE_NAME || cache_name == LFUDA_CACHE_NAME || cache_name == LRUK_CACHE_NAME || cache_name == LACACHE_CACHE_NAME || cache_name == LFU_CACHE_NAME || cache_name == LHD_CACHE_NAME || cache_name == LRB_CACHE_NAME || cache_name == LRU_CACHE_NAME || cache_name == S3FIFO_CACHE_NAME || cache_name == SEGCACHE_CACHE_NAME || cache_name == SIEVE_CACHE_NAME || cache_name == SLRU_CACHE_NAME || cache_name == WTINYLFU_CACHE_NAME)
+        if (cache_name == ADAPTSIZE_CACHE_NAME || cache_name == ARC_CACHE_NAME || cache_name == CACHELIB_CACHE_NAME || cache_name == FIFO_CACHE_NAME || cache_name == FROZENHOT_CACHE_NAME || cache_name == GLCACHE_CACHE_NAME || cache_name == GDSF_CACHE_NAME || cache_name == GDSIZE_CACHE_NAME || cache_name == LFUDA_CACHE_NAME || cache_name == LRUK_CACHE_NAME || cache_name == LACACHE_CACHE_NAME || cache_name == LFU_CACHE_NAME || cache_name == LHD_CACHE_NAME || cache_name == LRB_CACHE_NAME || cache_name == LRU_CACHE_NAME || cache_name == S3FIFO_CACHE_NAME || cache_name == SEGCACHE_CACHE_NAME || cache_name == SIEVE_CACHE_NAME || cache_name == SLRU_CACHE_NAME || cache_name == WTINYLFU_CACHE_NAME)
         {
             return true;
         }
@@ -215,7 +218,7 @@ namespace covered
 
     bool Util::isSharkLikeCache(const std::string cache_name)
     {
-        if (cache_name == SHARK_EXTENDED_ARC_CACHE_NAME || cache_name == SHARK_EXTENDED_CACHELIB_CACHE_NAME || cache_name == SHARK_EXTENDED_FIFO_CACHE_NAME || cache_name == SHARK_EXTENDED_FROZENHOT_CACHE_NAME || cache_name == SHARK_EXTENDED_GLCACHE_CACHE_NAME || cache_name == SHARK_EXTENDED_GDSF_CACHE_NAME || cache_name == SHARK_EXTENDED_GDSIZE_CACHE_NAME || cache_name == SHARK_EXTENDED_LFUDA_CACHE_NAME || cache_name == SHARK_EXTENDED_LRUK_CACHE_NAME || cache_name == SHARK_EXTENDED_LACACHE_CACHE_NAME || cache_name == SHARK_EXTENDED_LFU_CACHE_NAME || cache_name == SHARK_EXTENDED_LHD_CACHE_NAME || cache_name == SHARK_EXTENDED_LRB_CACHE_NAME || cache_name == SHARK_EXTENDED_LRU_CACHE_NAME || cache_name == SHARK_EXTENDED_S3FIFO_CACHE_NAME || cache_name == SHARK_EXTENDED_SEGCACHE_CACHE_NAME || cache_name == SHARK_EXTENDED_SIEVE_CACHE_NAME || cache_name == SHARK_EXTENDED_SLRU_CACHE_NAME || cache_name == SHARK_EXTENDED_WTINYLFU_CACHE_NAME)
+        if (cache_name == SHARK_EXTENDED_ADAPTSIZE_CACHE_NAME || cache_name == SHARK_EXTENDED_ARC_CACHE_NAME || cache_name == SHARK_EXTENDED_CACHELIB_CACHE_NAME || cache_name == SHARK_EXTENDED_FIFO_CACHE_NAME || cache_name == SHARK_EXTENDED_FROZENHOT_CACHE_NAME || cache_name == SHARK_EXTENDED_GLCACHE_CACHE_NAME || cache_name == SHARK_EXTENDED_GDSF_CACHE_NAME || cache_name == SHARK_EXTENDED_GDSIZE_CACHE_NAME || cache_name == SHARK_EXTENDED_LFUDA_CACHE_NAME || cache_name == SHARK_EXTENDED_LRUK_CACHE_NAME || cache_name == SHARK_EXTENDED_LACACHE_CACHE_NAME || cache_name == SHARK_EXTENDED_LFU_CACHE_NAME || cache_name == SHARK_EXTENDED_LHD_CACHE_NAME || cache_name == SHARK_EXTENDED_LRB_CACHE_NAME || cache_name == SHARK_EXTENDED_LRU_CACHE_NAME || cache_name == SHARK_EXTENDED_S3FIFO_CACHE_NAME || cache_name == SHARK_EXTENDED_SEGCACHE_CACHE_NAME || cache_name == SHARK_EXTENDED_SIEVE_CACHE_NAME || cache_name == SHARK_EXTENDED_SLRU_CACHE_NAME || cache_name == SHARK_EXTENDED_WTINYLFU_CACHE_NAME)
         {
             return true;
         }
@@ -225,7 +228,7 @@ namespace covered
 
     bool Util::isMagnetLikeCache(const std::string cache_name)
     {
-        if (cache_name == MAGNET_EXTENDED_ARC_CACHE_NAME || cache_name == MAGNET_EXTENDED_CACHELIB_CACHE_NAME || cache_name == MAGNET_EXTENDED_FIFO_CACHE_NAME || cache_name == MAGNET_EXTENDED_FROZENHOT_CACHE_NAME || cache_name == MAGNET_EXTENDED_GLCACHE_CACHE_NAME || cache_name == MAGNET_EXTENDED_GDSF_CACHE_NAME || cache_name == MAGNET_EXTENDED_GDSIZE_CACHE_NAME || cache_name == MAGNET_EXTENDED_LFUDA_CACHE_NAME || cache_name == MAGNET_EXTENDED_LRUK_CACHE_NAME || cache_name == MAGNET_EXTENDED_LACACHE_CACHE_NAME || cache_name == MAGNET_EXTENDED_LFU_CACHE_NAME || cache_name == MAGNET_EXTENDED_LHD_CACHE_NAME || cache_name == MAGNET_EXTENDED_LRB_CACHE_NAME || cache_name == MAGNET_EXTENDED_LRU_CACHE_NAME || cache_name == MAGNET_EXTENDED_S3FIFO_CACHE_NAME || cache_name == MAGNET_EXTENDED_SEGCACHE_CACHE_NAME || cache_name == MAGNET_EXTENDED_SIEVE_CACHE_NAME || cache_name == MAGNET_EXTENDED_SLRU_CACHE_NAME || cache_name == MAGNET_EXTENDED_WTINYLFU_CACHE_NAME)
+        if (cache_name == MAGNET_EXTENDED_ADAPTSIZE_CACHE_NAME || cache_name == MAGNET_EXTENDED_ARC_CACHE_NAME || cache_name == MAGNET_EXTENDED_CACHELIB_CACHE_NAME || cache_name == MAGNET_EXTENDED_FIFO_CACHE_NAME || cache_name == MAGNET_EXTENDED_FROZENHOT_CACHE_NAME || cache_name == MAGNET_EXTENDED_GLCACHE_CACHE_NAME || cache_name == MAGNET_EXTENDED_GDSF_CACHE_NAME || cache_name == MAGNET_EXTENDED_GDSIZE_CACHE_NAME || cache_name == MAGNET_EXTENDED_LFUDA_CACHE_NAME || cache_name == MAGNET_EXTENDED_LRUK_CACHE_NAME || cache_name == MAGNET_EXTENDED_LACACHE_CACHE_NAME || cache_name == MAGNET_EXTENDED_LFU_CACHE_NAME || cache_name == MAGNET_EXTENDED_LHD_CACHE_NAME || cache_name == MAGNET_EXTENDED_LRB_CACHE_NAME || cache_name == MAGNET_EXTENDED_LRU_CACHE_NAME || cache_name == MAGNET_EXTENDED_S3FIFO_CACHE_NAME || cache_name == MAGNET_EXTENDED_SEGCACHE_CACHE_NAME || cache_name == MAGNET_EXTENDED_SIEVE_CACHE_NAME || cache_name == MAGNET_EXTENDED_SLRU_CACHE_NAME || cache_name == MAGNET_EXTENDED_WTINYLFU_CACHE_NAME)
         {
             return true;
         }

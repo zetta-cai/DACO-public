@@ -107,6 +107,7 @@ namespace covered
         static const std::string HDD_NAME; // NOTE: a single RocksDB size on HDD should NOT exceed 500 GiB
 
         // Cache name
+        static const std::string ADAPTSIZE_CACHE_NAME;
         static const std::string ARC_CACHE_NAME;
         static const std::string BESTGUESS_CACHE_NAME; // Canonical cooperaive caching
         static const std::string CACHELIB_CACHE_NAME;
@@ -130,6 +131,7 @@ namespace covered
         static const std::string COVERED_CACHE_NAME;
 
         // Shark-extended cache names (e.g.., shark+arc)
+        static const std::string SHARK_EXTENDED_ADAPTSIZE_CACHE_NAME;
         static const std::string SHARK_EXTENDED_ARC_CACHE_NAME;
         static const std::string SHARK_EXTENDED_CACHELIB_CACHE_NAME;
         static const std::string SHARK_EXTENDED_FIFO_CACHE_NAME;
@@ -151,6 +153,7 @@ namespace covered
         static const std::string SHARK_EXTENDED_WTINYLFU_CACHE_NAME;
 
         // MagNet-extended cache names (e.g.., magnet+arc)
+        static const std::string MAGNET_EXTENDED_ADAPTSIZE_CACHE_NAME;
         static const std::string MAGNET_EXTENDED_ARC_CACHE_NAME;
         static const std::string MAGNET_EXTENDED_CACHELIB_CACHE_NAME;
         static const std::string MAGNET_EXTENDED_FIFO_CACHE_NAME;
