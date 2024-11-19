@@ -28,7 +28,7 @@ namespace covered
 			if (!(list_iter->first == key))
 			{
 				std::ostringstream oss;
-				oss << "get() for key " << key.getKeyDebugstr() << " failed due to mismatched key of list_iter->first " << list_iter->first.getKeystr();
+				oss << "get() for key " << key.getKeyDebugstr() << " failed due to mismatched key of list_iter->first " << list_iter->first.getKeyDebugstr();
 				Util::dumpErrorMsg(kClassName, oss.str());
 				exit(1);
 			}

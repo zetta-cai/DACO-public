@@ -103,7 +103,7 @@ namespace covered
         if (object_size >= _cacheSize)
         {
             std::ostringstream oss;
-            oss << "Too large object size (" << object_size << " bytes) for key " << key.getKeyLength() << ", which exceeds capacity " << _cacheSize << " bytes!";
+            oss << "Too large object size (" << object_size << " bytes) for key " << key.getKeyDebugstr() << ", which exceeds capacity " << _cacheSize << " bytes!";
             Util::dumpErrorMsg(kClassName, oss.str());
             exit(1);
             return;

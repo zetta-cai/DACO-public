@@ -4,6 +4,7 @@
 #include <sstream>
 
 #include "common/util.h"
+#include "cache/adaptsize_local_cache.h"
 #include "cache/arc_local_cache.h"
 #include "cache/bestguess_local_cache.h"
 #include "cache/cachelib_local_cache.h"
@@ -30,7 +31,11 @@ namespace covered
     LocalCacheBase* LocalCacheBase::getLocalCacheByCacheName(const EdgeWrapperBase* edge_wrapper_ptr, const std::string& cache_name, const uint32_t& edge_idx, const uint64_t& capacity_bytes, const uint32_t& dataset_keycnt, const uint64_t& local_uncached_capacity_bytes, const uint64_t& local_uncached_lru_bytes, const uint32_t& peredge_synced_victimcnt)
     {
         LocalCacheBase* local_cache_ptr = NULL;
-        if (cache_name == Util::ARC_CACHE_NAME || cache_name == Util::SHARK_EXTENDED_ARC_CACHE_NAME || cache_name == Util::MAGNET_EXTENDED_ARC_CACHE_NAME)
+        if (cache_name == Util::ADAPTSIZE_CACHE_NAME || cache_name == Util::SHARK_EXTENDED_ADAPTSIZE_CACHE_NAME || cache_name == Util::MAGNET_EXTENDED_ADAPTSIZE_CACHE_NAME)
+        {
+            local_cache_ptr = new AdaptSizeLocalCache(edge_wrapper_ptr, cache_name, edge_idx, capacity_bytes);
+        }
+        else if (cache_name == Util::ARC_CACHE_NAME || cache_name == Util::SHARK_EXTENDED_ARC_CACHE_NAME || cache_name == Util::MAGNET_EXTENDED_ARC_CACHE_NAME)
         {
             local_cache_ptr = new ArcLocalCache(edge_wrapper_ptr, edge_idx, capacity_bytes);
         }
