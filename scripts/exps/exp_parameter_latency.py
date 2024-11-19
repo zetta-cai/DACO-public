@@ -23,14 +23,14 @@ exp_default_settings = {
     "cache_name": "covered",
     "workload_name": "facebook",
     "propagation_latency_clientedge_lbound_us": 500,
-    "propagation_latency_clientedge_avg_us": 1000,
+    "propagation_latency_clientedge_avg_us": 1000, # 1ms
     "propagation_latency_clientedge_rbound_us": 1500,
-    "propagation_latency_crossedge_lbound_us": 5000,
-    "propagation_latency_crossedge_avg_us": 10000,
-    "propagation_latency_crossedge_rbound_us": 15000,
-    "propagation_latency_edgecloud_lbound_us": 22000,
-    "propagation_latency_edgecloud_avg_us": 44000,
-    "propagation_latency_edgecloud_rbound_us": 66000
+    "propagation_latency_crossedge_lbound_us": 1500,
+    "propagation_latency_crossedge_avg_us": 3000, # 3ms
+    "propagation_latency_crossedge_rbound_us": 4500,
+    "propagation_latency_edgecloud_lbound_us": 6500,
+    "propagation_latency_edgecloud_avg_us": 13000, # 13ms
+    "propagation_latency_edgecloud_rbound_us": 19500
 }
 # NOTE: run lrb, glcache, and segcache at last due to slow warmup issue of lrb (may be caused by model retraining), and memory usage issue of segcache and glcache (may be caused by bugs on segment-level memory management) -> TODO: if no results of the above baselines due to program crashes, please provide more DRAM memory (or swap memory), and run them again with sufficient time (may be in units of hours or days) for warmup and cache stable performance
 # cache_names = ["covered", "shark", "bestguess", "shark+arc", "shark+cachelib", "shark+fifo", "shark+frozenhot", "shark+gdsf", "shark+lfu", "shark+lhd", "shark+s3fifo", "shark+sieve", "shark+wtinylfu", "shark+lrb", "shark+glcache", "shark+segcache"]
