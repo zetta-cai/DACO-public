@@ -23,9 +23,9 @@ exp_default_settings = {
     "cache_name": "covered",
     "workload_name": "facebook",
     "propagation_latency_distname": "constant", # NOTE: only used in warmup yet not affect evaluation results in stresstest (using real-cloud delays)
-    "propagation_latency_clientedge_avg_us": 1000,
-    "propagation_latency_crossedge_avg_us": 10000,
-    "propagation_latency_edgecloud_avg_us": 100000,
+    "propagation_latency_clientedge_avg_us": 1000, # NOTE: NOT used during real-net warmup phase
+    "propagation_latency_crossedge_avg_us": 10000, # NOTE: NOT used during real-net warmup phase
+    "propagation_latency_edgecloud_avg_us": 100000, # NOTE: NOT used during real-net warmup phase
     "realnet_option": "dump",
     "realnet_expname": "",
 }

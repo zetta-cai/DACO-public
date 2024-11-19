@@ -98,8 +98,7 @@ class Common:
 
     ## (5) Experiment settings
 
-    # TODO: TMPDEBUG24
-    exp_round_number = 1 # Run each experiment for exp_round_number times
+    exp_round_number = 5 # Run each experiment for exp_round_number times
 
     ## (6) Real-network settings
 
