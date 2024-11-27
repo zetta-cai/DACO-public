@@ -25,7 +25,7 @@ exp_default_settings = {
 }
 # NOTE: run lrb, glcache, and segcache at last due to slow warmup issue of lrb (may be caused by model retraining), and memory usage issue of segcache and glcache (may be caused by bugs on segment-level memory management) -> TODO: if no results of the above baselines due to program crashes, please provide more DRAM memory (or swap memory), and run them again with sufficient time (may be in units of hours or days) for warmup and cache stable performance
 # cache_names = ["covered", "shark", "bestguess", "shark+adaptsize", "shark+arc", "shark+cachelib", "shark+fifo", "shark+frozenhot", "shark+gdsf", "shark+lfu", "shark+lhd", "shark+s3fifo", "shark+sieve", "shark+wtinylfu", "shark+lrb", "shark+glcache", "shark+segcache"]
-cache_names = ["covered", "shark+gdsf", "shark+lhd"] # NOTE: just for fast evaluation -> you can use the above cache list if with time
+cache_names = ["covered", "shark+gdsf", "shark+lhd", "shark+adaptsize"] # NOTE: just for fast evaluation -> you can use the above cache list if with time
 # # NOTE: NO need to run 1M, which is the same as previous experiment (performance against different workloads)
 # keycnt_peredge_capacity_map = {"2000000": 6887, "4000000": 13675} # 2M and 4M dataset size; per-edge capacity = dataset capacity * 50% / 4 edges
 # NOTE: NO need to run 1M, which is the same as previous experiment (performance on existing methods)
