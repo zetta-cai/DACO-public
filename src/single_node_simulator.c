@@ -32,6 +32,8 @@
 #include "edge/basic_edge_wrapper.h"
 #include "edge/covered_edge_wrapper.h"
 #include "message/message_base.h"
+#include "message/control_message.h"
+#include "message/data_message.h"
 #include "workload/workload_wrapper_base.h"
 
 namespace covered
@@ -143,16 +145,16 @@ namespace covered
     void processRequest(const WorkloadItem& cur_workload_item, const uint32_t& clientidx, const std::string& cache_name, const uint32_t& edgecnt, const uint32_t& covered_topk_edgecnt, uint32_t& reqcnt, uint32_t& local_hitcnt, uint32_t& remote_hitcnt, uint64_t& latency_sum_us, BandwidthUsage& bandwidth_usage);
 
     bool accessClosestCache(const Key& cur_key, const uint32_t& clientidx, const std::string& cache_name, Value& fetched_value); // Return is_local_cached_and_valid
-    void writeClosestCache(const Key& cur_key, const Value& fetched_value, const uint32_t& clientidx, const std::string& cache_name, const WorkloadItemType& cur_workload_item_type, bool& is_evict);
-    void contentDiscovery(const Key& cur_key, const uint32_t& clientidx, const std::string& cache_name, const uint32_t& edgecnt, bool& is_remote_hit, uint32_t& target_edge_idx);
-    void requestRedirection(const Key& cur_key, const uint32_t& target_edge_idx, const std::string& cache_name, Value& fetched_value);
-    void validateClosestEdgeForFetchedValue(const Key& cur_key, const Value& fetched_value, const uint32_t& clientidx, const std::string& cache_name, const Hitflag& curobj_hitflag, bool& is_evict);
+    void writeClosestCache(const Key& cur_key, const Value& fetched_value, const uint32_t& clientidx, const std::string& cache_name, const WorkloadItemType& cur_workload_item_type, bool& is_evict, uint32_t& victim_cnt);
+    void contentDiscovery(const Key& cur_key, const uint32_t& clientidx, const std::string& cache_name, const uint32_t& edgecnt, bool& is_remote_hit, uint32_t& target_edge_idx, BandwidthUsage& curpkt_bandwidth_usage);
+    void requestRedirection(const Key& cur_key, const uint32_t& clientidx, const uint32_t& target_edge_idx, const std::string& cache_name, Value& fetched_value, BandwidthUsage& curpkt_bandwidth_usage);
+    void validateClosestEdgeForFetchedValue(const Key& cur_key, const Value& fetched_value, const uint32_t& clientidx, const std::string& cache_name, const Hitflag& curobj_hitflag, bool& is_evict, uint32_t& victim_cnt);
     uint64_t calcReadLatencyBeforeCacheManagement(const Key& cur_key, const uint32_t& clientidx, const uint32_t& local_access_latency_us, const uint32_t& content_discovery_latency_us, const uint32_t& request_redirection_latency_us, const uint32_t& cloud_access_latency_us, const Hitflag& hitflag, const std::string& cache_name);
     uint64_t calcWriteLatencyBeforeCacheManagement(const Key& cur_key, const uint32_t& clientidx, const uint32_t& local_access_latency_us, const uint32_t& acquire_writelock_latency_us, const uint32_t& release_writelock_latency_us, const uint32_t& cloud_access_latency_us, const std::string& cache_name);
-    void triggerCacheManagement(const Key& cur_key, const Value& fetched_value, const uint32_t& clientidx, const Hitflag& curobj_hitflag, const std::string& cache_name, const uint64_t& total_latency_us, const uint32_t& covered_topk_edgecnt, bool& is_admit, bool& is_evict);
+    void triggerCacheManagement(const Key& cur_key, const Value& fetched_value, const uint32_t& clientidx, const Hitflag& curobj_hitflag, const std::string& cache_name, const uint64_t& total_latency_us, const uint32_t& covered_topk_edgecnt, bool& is_admit, bool& is_evict, uint32_t& victim_cnt);
     void updateTotalLatencyAfterCacheManagement(const Key& cur_key, const uint32_t& clientidx, const uint32_t& directory_admit_latency_us, const uint32_t& directory_evict_latency_us, const std::string& cache_name, uint64_t& total_latency_us);
-    void admitIntoEdge(const Key& cur_key, const Value& fetched_value, const uint32_t& placement_edgeidx, const Hitflag& hitflag, const std::string& cache_name, const uint64_t& miss_latency_us, bool& is_evict);
-    void evictForCapacity(const uint32_t& placement_edgeidx, const std::string& cache_name, bool& is_evict);
+    void admitIntoEdge(const Key& cur_key, const Value& fetched_value, const uint32_t& placement_edgeidx, const Hitflag& hitflag, const std::string& cache_name, const uint64_t& miss_latency_us, bool& is_evict, uint32_t& victim_cnt);
+    void evictForCapacity(const uint32_t& placement_edgeidx, const std::string& cache_name, bool& is_evict, uint32_t& victim_cnt);
     uint32_t getDirectoryUpdateLatency(const Key& cur_key, const uint32_t& clientidx, const std::string& cache_name);
 
     // (3) COVERED's helper functions
@@ -161,13 +163,25 @@ namespace covered
     void coveredVictimSynchronizationForEdge(const uint32_t& given_edgeidx, const bool& only_update_cache_margin_bytes);
     float coveredCalcEvictionCost(const Key& cur_key, const uint32_t& object_size, const std::unordered_set<uint32_t>& placement_edgeset);
     void coveredPlacementCalculation(const Key& cur_key, const uint32_t& covered_topk_edgecnt, bool& has_best_placement, std::unordered_set<uint32_t>& best_placement_edgeset);
-    void coveredPlacementDeployment(const Key& key, const Value& fetched_value, const std::unordered_set<uint32_t>& best_placement_edgeset, const Hitflag& hitflag, const std::string& cache_name, const uint64_t miss_latency_us, bool& is_evict);
+    void coveredPlacementDeployment(const Key& key, const Value& fetched_value, const std::unordered_set<uint32_t>& best_placement_edgeset, const Hitflag& hitflag, const std::string& cache_name, const uint64_t miss_latency_us, bool& is_evict, uint32_t& victim_cnt);
     void coveredMetadataUpdate(const Key& cur_key, const uint32_t& notify_edgeidx, const bool& is_neighbor_cached);
 
     // (4) BestGuess's helper functions
 
     void bestguessVtimeSynchronizationForEdge(const uint32_t& given_edgeidx);
     uint32_t bestguessGetEdgeidxWithSmallestVtime();
+
+    // (5) Helper functions for bandwidth calculation
+    void updateBandwidthUsageForClientRequest(const WorkloadItem& cur_workload_item, const uint32_t& clientidx, BandwidthUsage& curpkt_bandwidth_usage);
+    void updateBandwidthUsageForClientGetResponse(const Key& cur_key, const uint32_t& clientidx, const Value& value, BandwidthUsage& curpkt_bandwidth_usage);
+    void updateBandwidthUsageForClientPutResponse(const Key& cur_key, const uint32_t& clientidx, BandwidthUsage& curpkt_bandwidth_usage);
+    void updateBandwidthUsageForContentDiscovery(const Key& cur_key, const uint32_t& clientidx, const std::string& cache_name, BandwidthUsage& curpkt_bandwidth_usage);
+    void updateBandwidthUsageForRequestRedirection(const Key& cur_key, const Value& value, const uint32_t& clientidx, const std::string& cache_name, BandwidthUsage& curpkt_bandwidth_usage);
+    void updateBandwidthUsageForGlobalGet(const Key& cur_key, const Value& value, const uint32_t& clientidx, BandwidthUsage& curpkt_bandwidth_usage);
+    void updateBandwidthUsageForGlobalPut(const Key& cur_key, const Value& value, const uint32_t& clientidx, BandwidthUsage& curpkt_bandwidth_usage);
+    void updateBandwidthUsageForDirectoryUpdate(const Key& cur_key, const uint32_t& clientidx, const std::string& cache_name, const bool& is_admit, const uint32_t& victim_cnt, BandwidthUsage& curpkt_bandwidth_usage);
+    void updateBandwidthUsageForAcquireWritelock(const Key& cur_key, const uint32_t& clientidx, const std::string& cache_name, BandwidthUsage& curpkt_bandwidth_usage);
+    void updateBandwidthUsageForReleaseWritelock(const Key& cur_key, const uint32_t& clientidx, const std::string& cache_name, BandwidthUsage& curpkt_bandwidth_usage);
 }
 
 int main(int argc, char **argv) {
@@ -848,6 +862,7 @@ namespace covered
         // Used to calculate latency (calculated performance, yet NOT absolute performance)
         bool is_admit = false;
         bool is_evict = false;
+        uint32_t victim_cnt = 0;
         // Common latency
         uint32_t local_access_latency_us = 0;
         uint32_t cloud_access_latency_us = 0;
@@ -864,17 +879,11 @@ namespace covered
         // Total bandwidth usage
         BandwidthUsage curpkt_bandwidth_usage; // Bandwidth usage of current packet
 
-        // NOT really used (just for bandwidth calculation)
-        MessageBase* unused_msg_ptr = nullptr; 
-
         // Update statistics
         reqcnt += 1;
 
         // Client-edge bandwidth usage (get/put request)
-        unused_msg_ptr = MessageBase::getRequestFromWorkloadItem(cur_workload_item, clientidx, NetworkAddr(), false, false, false, 0);
-        curpkt_bandwidth_usage.updateClientEdgeBandwidthAndMsgcnt(unused_msg_ptr->getMsgBandwidthSize(), 1);
-        delete unused_msg_ptr;
-        unused_msg_ptr = nullptr;
+        updateBandwidthUsageForClientRequest(cur_workload_item, clientidx, curpkt_bandwidth_usage);
 
         if (cur_workload_item_type == WorkloadItemType::kWorkloadItemGet)
         {
@@ -890,21 +899,17 @@ namespace covered
                 uint32_t target_edge_idx = 0;
 
                 // Simulate content discovery (refer to src/cooperation/directory_table.c::lookup())
-                contentDiscovery(cur_key, clientidx, cache_name, edgecnt, is_remote_hit, target_edge_idx);
+                contentDiscovery(cur_key, clientidx, cache_name, edgecnt, is_remote_hit, target_edge_idx, curpkt_bandwidth_usage);
                 if (!isLocalBeacon(cur_key, clientidx))
                 {
                     content_discovery_latency_us = curclient_closest_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency();
                 }
 
-                // TODO: Cross-edge bandwidth usage (content discovery request and response)
-
                 if (is_remote_hit) // Remote hit
                 {
                     // Access local cache in the remote edge node to simulate request redirection for remote hit (update cache statistics in the remote edge node) (refer to src/edge/cache_server/basic_cache_server_redirection_processor.c::processReqForRedirectedGet_())
-                    requestRedirection(cur_key, target_edge_idx, cache_name, fetched_value);
+                    requestRedirection(cur_key, clientidx, target_edge_idx, cache_name, fetched_value, curpkt_bandwidth_usage);
                     request_redirection_latency_us = curclient_closest_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency();
-
-                    // TODO: Cross-edge bandwidth usage (request redirection request and response)
 
                     // Update statistics
                     remote_hitcnt += 1;
@@ -917,7 +922,8 @@ namespace covered
                     fetched_value = cur_value;
                     cloud_access_latency_us = curclient_closest_edge_wrapper_ptr->getEdgeTocloudPropagationSimulatorParamPtr()->genPropagationLatency();
 
-                    // TODO: Edge-cloud bandwidth usage (cloud access request and response)
+                    // Edge-cloud bandwidth usage (cloud access request and response)
+                    updateBandwidthUsageForGlobalGet(cur_key, fetched_value, clientidx, curpkt_bandwidth_usage);
 
                     curobj_hitflag = Hitflag::kGlobalMiss;
                 } // End of global miss
@@ -933,39 +939,48 @@ namespace covered
             } // End of local hit
 
             // Access local cache in the closest edge node to simulate value validation if necessary for fetched value (update value-related statistics in the closest edge node) (refer to src/edge/cache_server/basic_cache_server_worker.c::tryToUpdateInvalidLocalEdgeCache_())
-            validateClosestEdgeForFetchedValue(cur_key, fetched_value, clientidx, cache_name, curobj_hitflag, is_evict);
+            validateClosestEdgeForFetchedValue(cur_key, fetched_value, clientidx, cache_name, curobj_hitflag, is_evict, victim_cnt);
             if (is_evict)
             {
                 directory_evict_latency_us += getDirectoryUpdateLatency(cur_key, clientidx, cache_name); // NOTE: may trigger multiple times of eviction for a request (each time is parallel)
-                is_evict = false;
 
-                // TODO: Cross-edge bandwidth usage (directory update request and response)
+                // Cross-edge bandwidth usage (directory update request and response)
+                updateBandwidthUsageForDirectoryUpdate(cur_key, clientidx, cache_name, false, victim_cnt, curpkt_bandwidth_usage);
+
+                is_evict = false;
+                victim_cnt = 0;
             }
 
             // Calculate cache miss latency for LA-Cache and update COVERED's parameters based on hitflag
             total_latency_us = calcReadLatencyBeforeCacheManagement(cur_key, clientidx, local_access_latency_us, content_discovery_latency_us, request_redirection_latency_us, cloud_access_latency_us, curobj_hitflag, cache_name);
 
             // Trigger cache management
-            triggerCacheManagement(cur_key, fetched_value, clientidx, curobj_hitflag, cache_name, total_latency_us, covered_topk_edgecnt, is_admit, is_evict);
+            triggerCacheManagement(cur_key, fetched_value, clientidx, curobj_hitflag, cache_name, total_latency_us, covered_topk_edgecnt, is_admit, is_evict, victim_cnt);
             if (is_admit)
             {
                 directory_admit_latency_us = getDirectoryUpdateLatency(cur_key, clientidx, cache_name);
-                is_admit = false;
 
-                // TODO: Cross-edge bandwidth usage (directory update request and response)
+                // Cross-edge bandwidth usage (directory update request and response)
+                updateBandwidthUsageForDirectoryUpdate(cur_key, clientidx, cache_name, true, 0, curpkt_bandwidth_usage);
+
+                is_admit = false;
             }
             if (is_evict)
             {
                 directory_evict_latency_us += getDirectoryUpdateLatency(cur_key, clientidx, cache_name); // NOTE: may trigger multiple times of eviction for a request (each time is parallel)
-                is_evict = false;
 
-                // TODO: Cross-edge bandwidth usage (directory update request and response)
+                // Cross-edge bandwidth usage (directory update request and response)
+                updateBandwidthUsageForDirectoryUpdate(cur_key, clientidx, cache_name, false, victim_cnt, curpkt_bandwidth_usage);
+
+                is_evict = false;
+                victim_cnt = 0;
             }
 
             // Update total latency with directory update latencies
             updateTotalLatencyAfterCacheManagement(cur_key, clientidx, directory_admit_latency_us, directory_evict_latency_us, cache_name, total_latency_us);
 
-            // TODO: Client-edge bandwidth usage (get response)
+            // Client-edge bandwidth usage (get response)
+            updateBandwidthUsageForClientGetResponse(cur_key, clientidx, fetched_value, curpkt_bandwidth_usage);
 
             // Update statistics
             latency_sum_us += total_latency_us;
@@ -997,17 +1012,21 @@ namespace covered
             }
             cloud_access_latency_us = curclient_closest_edge_wrapper_ptr->getEdgeTocloudPropagationSimulatorParamPtr()->genPropagationLatency();
 
-            // TODO: Edge-cloud bandwidth usage (cloud access request and response)
+            // Edge-cloud bandwidth usage (cloud access request and response)
+            updateBandwidthUsageForGlobalPut(cur_key, fetched_value, clientidx, curpkt_bandwidth_usage);
 
             // Access local cache in each involved edge node to simulate cache update after write acknowledgement (update cache statistics in the closest edge node)
-            writeClosestCache(cur_key, fetched_value, clientidx, cache_name, cur_workload_item_type, is_evict);
+            writeClosestCache(cur_key, fetched_value, clientidx, cache_name, cur_workload_item_type, is_evict, victim_cnt);
             local_access_latency_us = curclient_closest_edge_wrapper_ptr->getEdgeToclientPropagationSimulatorParamPtr()->genPropagationLatency();
             if (is_evict)
             {
                 directory_evict_latency_us += getDirectoryUpdateLatency(cur_key, clientidx, cache_name); // NOTE: may trigger multiple times of eviction for a request (each time is parallel)
-                is_evict = false;
 
-                // TODO: Cross-edge bandwidth usage (directory update request and response)
+                // Cross-edge bandwidth usage (directory update request and response)
+                updateBandwidthUsageForDirectoryUpdate(cur_key, clientidx, cache_name, false, victim_cnt, curpkt_bandwidth_usage);
+
+                is_evict = false;
+                victim_cnt = 0;
             }
 
             // Calculate cache miss latency for LA-Cache and update COVERED's parameters based on remote beacon access
@@ -1020,26 +1039,32 @@ namespace covered
                 // NOTE: BestGuess does NOT admit the object if it has been cached by other cache nodes
                 curobj_hitflag = Hitflag::kCooperativeHit;
             }
-            triggerCacheManagement(cur_key, fetched_value, clientidx, curobj_hitflag, cache_name, total_latency_us, covered_topk_edgecnt, is_admit, is_evict);
+            triggerCacheManagement(cur_key, fetched_value, clientidx, curobj_hitflag, cache_name, total_latency_us, covered_topk_edgecnt, is_admit, is_evict, victim_cnt);
             if (is_admit)
             {
                 directory_admit_latency_us = getDirectoryUpdateLatency(cur_key, clientidx, cache_name);
-                is_admit = false;
 
-                // TODO: Cross-edge bandwidth usage (directory update request and response)
+                // Cross-edge bandwidth usage (directory update request and response)
+                updateBandwidthUsageForDirectoryUpdate(cur_key, clientidx, cache_name, true, 0, curpkt_bandwidth_usage);
+
+                is_admit = false;
             }
             if (is_evict)
             {
                 directory_evict_latency_us += getDirectoryUpdateLatency(cur_key, clientidx, cache_name); // NOTE: may trigger multiple times of eviction for a request (each time is parallel)
-                is_evict = false;
 
-                // TODO: Cross-edge bandwidth usage (directory update request and response)
+                // Cross-edge bandwidth usage (directory update request and response)
+                updateBandwidthUsageForDirectoryUpdate(cur_key, clientidx, cache_name, false, victim_cnt, curpkt_bandwidth_usage);
+
+                is_evict = false;
+                victim_cnt = 0;
             }
 
             // Update total latency with directory update latencies
             updateTotalLatencyAfterCacheManagement(cur_key, clientidx, directory_admit_latency_us, directory_evict_latency_us, cache_name, total_latency_us);
 
-            // TODO: Client-edge bandwidth usage (put response)
+            // Client-edge bandwidth usage (put response)
+            updateBandwidthUsageForClientPutResponse(cur_key, clientidx, curpkt_bandwidth_usage);
 
             // Update statistics (NOTE: write MUST be cache miss -> NO need to update local hitcnt and remote hitcnt)
             latency_sum_us += total_latency_us;
@@ -1081,7 +1106,7 @@ namespace covered
         return is_local_cached_and_valid;
     }
 
-    void writeClosestCache(const Key& cur_key, const Value& fetched_value, const uint32_t& clientidx, const std::string& cache_name, const WorkloadItemType& cur_workload_item_type, bool& is_evict)
+    void writeClosestCache(const Key& cur_key, const Value& fetched_value, const uint32_t& clientidx, const std::string& cache_name, const WorkloadItemType& cur_workload_item_type, bool& is_evict, uint32_t& victim_cnt)
     {
         const uint32_t closest_edgeidx = getClosestEdgeidx(clientidx);
         CacheWrapper* curclient_closest_edge_cache_wrapper_ptr = getClosestEdgeCacheWrapperPtr(clientidx);
@@ -1101,7 +1126,7 @@ namespace covered
             unused_is_local_cached_and_invalid = curclient_closest_edge_cache_wrapper_ptr->updateIfInvalidForGetrsp(cur_key, fetched_value, is_global_cached, affect_victim_tracker);
             
             // NOTE: update may trigger eviction (see CacheServerWorkerBase::processLocalGetRequest_())
-            evictForCapacity(getClosestEdgeidx(clientidx), cache_name, is_evict);
+            evictForCapacity(getClosestEdgeidx(clientidx), cache_name, is_evict, victim_cnt);
         }
         UNUSED(unused_is_local_cached_and_invalid);
 
@@ -1119,7 +1144,7 @@ namespace covered
         return;
     }
 
-    void contentDiscovery(const Key& cur_key, const uint32_t& clientidx, const std::string& cache_name, const uint32_t& edgecnt, bool& is_remote_hit, uint32_t& target_edge_idx)
+    void contentDiscovery(const Key& cur_key, const uint32_t& clientidx, const std::string& cache_name, const uint32_t& edgecnt, bool& is_remote_hit, uint32_t& target_edge_idx, BandwidthUsage& curpkt_bandwidth_usage)
     {
         EdgeWrapperBase* beacon_edge_wrapper_ptr = getBeaconEdgeWrapperPtr(cur_key);
 
@@ -1187,6 +1212,9 @@ namespace covered
                     is_remote_hit = true;
                 } // End of other baselines and COVERED
             }
+
+            // Cross-edge bandwidth usage (content discovery request and response)
+            updateBandwidthUsageForContentDiscovery(cur_key, clientidx, cache_name, curpkt_bandwidth_usage);
         } // End of global cached
         else // Global uncached
         {
@@ -1196,7 +1224,7 @@ namespace covered
         return;
     }
 
-    void requestRedirection(const Key& cur_key, const uint32_t& target_edge_idx, const std::string& cache_name, Value& fetched_value)
+    void requestRedirection(const Key& cur_key, const uint32_t& clientidx, const uint32_t& target_edge_idx, const std::string& cache_name, Value& fetched_value, BandwidthUsage& curpkt_bandwidth_usage)
     {
         EdgeWrapperBase* curobj_target_edge_wrapper_ptr = getEdgeWrapperPtr(target_edge_idx);
         CacheWrapper* curobj_target_edge_cache_wrapper_ptr = curobj_target_edge_wrapper_ptr->getEdgeCachePtr();
@@ -1217,12 +1245,15 @@ namespace covered
             bestguessVtimeSynchronizationForEdge(target_edge_idx);
         }
 
+        // Cross-edge bandwidth usage (request redirection request and response)
+        updateBandwidthUsageForRequestRedirection(cur_key, fetched_value, clientidx, cache_name, curpkt_bandwidth_usage);
+
         assert(is_cooperative_cached_and_valid);
 
         return;
     }
 
-    void validateClosestEdgeForFetchedValue(const Key& cur_key, const Value& fetched_value, const uint32_t& clientidx, const std::string& cache_name, const Hitflag& curobj_hitflag, bool& is_evict)
+    void validateClosestEdgeForFetchedValue(const Key& cur_key, const Value& fetched_value, const uint32_t& clientidx, const std::string& cache_name, const Hitflag& curobj_hitflag, bool& is_evict, uint32_t& victim_cnt)
     {
         const uint32_t closest_edgeidx = getClosestEdgeidx(clientidx);
         CacheWrapper* curclient_closest_edge_cache_wrapper_ptr = getClosestEdgeCacheWrapperPtr(clientidx);
@@ -1239,7 +1270,7 @@ namespace covered
             unused_is_local_cached_and_invalid = curclient_closest_edge_cache_wrapper_ptr->updateIfInvalidForGetrsp(cur_key, fetched_value, is_global_cached, affect_victim_tracker);
             
             // NOTE: update may trigger eviction (see CacheServerWorkerBase::processLocalGetRequest_())
-            evictForCapacity(getClosestEdgeidx(clientidx), cache_name, is_evict);
+            evictForCapacity(getClosestEdgeidx(clientidx), cache_name, is_evict, victim_cnt);
         }
         UNUSED(unused_is_local_cached_and_invalid);
 
@@ -1348,10 +1379,11 @@ namespace covered
         return total_latency_us;
     }
 
-    void triggerCacheManagement(const Key& cur_key, const Value& fetched_value, const uint32_t& clientidx, const Hitflag& curobj_hitflag, const std::string& cache_name, const uint64_t& total_latency_us, const uint32_t& covered_topk_edgecnt, bool& is_admit, bool& is_evict)
+    void triggerCacheManagement(const Key& cur_key, const Value& fetched_value, const uint32_t& clientidx, const Hitflag& curobj_hitflag, const std::string& cache_name, const uint64_t& total_latency_us, const uint32_t& covered_topk_edgecnt, bool& is_admit, bool& is_evict, uint32_t& victim_cnt)
     {
         is_admit = false;
         is_evict = false;
+        victim_cnt = 0;
 
         const uint32_t curclient_closest_edgeidx = getClosestEdgeidx(clientidx);
         CacheWrapper* curclient_closest_edge_cache_wrapper_ptr = getClosestEdgeCacheWrapperPtr(clientidx);
@@ -1371,7 +1403,7 @@ namespace covered
                 if (has_best_placement)
                 {
                     is_admit = true;
-                    coveredPlacementDeployment(cur_key, fetched_value, best_placement_edgeset, curobj_hitflag, cache_name, total_latency_us, is_evict);
+                    coveredPlacementDeployment(cur_key, fetched_value, best_placement_edgeset, curobj_hitflag, cache_name, total_latency_us, is_evict, victim_cnt);
                 }
             }
         } // End of COVERED
@@ -1383,7 +1415,7 @@ namespace covered
 
                 // BestGuess evicts with approximate global LRU
                 uint32_t placement_edgeidx = bestguessGetEdgeidxWithSmallestVtime();
-                admitIntoEdge(cur_key, fetched_value, placement_edgeidx, curobj_hitflag, cache_name, total_latency_us, is_evict);
+                admitIntoEdge(cur_key, fetched_value, placement_edgeidx, curobj_hitflag, cache_name, total_latency_us, is_evict, victim_cnt);
             }
         }
         else if (Util::isMagnetLikeCache(cache_name)) // MagNet-like caches
@@ -1393,7 +1425,7 @@ namespace covered
                 if (curclient_closest_edge_cache_wrapper_ptr->needIndependentAdmit(cur_key, fetched_value))
                 {
                     is_admit = true;
-                    admitIntoEdge(cur_key, fetched_value, curclient_closest_edgeidx, curobj_hitflag, cache_name, total_latency_us, is_evict);
+                    admitIntoEdge(cur_key, fetched_value, curclient_closest_edgeidx, curobj_hitflag, cache_name, total_latency_us, is_evict, victim_cnt);
                 }
             }
         }
@@ -1402,7 +1434,7 @@ namespace covered
             if (curclient_closest_edge_cache_wrapper_ptr->needIndependentAdmit(cur_key, fetched_value))
             {
                 is_admit = true;
-                admitIntoEdge(cur_key, fetched_value, curclient_closest_edgeidx, curobj_hitflag, cache_name, total_latency_us, is_evict);
+                admitIntoEdge(cur_key, fetched_value, curclient_closest_edgeidx, curobj_hitflag, cache_name, total_latency_us, is_evict, victim_cnt);
             }
         }
 
@@ -1438,9 +1470,10 @@ namespace covered
         return;
     }
 
-    void admitIntoEdge(const Key& cur_key, const Value& fetched_value, const uint32_t& placement_edgeidx, const Hitflag& hitflag, const std::string& cache_name, const uint64_t& miss_latency_us, bool& is_evict)
+    void admitIntoEdge(const Key& cur_key, const Value& fetched_value, const uint32_t& placement_edgeidx, const Hitflag& hitflag, const std::string& cache_name, const uint64_t& miss_latency_us, bool& is_evict, uint32_t& victim_cnt)
     {
         is_evict = false;
+        victim_cnt = 0;
 
         assert(placement_edgeidx < edge_wrapper_ptrs.size());
         const uint32_t beacon_edgeidx = getBeaconEdgeidx(cur_key);
@@ -1501,16 +1534,17 @@ namespace covered
         }
 
         // Evict after admission
-        evictForCapacity(placement_edgeidx, cache_name, is_evict);
+        evictForCapacity(placement_edgeidx, cache_name, is_evict, victim_cnt);
 
         return;
     }
 
-    void evictForCapacity(const uint32_t& placement_edgeidx, const std::string& cache_name, bool& is_evict)
+    void evictForCapacity(const uint32_t& placement_edgeidx, const std::string& cache_name, bool& is_evict, uint32_t& victim_cnt)
     {
         // Refer to src/edge/cache_server/cache_server_base.c::evictForCapacity_()
 
         is_evict = false;
+        victim_cnt = 0;
 
         EdgeWrapperBase* edge_wrapper_ptr = getEdgeWrapperPtr(placement_edgeidx);
         CacheWrapper* edge_cache_wrapper_ptr = edge_wrapper_ptr->getEdgeCachePtr();
@@ -1546,6 +1580,7 @@ namespace covered
         }
 
         is_evict = total_victims.size() > 0;
+        victim_cnt = total_victims.size();
 
         // Update global cached information of placement edge node for all methods after eviction
         for (std::unordered_map<Key, Value, KeyHasher>::iterator total_victims_iter = total_victims.begin(); total_victims_iter != total_victims.end(); total_victims_iter++)
@@ -1898,14 +1933,14 @@ namespace covered
         return;
     }
 
-    void coveredPlacementDeployment(const Key& cur_key, const Value& fetched_value, const std::unordered_set<uint32_t>& best_placement_edgeset, const Hitflag& hitflag, const std::string& cache_name, const uint64_t miss_latency_us, bool& is_evict)
+    void coveredPlacementDeployment(const Key& cur_key, const Value& fetched_value, const std::unordered_set<uint32_t>& best_placement_edgeset, const Hitflag& hitflag, const std::string& cache_name, const uint64_t miss_latency_us, bool& is_evict, uint32_t& victim_cnt)
     {
         assert(best_placement_edgeset.size() > 0);
 
         for (std::unordered_set<uint32_t>::const_iterator best_placement_edgeset_iter = best_placement_edgeset.begin(); best_placement_edgeset_iter != best_placement_edgeset.end(); best_placement_edgeset_iter++)
         {
             const uint32_t tmp_placement_edgeidx = *best_placement_edgeset_iter;
-            admitIntoEdge(cur_key, fetched_value, tmp_placement_edgeidx, hitflag, cache_name, miss_latency_us, is_evict);
+            admitIntoEdge(cur_key, fetched_value, tmp_placement_edgeidx, hitflag, cache_name, miss_latency_us, is_evict, victim_cnt);
         }
 
         return;
@@ -1969,4 +2004,351 @@ namespace covered
 
         return placement_edgeidx;
     }
+
+    // (5) Helper functions for bandwidth calculation
+
+    void updateBandwidthUsageForClientRequest(const WorkloadItem& cur_workload_item, const uint32_t& clientidx, BandwidthUsage& curpkt_bandwidth_usage)
+    {
+        MessageBase* unused_req_ptr = MessageBase::getRequestFromWorkloadItem(cur_workload_item, clientidx, NetworkAddr(), false, false, false, 0);
+        assert(unused_req_ptr != NULL);
+
+        curpkt_bandwidth_usage.updateClientEdgeBandwidthAndMsgcnt(unused_req_ptr->getMsgBandwidthSize(), 1);
+
+        delete unused_req_ptr;
+        unused_req_ptr = NULL;
+
+        return;
+    }
+
+    void updateBandwidthUsageForClientGetResponse(const Key& cur_key, const uint32_t& clientidx, const Value& value, BandwidthUsage& curpkt_bandwidth_usage)
+    {
+        const uint32_t curclient_closest_edge_idx = getClosestEdgeidx(clientidx);
+
+        MessageBase* unused_req_ptr = new LocalGetResponse(cur_key, value, Hitflag::kLocalHit, 0, 0, curclient_closest_edge_idx, NetworkAddr(), BandwidthUsage(), EventList(), ExtraCommonMsghdr());
+        assert(unused_req_ptr != NULL);
+
+        curpkt_bandwidth_usage.updateClientEdgeBandwidthAndMsgcnt(unused_req_ptr->getMsgBandwidthSize(), 1);
+
+        delete unused_req_ptr;
+        unused_req_ptr = NULL;
+
+        return;
+    }
+
+    void updateBandwidthUsageForClientPutResponse(const Key& cur_key, const uint32_t& clientidx, BandwidthUsage& curpkt_bandwidth_usage)
+    {
+        const uint32_t curclient_closest_edge_idx = getClosestEdgeidx(clientidx);
+
+        MessageBase* unused_req_ptr = new LocalPutResponse(cur_key, Hitflag::kGlobalMiss, 0, 0, curclient_closest_edge_idx, NetworkAddr(), BandwidthUsage(), EventList(), ExtraCommonMsghdr());
+        assert(unused_req_ptr != NULL);
+
+        curpkt_bandwidth_usage.updateClientEdgeBandwidthAndMsgcnt(unused_req_ptr->getMsgBandwidthSize(), 1);
+
+        delete unused_req_ptr;
+        unused_req_ptr = NULL;
+
+        return;
+    }
+
+    void updateBandwidthUsageForContentDiscovery(const Key& cur_key, const uint32_t& clientidx, const std::string& cache_name, BandwidthUsage& curpkt_bandwidth_usage)
+    {
+        const uint32_t curclient_closest_edge_idx = getClosestEdgeidx(clientidx);
+
+        MessageBase* unused_req_ptr = NULL;
+        MessageBase* unused_rsp_ptr = NULL;
+        if (cache_name == Util::COVERED_CACHE_NAME) // For COVERED
+        {
+            CacheWrapper* curclient_closest_edge_cache_wrapper_ptr = getClosestEdgeCacheWrapperPtr(clientidx);
+
+            // Check if the object is tracked by local uncached metadata in the closest cache node for COVERED, which caches directory information for tracked objects
+            GetCollectedPopularityParam tmp_param(cur_key);
+            curclient_closest_edge_cache_wrapper_ptr->constCustomFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param);
+            const CollectedPopularity tmp_collected_popularity_before_content_discovery = tmp_param.getCollectedPopularityRef();
+            const bool is_tracked_before_content_discovery = tmp_collected_popularity_before_content_discovery.isTracked();
+
+            // Simulate DirectoryCacher for COVERED
+            bool with_content_discovery_bandwidth_usage = true;
+            if (is_tracked_before_content_discovery)
+            {
+                // Treat tracked object as with cached directory, i.e., no content discovery bandwidth cost
+                with_content_discovery_bandwidth_usage = false;
+            }
+
+            // Simulate content discovery request and response
+            if (with_content_discovery_bandwidth_usage)
+            {
+                unused_req_ptr = new covered::CoveredDirectoryLookupRequest(cur_key, tmp_collected_popularity_before_content_discovery, VictimSyncset(), curclient_closest_edge_idx, NetworkAddr(), ExtraCommonMsghdr());
+                assert(unused_req_ptr != NULL);
+
+                unused_rsp_ptr = new covered::CoveredDirectoryLookupResponse(cur_key, false, true, DirectoryInfo(), VictimSyncset(), 0, NetworkAddr(), BandwidthUsage(), EventList(), ExtraCommonMsghdr());
+                assert(unused_rsp_ptr != NULL);
+            }
+        }
+        else if (cache_name == Util::BESTGUESS_CACHE_NAME) // For BestGuess
+        {
+            unused_req_ptr = new BestGuessDirectoryLookupRequest(cur_key, BestGuessSyncinfo(), curclient_closest_edge_idx, NetworkAddr(), ExtraCommonMsghdr());
+            assert(unused_req_ptr != NULL);
+
+            unused_rsp_ptr = new BestGuessDirectoryLookupResponse(cur_key, false, true, DirectoryInfo(), BestGuessSyncinfo(), 0, NetworkAddr(), BandwidthUsage(), EventList(), ExtraCommonMsghdr());
+            assert(unused_rsp_ptr != NULL);
+        }
+        else // For other baselines
+        {
+            unused_req_ptr = new DirectoryLookupRequest(cur_key, curclient_closest_edge_idx, NetworkAddr(), ExtraCommonMsghdr());
+            assert(unused_req_ptr != NULL);
+
+            unused_rsp_ptr = new DirectoryLookupResponse(cur_key, false, true, DirectoryInfo(), 0, NetworkAddr(), BandwidthUsage(), EventList(), ExtraCommonMsghdr());
+            assert(unused_rsp_ptr != NULL);
+        }
+
+        // Cross-edge bandwidth usage (content discovery request)
+        if (unused_req_ptr != NULL)
+        {
+            curpkt_bandwidth_usage.updateCrossEdgeControlContentDiscoveryBandwidthAndMsgcnt(unused_req_ptr->getMsgBandwidthSize(), 1);
+
+            delete unused_req_ptr;
+            unused_req_ptr = NULL;
+        }
+
+        // Cross-edge bandwidth usage (content discovery response)
+        if (unused_rsp_ptr != NULL)
+        {
+            curpkt_bandwidth_usage.updateCrossEdgeControlContentDiscoveryBandwidthAndMsgcnt(unused_rsp_ptr->getMsgBandwidthSize(), 1);
+
+            delete unused_rsp_ptr;
+            unused_rsp_ptr = NULL;
+        }
+
+        return;
+    }
+
+    void updateBandwidthUsageForRequestRedirection(const Key& cur_key, const Value& value, const uint32_t& clientidx, const std::string& cache_name, BandwidthUsage& curpkt_bandwidth_usage)
+    {
+        const uint32_t curclient_closest_edge_idx = getClosestEdgeidx(clientidx);
+
+        MessageBase* unused_req_ptr = NULL;
+        MessageBase* unused_rsp_ptr = NULL;
+        if (cache_name == Util::COVERED_CACHE_NAME) // For COVERED
+        {
+            unused_req_ptr = new CoveredRedirectedGetRequest(cur_key, VictimSyncset(), curclient_closest_edge_idx, NetworkAddr(), ExtraCommonMsghdr());
+            assert(unused_req_ptr != NULL);
+
+            unused_rsp_ptr = new CoveredRedirectedGetResponse(cur_key, value, Hitflag::kCooperativeHit, VictimSyncset(), 0, NetworkAddr(), BandwidthUsage(), EventList(), ExtraCommonMsghdr());
+            assert(unused_rsp_ptr != NULL);
+        }
+        else if (cache_name == Util::BESTGUESS_CACHE_NAME) // For BestGuess
+        {
+            unused_req_ptr = new BestGuessRedirectedGetRequest(cur_key, BestGuessSyncinfo(), curclient_closest_edge_idx, NetworkAddr(), ExtraCommonMsghdr());
+            assert(unused_req_ptr != NULL);
+
+            unused_rsp_ptr = new BestGuessRedirectedGetResponse(cur_key, value, Hitflag::kCooperativeHit, BestGuessSyncinfo(), 0, NetworkAddr(), BandwidthUsage(), EventList(), ExtraCommonMsghdr());
+            assert(unused_rsp_ptr != NULL);
+        }
+        else // For other baselines
+        {
+            unused_req_ptr = new RedirectedGetRequest(cur_key, curclient_closest_edge_idx, NetworkAddr(), ExtraCommonMsghdr());
+            assert(unused_req_ptr != NULL);
+
+            unused_rsp_ptr = new RedirectedGetResponse(cur_key, value, Hitflag::kCooperativeHit, 0, NetworkAddr(), BandwidthUsage(), EventList(), ExtraCommonMsghdr());
+            assert(unused_rsp_ptr != NULL);
+        }
+
+        // Cross-edge bandwidth usage (request redirection request)
+        if (unused_req_ptr != NULL)
+        {
+            curpkt_bandwidth_usage.updateCrossEdgeDataBandwidthAndMsgcnt(unused_req_ptr->getMsgBandwidthSize(), 1);
+
+            delete unused_req_ptr;
+            unused_req_ptr = NULL;
+        }
+
+        // Cross-edge bandwidth usage (request redirection response)
+        if (unused_rsp_ptr != NULL)
+        {
+            curpkt_bandwidth_usage.updateCrossEdgeDataBandwidthAndMsgcnt(unused_rsp_ptr->getMsgBandwidthSize(), 1);
+
+            delete unused_rsp_ptr;
+            unused_rsp_ptr = NULL;
+        }
+
+        return;
+    }
+
+    void updateBandwidthUsageForGlobalGet(const Key& cur_key, const Value& value, const uint32_t& clientidx, BandwidthUsage& curpkt_bandwidth_usage)
+    {
+        const uint32_t curclient_closest_edge_idx = getClosestEdgeidx(clientidx);
+
+        MessageBase* unused_req_ptr = new GlobalGetRequest(cur_key, curclient_closest_edge_idx, NetworkAddr(), ExtraCommonMsghdr());
+        assert(unused_req_ptr != NULL);
+
+        MessageBase* unused_rsp_ptr = new GlobalGetResponse(cur_key, value, 0, NetworkAddr(), BandwidthUsage(), EventList(), ExtraCommonMsghdr());
+        assert(unused_rsp_ptr != NULL);
+
+        // Edge-cloud bandwidth usage (cloud access request)
+        if (unused_req_ptr != NULL)
+        {
+            curpkt_bandwidth_usage.updateEdgeCloudBandwidthAndMsgcnt(unused_req_ptr->getMsgBandwidthSize(), 1);
+
+            delete unused_req_ptr;
+            unused_req_ptr = NULL;
+        }
+
+        // Edge-cloud bandwidth usage (cloud access response)
+        if (unused_rsp_ptr != NULL)
+        {
+            curpkt_bandwidth_usage.updateEdgeCloudBandwidthAndMsgcnt(unused_rsp_ptr->getMsgBandwidthSize(), 1);
+
+            delete unused_rsp_ptr;
+            unused_rsp_ptr = NULL;
+        }
+
+        return;
+    }
+
+    void updateBandwidthUsageForGlobalPut(const Key& cur_key, const Value& value, const uint32_t& clientidx, BandwidthUsage& curpkt_bandwidth_usage)
+    {
+        const uint32_t curclient_closest_edge_idx = getClosestEdgeidx(clientidx);
+
+        MessageBase* unused_req_ptr = new GlobalPutRequest(cur_key, value, curclient_closest_edge_idx, NetworkAddr(), ExtraCommonMsghdr());
+        assert(unused_req_ptr != NULL);
+
+        MessageBase* unused_rsp_ptr = new GlobalPutResponse(cur_key, 0, NetworkAddr(), BandwidthUsage(), EventList(), ExtraCommonMsghdr());
+        assert(unused_rsp_ptr != NULL);
+
+        // Edge-cloud bandwidth usage (cloud access request)
+        if (unused_req_ptr != NULL)
+        {
+            curpkt_bandwidth_usage.updateEdgeCloudBandwidthAndMsgcnt(unused_req_ptr->getMsgBandwidthSize(), 1);
+
+            delete unused_req_ptr;
+            unused_req_ptr = NULL;
+        }
+
+        // Edge-cloud bandwidth usage (cloud access response)
+        if (unused_rsp_ptr != NULL)
+        {
+            curpkt_bandwidth_usage.updateEdgeCloudBandwidthAndMsgcnt(unused_rsp_ptr->getMsgBandwidthSize(), 1);
+
+            delete unused_rsp_ptr;
+            unused_rsp_ptr = NULL;
+        }
+
+        return;
+    }
+
+    void updateBandwidthUsageForDirectoryUpdate(const Key& cur_key, const uint32_t& clientidx, const std::string& cache_name, const bool& is_admit, const uint32_t& victim_cnt, BandwidthUsage& curpkt_bandwidth_usage)
+    {
+        const uint32_t curclient_closest_edge_idx = getClosestEdgeidx(clientidx);
+
+        MessageBase* unused_req_ptr = NULL;
+        MessageBase* unused_rsp_ptr = NULL;
+        if (cache_name == Util::COVERED_CACHE_NAME) // For COVERED
+        {
+            unused_req_ptr = new CoveredDirectoryUpdateRequest(cur_key, is_admit, DirectoryInfo(), VictimSyncset(), curclient_closest_edge_idx, NetworkAddr(), ExtraCommonMsghdr());
+            assert(unused_req_ptr != NULL);
+
+            unused_rsp_ptr = new CoveredDirectoryUpdateResponse(cur_key, false, false, VictimSyncset(), 0, NetworkAddr(), BandwidthUsage(), EventList(), ExtraCommonMsghdr());
+            assert(unused_rsp_ptr != NULL);
+        }
+        else if (cache_name == Util::BESTGUESS_CACHE_NAME) // For BestGuess
+        {
+            unused_req_ptr = new BestGuessDirectoryUpdateRequest(cur_key, is_admit, DirectoryInfo(), BestGuessSyncinfo(), curclient_closest_edge_idx, NetworkAddr(), ExtraCommonMsghdr());
+            assert(unused_req_ptr != NULL);
+
+            unused_rsp_ptr = new BestGuessDirectoryUpdateResponse(cur_key, false, BestGuessSyncinfo(), 0, NetworkAddr(), BandwidthUsage(), EventList(), ExtraCommonMsghdr());
+            assert(unused_rsp_ptr != NULL);
+        }
+        else // For other baselines
+        {
+            unused_req_ptr = new DirectoryUpdateRequest(cur_key, is_admit, DirectoryInfo(), curclient_closest_edge_idx, NetworkAddr(), ExtraCommonMsghdr());
+            assert(unused_req_ptr != NULL);
+
+            unused_rsp_ptr = new DirectoryUpdateResponse(cur_key, false, 0, NetworkAddr(), BandwidthUsage(), EventList(), ExtraCommonMsghdr());
+            assert(unused_rsp_ptr != NULL);
+        }
+
+        // Get msg count
+        uint32_t msgcnt = 1;
+        if (!is_admit) // Evict multiple victims
+        {
+            msgcnt = victim_cnt;
+            
+            assert(msgcnt > 0);
+            assert(msgcnt <= 10000); // NOTE: # of evicted victims should not be too large
+        }
+
+        // Cross-edge bandwidth usage (directory update request)
+        if (unused_req_ptr != NULL)
+        {
+            curpkt_bandwidth_usage.updateCrossEdgeControlDirectoryUpdateBandwidthAndMsgcnt(unused_req_ptr->getMsgBandwidthSize() * msgcnt, msgcnt);
+
+            delete unused_req_ptr;
+            unused_req_ptr = NULL;
+        }
+
+        // Cross-edge bandwidth usage (directory update response)
+        if (unused_rsp_ptr != NULL)
+        {
+            curpkt_bandwidth_usage.updateCrossEdgeControlDirectoryUpdateBandwidthAndMsgcnt(unused_rsp_ptr->getMsgBandwidthSize() * msgcnt, msgcnt);
+
+            delete unused_rsp_ptr;
+            unused_rsp_ptr = NULL;
+        }
+
+        return;
+    }
+
+    void updateBandwidthUsageForAcquireWritelock(const Key& cur_key, const uint32_t& clientidx, const std::string& cache_name, BandwidthUsage& curpkt_bandwidth_usage)
+    {
+        const uint32_t curclient_closest_edge_idx = getClosestEdgeidx(clientidx);
+
+        MessageBase* unused_req_ptr = NULL;
+        MessageBase* unused_rsp_ptr = NULL;
+        if (cache_name == Util::COVERED_CACHE_NAME) // For COVERED
+        {
+            unused_req_ptr = new CoveredAcquireWritelockRequest(cur_key, CollectedPopularity(), VictimSyncset(), curclient_closest_edge_idx, NetworkAddr(), ExtraCommonMsghdr());
+            assert(unused_req_ptr != NULL);
+
+            unused_rsp_ptr = new CoveredAcquireWritelockResponse(cur_key, LockResult::kSuccess, VictimSyncset(), 0, NetworkAddr(), BandwidthUsage(), EventList(), ExtraCommonMsghdr());
+            assert(unused_rsp_ptr != NULL);
+        }
+        else if (cache_name == Util::BESTGUESS_CACHE_NAME) // For BestGuess
+        {
+            unused_req_ptr = new BestGuessAcquireWritelockRequest(cur_key, BestGuessSyncinfo(), curclient_closest_edge_idx, NetworkAddr(), ExtraCommonMsghdr());
+            assert(unused_req_ptr != NULL);
+
+            unused_rsp_ptr = new BestGuessAcquireWritelockResponse(cur_key, LockResult::kSuccess, BestGuessSyncinfo(), 0, NetworkAddr(), BandwidthUsage(), EventList(), ExtraCommonMsghdr());
+            assert(unused_rsp_ptr != NULL);
+        }
+        else // For other baselines
+        {
+            unused_req_ptr = new AcquireWritelockRequest(cur_key, curclient_closest_edge_idx, NetworkAddr(), ExtraCommonMsghdr());
+            assert(unused_req_ptr != NULL);
+
+            unused_rsp_ptr = new AcquireWritelockResponse(cur_key, LockResult::kSuccess, 0, NetworkAddr(), BandwidthUsage(), EventList(), ExtraCommonMsghdr());
+            assert(unused_rsp_ptr != NULL);
+        }
+
+        // Cross-edge bandwidth usage (acquire writelock request)
+        if (unused_req_ptr != NULL)
+        {
+            curpkt_bandwidth_usage.updateCrossEdgeControlOthersBandwidthAndMsgcnt(unused_req_ptr->getMsgBandwidthSize(), 1);
+
+            delete unused_req_ptr;
+            unused_req_ptr = NULL;
+        }
+
+        // Cross-edge bandwidth usage (acquire writelock response)
+        if (unused_rsp_ptr != NULL)
+        {
+            curpkt_bandwidth_usage.updateCrossEdgeControlOthersBandwidthAndMsgcnt(unused_rsp_ptr->getMsgBandwidthSize(), 1);
+
+            delete unused_rsp_ptr;
+            unused_rsp_ptr = NULL;
+        }
+
+        return;
+    }
+
+    void updateBandwidthUsageForReleaseWritelock(const Key& cur_key, const uint32_t& clientidx, const std::string& cache_name, BandwidthUsage& curpkt_bandwidth_usage);
 }
