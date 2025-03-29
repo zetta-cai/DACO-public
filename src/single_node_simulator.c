@@ -996,9 +996,11 @@ namespace covered
                 acquire_writelock_latency_us = curclient_closest_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency();
                 release_writelock_latency_us = curclient_closest_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency();
 
-                // TODO: Cross-edge bandwidth usage (acquire writelock request and response)
+                // Cross-edge bandwidth usage (acquire writelock request and response)
+                updateBandwidthUsageForAcquireWritelock(cur_key, clientidx, cache_name, curpkt_bandwidth_usage);
 
-                // TODO: Cross-edge bandwidth usage (release writelock request and response)
+                // Cross-edge bandwidth usage (release writelock request and response)
+                updateBandwidthUsageForReleaseWritelock(cur_key, clientidx, cache_name, curpkt_bandwidth_usage);
             }
 
             // Simulate cloud update for write acknowledgement
@@ -1686,8 +1688,6 @@ namespace covered
             peredge_evictinfo.updateEvictinfo(given_edgeidx, local_cache_margin_bytes, tmp_param.getVictimCacheinfosConstRef());
         }
 
-        // TODO: Cross-edge bandwidth usage (victim synchronization request and response)
-
         return;
     }
 
@@ -1981,8 +1981,6 @@ namespace covered
         {
             peredge_victim_vtime_iter->second = local_victim_vtime;
         }
-
-        // TODO: Cross-edge bandwidth usage (victim synchronization request and response)
 
         return;
     }
@@ -2350,5 +2348,55 @@ namespace covered
         return;
     }
 
-    void updateBandwidthUsageForReleaseWritelock(const Key& cur_key, const uint32_t& clientidx, const std::string& cache_name, BandwidthUsage& curpkt_bandwidth_usage);
+    void updateBandwidthUsageForReleaseWritelock(const Key& cur_key, const uint32_t& clientidx, const std::string& cache_name, BandwidthUsage& curpkt_bandwidth_usage)
+    {
+        const uint32_t curclient_closest_edge_idx = getClosestEdgeidx(clientidx);
+
+        MessageBase* unused_req_ptr = NULL;
+        MessageBase* unused_rsp_ptr = NULL;
+        if (cache_name == Util::COVERED_CACHE_NAME) // For COVERED
+        {
+            unused_req_ptr = new CoveredReleaseWritelockRequest(cur_key, CollectedPopularity(), VictimSyncset(), curclient_closest_edge_idx, NetworkAddr(), ExtraCommonMsghdr());
+            assert(unused_req_ptr != NULL);
+
+            unused_rsp_ptr = new CoveredReleaseWritelockResponse(cur_key, VictimSyncset(), 0, NetworkAddr(), BandwidthUsage(), EventList(), ExtraCommonMsghdr());
+            assert(unused_rsp_ptr != NULL);
+        }
+        else if (cache_name == Util::BESTGUESS_CACHE_NAME) // For BestGuess
+        {
+            unused_req_ptr = new BestGuessReleaseWritelockRequest(cur_key, BestGuessSyncinfo(), curclient_closest_edge_idx, NetworkAddr(), ExtraCommonMsghdr());
+            assert(unused_req_ptr != NULL);
+
+            unused_rsp_ptr = new BestGuessReleaseWritelockResponse(cur_key, BestGuessSyncinfo(), 0, NetworkAddr(), BandwidthUsage(), EventList(), ExtraCommonMsghdr());
+            assert(unused_rsp_ptr != NULL);
+        }
+        else // For other baselines
+        {
+            unused_req_ptr = new ReleaseWritelockRequest(cur_key, curclient_closest_edge_idx, NetworkAddr(), ExtraCommonMsghdr());
+            assert(unused_req_ptr != NULL);
+
+            unused_rsp_ptr = new ReleaseWritelockResponse(cur_key, 0, NetworkAddr(), BandwidthUsage(), EventList(), ExtraCommonMsghdr());
+            assert(unused_rsp_ptr != NULL);
+        }
+
+        // Cross-edge bandwidth usage (release writelock request)
+        if (unused_req_ptr != NULL)
+        {
+            curpkt_bandwidth_usage.updateCrossEdgeControlOthersBandwidthAndMsgcnt(unused_req_ptr->getMsgBandwidthSize(), 1);
+
+            delete unused_req_ptr;
+            unused_req_ptr = NULL;
+        }
+
+        // Cross-edge bandwidth usage (release writelock response)
+        if (unused_rsp_ptr != NULL)
+        {
+            curpkt_bandwidth_usage.updateCrossEdgeControlOthersBandwidthAndMsgcnt(unused_rsp_ptr->getMsgBandwidthSize(), 1);
+
+            delete unused_rsp_ptr;
+            unused_rsp_ptr = NULL;
+        }
+
+        return;
+    }
 }
