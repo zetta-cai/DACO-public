@@ -23,9 +23,19 @@ namespace covered
     public:
         BandwidthUsage();
         BandwidthUsage(const uint64_t& client_edge_bandwidth_bytes, const uint64_t& cross_edge_bandwidth_bytes, const uint64_t& edge_cloud_bandwidth_bytes, const uint64_t& client_edge_msgcnt, const uint64_t& cross_edge_msgcnt, const uint64_t& edge_cloud_msgcnt, const MessageType& message_type, const uint32_t& victim_syncset_bandwidth_bytes = 0); // NOTE: message_type ONLY works for cross-edge network overhead
+        BandwidthUsage(const BandwidthUsage& other); // Copy constructor
         ~BandwidthUsage();
 
         void update(const BandwidthUsage& other); // Add other into *this
+
+        // Fine-grained update for single-node simulation
+        void updateClientEdgeBandwidthAndMsgcnt(const uint64_t& bandwidth_bytes, const uint64_t& msgcnt);
+        void updateCrossEdgeControlContentDiscoveryBandwidthAndMsgcnt(const uint64_t& bandwidth_bytes, const uint64_t& msgcnt);
+        void updateCrossEdgeControlDirectoryUpdateBandwidthAndMsgcnt(const uint64_t& bandwidth_bytes, const uint64_t& msgcnt);
+        void updateCrossEdgeControlOthersBandwidthAndMsgcnt(const uint64_t& bandwidth_bytes, const uint64_t& msgcnt);
+        void updateCrossEdgeDataBandwidthAndMsgcnt(const uint64_t& bandwidth_bytes, const uint64_t& msgcnt);
+        void updateEdgeCloudBandwidthAndMsgcnt(const uint64_t& bandwidth_bytes, const uint64_t& msgcnt);
+        void updateVictimSyncsetBandwidth(const uint32_t& bandwidth_bytes);
 
         uint64_t getClientEdgeBandwidthBytes() const;
         uint64_t getCrossEdgeControlContentDiscoveryBandwidthBytes() const;

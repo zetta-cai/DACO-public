@@ -85,6 +85,25 @@ namespace covered
         }
     }
 
+    BandwidthUsage::BandwidthUsage(const BandwidthUsage& other)
+    {
+        client_edge_bandwidth_bytes_ = other.client_edge_bandwidth_bytes_;
+        cross_edge_control_content_discovery_bandwidth_bytes_ = other.cross_edge_control_content_discovery_bandwidth_bytes_;
+        cross_edge_control_directory_udpate_bandwidth_bytes_ = other.cross_edge_control_directory_udpate_bandwidth_bytes_;
+        cross_edge_control_others_bandwidth_bytes_ = other.cross_edge_control_others_bandwidth_bytes_;
+        cross_edge_data_bandwidth_bytes_ = other.cross_edge_data_bandwidth_bytes_;
+        edge_cloud_bandwidth_bytes_ = other.edge_cloud_bandwidth_bytes_;
+
+        victim_syncset_bandwidth_bytes_ = other.victim_syncset_bandwidth_bytes_;
+
+        client_edge_msgcnt_ = other.client_edge_msgcnt_;
+        cross_edge_control_content_discovery_msgcnt_ = other.cross_edge_control_content_discovery_msgcnt_;
+        cross_edge_control_directory_udpate_msgcnt_ = other.cross_edge_control_directory_udpate_msgcnt_;
+        cross_edge_control_others_msgcnt_ = other.cross_edge_control_others_msgcnt_;
+        cross_edge_data_msgcnt_ = other.cross_edge_data_msgcnt_;
+        edge_cloud_msgcnt_ = other.edge_cloud_msgcnt_;
+    }
+
     BandwidthUsage::~BandwidthUsage() {}
 
     void BandwidthUsage::update(const BandwidthUsage& other)
@@ -105,6 +124,56 @@ namespace covered
         cross_edge_control_others_msgcnt_ += other.cross_edge_control_others_msgcnt_;
         edge_cloud_msgcnt_ += other.edge_cloud_msgcnt_;
 
+        return;
+    }
+
+    // Fine-grained update for single-node simulation
+
+    void BandwidthUsage::updateClientEdgeBandwidthAndMsgcnt(const uint64_t& bandwidth_bytes, const uint64_t& msgcnt)
+    {
+        client_edge_bandwidth_bytes_ += bandwidth_bytes;
+        client_edge_msgcnt_ += msgcnt;
+        return;
+    }
+
+    void BandwidthUsage::updateCrossEdgeControlContentDiscoveryBandwidthAndMsgcnt(const uint64_t& bandwidth_bytes, const uint64_t& msgcnt)
+    {
+        cross_edge_control_content_discovery_bandwidth_bytes_ += bandwidth_bytes;
+        cross_edge_control_content_discovery_msgcnt_ += msgcnt;
+        return;
+    }
+
+    void BandwidthUsage::updateCrossEdgeControlDirectoryUpdateBandwidthAndMsgcnt(const uint64_t& bandwidth_bytes, const uint64_t& msgcnt)
+    {
+        cross_edge_control_directory_udpate_bandwidth_bytes_ += bandwidth_bytes;
+        cross_edge_control_directory_udpate_msgcnt_ += msgcnt;
+        return;
+    }
+
+    void BandwidthUsage::updateCrossEdgeControlOthersBandwidthAndMsgcnt(const uint64_t& bandwidth_bytes, const uint64_t& msgcnt)
+    {
+        cross_edge_control_others_bandwidth_bytes_ += bandwidth_bytes;
+        cross_edge_control_others_msgcnt_ += msgcnt;
+        return;
+    }
+
+    void BandwidthUsage::updateCrossEdgeDataBandwidthAndMsgcnt(const uint64_t& bandwidth_bytes, const uint64_t& msgcnt)
+    {
+        cross_edge_data_bandwidth_bytes_ += bandwidth_bytes;
+        cross_edge_data_msgcnt_ += msgcnt;
+        return;
+    }
+
+    void BandwidthUsage::updateEdgeCloudBandwidthAndMsgcnt(const uint64_t& bandwidth_bytes, const uint64_t& msgcnt)
+    {
+        edge_cloud_bandwidth_bytes_ += bandwidth_bytes;
+        edge_cloud_msgcnt_ += msgcnt;
+        return;
+    }
+
+    void BandwidthUsage::updateVictimSyncsetBandwidth(const uint32_t& bandwidth_bytes)
+    {
+        victim_syncset_bandwidth_bytes_ += bandwidth_bytes;
         return;
     }
 

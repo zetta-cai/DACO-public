@@ -22,6 +22,7 @@
 #include "cache/basic_cache_custom_func_param.h"
 #include "cache/covered_cache_custom_func_param.h"
 #include "cli/single_node_cli.h"
+#include "common/bandwidth_usage.h"
 #include "common/config.h"
 #include "common/key.h"
 #include "common/util.h"
@@ -30,6 +31,7 @@
 #include "edge/covered_edge_custom_func_param.h"
 #include "edge/basic_edge_wrapper.h"
 #include "edge/covered_edge_wrapper.h"
+#include "message/message_base.h"
 #include "workload/workload_wrapper_base.h"
 
 namespace covered
@@ -134,9 +136,11 @@ namespace covered
     EdgeWrapperBase* getBeaconEdgeWrapperPtr(const Key& cur_key);
     bool isLocalBeacon(const Key& cur_key, const uint32_t& clientidx);
 
+    std::string getStatisticsString(const uint32_t& reqcnt, const uint32_t& local_hitcnt, const uint32_t& remote_hitcnt, const uint64_t& latency_sum, const BandwidthUsage& bandwidth_usage);
+
     // (2) Common helper functions
 
-    void processRequest(const WorkloadItem& cur_workload_item, const uint32_t& clientidx, const std::string& cache_name, const uint32_t& edgecnt, const uint32_t& covered_topk_edgecnt, uint32_t& reqcnt, uint32_t& local_hitcnt, uint32_t& remote_hitcnt, uint64_t& latency_sum_us);
+    void processRequest(const WorkloadItem& cur_workload_item, const uint32_t& clientidx, const std::string& cache_name, const uint32_t& edgecnt, const uint32_t& covered_topk_edgecnt, uint32_t& reqcnt, uint32_t& local_hitcnt, uint32_t& remote_hitcnt, uint64_t& latency_sum_us, BandwidthUsage& bandwidth_usage);
 
     bool accessClosestCache(const Key& cur_key, const uint32_t& clientidx, const std::string& cache_name, Value& fetched_value); // Return is_local_cached_and_valid
     void writeClosestCache(const Key& cur_key, const Value& fetched_value, const uint32_t& clientidx, const std::string& cache_name, const WorkloadItemType& cur_workload_item_type, bool& is_evict);
@@ -286,6 +290,7 @@ int main(int argc, char **argv) {
     uint32_t warmup_interval_local_hitcnt = 0;
     uint32_t warmup_interval_remote_hitcnt = 0;
     uint64_t warmup_interval_latency_sum = 0; // Calculated latency (calculated performance, yet NOT absolute performance)
+    covered::BandwidthUsage warmup_interval_bandwidth_usage;
     uint32_t warmup_total_reqcnt = 0;
 
     // Generate requests via workload generators one by one to simulate cache access
@@ -299,7 +304,7 @@ int main(int argc, char **argv) {
                 // Generate workload item by the workload worker to simulate the client worker
                 covered::WorkloadItem cur_workload_item = covered::genWorkloadItemForClientWorker(local_client_worker_idx, clientidx, perclient_workercnt, client_workercnt, perworkload_workercnt, simulator_workloadcnt);
                 
-                covered::processRequest(cur_workload_item, clientidx, cache_name, edgecnt, covered_topk_edgecnt, warmup_interval_reqcnt, warmup_interval_local_hitcnt, warmup_interval_remote_hitcnt, warmup_interval_latency_sum);
+                covered::processRequest(cur_workload_item, clientidx, cache_name, edgecnt, covered_topk_edgecnt, warmup_interval_reqcnt, warmup_interval_local_hitcnt, warmup_interval_remote_hitcnt, warmup_interval_latency_sum, warmup_interval_bandwidth_usage);
             }
         }
 
@@ -308,28 +313,26 @@ int main(int argc, char **argv) {
         double warmup_delta_us = covered::Util::getDeltaTimeUs(warmup_cur_timestamp, warmup_prev_timestamp);
         if (warmup_delta_us >= static_cast<double>(warmup_interval_us))
         {
-            // Calculate warmup statistics
-            double warmup_local_hitratio = static_cast<double>(warmup_interval_local_hitcnt) / static_cast<double>(warmup_interval_reqcnt);
-            double warmup_remote_hitratio = static_cast<double>(warmup_interval_remote_hitcnt) / static_cast<double>(warmup_interval_reqcnt);
-            double warmup_global_hitratio = warmup_local_hitratio + warmup_remote_hitratio;
-            uint64_t warmup_interval_avg_latency = warmup_interval_latency_sum / static_cast<uint64_t>(warmup_interval_reqcnt);
+            // Update warmup total statistics
             warmup_total_reqcnt += warmup_interval_reqcnt;
+
+            // Get warmup interval statistics string
+            std::string warmup_interval_statistics_string = covered::getStatisticsString(warmup_interval_reqcnt, warmup_interval_local_hitcnt, warmup_interval_remote_hitcnt, warmup_interval_latency_sum, warmup_interval_bandwidth_usage);
 
             // Dump warmup statistics per interval
             std::ostringstream oss;
             oss << "[Warmup Statistics at Interval " << warmup_interval_idx << "]" << std::endl;
             oss << "Total reqcnt: " << warmup_total_reqcnt << std::endl;
-            oss << "Reqcnt: " << warmup_interval_reqcnt << ", LocalHitcnt: " << warmup_interval_local_hitcnt << ", RemoteHitcnt: " << warmup_interval_remote_hitcnt << std::endl;
-            oss << "| Global Hit Ratio (%) (Local + Remote) | Average Latency (ms) |" << std::endl;
-            oss << "| " << warmup_global_hitratio * 100 << " (" << warmup_local_hitratio * 100 << " + " << warmup_remote_hitratio * 100 << ") | " << static_cast<double>(warmup_interval_avg_latency) / 1000 << " |" << std::endl << std::endl;
+            oss << warmup_interval_statistics_string << std::endl << std::endl;
             std::cout << oss.str() << std::flush;
 
-            // Reset warmup statistics
+            // Reset warmup interval statistics
             warmup_prev_timestamp = warmup_cur_timestamp;
             warmup_interval_reqcnt = 0;
             warmup_interval_local_hitcnt = 0;
             warmup_interval_remote_hitcnt = 0;
             warmup_interval_latency_sum = 0;
+            warmup_interval_bandwidth_usage = covered::BandwidthUsage();
 
             warmup_interval_idx += 1;
         }
@@ -347,6 +350,7 @@ int main(int argc, char **argv) {
     uint32_t stresstest_total_local_hitcnt = 0;
     uint32_t stresstest_total_remote_hitcnt = 0;
     uint64_t stresstest_total_latency_sum = 0; // Calculated latency (calculated performance, yet NOT absolute performance)
+    covered::BandwidthUsage stresstest_total_bandwidth_usage;
 
     // Generate requests via workload generators one by one to simulate cache access until stresstest duration finishes
     while (true)
@@ -359,7 +363,7 @@ int main(int argc, char **argv) {
                 // Generate workload item by the workload worker to simulate the client worker
                 covered::WorkloadItem cur_workload_item = covered::genWorkloadItemForClientWorker(local_client_worker_idx, clientidx, perclient_workercnt, client_workercnt, perworkload_workercnt, simulator_workloadcnt);
                 
-                covered::processRequest(cur_workload_item, clientidx, cache_name, edgecnt, covered_topk_edgecnt, stresstest_total_reqcnt, stresstest_total_local_hitcnt, stresstest_total_remote_hitcnt, stresstest_total_latency_sum);
+                covered::processRequest(cur_workload_item, clientidx, cache_name, edgecnt, covered_topk_edgecnt, stresstest_total_reqcnt, stresstest_total_local_hitcnt, stresstest_total_remote_hitcnt, stresstest_total_latency_sum, stresstest_total_bandwidth_usage);
             }
         }
 
@@ -371,11 +375,8 @@ int main(int argc, char **argv) {
         {
             const bool is_finish = stresstest_whole_us >= static_cast<double>(SEC2US(stresstest_duration_sec));
 
-            // Calculate stresstest statistics
-            double stresstest_local_hitratio = static_cast<double>(stresstest_total_local_hitcnt) / static_cast<double>(stresstest_total_reqcnt);
-            double stresstest_remote_hitratio = static_cast<double>(stresstest_total_remote_hitcnt) / static_cast<double>(stresstest_total_reqcnt);
-            double stresstest_global_hitratio = stresstest_local_hitratio + stresstest_remote_hitratio;
-            uint64_t stresstest_total_avg_latency = stresstest_total_latency_sum / static_cast<uint64_t>(stresstest_total_reqcnt);
+            // Get stresstest total statistics string
+            std::string stresstest_total_statistics_string = covered::getStatisticsString(stresstest_total_reqcnt, stresstest_total_local_hitcnt, stresstest_total_remote_hitcnt, stresstest_total_latency_sum, stresstest_total_bandwidth_usage);
 
             // Dump stresstest statistics until the current interval
             std::ostringstream oss;
@@ -387,9 +388,7 @@ int main(int argc, char **argv) {
             {
                 oss << "[Final Stresstest Statistics]" << std::endl;
             }
-            oss << "Reqcnt: " << stresstest_total_reqcnt << ", LocalHitcnt: " << stresstest_total_local_hitcnt << ", RemoteHitcnt: " << stresstest_total_remote_hitcnt << std::endl;
-            oss << "| Global Hit Ratio (%) (Local + Remote) | Average Latency (ms) |" << std::endl;
-            oss << "| " << stresstest_global_hitratio * 100 << " (" << stresstest_local_hitratio * 100 << " + " << stresstest_remote_hitratio * 100 << ") | " << static_cast<double>(stresstest_total_avg_latency) / 1000 << " |" << std::endl << std::endl;
+            oss << stresstest_total_statistics_string << std::endl << std::endl;
             std::cout << oss.str() << std::flush;
 
             // Reset stresstest statistics
@@ -788,9 +787,55 @@ namespace covered
         return closest_edge_idx == beacon_edge_idx;
     }
 
+    std::string getStatisticsString(const uint32_t& reqcnt, const uint32_t& local_hitcnt, const uint32_t& remote_hitcnt, const uint64_t& latency_sum, const BandwidthUsage& bandwidth_usage)
+    {
+        // Calculate hit ratio and latency statistics
+        double local_hitratio = static_cast<double>(local_hitcnt) / static_cast<double>(reqcnt);
+        double remote_hitratio = static_cast<double>(remote_hitcnt) / static_cast<double>(reqcnt);
+        double global_hitratio = local_hitratio + remote_hitratio;
+        uint64_t avg_latency = latency_sum / static_cast<uint64_t>(reqcnt);
+
+        // Calculate coarse-grained bandwidth usage statistics
+
+        //const double perpkt_client_edge_bwcost = B2MB(static_cast<double>(bandwidth_usage.getClientEdgeBandwidthBytes()) / static_cast<double>(reqcnt));
+        const double perpkt_cross_edge_control_total_bwcost = B2MB(static_cast<double>(bandwidth_usage.getCrossEdgeControlTotalBandwidthBytes()) / static_cast<double>(reqcnt));
+        const double perpkt_cross_edge_data_bwcost = B2MB(static_cast<double>(bandwidth_usage.getCrossEdgeDataBandwidthBytes()) / static_cast<double>(reqcnt));
+        const double perpkt_cross_edge_bwcost = perpkt_cross_edge_control_total_bwcost + perpkt_cross_edge_data_bwcost;
+        const double perpkt_edge_cloud_bwcost = B2MB(static_cast<double>(bandwidth_usage.getEdgeCloudBandwidthBytes()) / static_cast<double>(reqcnt));
+
+        //const double perpkt_client_edge_msgcnt = static_cast<double>(bandwidth_usage.getClientEdgeMsgcnt()) / static_cast<double>(reqcnt);
+        const double perpkt_cross_edge_control_total_msgcnt = static_cast<double>(bandwidth_usage.getCrossEdgeControlTotalMsgcnt()) / static_cast<double>(reqcnt);
+        const double perpkt_cross_edge_data_msgcnt = static_cast<double>(bandwidth_usage.getCrossEdgeDataMsgcnt()) / static_cast<double>(reqcnt);
+        const double perpkt_cross_edge_msgcnt = perpkt_cross_edge_control_total_msgcnt + perpkt_cross_edge_data_msgcnt;
+        const double perpkt_edge_cloud_msgcnt = static_cast<double>(bandwidth_usage.getEdgeCloudMsgcnt()) / static_cast<double>(reqcnt);
+
+        // Calculate fine-grained bandwidth usage statistics
+
+        const double perpkt_cross_edge_control_content_discovery_bwcost = B2MB(static_cast<double>(bandwidth_usage.getCrossEdgeControlContentDiscoveryBandwidthBytes()) / static_cast<double>(reqcnt));
+        const double perpkt_cross_edge_control_directory_update_bwcost = B2MB(static_cast<double>(bandwidth_usage.getCrossEdgeControlDirectoryUpdateBandwidthBytes()) / static_cast<double>(reqcnt));
+        const double perpkt_cross_edge_control_others_bwcost = B2MB(static_cast<double>(bandwidth_usage.getCrossEdgeControlOthersBandwidthBytes()) / static_cast<double>(reqcnt));
+
+        const double perpkt_cross_edge_control_victimsync_bwcost = B2MB(static_cast<double>(bandwidth_usage.getVictimSyncsetBandwidthBytes()) / static_cast<double>(reqcnt));
+
+        const double perpkt_cross_edge_control_content_discovery_msgcnt = static_cast<double>(bandwidth_usage.getCrossEdgeControlContentDiscoveryMsgcnt()) / static_cast<double>(reqcnt);
+        const double perpkt_cross_edge_control_directory_update_msgcnt = static_cast<double>(bandwidth_usage.getCrossEdgeControlDirectoryUpdateMsgcnt()) / static_cast<double>(reqcnt);
+        const double perpkt_cross_edge_control_others_msgcnt = static_cast<double>(bandwidth_usage.getCrossEdgeControlOthersMsgcnt()) / static_cast<double>(reqcnt);
+
+        // Dump markdown string to help collect statistics
+        std::ostringstream oss;
+        oss << "Reqcnt: " << reqcnt << ", LocalHitcnt: " << local_hitcnt << ", RemoteHitcnt: " << remote_hitcnt << std::endl;
+        oss << "| Global Hit Ratio (%) (Local + Cooperative) | Avg Latency (ms) | Per-request Average Bandwidth Cost (MiB/pkt) (cross-edge (control + data) / edge-cloud) | Per-request Msgcnt (cross-edge (control + data) / edge-cloud) |" << std::endl;
+        oss << "| " << global_hitratio * 100 << " (" << local_hitratio * 100 << " + " << remote_hitratio * 100 << ") | " << static_cast<double>(avg_latency) / 1000.0 << " | " << perpkt_cross_edge_bwcost << " (" << perpkt_cross_edge_control_total_bwcost << " + " << perpkt_cross_edge_data_bwcost << ") / " << perpkt_edge_cloud_bwcost << " | " << perpkt_cross_edge_msgcnt << " (" << perpkt_cross_edge_control_total_msgcnt << " + " << perpkt_cross_edge_data_msgcnt << ") / " << perpkt_edge_cloud_msgcnt << " |" << std::endl;
+        // NOTE: inclusive means that victimsync bandwidth cost is already included in cross-edge bandwidth cost (e.g., content discovery, directory update, and others), which is not an independent bandwidth cost and NO need to add to total cross-edge bandwidth cost
+        oss << "| Cross-edge Per-request Bandwidth Cost (Content Discovery / Directory Update / Others) (MiB/pkt) | Cross-edge Per-request Msgcnt (Content Discovery / Directory Update / Others) | Cross-edge Per-request Victimsync Bandwidth Cost (MiB/pkt; inclusive) |" << std::endl;
+        oss << "| " << perpkt_cross_edge_control_content_discovery_bwcost << " / " << perpkt_cross_edge_control_directory_update_bwcost << " / " << perpkt_cross_edge_control_others_bwcost << " | " << perpkt_cross_edge_control_content_discovery_msgcnt << " / " << perpkt_cross_edge_control_directory_update_msgcnt << " / " << perpkt_cross_edge_control_others_msgcnt << " | " << perpkt_cross_edge_control_victimsync_bwcost << " |";
+
+        return oss.str();
+    }
+
     // (2) Common helper functions
 
-    void processRequest(const WorkloadItem& cur_workload_item, const uint32_t& clientidx, const std::string& cache_name, const uint32_t& edgecnt, const uint32_t& covered_topk_edgecnt, uint32_t& reqcnt, uint32_t& local_hitcnt, uint32_t& remote_hitcnt, uint64_t& latency_sum_us)
+    void processRequest(const WorkloadItem& cur_workload_item, const uint32_t& clientidx, const std::string& cache_name, const uint32_t& edgecnt, const uint32_t& covered_topk_edgecnt, uint32_t& reqcnt, uint32_t& local_hitcnt, uint32_t& remote_hitcnt, uint64_t& latency_sum_us, BandwidthUsage& bandwidth_usage)
     {
         WorkloadItemType cur_workload_item_type = cur_workload_item.getItemType();
         Key cur_key = cur_workload_item.getKey();
@@ -816,15 +861,26 @@ namespace covered
         uint32_t release_writelock_latency_us = 0;
         // Total latency
         uint64_t total_latency_us = 0; // ONLY used for LA-Cache
+        // Total bandwidth usage
+        BandwidthUsage curpkt_bandwidth_usage; // Bandwidth usage of current packet
+
+        // NOT really used (just for bandwidth calculation)
+        MessageBase* unused_msg_ptr = nullptr; 
 
         // Update statistics
         reqcnt += 1;
+
+        // Client-edge bandwidth usage (get/put request)
+        unused_msg_ptr = MessageBase::getRequestFromWorkloadItem(cur_workload_item, clientidx, NetworkAddr(), false, false, false, 0);
+        curpkt_bandwidth_usage.updateClientEdgeBandwidthAndMsgcnt(unused_msg_ptr->getMsgBandwidthSize(), 1);
+        delete unused_msg_ptr;
+        unused_msg_ptr = nullptr;
 
         if (cur_workload_item_type == WorkloadItemType::kWorkloadItemGet)
         {
             // Access local cache in the closest edge node for local hit/miss (update cache statistics in the closest edge node) (refer to src/edge/cache_server/basic_edge_wrapper.c::getLocalEdgeCache_())
             bool is_local_cached_and_valid = accessClosestCache(cur_key, clientidx, cache_name, fetched_value);
-            local_access_latency_us = curclient_closest_edge_wrapper_ptr->getEdgeToclientPropagationSimulatorParamPtr()->genPropagationLatency();
+            local_access_latency_us = curclient_closest_edge_wrapper_ptr->getEdgeToclientPropagationSimulatorParamPtr()->genPropagationLatency(); // RTT: including both client-to-edge req and edge-to-client rsp
 
             // Check if any other edge node caches the object
             Hitflag curobj_hitflag = Hitflag::kGlobalMiss;
@@ -840,11 +896,15 @@ namespace covered
                     content_discovery_latency_us = curclient_closest_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency();
                 }
 
+                // TODO: Cross-edge bandwidth usage (content discovery request and response)
+
                 if (is_remote_hit) // Remote hit
                 {
                     // Access local cache in the remote edge node to simulate request redirection for remote hit (update cache statistics in the remote edge node) (refer to src/edge/cache_server/basic_cache_server_redirection_processor.c::processReqForRedirectedGet_())
                     requestRedirection(cur_key, target_edge_idx, cache_name, fetched_value);
                     request_redirection_latency_us = curclient_closest_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency();
+
+                    // TODO: Cross-edge bandwidth usage (request redirection request and response)
 
                     // Update statistics
                     remote_hitcnt += 1;
@@ -856,6 +916,8 @@ namespace covered
                     // Copy dataset value to fetched_value to simulate cloud access
                     fetched_value = cur_value;
                     cloud_access_latency_us = curclient_closest_edge_wrapper_ptr->getEdgeTocloudPropagationSimulatorParamPtr()->genPropagationLatency();
+
+                    // TODO: Edge-cloud bandwidth usage (cloud access request and response)
 
                     curobj_hitflag = Hitflag::kGlobalMiss;
                 } // End of global miss
@@ -876,6 +938,8 @@ namespace covered
             {
                 directory_evict_latency_us += getDirectoryUpdateLatency(cur_key, clientidx, cache_name); // NOTE: may trigger multiple times of eviction for a request (each time is parallel)
                 is_evict = false;
+
+                // TODO: Cross-edge bandwidth usage (directory update request and response)
             }
 
             // Calculate cache miss latency for LA-Cache and update COVERED's parameters based on hitflag
@@ -887,15 +951,21 @@ namespace covered
             {
                 directory_admit_latency_us = getDirectoryUpdateLatency(cur_key, clientidx, cache_name);
                 is_admit = false;
+
+                // TODO: Cross-edge bandwidth usage (directory update request and response)
             }
             if (is_evict)
             {
                 directory_evict_latency_us += getDirectoryUpdateLatency(cur_key, clientidx, cache_name); // NOTE: may trigger multiple times of eviction for a request (each time is parallel)
                 is_evict = false;
+
+                // TODO: Cross-edge bandwidth usage (directory update request and response)
             }
 
             // Update total latency with directory update latencies
             updateTotalLatencyAfterCacheManagement(cur_key, clientidx, directory_admit_latency_us, directory_evict_latency_us, cache_name, total_latency_us);
+
+            // TODO: Client-edge bandwidth usage (get response)
 
             // Update statistics
             latency_sum_us += total_latency_us;
@@ -910,6 +980,10 @@ namespace covered
             {
                 acquire_writelock_latency_us = curclient_closest_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency();
                 release_writelock_latency_us = curclient_closest_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency();
+
+                // TODO: Cross-edge bandwidth usage (acquire writelock request and response)
+
+                // TODO: Cross-edge bandwidth usage (release writelock request and response)
             }
 
             // Simulate cloud update for write acknowledgement
@@ -923,6 +997,8 @@ namespace covered
             }
             cloud_access_latency_us = curclient_closest_edge_wrapper_ptr->getEdgeTocloudPropagationSimulatorParamPtr()->genPropagationLatency();
 
+            // TODO: Edge-cloud bandwidth usage (cloud access request and response)
+
             // Access local cache in each involved edge node to simulate cache update after write acknowledgement (update cache statistics in the closest edge node)
             writeClosestCache(cur_key, fetched_value, clientidx, cache_name, cur_workload_item_type, is_evict);
             local_access_latency_us = curclient_closest_edge_wrapper_ptr->getEdgeToclientPropagationSimulatorParamPtr()->genPropagationLatency();
@@ -930,6 +1006,8 @@ namespace covered
             {
                 directory_evict_latency_us += getDirectoryUpdateLatency(cur_key, clientidx, cache_name); // NOTE: may trigger multiple times of eviction for a request (each time is parallel)
                 is_evict = false;
+
+                // TODO: Cross-edge bandwidth usage (directory update request and response)
             }
 
             // Calculate cache miss latency for LA-Cache and update COVERED's parameters based on remote beacon access
@@ -947,15 +1025,21 @@ namespace covered
             {
                 directory_admit_latency_us = getDirectoryUpdateLatency(cur_key, clientidx, cache_name);
                 is_admit = false;
+
+                // TODO: Cross-edge bandwidth usage (directory update request and response)
             }
             if (is_evict)
             {
                 directory_evict_latency_us += getDirectoryUpdateLatency(cur_key, clientidx, cache_name); // NOTE: may trigger multiple times of eviction for a request (each time is parallel)
                 is_evict = false;
+
+                // TODO: Cross-edge bandwidth usage (directory update request and response)
             }
 
             // Update total latency with directory update latencies
             updateTotalLatencyAfterCacheManagement(cur_key, clientidx, directory_admit_latency_us, directory_evict_latency_us, cache_name, total_latency_us);
+
+            // TODO: Client-edge bandwidth usage (put response)
 
             // Update statistics (NOTE: write MUST be cache miss -> NO need to update local hitcnt and remote hitcnt)
             latency_sum_us += total_latency_us;
@@ -967,6 +1051,9 @@ namespace covered
             Util::dumpErrorMsg("processRequest()", oss.str());
             exit(1);
         }
+
+        // Update bandwidth usage
+        bandwidth_usage.update(curpkt_bandwidth_usage);
 
         return;
     }
@@ -1564,6 +1651,8 @@ namespace covered
             peredge_evictinfo.updateEvictinfo(given_edgeidx, local_cache_margin_bytes, tmp_param.getVictimCacheinfosConstRef());
         }
 
+        // TODO: Cross-edge bandwidth usage (victim synchronization request and response)
+
         return;
     }
 
@@ -1857,6 +1946,8 @@ namespace covered
         {
             peredge_victim_vtime_iter->second = local_victim_vtime;
         }
+
+        // TODO: Cross-edge bandwidth usage (victim synchronization request and response)
 
         return;
     }
