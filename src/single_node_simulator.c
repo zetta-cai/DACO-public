@@ -123,6 +123,9 @@ namespace covered
 
     // Evaluation variables
     std::mt19937_64 content_discovery_randgen(0); // Used for content discovery simulation
+
+    // Unused variables (NOT really used for caching; just for simulation)
+    NetworkAddr network_addr_for_debug("127.0.0.1", Util::UDP_MIN_PORT + 1);
 }
 
 namespace covered
@@ -2007,7 +2010,7 @@ namespace covered
 
     void updateBandwidthUsageForClientRequest(const WorkloadItem& cur_workload_item, const uint32_t& clientidx, BandwidthUsage& curpkt_bandwidth_usage)
     {
-        MessageBase* unused_req_ptr = MessageBase::getRequestFromWorkloadItem(cur_workload_item, clientidx, NetworkAddr(), false, false, false, 0);
+        MessageBase* unused_req_ptr = MessageBase::getRequestFromWorkloadItem(cur_workload_item, clientidx, network_addr_for_debug, false, false, false, 0);
         assert(unused_req_ptr != NULL);
 
         curpkt_bandwidth_usage.updateClientEdgeBandwidthAndMsgcnt(unused_req_ptr->getMsgBandwidthSize(), 1);
@@ -2022,7 +2025,7 @@ namespace covered
     {
         const uint32_t curclient_closest_edge_idx = getClosestEdgeidx(clientidx);
 
-        MessageBase* unused_req_ptr = new LocalGetResponse(cur_key, value, Hitflag::kLocalHit, 0, 0, curclient_closest_edge_idx, NetworkAddr(), BandwidthUsage(), EventList(), ExtraCommonMsghdr());
+        MessageBase* unused_req_ptr = new LocalGetResponse(cur_key, value, Hitflag::kLocalHit, 0, 0, curclient_closest_edge_idx, network_addr_for_debug, BandwidthUsage(), EventList(), ExtraCommonMsghdr());
         assert(unused_req_ptr != NULL);
 
         curpkt_bandwidth_usage.updateClientEdgeBandwidthAndMsgcnt(unused_req_ptr->getMsgBandwidthSize(), 1);
@@ -2037,7 +2040,7 @@ namespace covered
     {
         const uint32_t curclient_closest_edge_idx = getClosestEdgeidx(clientidx);
 
-        MessageBase* unused_req_ptr = new LocalPutResponse(cur_key, Hitflag::kGlobalMiss, 0, 0, curclient_closest_edge_idx, NetworkAddr(), BandwidthUsage(), EventList(), ExtraCommonMsghdr());
+        MessageBase* unused_req_ptr = new LocalPutResponse(cur_key, Hitflag::kGlobalMiss, 0, 0, curclient_closest_edge_idx, network_addr_for_debug, BandwidthUsage(), EventList(), ExtraCommonMsghdr());
         assert(unused_req_ptr != NULL);
 
         curpkt_bandwidth_usage.updateClientEdgeBandwidthAndMsgcnt(unused_req_ptr->getMsgBandwidthSize(), 1);
@@ -2075,27 +2078,27 @@ namespace covered
             // Simulate content discovery request and response
             if (with_content_discovery_bandwidth_usage)
             {
-                unused_req_ptr = new covered::CoveredDirectoryLookupRequest(cur_key, tmp_collected_popularity_before_content_discovery, VictimSyncset(), curclient_closest_edge_idx, NetworkAddr(), ExtraCommonMsghdr());
+                unused_req_ptr = new covered::CoveredDirectoryLookupRequest(cur_key, tmp_collected_popularity_before_content_discovery, VictimSyncset(), curclient_closest_edge_idx, network_addr_for_debug, ExtraCommonMsghdr());
                 assert(unused_req_ptr != NULL);
 
-                unused_rsp_ptr = new covered::CoveredDirectoryLookupResponse(cur_key, false, true, DirectoryInfo(), VictimSyncset(), 0, NetworkAddr(), BandwidthUsage(), EventList(), ExtraCommonMsghdr());
+                unused_rsp_ptr = new covered::CoveredDirectoryLookupResponse(cur_key, false, true, DirectoryInfo(), VictimSyncset(), 0, network_addr_for_debug, BandwidthUsage(), EventList(), ExtraCommonMsghdr());
                 assert(unused_rsp_ptr != NULL);
             }
         }
         else if (cache_name == Util::BESTGUESS_CACHE_NAME) // For BestGuess
         {
-            unused_req_ptr = new BestGuessDirectoryLookupRequest(cur_key, BestGuessSyncinfo(), curclient_closest_edge_idx, NetworkAddr(), ExtraCommonMsghdr());
+            unused_req_ptr = new BestGuessDirectoryLookupRequest(cur_key, BestGuessSyncinfo(), curclient_closest_edge_idx, network_addr_for_debug, ExtraCommonMsghdr());
             assert(unused_req_ptr != NULL);
 
-            unused_rsp_ptr = new BestGuessDirectoryLookupResponse(cur_key, false, true, DirectoryInfo(), BestGuessSyncinfo(), 0, NetworkAddr(), BandwidthUsage(), EventList(), ExtraCommonMsghdr());
+            unused_rsp_ptr = new BestGuessDirectoryLookupResponse(cur_key, false, true, DirectoryInfo(), BestGuessSyncinfo(), 0, network_addr_for_debug, BandwidthUsage(), EventList(), ExtraCommonMsghdr());
             assert(unused_rsp_ptr != NULL);
         }
         else // For other baselines
         {
-            unused_req_ptr = new DirectoryLookupRequest(cur_key, curclient_closest_edge_idx, NetworkAddr(), ExtraCommonMsghdr());
+            unused_req_ptr = new DirectoryLookupRequest(cur_key, curclient_closest_edge_idx, network_addr_for_debug, ExtraCommonMsghdr());
             assert(unused_req_ptr != NULL);
 
-            unused_rsp_ptr = new DirectoryLookupResponse(cur_key, false, true, DirectoryInfo(), 0, NetworkAddr(), BandwidthUsage(), EventList(), ExtraCommonMsghdr());
+            unused_rsp_ptr = new DirectoryLookupResponse(cur_key, false, true, DirectoryInfo(), 0, network_addr_for_debug, BandwidthUsage(), EventList(), ExtraCommonMsghdr());
             assert(unused_rsp_ptr != NULL);
         }
 
@@ -2128,26 +2131,26 @@ namespace covered
         MessageBase* unused_rsp_ptr = NULL;
         if (cache_name == Util::COVERED_CACHE_NAME) // For COVERED
         {
-            unused_req_ptr = new CoveredRedirectedGetRequest(cur_key, VictimSyncset(), curclient_closest_edge_idx, NetworkAddr(), ExtraCommonMsghdr());
+            unused_req_ptr = new CoveredRedirectedGetRequest(cur_key, VictimSyncset(), curclient_closest_edge_idx, network_addr_for_debug, ExtraCommonMsghdr());
             assert(unused_req_ptr != NULL);
 
-            unused_rsp_ptr = new CoveredRedirectedGetResponse(cur_key, value, Hitflag::kCooperativeHit, VictimSyncset(), 0, NetworkAddr(), BandwidthUsage(), EventList(), ExtraCommonMsghdr());
+            unused_rsp_ptr = new CoveredRedirectedGetResponse(cur_key, value, Hitflag::kCooperativeHit, VictimSyncset(), 0, network_addr_for_debug, BandwidthUsage(), EventList(), ExtraCommonMsghdr());
             assert(unused_rsp_ptr != NULL);
         }
         else if (cache_name == Util::BESTGUESS_CACHE_NAME) // For BestGuess
         {
-            unused_req_ptr = new BestGuessRedirectedGetRequest(cur_key, BestGuessSyncinfo(), curclient_closest_edge_idx, NetworkAddr(), ExtraCommonMsghdr());
+            unused_req_ptr = new BestGuessRedirectedGetRequest(cur_key, BestGuessSyncinfo(), curclient_closest_edge_idx, network_addr_for_debug, ExtraCommonMsghdr());
             assert(unused_req_ptr != NULL);
 
-            unused_rsp_ptr = new BestGuessRedirectedGetResponse(cur_key, value, Hitflag::kCooperativeHit, BestGuessSyncinfo(), 0, NetworkAddr(), BandwidthUsage(), EventList(), ExtraCommonMsghdr());
+            unused_rsp_ptr = new BestGuessRedirectedGetResponse(cur_key, value, Hitflag::kCooperativeHit, BestGuessSyncinfo(), 0, network_addr_for_debug, BandwidthUsage(), EventList(), ExtraCommonMsghdr());
             assert(unused_rsp_ptr != NULL);
         }
         else // For other baselines
         {
-            unused_req_ptr = new RedirectedGetRequest(cur_key, curclient_closest_edge_idx, NetworkAddr(), ExtraCommonMsghdr());
+            unused_req_ptr = new RedirectedGetRequest(cur_key, curclient_closest_edge_idx, network_addr_for_debug, ExtraCommonMsghdr());
             assert(unused_req_ptr != NULL);
 
-            unused_rsp_ptr = new RedirectedGetResponse(cur_key, value, Hitflag::kCooperativeHit, 0, NetworkAddr(), BandwidthUsage(), EventList(), ExtraCommonMsghdr());
+            unused_rsp_ptr = new RedirectedGetResponse(cur_key, value, Hitflag::kCooperativeHit, 0, network_addr_for_debug, BandwidthUsage(), EventList(), ExtraCommonMsghdr());
             assert(unused_rsp_ptr != NULL);
         }
 
@@ -2176,10 +2179,10 @@ namespace covered
     {
         const uint32_t curclient_closest_edge_idx = getClosestEdgeidx(clientidx);
 
-        MessageBase* unused_req_ptr = new GlobalGetRequest(cur_key, curclient_closest_edge_idx, NetworkAddr(), ExtraCommonMsghdr());
+        MessageBase* unused_req_ptr = new GlobalGetRequest(cur_key, curclient_closest_edge_idx, network_addr_for_debug, ExtraCommonMsghdr());
         assert(unused_req_ptr != NULL);
 
-        MessageBase* unused_rsp_ptr = new GlobalGetResponse(cur_key, value, 0, NetworkAddr(), BandwidthUsage(), EventList(), ExtraCommonMsghdr());
+        MessageBase* unused_rsp_ptr = new GlobalGetResponse(cur_key, value, 0, network_addr_for_debug, BandwidthUsage(), EventList(), ExtraCommonMsghdr());
         assert(unused_rsp_ptr != NULL);
 
         // Edge-cloud bandwidth usage (cloud access request)
@@ -2207,10 +2210,10 @@ namespace covered
     {
         const uint32_t curclient_closest_edge_idx = getClosestEdgeidx(clientidx);
 
-        MessageBase* unused_req_ptr = new GlobalPutRequest(cur_key, value, curclient_closest_edge_idx, NetworkAddr(), ExtraCommonMsghdr());
+        MessageBase* unused_req_ptr = new GlobalPutRequest(cur_key, value, curclient_closest_edge_idx, network_addr_for_debug, ExtraCommonMsghdr());
         assert(unused_req_ptr != NULL);
 
-        MessageBase* unused_rsp_ptr = new GlobalPutResponse(cur_key, 0, NetworkAddr(), BandwidthUsage(), EventList(), ExtraCommonMsghdr());
+        MessageBase* unused_rsp_ptr = new GlobalPutResponse(cur_key, 0, network_addr_for_debug, BandwidthUsage(), EventList(), ExtraCommonMsghdr());
         assert(unused_rsp_ptr != NULL);
 
         // Edge-cloud bandwidth usage (cloud access request)
@@ -2242,26 +2245,26 @@ namespace covered
         MessageBase* unused_rsp_ptr = NULL;
         if (cache_name == Util::COVERED_CACHE_NAME) // For COVERED
         {
-            unused_req_ptr = new CoveredDirectoryUpdateRequest(cur_key, is_admit, DirectoryInfo(), VictimSyncset(), curclient_closest_edge_idx, NetworkAddr(), ExtraCommonMsghdr());
+            unused_req_ptr = new CoveredDirectoryUpdateRequest(cur_key, is_admit, DirectoryInfo(), VictimSyncset(), curclient_closest_edge_idx, network_addr_for_debug, ExtraCommonMsghdr());
             assert(unused_req_ptr != NULL);
 
-            unused_rsp_ptr = new CoveredDirectoryUpdateResponse(cur_key, false, false, VictimSyncset(), 0, NetworkAddr(), BandwidthUsage(), EventList(), ExtraCommonMsghdr());
+            unused_rsp_ptr = new CoveredDirectoryUpdateResponse(cur_key, false, false, VictimSyncset(), 0, network_addr_for_debug, BandwidthUsage(), EventList(), ExtraCommonMsghdr());
             assert(unused_rsp_ptr != NULL);
         }
         else if (cache_name == Util::BESTGUESS_CACHE_NAME) // For BestGuess
         {
-            unused_req_ptr = new BestGuessDirectoryUpdateRequest(cur_key, is_admit, DirectoryInfo(), BestGuessSyncinfo(), curclient_closest_edge_idx, NetworkAddr(), ExtraCommonMsghdr());
+            unused_req_ptr = new BestGuessDirectoryUpdateRequest(cur_key, is_admit, DirectoryInfo(), BestGuessSyncinfo(), curclient_closest_edge_idx, network_addr_for_debug, ExtraCommonMsghdr());
             assert(unused_req_ptr != NULL);
 
-            unused_rsp_ptr = new BestGuessDirectoryUpdateResponse(cur_key, false, BestGuessSyncinfo(), 0, NetworkAddr(), BandwidthUsage(), EventList(), ExtraCommonMsghdr());
+            unused_rsp_ptr = new BestGuessDirectoryUpdateResponse(cur_key, false, BestGuessSyncinfo(), 0, network_addr_for_debug, BandwidthUsage(), EventList(), ExtraCommonMsghdr());
             assert(unused_rsp_ptr != NULL);
         }
         else // For other baselines
         {
-            unused_req_ptr = new DirectoryUpdateRequest(cur_key, is_admit, DirectoryInfo(), curclient_closest_edge_idx, NetworkAddr(), ExtraCommonMsghdr());
+            unused_req_ptr = new DirectoryUpdateRequest(cur_key, is_admit, DirectoryInfo(), curclient_closest_edge_idx, network_addr_for_debug, ExtraCommonMsghdr());
             assert(unused_req_ptr != NULL);
 
-            unused_rsp_ptr = new DirectoryUpdateResponse(cur_key, false, 0, NetworkAddr(), BandwidthUsage(), EventList(), ExtraCommonMsghdr());
+            unused_rsp_ptr = new DirectoryUpdateResponse(cur_key, false, 0, network_addr_for_debug, BandwidthUsage(), EventList(), ExtraCommonMsghdr());
             assert(unused_rsp_ptr != NULL);
         }
 
@@ -2304,26 +2307,26 @@ namespace covered
         MessageBase* unused_rsp_ptr = NULL;
         if (cache_name == Util::COVERED_CACHE_NAME) // For COVERED
         {
-            unused_req_ptr = new CoveredAcquireWritelockRequest(cur_key, CollectedPopularity(), VictimSyncset(), curclient_closest_edge_idx, NetworkAddr(), ExtraCommonMsghdr());
+            unused_req_ptr = new CoveredAcquireWritelockRequest(cur_key, CollectedPopularity(), VictimSyncset(), curclient_closest_edge_idx, network_addr_for_debug, ExtraCommonMsghdr());
             assert(unused_req_ptr != NULL);
 
-            unused_rsp_ptr = new CoveredAcquireWritelockResponse(cur_key, LockResult::kSuccess, VictimSyncset(), 0, NetworkAddr(), BandwidthUsage(), EventList(), ExtraCommonMsghdr());
+            unused_rsp_ptr = new CoveredAcquireWritelockResponse(cur_key, LockResult::kSuccess, VictimSyncset(), 0, network_addr_for_debug, BandwidthUsage(), EventList(), ExtraCommonMsghdr());
             assert(unused_rsp_ptr != NULL);
         }
         else if (cache_name == Util::BESTGUESS_CACHE_NAME) // For BestGuess
         {
-            unused_req_ptr = new BestGuessAcquireWritelockRequest(cur_key, BestGuessSyncinfo(), curclient_closest_edge_idx, NetworkAddr(), ExtraCommonMsghdr());
+            unused_req_ptr = new BestGuessAcquireWritelockRequest(cur_key, BestGuessSyncinfo(), curclient_closest_edge_idx, network_addr_for_debug, ExtraCommonMsghdr());
             assert(unused_req_ptr != NULL);
 
-            unused_rsp_ptr = new BestGuessAcquireWritelockResponse(cur_key, LockResult::kSuccess, BestGuessSyncinfo(), 0, NetworkAddr(), BandwidthUsage(), EventList(), ExtraCommonMsghdr());
+            unused_rsp_ptr = new BestGuessAcquireWritelockResponse(cur_key, LockResult::kSuccess, BestGuessSyncinfo(), 0, network_addr_for_debug, BandwidthUsage(), EventList(), ExtraCommonMsghdr());
             assert(unused_rsp_ptr != NULL);
         }
         else // For other baselines
         {
-            unused_req_ptr = new AcquireWritelockRequest(cur_key, curclient_closest_edge_idx, NetworkAddr(), ExtraCommonMsghdr());
+            unused_req_ptr = new AcquireWritelockRequest(cur_key, curclient_closest_edge_idx, network_addr_for_debug, ExtraCommonMsghdr());
             assert(unused_req_ptr != NULL);
 
-            unused_rsp_ptr = new AcquireWritelockResponse(cur_key, LockResult::kSuccess, 0, NetworkAddr(), BandwidthUsage(), EventList(), ExtraCommonMsghdr());
+            unused_rsp_ptr = new AcquireWritelockResponse(cur_key, LockResult::kSuccess, 0, network_addr_for_debug, BandwidthUsage(), EventList(), ExtraCommonMsghdr());
             assert(unused_rsp_ptr != NULL);
         }
 
@@ -2356,26 +2359,26 @@ namespace covered
         MessageBase* unused_rsp_ptr = NULL;
         if (cache_name == Util::COVERED_CACHE_NAME) // For COVERED
         {
-            unused_req_ptr = new CoveredReleaseWritelockRequest(cur_key, CollectedPopularity(), VictimSyncset(), curclient_closest_edge_idx, NetworkAddr(), ExtraCommonMsghdr());
+            unused_req_ptr = new CoveredReleaseWritelockRequest(cur_key, CollectedPopularity(), VictimSyncset(), curclient_closest_edge_idx, network_addr_for_debug, ExtraCommonMsghdr());
             assert(unused_req_ptr != NULL);
 
-            unused_rsp_ptr = new CoveredReleaseWritelockResponse(cur_key, VictimSyncset(), 0, NetworkAddr(), BandwidthUsage(), EventList(), ExtraCommonMsghdr());
+            unused_rsp_ptr = new CoveredReleaseWritelockResponse(cur_key, VictimSyncset(), 0, network_addr_for_debug, BandwidthUsage(), EventList(), ExtraCommonMsghdr());
             assert(unused_rsp_ptr != NULL);
         }
         else if (cache_name == Util::BESTGUESS_CACHE_NAME) // For BestGuess
         {
-            unused_req_ptr = new BestGuessReleaseWritelockRequest(cur_key, BestGuessSyncinfo(), curclient_closest_edge_idx, NetworkAddr(), ExtraCommonMsghdr());
+            unused_req_ptr = new BestGuessReleaseWritelockRequest(cur_key, BestGuessSyncinfo(), curclient_closest_edge_idx, network_addr_for_debug, ExtraCommonMsghdr());
             assert(unused_req_ptr != NULL);
 
-            unused_rsp_ptr = new BestGuessReleaseWritelockResponse(cur_key, BestGuessSyncinfo(), 0, NetworkAddr(), BandwidthUsage(), EventList(), ExtraCommonMsghdr());
+            unused_rsp_ptr = new BestGuessReleaseWritelockResponse(cur_key, BestGuessSyncinfo(), 0, network_addr_for_debug, BandwidthUsage(), EventList(), ExtraCommonMsghdr());
             assert(unused_rsp_ptr != NULL);
         }
         else // For other baselines
         {
-            unused_req_ptr = new ReleaseWritelockRequest(cur_key, curclient_closest_edge_idx, NetworkAddr(), ExtraCommonMsghdr());
+            unused_req_ptr = new ReleaseWritelockRequest(cur_key, curclient_closest_edge_idx, network_addr_for_debug, ExtraCommonMsghdr());
             assert(unused_req_ptr != NULL);
 
-            unused_rsp_ptr = new ReleaseWritelockResponse(cur_key, 0, NetworkAddr(), BandwidthUsage(), EventList(), ExtraCommonMsghdr());
+            unused_rsp_ptr = new ReleaseWritelockResponse(cur_key, 0, network_addr_for_debug, BandwidthUsage(), EventList(), ExtraCommonMsghdr());
             assert(unused_rsp_ptr != NULL);
         }
 
