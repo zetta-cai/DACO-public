@@ -2245,7 +2245,14 @@ namespace covered
         MessageBase* unused_rsp_ptr = NULL;
         if (cache_name == Util::COVERED_CACHE_NAME) // For COVERED
         {
-            unused_req_ptr = new CoveredDirectoryUpdateRequest(cur_key, is_admit, DirectoryInfo(), VictimSyncset(), curclient_closest_edge_idx, network_addr_for_debug, ExtraCommonMsghdr());
+            if (is_admit)
+            {
+                unused_req_ptr = new CoveredDirectoryUpdateRequest(cur_key, is_admit, DirectoryInfo(), VictimSyncset(), curclient_closest_edge_idx, network_addr_for_debug, ExtraCommonMsghdr());
+            }
+            else
+            {
+                unused_req_ptr = new CoveredDirectoryUpdateRequest(cur_key, is_admit, DirectoryInfo(), CollectedPopularity(), VictimSyncset(), curclient_closest_edge_idx, network_addr_for_debug, ExtraCommonMsghdr());
+            }
             assert(unused_req_ptr != NULL);
 
             unused_rsp_ptr = new CoveredDirectoryUpdateResponse(cur_key, false, false, VictimSyncset(), 0, network_addr_for_debug, BandwidthUsage(), EventList(), ExtraCommonMsghdr());
