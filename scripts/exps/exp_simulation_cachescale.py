@@ -23,8 +23,8 @@ exp_default_settings = {
 }
 
 largescale_keycnt = 10 * 1000000 # 10M (default 1M is too small for large-scale exps that all methods will achieve nearly full hit ratio)
-# cache_names = ["covered", "shark+gdsf", "shark+lhd", "shark", "gdsf", "lhd", "magnet", "bestguess"]
-cache_names = ["covered", "shark+gdsf", "shark+lhd", "shark+adaptsize"] # NOTE: just for fast evaluation -> you can add more methods if with time
+# cache_names = ["covered", "shark+gdsf", "shark+lhd", "shark+adaptsize"] # NOTE: just for fast evaluation -> you can add more methods if with time
+cache_names = ["covered", "shark", "bestguess", "magnet", "adaptsize", "arc", "cachelib", "fifo", "frozenhot", "gdsf", "lacache", "lfu", "lhd", "lru", "s3fifo", "sieve", "wtinylfu", "lrb", "glcache", "segcache", "shark+adaptsize", "shark+arc", "shark+cachelib", "shark+fifo", "shark+frozenhot", "shark+gdsf", "shark+lacache", "shark+lfu", "shark+lhd", "shark+s3fifo", "shark+sieve", "shark+wtinylfu", "shark+lrb", "shark+glcache", "shark+segcache"]
 edgecnt_list = [32, 64, 128, 256, 512]
 
 # Run the experiments with multiple rounds
