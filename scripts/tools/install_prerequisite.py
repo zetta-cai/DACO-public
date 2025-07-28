@@ -283,8 +283,8 @@ if is_update_swapspace_size:
     # NOTE: if you don't have sufficient space for /swapfile, you can also allocate a new logical volume for swap.
     # Suppose that you need to reduce existing logical volume first to allocate a new one for swap -> here is my example:
     # (1) Reduce existing logical volume
-    # sudo lsof /home/projects/sysheng/covered-private # Check if any file in the mount point of existing logical volume is open -> kill corresponding processes if any
-    # sudo umount -v /home/projects/sysheng/covered-private # Unmount the existing logical volume
+    # sudo lsof /home/projects/jzcai/covered-private # Check if any file in the mount point of existing logical volume is open -> kill corresponding processes if any
+    # sudo umount -v /home/projects/jzcai/covered-private # Unmount the existing logical volume
     # sudo e2fsck -ff /home/mapper/ubuntu--vg-ubuntu--lg # Verify FS in the existing logibal volume
     # sudo resize2fs /dev/mapper/ubuntu--vg-ubuntu--lg 2200G # Shrink FS from 2.7T to 2.2T in the existing logical volume
     # sudo lvreduce -L 2200G /dev/mapper/ubuntu--vg-ubuntu--lg # Shrink the existing logical volume from 2.7T to 2.2T

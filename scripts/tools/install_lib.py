@@ -88,7 +88,7 @@ if is_install_cachelib:
     if not os.path.exists(cachelib_cachebench_filepath) or not os.path.exists(cachelib_allocator_filepath):
         # Replace library dirpath in scripts/cachelib/build-package.sh before copying
         custom_cachelib_buildpkg_filepath = "scripts/cachelib/build-package.sh"
-        default_lib_dirpath = "/home/sysheng/projects/covered-private/lib"
+        default_lib_dirpath = "/home/jzcai/projects/covered-private/lib"
         PathUtil.replace_dir(Common.scriptname, default_lib_dirpath, Common.lib_dirpath, custom_cachelib_buildpkg_filepath)
 
         # Update build-package.sh for folly to use libboost 1.81.0

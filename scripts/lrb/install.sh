@@ -16,8 +16,8 @@ set -e
 # Siyuan: lib/lrb by default
 lrb_rootpath=$(pwd)
 
-# Siyuan: use the same version of libboost (lib/boost_1_81_0/install by default)
-libboost_prefix_path=${lrb_rootpath}/../boost_1_81_0/install
+# Siyuan: use the same version of libboost (lib/boost-1.81.0/install by default)
+libboost_prefix_path=${lrb_rootpath}/../boost-1.81.0/install
 
 cd ./lib
 
@@ -52,7 +52,7 @@ export CMAKE_PREFIX_PATH
 cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${lrb_rootpath}/install/mongocxxdriver ..
 sudo make VERBOSE=1 EP_mnmlstc_core
 # TODO: replace the previous command with the following one if you want to dump the output to a file
-#sudo make VERBOSE=1 EP_mnmlstc_core >/home/sysheng/projects/covered-private/tmp.out 2>&1
+#sudo make VERBOSE=1 EP_mnmlstc_core >/home/jzcai/projects/covered-private/tmp.out 2>&1
 make -j
 sudo make install
 cd ../..

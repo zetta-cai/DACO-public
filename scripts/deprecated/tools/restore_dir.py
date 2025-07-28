@@ -17,7 +17,7 @@ print("")
 # (2) Scripts
 
 # Update project lib directory for CMAKE_PREFIX_PATH in cachelib
-default_lib_dirpath = "/home/sysheng/projects/covered-private/lib"
+default_lib_dirpath = "/home/jzcai/projects/covered-private/lib"
 PathUtil.restore_dir(Common.scriptname, default_lib_dirpath, Common.lib_dirpath, "scripts/cachelib/build-package.sh")
 print("")
 
@@ -34,8 +34,8 @@ current_lfu_dirpath = "{}/caches".format(Common.lib_dirpath)
 PathUtil.restore_dir(Common.scriptname, default_lfu_dirpath, current_lfu_dirpath, "src/mk/cache/lfu.mk")
 
 # Update BOOST_DIRPATH for libboost
-default_boost_dirpath = "lib/boost_1_81_0"
-current_boost_dirpath = "{}/boost_1_81_0".format(Common.lib_dirpath)
+default_boost_dirpath = "lib/boost-1.81.0"
+current_boost_dirpath = "{}/boost-1.81.0".format(Common.lib_dirpath)
 PathUtil.restore_dir(Common.scriptname, default_boost_dirpath, current_boost_dirpath, "src/mk/lib/boost.mk")
 
 # Update ROCKSDB_DIRPATH for rocksdb

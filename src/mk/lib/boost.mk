@@ -1,6 +1,6 @@
 # boost module
 
-BOOST_DIRPATH := $(LIBRARY_DIRPATH)/boost_1_81_0
+BOOST_DIRPATH := $(LIBRARY_DIRPATH)/boost-1.81.0
 
 BOOST_LDDIR := -L$(BOOST_DIRPATH)/install/lib
 LDDIR += $(BOOST_LDDIR)
