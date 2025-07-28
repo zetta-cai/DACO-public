@@ -56,11 +56,11 @@ if is_install_xgboost:
 # (1) Install boost 1.81.0
 
 if is_install_boost:
-    boost_download_filepath = "{}/boost_1_81_0.tar.gz".format(Common.lib_dirpath)
-    boost_download_url = "https://boostorg.jfrog.io/artifactory/main/release/1.81.0/source/boost_1_81_0.tar.gz"
+    boost_download_filepath = "{}/boost-1.81.0.tar.gz".format(Common.lib_dirpath)
+    boost_download_url = "https://github.com/boostorg/boost/releases/download/boost-1.81.0/boost-1.81.0.tar.gz"
     SubprocessUtil.downloadTarball(Common.scriptname, boost_download_filepath, boost_download_url)
 
-    boost_decompress_dirpath = "{}/boost_1_81_0".format(Common.lib_dirpath)
+    boost_decompress_dirpath = "{}/boost-1.81.0".format(Common.lib_dirpath)
     boost_decompress_tool = "tar -xzvf"
     SubprocessUtil.decompressTarball(Common.scriptname, boost_download_filepath, boost_decompress_dirpath, boost_decompress_tool)
 
@@ -383,7 +383,7 @@ if chown_subprocess.returncode != 0:
 ## (16.2) Update LD_LIBRARY_PATH for interactive and non-interactive shells
 
 target_ld_libs = ["webcachesim", "libbf", "mongocxxdriver", "lightgbm", "glcache", "segcache", "cachelib", "boost", "x86_64-linux-gnu"]
-target_ld_lib_dirpaths = ["{}/lrb/install/webcachesim/lib".format(Common.lib_dirpath), "{}/lrb/install/libbf/lib".format(Common.lib_dirpath), "{}/lrb/install/mongocxxdriver/lib".format(Common.lib_dirpath), "{}/lrb/install/lightgbm/lib".format(Common.lib_dirpath), "{}/src/cache/glcache/micro-implementation/build/lib".format(Common.proj_dirname), "{}/src/cache/segcache/build/ccommon/lib".format(Common.proj_dirname), "{}/CacheLib/opt/cachelib/lib".format(Common.lib_dirpath), "{}/boost_1_81_0/install/lib".format(Common.lib_dirpath), "/usr/lib/x86_64-linux-gnu"]
+target_ld_lib_dirpaths = ["{}/lrb/install/webcachesim/lib".format(Common.lib_dirpath), "{}/lrb/install/libbf/lib".format(Common.lib_dirpath), "{}/lrb/install/mongocxxdriver/lib".format(Common.lib_dirpath), "{}/lrb/install/lightgbm/lib".format(Common.lib_dirpath), "{}/src/cache/glcache/micro-implementation/build/lib".format(Common.proj_dirname), "{}/src/cache/segcache/build/ccommon/lib".format(Common.proj_dirname), "{}/CacheLib/opt/cachelib/lib".format(Common.lib_dirpath), "{}/boost-1.81.0/install/lib".format(Common.lib_dirpath), "/usr/lib/x86_64-linux-gnu"]
 
 # Formulate grepstr to check LD_LIBRARY_PATH in {~/.bashrc or ~/.bash_profile} and ~/.bashrc_non_interactive
 check_bash_source_grepstr = "grep \"LD_LIBRARY_PATH\""

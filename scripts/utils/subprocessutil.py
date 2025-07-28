@@ -156,6 +156,7 @@ class SubprocessUtil:
     def downloadTarball(cls, scriptname, download_filepath, download_url):
         tmp_parent_dirpath = os.path.dirname(download_filepath)
         SubprocessUtil.tryToCreateDirectory(scriptname, tmp_parent_dirpath)
+        # print(download_filepath)
 
         tmp_download_filename = os.path.basename(download_filepath)
         if not os.path.exists(download_filepath):
