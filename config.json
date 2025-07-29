@@ -56,8 +56,8 @@
     "version": "1.0",
     "physical_machines": [
         {
-            "private_ipstr": "192.168.11.215",
-            "public_ipstr": "192.168.11.215",
+            "private_ipstr": "192.168.11.214",
+            "public_ipstr": "192.168.11.214",
             "cpu_dedicated_corecnt": 32,
             "cpu_shared_corecnt": 0
         },
@@ -80,8 +80,8 @@
             "cpu_shared_corecnt": 4
         },
         {
-            "private_ipstr": "192.168.11.25",
-            "public_ipstr": "192.168.11.25",
+            "private_ipstr": "192.168.11.119",
+            "public_ipstr": "192.168.11.119",
             "cpu_dedicated_corecnt": 16,
             "cpu_shared_corecnt": 8
         }
