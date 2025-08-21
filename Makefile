@@ -45,7 +45,7 @@ LDDIR += -L/usr/lib/x86_64-linux-gnu
 
 ##############################################################################
 # Executable files
-
+LDLIBS += -luring
 dataset_loader: src/dataset_loader.o $(LINK_OBJECTS) $(CLOUD_OBJECTS)
 	$(LINK) $^ $(ROCKSDB_LDLIBS) $(LDLIBS) -o $@
 DEPS += src/dataset_loader.d
