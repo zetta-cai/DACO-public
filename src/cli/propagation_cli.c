@@ -17,6 +17,7 @@ namespace covered
     const uint32_t PropagationCLI::DEFAULT_PROPAGATION_LATENCY_EDGECLOUD_LBOUND_US = 6500; // 6.5ms
     const uint32_t PropagationCLI::DEFAULT_PROPAGATION_LATENCY_EDGECLOUD_AVG_US = 13000; // 13ms
     const uint32_t PropagationCLI::DEFAULT_PROPAGATION_LATENCY_EDGECLOUD_RBOUND_US = 19500; // 19.5ms
+    const std::string PropagationCLI::P2P_LATENCY_MAT_PATH = "";
 
     const std::string PropagationCLI::kClassName("PropagationCLI");
 
@@ -35,12 +36,15 @@ namespace covered
     {
         std::ostringstream oss;
         if (!is_to_cli_string_)
-        {
+        { 
+            // oss<< "debug for toCliString: ";
+            // oss << is_add_cli_parameters_ << " " << is_set_param_and_config_ << " " << is_dump_cli_parameters_ << " " << is_to_cli_string_;
             // NOTE: MUST already parse and process CLI parameters
             assert(is_add_cli_parameters_);
             assert(is_set_param_and_config_);
             assert(is_dump_cli_parameters_);
-
+            
+        
             oss << CLIBase::toCliString();
             if (cli_latency_info_.getPropagationLatencyDistname() != DEFAULT_PROPAGATION_LATENCY_DISTNAME)
             {
@@ -82,6 +86,11 @@ namespace covered
             {
                 oss << " --propagation_latency_edgecloud_rbound_us " << cli_latency_info_.getPropagationLatencyEdgecloudRboundUs();
             }
+            // oss << " --p2p_latency_mat_path " << cli_latency_info_.getPropagationP2PLatencyMatPath();
+            if (cli_latency_info_.getPropagationP2PLatencyMatPath() != P2P_LATENCY_MAT_PATH)
+            {
+                oss << " --p2p_latency_mat_path " << cli_latency_info_.getPropagationP2PLatencyMatPath();
+            }
 
             is_to_cli_string_ = true;
         }
@@ -118,8 +127,8 @@ namespace covered
                 ("propagation_latency_crossedge_rbound_us", boost::program_options::value<uint32_t>()->default_value(DEFAULT_PROPAGATION_LATENCY_CROSSEDGE_RBOUND_US), "the right bound propagation latency between edge and neighbor (in units of us)")
                 ("propagation_latency_edgecloud_lbound_us", boost::program_options::value<uint32_t>()->default_value(DEFAULT_PROPAGATION_LATENCY_EDGECLOUD_LBOUND_US), "the left bound propagation latency between edge and cloud (in units of us)")
                 ("propagation_latency_edgecloud_avg_us", boost::program_options::value<uint32_t>()->default_value(DEFAULT_PROPAGATION_LATENCY_EDGECLOUD_AVG_US), "the average propagation latency between edge and cloud (in units of us)")
-                ("propagation_latency_edgecloud_rbound_us", boost::program_options::value<uint32_t>()->default_value(DEFAULT_PROPAGATION_LATENCY_EDGECLOUD_RBOUND_US), "the right bound propagation latency between edge and cloud (in units of us)");
-            ;
+                ("propagation_latency_edgecloud_rbound_us", boost::program_options::value<uint32_t>()->default_value(DEFAULT_PROPAGATION_LATENCY_EDGECLOUD_RBOUND_US), "the right bound propagation latency between edge and cloud (in units of us)")
+                ("p2p_latency_mat_path", boost::program_options::value<std::string>()->default_value(P2P_LATENCY_MAT_PATH), "the path to the P2P latency matrix (in units of us)");
 
             is_add_cli_parameters_ = true;
         }
@@ -145,9 +154,11 @@ namespace covered
             uint32_t propagation_latency_edgecloud_lbound_us = argument_info_["propagation_latency_edgecloud_lbound_us"].as<uint32_t>();
             uint32_t propagation_latency_edgecloud_avg_us = argument_info_["propagation_latency_edgecloud_avg_us"].as<uint32_t>();
             uint32_t propagation_latency_edgecloud_rbound_us = argument_info_["propagation_latency_edgecloud_rbound_us"].as<uint32_t>();
+            std::string p2p_latency_mat_path = argument_info_["p2p_latency_mat_path"].as<std::string>();
+            
 
             // Store propagation CLI parameters for dynamic configurations
-            cli_latency_info_ = CLILatencyInfo(propagation_latency_distname, propagation_latency_clientedge_lbound_us, propagation_latency_clientedge_avg_us, propagation_latency_clientedge_rbound_us, propagation_latency_crossedge_lbound_us, propagation_latency_crossedge_avg_us, propagation_latency_crossedge_rbound_us, propagation_latency_edgecloud_lbound_us, propagation_latency_edgecloud_avg_us, propagation_latency_edgecloud_rbound_us);
+            cli_latency_info_ = CLILatencyInfo(propagation_latency_distname, propagation_latency_clientedge_lbound_us, propagation_latency_clientedge_avg_us, propagation_latency_clientedge_rbound_us, propagation_latency_crossedge_lbound_us, propagation_latency_crossedge_avg_us, propagation_latency_crossedge_rbound_us, propagation_latency_edgecloud_lbound_us, propagation_latency_edgecloud_avg_us, propagation_latency_edgecloud_rbound_us, p2p_latency_mat_path);
 
             is_set_param_and_config_ = true;
         }
@@ -197,4 +208,7 @@ namespace covered
         }
         return;
     }
+    // std::string PropagationCLI::getP2PLatencyMatrixPath() const{
+    //     return p2p_latency_mat_path;
+    // }
 }

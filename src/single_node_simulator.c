@@ -203,8 +203,29 @@ int main(int argc, char **argv) {
     const uint32_t keycnt = single_node_cli.getKeycnt();
     const uint32_t percacheserver_workercnt = single_node_cli.getPercacheserverWorkercnt(); // NOT affect single-node simulation, as multiple edge cache server workers still share the same local cache structure
     const covered::CLILatencyInfo cli_latency_info = single_node_cli.getCLILatencyInfo();
+    // print cli_latency_info for debugging
+    // const std::string p2p_latency_mat_path = single_node_cli.toCliString();
+    // std::cout << "P2P Latency Matrix Path: " << p2p_latency_mat_path << std::endl;
+    // getP2PLatencyMatrixPath()
+    const std::vector<std::vector<uint32_t>> p2p_latency_matrix = cli_latency_info.getP2PLatencyMatrix();
+    if (p2p_latency_matrix.size() != edgecnt || p2p_latency_matrix[0].size() != edgecnt)
+    {
+        std::cerr << "Error: P2P latency matrix size does not match edge count!" << std::endl;
+        return -1;
+    }else{
+        // print first 10*10
+        std::cout << "P2P Latency Matrix (first 10x10):" << std::endl;
+        for (uint32_t i = 0; i < std::min(edgecnt, static_cast<uint32_t>(10)); ++i) {
+            for (uint32_t j = 0; j < std::min(edgecnt, static_cast<uint32_t>(10)); ++j) {
+                std::cout << p2p_latency_matrix[i][j] << " ";
+            }
+            std::cout << std::endl;
+        }
+    }
+
     const std::string realnet_option = single_node_cli.getRealnetOption();
     const std::string realnet_expname = single_node_cli.getRealnetExpname();
+
     // Specific for COVERED (some are obsolete)
     const uint64_t covered_local_uncached_capacity_bytes = single_node_cli.getCoveredLocalUncachedMaxMemUsageBytes(); // Used for local uncached metadata in COVERED
     const uint64_t covered_local_uncached_lru_bytes = single_node_cli.getCoveredLocalUncachedLruMaxBytes(); // Used for local uncached LRU in COVERED

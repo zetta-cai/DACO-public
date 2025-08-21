@@ -35,6 +35,8 @@ int main(int argc, char **argv) {
     // (2) Print CLI string for different components
 
     // Get CLI string of different componenets
+    std::string base_cli_string = ((covered::CLIBase*)&cliutil_cli)->toCliString();
+    cliutil_cli.clearIsToCliString();
     std::string client_cli_string = ((covered::ClientCLI*)&cliutil_cli)->toCliString();
     cliutil_cli.clearIsToCliString();
     std::string edge_cli_string = ((covered::EdgeCLI*)&cliutil_cli)->toCliString();
@@ -52,6 +54,7 @@ int main(int argc, char **argv) {
     
     // Print CLI string of different components
     std::ostringstream oss;
+    oss << "COVERED CLI string for exp scripts:" << std::endl;
     oss << CLIENT_PREFIX_STRING << client_cli_string << std::endl;
     oss << EDGE_PREFIX_STRING << edge_cli_string << std::endl;
     oss << CLOUD_PREFIX_STRING << cloud_cli_string << std::endl;

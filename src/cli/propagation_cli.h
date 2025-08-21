@@ -26,6 +26,7 @@ namespace covered
 
         std::string toCliString(); // NOT virtual for cilutil
         virtual void clearIsToCliString(); // Idempotent operation: clear is_to_cli_string_ for the next toCliString()
+        std::string getP2PLatencyMatrixPath() const;
     private:
         static const std::string DEFAULT_PROPAGATION_LATENCY_DISTNAME;
         static const uint32_t DEFAULT_PROPAGATION_LATENCY_CLIENTEDGE_LBOUND_US;
@@ -39,6 +40,8 @@ namespace covered
         static const uint32_t DEFAULT_PROPAGATION_LATENCY_EDGECLOUD_RBOUND_US;
 
         static const std::string kClassName;
+        
+        static const std::string P2P_LATENCY_MAT_PATH;
 
         void verifyPropagationLatencyDistname_() const;
 

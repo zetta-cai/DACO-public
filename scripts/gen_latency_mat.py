@@ -62,7 +62,7 @@ if __name__ == "__main__":
     node_count = 128
     distribution_type = "long_tail"  # 可选 "uniform" 或 "long_tail"
     delay_low = 1000      # 最小延迟（ms）
-    delay_high = 10000    # 最大延迟（ms）
+    delay_high = 5000    # 最大延迟（ms）
     output_filename = "delay_config_uint32.json"
     
     if distribution_type == 'long_tail':

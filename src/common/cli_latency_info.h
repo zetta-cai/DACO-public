@@ -6,8 +6,9 @@
 
 #ifndef CLI_LATENCY_INFO_H
 #define CLI_LATENCY_INFO_H
-
+#include <iostream>
 #include <string>
+#include "delay_config_reader.h"
 
 namespace covered
 {
@@ -15,7 +16,9 @@ namespace covered
     {
     public:
         CLILatencyInfo();
-        CLILatencyInfo(const std::string& propagation_latency_distname, const uint32_t& propagation_latency_clientedge_lbound_us, const uint32_t& propagation_latency_clientedge_avg_us, const uint32_t& propagation_latency_clientedge_rbound_us, const uint32_t& propagation_latency_crossedge_lbound_us, const uint32_t& propagation_latency_crossedge_avg_us, const uint32_t& propagation_latency_crossedge_rbound_us, const uint32_t& propagation_latency_edgecloud_lbound_us, const uint32_t& propagation_latency_edgecloud_avg_us, const uint32_t& propagation_latency_edgecloud_rbound_us);
+        // CLILatencyInfo(const std::string& propagation_latency_distname, const uint32_t& propagation_latency_clientedge_lbound_us, const uint32_t& propagation_latency_clientedge_avg_us, const uint32_t& propagation_latency_clientedge_rbound_us, const uint32_t& propagation_latency_crossedge_lbound_us, const uint32_t& propagation_latency_crossedge_avg_us, const uint32_t& propagation_latency_crossedge_rbound_us, const uint32_t& propagation_latency_edgecloud_lbound_us, const uint32_t& propagation_latency_edgecloud_avg_us, const uint32_t& propagation_latency_edgecloud_rbound_us);
+        CLILatencyInfo(const std::string& propagation_latency_distname, const uint32_t& propagation_latency_clientedge_lbound_us, const uint32_t& propagation_latency_clientedge_avg_us, const uint32_t& propagation_latency_clientedge_rbound_us, const uint32_t& propagation_latency_crossedge_lbound_us, const uint32_t& propagation_latency_crossedge_avg_us, const uint32_t& propagation_latency_crossedge_rbound_us, const uint32_t& propagation_latency_edgecloud_lbound_us, const uint32_t& propagation_latency_edgecloud_avg_us, const uint32_t& propagation_latency_edgecloud_rbound_us, const std::string& p2p_latency_mat_path);
+        
         ~CLILatencyInfo();
 
         std::string getPropagationLatencyDistname() const;
@@ -28,6 +31,8 @@ namespace covered
         uint32_t getPropagationLatencyEdgecloudLboundUs() const;
         uint32_t getPropagationLatencyEdgecloudAvgUs() const;
         uint32_t getPropagationLatencyEdgecloudRboundUs() const;
+        std::string getPropagationP2PLatencyMatPath() const;
+        std::vector<std::vector<uint32_t>> getP2PLatencyMatrix() const;
 
         CLILatencyInfo& operator=(const CLILatencyInfo& other);
     private:
@@ -43,6 +48,12 @@ namespace covered
         uint32_t propagation_latency_edgecloud_lbound_us_; // Left bound RTT between edge and cloud
         uint32_t propagation_latency_edgecloud_avg_us_; // Average RTT between edge and cloud
         uint32_t propagation_latency_edgecloud_rbound_us_; // Right bound RTT between edge and cloud
+
+        std::string p2p_latency_mat_path_;
+
+        std::vector<std::vector<uint32_t>> p2p_latency_mat; 
+        std::string latency_distribution;
+        
     };
 }
 

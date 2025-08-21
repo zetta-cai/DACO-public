@@ -28,6 +28,7 @@ namespace covered
         // ONLY for single-node simulator
         uint32_t getSimulatorWorkloadcnt() const;
         uint32_t getSimulatorRandomness() const;
+        std::string getP2PLatencyMatrixPath() const;
 
         std::string toCliString(); // NOT virtual for cilutil
         virtual void clearIsToCliString(); // Idempotent operation: clear is_to_cli_string_ for the next toCliString()
