@@ -27,16 +27,20 @@ namespace covered
     {
     public:
         PropagationSimulatorParam();
-        PropagationSimulatorParam(NodeWrapperBase* node_wrapper_ptr, const std::string& propagation_latency_distname, const uint32_t& propagation_latency_lbound_us, const uint32_t& propagation_latency_avg_us, const uint32_t& propagation_latency_rbound_us, const uint32_t& propagation_latency_random_seed, const uint32_t& propagation_item_buffer_size, const std::string& realnet_option);
+        PropagationSimulatorParam(NodeWrapperBase* node_wrapper_ptr, const std::string& propagation_latency_distname, const uint32_t& propagation_latency_lbound_us, const uint32_t& propagation_latency_avg_us, const uint32_t& propagation_latency_rbound_us, const uint32_t& propagation_latency_random_seed, const uint32_t& propagation_item_buffer_size, const std::string& realnet_option, const std::vector<uint32_t> _p2p_latency_array = std::vector<uint32_t>()); 
         ~PropagationSimulatorParam();
 
         const NodeWrapperBase* getNodeWrapperPtr() const;
-
+        
         bool push(MessageBase* message_ptr, const NetworkAddr& dst_addr);
         bool pop(PropagationItem& element); // Only invoked by PropagationSimulator
 
-        uint32_t genPropagationLatency(); // Atomic function
+        // std::vector<std::vector<uint32_t>> propagation_latency_martix_;
 
+        uint32_t genPropagationLatency(); // Atomic function
+        uint32_t genPropagationLatency_of_j(int j);
+        // uint32_t genPropagationLatency_of_j_rnd(int j);
+        
         const PropagationSimulatorParam& operator=(const PropagationSimulatorParam& other);
     private:
         static const std::string kClassName;
@@ -50,9 +54,11 @@ namespace covered
         uint32_t propagation_latency_avg_us_;
         uint32_t propagation_latency_rbound_us_;
         uint32_t propagation_latency_random_seed_;
+        uint32_t propagation_latency_delta;
         std::string realnet_option_;
         std::string instance_name_;
 
+        std::vector<uint32_t> p2p_latency_array;
         // Ensure the atomicity of all non-const variables due to multiple providers (all subthreads of a client/edge/cloud node)
         // NOTE: only use write lock of rwlock (similar to a mutex; yet not use mutex so as to utilize the debug info of rwlock), as ring buffer only allows one reader and one writer (both will modify indexes in ring buffer)
         Rwlock rwlock_for_propagation_item_buffer_;

@@ -126,6 +126,9 @@ namespace covered
 
     // Unused variables (NOT really used for caching; just for simulation)
     NetworkAddr network_addr_for_debug("127.0.0.1", Util::UDP_MIN_PORT + 1);
+
+    bool is_various_latency_distribution = false; // Whether to use various latency distributions for different edge nodes (e.g., LA-Cache, COVERED, and BestGuess) in single-node simulator (default is false, i.e., all edge nodes have the same latency distribution)
+    std::vector<std::vector<uint32_t>> debug_p2p_latency_matrix;
 }
 
 namespace covered
@@ -208,18 +211,25 @@ int main(int argc, char **argv) {
     // std::cout << "P2P Latency Matrix Path: " << p2p_latency_mat_path << std::endl;
     // getP2PLatencyMatrixPath()
     const std::vector<std::vector<uint32_t>> p2p_latency_matrix = cli_latency_info.getP2PLatencyMatrix();
-    if (p2p_latency_matrix.size() != edgecnt || p2p_latency_matrix[0].size() != edgecnt)
+    covered::debug_p2p_latency_matrix = p2p_latency_matrix; // Store for debugging
+    if (!p2p_latency_matrix.empty())
     {
-        std::cerr << "Error: P2P latency matrix size does not match edge count!" << std::endl;
-        return -1;
-    }else{
-        // print first 10*10
-        std::cout << "P2P Latency Matrix (first 10x10):" << std::endl;
-        for (uint32_t i = 0; i < std::min(edgecnt, static_cast<uint32_t>(10)); ++i) {
-            for (uint32_t j = 0; j < std::min(edgecnt, static_cast<uint32_t>(10)); ++j) {
-                std::cout << p2p_latency_matrix[i][j] << " ";
+        covered::is_various_latency_distribution = true;
+    }
+    if(covered::is_various_latency_distribution){
+        if (p2p_latency_matrix.size() != edgecnt || p2p_latency_matrix[0].size() != edgecnt)
+        {
+            std::cerr << "Error: P2P latency matrix size does not match edge count!" << std::endl;
+            return -1;
+        }else{
+            // print first 10*10
+            std::cout << "P2P Latency Matrix (first 10x10):" << std::endl;
+            for (uint32_t i = 0; i < std::min(edgecnt, static_cast<uint32_t>(10)); ++i) {
+                for (uint32_t j = 0; j < std::min(edgecnt, static_cast<uint32_t>(10)); ++j) {
+                    std::cout << p2p_latency_matrix[i][j] << " ";
+                }
+                std::cout << std::endl;
             }
-            std::cout << std::endl;
         }
     }
 
@@ -277,11 +287,11 @@ int main(int argc, char **argv) {
         // NOTE: NOT use EdgeWrapperBase::launchEdge, which will invoke NodeWrapperBase::start() to launch multiple threads for absolute performance!
         if (cache_name == covered::Util::COVERED_CACHE_NAME)
         {
-            covered::edge_wrapper_ptrs[edgeidx] = new covered::CoveredEdgeWrapper(cache_name, capacity_bytes, edgeidx, edgecnt, hash_name, keycnt, covered_local_uncached_capacity_bytes, covered_local_uncached_lru_bytes, percacheserver_workercnt, covered_peredge_synced_victimcnt, covered_peredge_monitored_victimsetcnt, covered_popularity_aggregation_capacity_bytes, covered_popularity_collection_change_ratio, cli_latency_info, covered_topk_edgecnt, realnet_option, realnet_expname);
+            covered::edge_wrapper_ptrs[edgeidx] = new covered::CoveredEdgeWrapper(cache_name, capacity_bytes, edgeidx, edgecnt, hash_name, keycnt, covered_local_uncached_capacity_bytes, covered_local_uncached_lru_bytes, percacheserver_workercnt, covered_peredge_synced_victimcnt, covered_peredge_monitored_victimsetcnt, covered_popularity_aggregation_capacity_bytes, covered_popularity_collection_change_ratio, cli_latency_info, covered_topk_edgecnt, realnet_option, realnet_expname, p2p_latency_matrix[edgeidx]);
         }
         else
         {
-            covered::edge_wrapper_ptrs[edgeidx] = new covered::BasicEdgeWrapper(cache_name, capacity_bytes, edgeidx, edgecnt, hash_name, keycnt, covered_local_uncached_capacity_bytes, covered_local_uncached_lru_bytes, percacheserver_workercnt, covered_peredge_synced_victimcnt, covered_peredge_monitored_victimsetcnt, covered_popularity_aggregation_capacity_bytes, covered_popularity_collection_change_ratio, cli_latency_info, covered_topk_edgecnt, realnet_option, realnet_expname);
+            covered::edge_wrapper_ptrs[edgeidx] = new covered::BasicEdgeWrapper(cache_name, capacity_bytes, edgeidx, edgecnt, hash_name, keycnt, covered_local_uncached_capacity_bytes, covered_local_uncached_lru_bytes, percacheserver_workercnt, covered_peredge_synced_victimcnt, covered_peredge_monitored_victimsetcnt, covered_popularity_aggregation_capacity_bytes, covered_popularity_collection_change_ratio, cli_latency_info, covered_topk_edgecnt, realnet_option, realnet_expname, p2p_latency_matrix[edgeidx]);
         }
         
         // NOTE: NOT invoke NodeWrapperBase::start() to launch multiple threads for absolute performance!
@@ -921,19 +931,24 @@ namespace covered
             {
                 bool is_remote_hit = false;
                 uint32_t target_edge_idx = 0;
-
+                uint32_t beacon_edge_idx = getBeaconEdgeidx(cur_key);
                 // Simulate content discovery (refer to src/cooperation/directory_table.c::lookup())
                 contentDiscovery(cur_key, clientidx, cache_name, edgecnt, is_remote_hit, target_edge_idx, curpkt_bandwidth_usage);
+
                 if (!isLocalBeacon(cur_key, clientidx))
                 {
-                    content_discovery_latency_us = curclient_closest_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency();
+                    content_discovery_latency_us = is_various_latency_distribution ? 
+                        curclient_closest_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency_of_j(beacon_edge_idx) : 
+                        curclient_closest_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency();
                 }
 
                 if (is_remote_hit) // Remote hit
                 {
                     // Access local cache in the remote edge node to simulate request redirection for remote hit (update cache statistics in the remote edge node) (refer to src/edge/cache_server/basic_cache_server_redirection_processor.c::processReqForRedirectedGet_())
                     requestRedirection(cur_key, clientidx, target_edge_idx, cache_name, fetched_value, curpkt_bandwidth_usage);
-                    request_redirection_latency_us = curclient_closest_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency();
+                    request_redirection_latency_us = is_various_latency_distribution ? 
+                        curclient_closest_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency_of_j(target_edge_idx) :
+                        curclient_closest_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency();
 
                     // Update statistics
                     remote_hitcnt += 1;
@@ -951,6 +966,11 @@ namespace covered
 
                     curobj_hitflag = Hitflag::kGlobalMiss;
                 } // End of global miss
+                // std::cout<<"debug for latency array: "<<local_access_latency_us<<" "<<content_discovery_latency_us<<" "<<request_redirection_latency_us<<" "<<cloud_access_latency_us<<std::endl;
+                // if(is_remote_hit && !debug_p2p_latency_matrix.empty()&& debug_p2p_latency_matrix.size() > clientidx && debug_p2p_latency_matrix[clientidx].size() > target_edge_idx)
+                // {
+                //     std::cout<<"compare with latency matrix ["<<clientidx<<"]["<<target_edge_idx<<"]: "<< debug_p2p_latency_matrix[clientidx][target_edge_idx] << std::endl;
+                // }
             } // End of local miss
             else // Local hit
             {
@@ -1017,8 +1037,13 @@ namespace covered
             const bool is_neighbor_cached = perkey_global_cached_objinfo.isNeighborCached(cur_key, getClosestEdgeidx(clientidx));
             if (is_neighbor_cached && !is_local_beacon)
             {
-                acquire_writelock_latency_us = curclient_closest_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency();
-                release_writelock_latency_us = curclient_closest_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency();
+                // TODO: find correspodind beacon edge node idx and add lock
+                acquire_writelock_latency_us = is_various_latency_distribution ? 
+                    curclient_closest_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency() : 
+                    curclient_closest_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency();
+                release_writelock_latency_us = is_various_latency_distribution ? 
+                    curclient_closest_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency() :
+                    curclient_closest_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency();
 
                 // Cross-edge bandwidth usage (acquire writelock request and response)
                 updateBandwidthUsageForAcquireWritelock(cur_key, clientidx, cache_name, curpkt_bandwidth_usage);
@@ -1228,6 +1253,7 @@ namespace covered
                 } // End of MagNet-like caches
                 else // Other baselines and COVERED
                 {
+                    // TODO, select by latency compair
                     // Randomly select a valid edge node as the target edge node (refer to src/cooperation/directory_table.c::lookup())
                     std::uniform_int_distribution<uint32_t> uniform_dist(0, curobj_edge_node_idxes.size() - 1); // Range of [0, # of directory info - 1]
                     uint32_t random_number = uniform_dist(content_discovery_randgen);
@@ -1339,6 +1365,17 @@ namespace covered
             // Update probability p (ONLY for content discovery) (refer to src/edge/cache_server/covered_cache_server_worker.c::lookupLocalDirectory_() and getReqToLookupBeaconDirectory_())
             WeightTuner& weight_tuner_ref = closest_edge_wrapper_ptr->getWeightTunerRef();
             const bool is_local_beacon = isLocalBeacon(cur_key, clientidx);
+            // // print debug info
+            // std::cout << "DEBUG: calcReadLatencyBeforeCacheManagement() " 
+            //           << ", clientidx: " << clientidx 
+            //           << ", hitflag: " << static_cast<int>(hitflag) 
+            //           << ", total_latency_us: " << total_latency_us 
+            //           << ", local_access_latency_us: " << local_access_latency_us
+            //           << ", content_discovery_latency_us: " << content_discovery_latency_us
+            //           << ", request_redirection_latency_us: " << request_redirection_latency_us
+            //           << ", cloud_access_latency_us: " << cloud_access_latency_us
+            //           << ", is_local_beacon: " << (is_local_beacon ? "true" : "false")
+            //           << std::endl;
             if (is_local_beacon)
             {
                 weight_tuner_ref.incrLocalBeaconAccessCnt();

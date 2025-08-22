@@ -34,18 +34,8 @@ namespace covered
         if(!p2p_latency_mat_path.empty()){
             DelayConfig config = DelayConfigReader::readFromFile(p2p_latency_mat_path);
             p2p_latency_mat_path_ = p2p_latency_mat_path;
-            // std::cout<< "P2P Latency Matrix Path: " << p2p_latency_mat_path_ << std::endl;
             latency_distribution = config.distribution;
             p2p_latency_mat = config.delay_matrix;
-            // print the latency matrix size and the fisrst 10 * 10 matrix with cout
-            // std::cout << "P2P Latency Matrix Size: " << p2p_latency_mat.size() << " x " << p2p_latency_mat[0].size() << std::endl;
-            // std::cout << "P2P Latency Matrix ms (first 10 x 10):" << std::endl;
-            for (size_t i = 0; i < std::min(p2p_latency_mat.size(), size_t(10)); ++i) {
-                for (size_t j = 0; j < std::min(p2p_latency_mat[i].size(), size_t(10)); ++j) {
-                    // std::cout << p2p_latency_mat[i][j] << " ";
-                }
-                // std::cout << std::endl;
-            }
 
         }
     }

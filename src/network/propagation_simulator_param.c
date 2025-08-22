@@ -19,7 +19,7 @@ namespace covered
         propagation_latency_dist_ptr_ = NULL;
     }
 
-    PropagationSimulatorParam::PropagationSimulatorParam(NodeWrapperBase* node_wrapper_ptr, const std::string& propagation_latency_distname, const uint32_t& propagation_latency_lbound_us, const uint32_t& propagation_latency_avg_us, const uint32_t& propagation_latency_rbound_us, const uint32_t& propagation_latency_random_seed, const uint32_t& propagation_item_buffer_size, const std::string& realnet_option) : SubthreadParamBase(), node_wrapper_ptr_(node_wrapper_ptr), propagation_latency_distname_(propagation_latency_distname), propagation_latency_lbound_us_(propagation_latency_lbound_us), propagation_latency_avg_us_(propagation_latency_avg_us), propagation_latency_rbound_us_(propagation_latency_rbound_us), propagation_latency_random_seed_(propagation_latency_random_seed), rwlock_for_propagation_item_buffer_("rwlock_for_propagation_item_buffer_"), is_first_item_(true), prev_timespec_(), propagation_latency_randgen_(propagation_latency_random_seed)
+    PropagationSimulatorParam::PropagationSimulatorParam(NodeWrapperBase* node_wrapper_ptr, const std::string& propagation_latency_distname, const uint32_t& propagation_latency_lbound_us, const uint32_t& propagation_latency_avg_us, const uint32_t& propagation_latency_rbound_us, const uint32_t& propagation_latency_random_seed, const uint32_t& propagation_item_buffer_size, const std::string& realnet_option, const std::vector<uint32_t> _p2p_latency_array) : SubthreadParamBase(), node_wrapper_ptr_(node_wrapper_ptr), propagation_latency_distname_(propagation_latency_distname), propagation_latency_lbound_us_(propagation_latency_lbound_us), propagation_latency_avg_us_(propagation_latency_avg_us), propagation_latency_rbound_us_(propagation_latency_rbound_us), propagation_latency_random_seed_(propagation_latency_random_seed), rwlock_for_propagation_item_buffer_("rwlock_for_propagation_item_buffer_"), is_first_item_(true), prev_timespec_(), propagation_latency_randgen_(propagation_latency_random_seed), p2p_latency_array(_p2p_latency_array)
     {
         assert(node_wrapper_ptr != NULL);
 
@@ -28,6 +28,8 @@ namespace covered
         {
             assert(propagation_latency_lbound_us <= propagation_latency_avg_us);
             assert(propagation_latency_avg_us <= propagation_latency_rbound_us);
+            propagation_latency_delta = propagation_latency_rbound_us - propagation_latency_lbound_us;
+            assert(propagation_latency_delta > 0); // Ensure the range is valid
         }
 
         realnet_option_ = realnet_option;
@@ -44,6 +46,7 @@ namespace covered
         propagation_latency_dist_ptr_ = new std::uniform_int_distribution<uint32_t>(propagation_latency_lbound_us, propagation_latency_rbound_us);
         assert(propagation_latency_dist_ptr_ != NULL);
     }
+
 
     PropagationSimulatorParam::~PropagationSimulatorParam()
     {
@@ -194,6 +197,7 @@ namespace covered
         propagation_latency_avg_us_ = other.propagation_latency_avg_us_;
         propagation_latency_rbound_us_ = other.propagation_latency_rbound_us_;
         propagation_latency_random_seed_ = other.propagation_latency_random_seed_;
+        p2p_latency_array = other.p2p_latency_array;
 
         instance_name_ = other.instance_name_;
         
@@ -263,4 +267,37 @@ namespace covered
 
         return propagation_latency;
     }
-}
+
+    uint32_t PropagationSimulatorParam::genPropagationLatency_of_j(int j)
+    {
+        // NOTE: NO need to acquire write lock here, which has been done in PropagationSimulatorParam::push() and PropagationSimulatorParam::genPropagationLatency()
+
+        assert(j >= 0 && j < (int)p2p_latency_array.size());
+        uint32_t propagation_latency_base = p2p_latency_array[j];
+        uint32_t propagation_latency = 0;
+        if (propagation_latency_distname_ == Util::PROPAGATION_SIMULATION_CONSTANT_DISTNAME)
+        {
+            propagation_latency = propagation_latency_base;
+        }
+        else if (propagation_latency_distname_ == Util::PROPAGATION_SIMULATION_UNIFORM_DISTNAME)
+        {
+            // generate a random latency based on the base latency
+            assert(propagation_latency_dist_ptr_ != NULL);
+            uint32_t propagation_latency_off_lbound = (*propagation_latency_dist_ptr_)(propagation_latency_randgen_);
+            
+            assert(propagation_latency_off_lbound >= propagation_latency_lbound_us_);
+            assert(propagation_latency_off_lbound <= propagation_latency_rbound_us_);
+            propagation_latency = propagation_latency_base + propagation_latency_off_lbound - propagation_latency_avg_us_;
+            assert(propagation_latency >= 0);
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "propagation latency distribution " << propagation_latency_distname_ << " is not supported!" << std::endl;
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+
+        return propagation_latency;
+    }
+} // namespace covered
