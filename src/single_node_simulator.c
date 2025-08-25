@@ -1278,7 +1278,7 @@ namespace covered
                         // check latency of node j in curobj_edge_node_idxes and select the idx with lowest latency
                         uint32_t min_latency = std::numeric_limits<uint32_t>::max();
                         target_edge_idx = curobj_edge_node_idxes[0];
-                        for (uint32_t i = 0; i < target_edge_idx.size(); i++)
+                        for (uint32_t i = 0; i < curobj_edge_node_idxes.size(); i++)
                         {
                             uint32_t latency_ij = tuner.getEwmaCrossedgeLatency_of_j(curobj_edge_node_idxes[i]);
                             if(latency_ij < min_latency){
