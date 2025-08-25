@@ -22,6 +22,14 @@ namespace covered
         cooperative_hit_weight_ = cooperative_hit_weight;
     }
 
+    WeightInfo::WeightInfo(const Weight& local_hit_weight, const Weight& cooperative_hit_weight, const std::vector<Weight> local_hit_weights, const std::vector<Weight> cooperative_hit_weights)
+    {
+        local_hit_weight_ = local_hit_weight;
+        cooperative_hit_weight_ = cooperative_hit_weight;
+        local_hit_weights_ = local_hit_weights;
+        cooperative_hit_weights_ = cooperative_hit_weights;
+    }
+
     WeightInfo::~WeightInfo() {}
 
     Weight WeightInfo::getLocalHitWeight() const
@@ -34,15 +42,27 @@ namespace covered
         return cooperative_hit_weight_;
     }
 
+    std::vector<Weight> WeightInfo::getLocalHitWeights() const{
+        return local_hit_weights_;
+    }
+    std::vector<Weight> WeightInfo::getCooperativeHitWeights() const{
+        return cooperative_hit_weights_;
+    }
+    
     uint64_t WeightInfo::getSizeForCapacity() const
     {
-        return sizeof(Weight) * 2;
+        if(local_hit_weights_.empty() && cooperative_hit_weights_.empty())
+            return sizeof(Weight) * 2;
+    
+        return sizeof(Weight) * (2 + local_hit_weights_.size() + cooperative_hit_weights_.size());
     }
     
     const WeightInfo& WeightInfo::operator=(const WeightInfo& other)
     {
         local_hit_weight_ = other.local_hit_weight_;
         cooperative_hit_weight_ = other.cooperative_hit_weight_;
+        local_hit_weights_ = other.local_hit_weights_;
+        cooperative_hit_weights_ = other.cooperative_hit_weights_;
         return *this;
     }
 
@@ -79,19 +99,29 @@ namespace covered
     const double WeightTuner::EWMA_ALPHA = 0.1;
     const std::string WeightTuner::kClassName = "WeightTuner";
 
-    WeightTuner::WeightTuner(const uint32_t& edge_idx, const uint32_t& edgecnt, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us) : rwlock_for_weight_tuner_("rwlock_for_weight_tuner_"), ewma_propagation_latency_clientedge_us_(propagation_latency_clientedge_us), propagation_latency_edgecloud_us_(propagation_latency_edgecloud_us)
+    WeightTuner::WeightTuner(const uint32_t& edge_idx, const uint32_t& edgecnt, const uint32_t& propagation_latency_clientedge_us, const uint32_t& propagation_latency_crossedge_us, const uint32_t& propagation_latency_edgecloud_us, const std::vector<uint32_t> p2p_latency_array) : rwlock_for_weight_tuner_("rwlock_for_weight_tuner_"), ewma_propagation_latency_clientedge_us_(propagation_latency_clientedge_us), propagation_latency_edgecloud_us_(propagation_latency_edgecloud_us)
     {
         std::ostringstream oss;
         oss << kClassName << " edge" << edge_idx;
         instance_name_ = oss.str();
-
+        is_p2p_enable = false;
         local_beacon_access_cnt_ = 0.0;
         remote_beacon_access_cnt_ = 0.0;
         ewma_remote_beacon_prob_ = (1.0 - 1.0 / static_cast<float>(edgecnt));
+        remote_beacon_access_cnt_array_.resize(edgecnt, 0.0f);
+        // ewma_remote_beacon_prob_array_.resize(edgecnt, 1.0f - 1.0f / edgecnt); // 初始概率
 
         ewma_propagation_latency_crossedge_us_ = propagation_latency_crossedge_us;
         ewma_propagation_latency_edgecloud_us_ = propagation_latency_edgecloud_us;
-
+        
+        if(p2p_latency_array.empty()){
+            ewma_propagation_latency_crossedge_us_array_ = std::vector<uint32_t>(edgecnt, propagation_latency_crossedge_us);
+        }else{
+            ewma_propagation_latency_crossedge_us_array_ = p2p_latency_array; // Use the provided p2p latency array
+            assert(ewma_propagation_latency_crossedge_us_array_.size() == edgecnt); 
+            is_p2p_enable = true;
+        }
+        
         updateWeightInfo_(); // Update weight_info_ for heuristic weight calculation
 
         // Dump initial weight info
@@ -120,6 +150,33 @@ namespace covered
         rwlock_for_weight_tuner_.unlock_shared(context_name);
         return weight_info;
     }
+
+    // std::vector<WeightInfo> WeightTuner::getWeightInfoArray() const
+    // {
+    //     // Acquire a read lock
+    //     const std::string context_name = "WeightTuner::getWeightInfoArray()";
+    //     rwlock_for_weight_tuner_.acquire_lock_shared(context_name);
+
+    //     std::vector<WeightInfo> weight_info_array(weight_info_array_);
+
+    //     rwlock_for_weight_tuner_.unlock_shared(context_name);
+    //     return weight_info_array;
+    // }
+
+    // WeightInfo WeightTuner::getWeightInfoP2P(const uint32_t& edge_idx) const
+    // {
+
+    //     const std::string context_name = "WeightTuner::getWeightInfoP2P()";
+    //     rwlock_for_weight_tuner_.acquire_lock_shared(context_name);
+
+
+    //     assert(edge_idx < weight_info_array_.size() && "edge_idx is out of bounds");
+
+    //     WeightInfo weight_info = weight_info_array_[edge_idx];
+
+    //     rwlock_for_weight_tuner_.unlock_shared(context_name);
+    //     return weight_info;
+    // }
 
     void WeightTuner::incrLocalBeaconAccessCnt()
     {
@@ -167,6 +224,31 @@ namespace covered
         return;
     }
 
+    void WeightTuner::incrRemoteBeaconAccessCntArray(int j)
+    {
+        #ifdef ENABLE_PROBABILITY_TUNING
+        // Acquire a write lock
+        const std::string context_name = "WeightTuner::incrRemoteBeaconAccessCntArray()";
+        rwlock_for_weight_tuner_.acquire_lock(context_name);
+
+        remote_beacon_access_cnt_array_[j] += 1.0;
+        remote_beacon_access_cnt_ += 1.0;
+
+        // Update remote beacon probability for every tuning window
+        if (local_beacon_access_cnt_ + remote_beacon_access_cnt_ >= BEACON_ACCESS_CNT_FOR_PROB_WINDOW_SIZE) // At the end of a tuning window
+        {
+            updateEwmaRemoteBeaconProb_();
+        }
+
+        updateWeightInfo_(); // Update weight_info_ for latency-aware weight tuning
+
+        rwlock_for_weight_tuner_.unlock(context_name);
+        #endif
+
+        return;
+    }
+
+
     void WeightTuner::updateEwmaCrossedgeLatency(const uint32_t& cur_propagation_latency_crossedge_us)
     {
         #ifdef ENABLE_WEIGHT_TUNING
@@ -190,6 +272,45 @@ namespace covered
             assert(ewma_propagation_latency_crossedge_us_ >= 0);
 
             updateWeightInfo_(); // Update weight_info_ for latency-aware weight tuning
+        }
+
+        rwlock_for_weight_tuner_.unlock(context_name);
+        #endif
+
+        return;
+    }
+
+    void WeightTuner::updateEwmaCrossedgeLatency_of_j(int j, const uint32_t& cur_latency)
+    {
+        #ifdef ENABLE_WEIGHT_TUNING
+        // Acquire a write lock
+        const std::string context_name = "WeightTuner::updateEwmaCrossedgeLatency_of_j()";
+        rwlock_for_weight_tuner_.acquire_lock(context_name);
+
+        assert(cur_latency > 0);
+
+        // Filter abnormal cross-edge latency which should < edge-cloud latency
+        if (cur_latency > propagation_latency_edgecloud_us_)
+        {
+            std::ostringstream oss;
+            oss << "abnormal cross-edge latency: " << cur_latency << " us, which should be less than edge-cloud latency: " << propagation_latency_edgecloud_us_ << " us (could be caused by CPU contention)";
+            Util::dumpWarnMsg(instance_name_, oss.str());
+        }
+        else
+        {
+            // Update cross-edge latency by EWMA
+            ewma_propagation_latency_crossedge_us_array_[j] = 
+                (1 - EWMA_ALPHA) * ewma_propagation_latency_crossedge_us_array_[j] + 
+                EWMA_ALPHA * cur_latency;
+
+            assert(ewma_propagation_latency_crossedge_us_array_[j] >= 0);
+
+            // Update weight_info_ for latency-aware weight tuning
+            ewma_propagation_latency_crossedge_us_ = (1 - EWMA_ALPHA) * ewma_propagation_latency_crossedge_us_ + EWMA_ALPHA * cur_latency;
+            assert(ewma_propagation_latency_crossedge_us_ >= 0);
+
+            updateWeightInfo_(); 
+
         }
 
         rwlock_for_weight_tuner_.unlock(context_name);
@@ -313,6 +434,23 @@ namespace covered
         return;
     }
 
+    // void WeightTuner::updateEwmaRemoteBeaconProbArray_() {
+    //     float total_access = local_beacon_access_cnt_ + remote_beacon_access_cnt_;
+    //     assert(total_access >= BEACON_ACCESS_CNT_FOR_PROB_WINDOW_SIZE);
+    
+    //     for (size_t j = 0; j < remote_beacon_access_cnt_array_.size(); ++j) {
+    //         // 计算节点j的当前窗口概率
+    //         float curr_prob = remote_beacon_access_cnt_array_[j] / total_access;
+    //         // EWMA更新
+    //         // ewma_remote_beacon_prob_array_[j] = (1 - EWMA_ALPHA) * ewma_remote_beacon_prob_array_[j] + EWMA_ALPHA * curr_prob;
+    //     }
+    
+    //     // 重置窗口计数
+    //     local_beacon_access_cnt_ = 0.0f;
+    //     std::fill(remote_beacon_access_cnt_array_.begin(), remote_beacon_access_cnt_array_.end(), 0.0f);
+    //     remote_beacon_access_cnt_ = 0.0f;
+    // }
+
     void WeightTuner::updateWeightInfo_()
     {
         // NOTE: NO need to acquire a write lock, which is NO need in constructor, or has been done in tuneWeightInfo()
@@ -340,9 +478,55 @@ namespace covered
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }
-        
-        weight_info_ = WeightInfo(local_hit_weight, cooperative_hit_weight);
+        if(!is_p2p_enable){
+            weight_info_ = WeightInfo(local_hit_weight, cooperative_hit_weight);
+        }
+        else{
+            // update for p2p
+            int edgecnt = ewma_propagation_latency_crossedge_us_array_.size();
+            std::vector<Weight> local_hit_weights(edgecnt, 0.0);
+            std::vector<Weight> cooperative_hit_weights(edgecnt, 0.0);
 
+            for(int N_beacon = 0; N_beacon < edgecnt; N_beacon++){
+                // δlocal = (1− p)lcache + lbackend,
+                local_hit_weights[N_beacon] = ewma_remote_beacon_prob_ * ewma_propagation_latency_crossedge_us_array_[N_beacon] + ewma_propagation_latency_edgecloud_us_;
+            }
+            for(int j = 0; j < edgecnt; j++){
+                // δremote = lbackend −lcache
+                cooperative_hit_weights[j] = ewma_propagation_latency_edgecloud_us_ - ewma_propagation_latency_crossedge_us_array_[j];
+            }
+            weight_info_ = WeightInfo(local_hit_weight, cooperative_hit_weight, local_hit_weights, cooperative_hit_weights);
+        }
         return;
+    }
+
+    // void WeightTuner::updateWeightInfoP2P_()
+    // {
+    //     // NOTE: NO need to acquire a write lock, which is NO need in constructor, or has been done in tuneWeightInfo()
+
+    //     // Calculate latency of different accesses
+    //     const Weight local_hit_latency = ewma_propagation_latency_clientedge_us_;
+    //     // const Weight cooperative_hit_latency = ewma_propagation_latency_clientedge_us_ + (ewma_remote_beacon_prob_ + 1) * ewma_propagation_latency_crossedge_us_;
+    //     // const Weight global_miss_latency = ewma_propagation_latency_clientedge_us_ + ewma_remote_beacon_prob_ * ewma_propagation_latency_crossedge_us_ + ewma_propagation_latency_edgecloud_us_;
+    //     std::vector<Weight> cooperative_hit_weights;
+    //     for(int i = 0; i < ewma_propagation_latency_crossedge_us_array_.size(); i++){
+    //         const Weight cooperative_hit_latency = ewma_propagation_latency_clientedge_us_ + (ewma_remote_beacon_prob_ + 1) * ewma_propagation_latency_crossedge_us_array_[i];
+    //         const Weight global_miss_latency = ewma_propagation_latency_clientedge_us_ + ewma_remote_beacon_prob_ * ewma_propagation_latency_crossedge_us_array_[i] + ewma_propagation_latency_edgecloud_us_;
+    //         const Weight cooperative_hit_weight = global_miss_latency - cooperative_hit_latency; // w2 = ewma_propagation_latency_edgecloud_us_ - ewma_propagation_latency_crossedge_us_
+           
+    //     }
+    //     Weight average_cooperative_hit_weight = std::accumulate(cooperative_hit_weights.begin(), cooperative_hit_weights.end(), 0.0) / cooperative_hit_weights.size();
+    //     weight_info_ = WeightInfo(local_hit_latency, average_cooperative_hit_weight, cooperative_hit_weights);
+
+    //     // 
+
+
+    //     return;
+    // }
+    uint32_t WeightTuner::getEwmaCrossedgeLatency_of_j(int j){
+        return ewma_propagation_latency_crossedge_us_array_[j];
+    }
+    bool WeightTuner::getIsP2PEnable(){
+        return is_p2p_enable;
     }
 }

@@ -98,7 +98,7 @@ namespace covered
     }
 
     // For reward information
-
+    // TODO for reward
     Reward LocalCachedMetadata::calculateReward_(const EdgeWrapperBase* edge_wrapper_ptr, perkey_metadata_list_t::iterator perkey_metadata_list_iter) const
     {
         // Get local/redirected cached popularity
@@ -106,7 +106,7 @@ namespace covered
         const Popularity redirected_cached_popularity = perkey_metadata_list_iter->second.getRedirectedPopularity();
         const bool is_neighbor_cached = perkey_metadata_list_iter->second.isNeighborCached();
 
-        // Calculte local reward (i.e., max eviction cost, as the local edge node does NOT know cache hit status of all other edge nodes and conservatively treat it as the last copy)
+        // Calculate local reward (i.e., max eviction cost, as the local edge node does NOT know cache hit status of all other edge nodes and conservatively treat it as the last copy)
         const bool is_last_copies = !is_neighbor_cached;
         CalcLocalCachedRewardFuncParam tmp_param(local_cached_popularity, redirected_cached_popularity, is_last_copies);
         edge_wrapper_ptr->constCustomFunc(CalcLocalCachedRewardFuncParam::FUNCNAME, &tmp_param);

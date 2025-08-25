@@ -79,6 +79,26 @@ namespace covered
         lookup_map_t edgeidx_multimapiter_lookup_map; // Lookup map for per-edge local uncached popularity
     };
 
+    // struct LocalUncachedObjinfo
+    // {
+    //     typedef std::multimap<float, uint32_t, std::greater<float>> sorted_popularity_map_t;
+    //     typedef std::unordered_map<uint32_t, sorted_popularity_map_t::iterator> lookup_map_t;
+
+    //     LocalUncachedObjinfo();
+    //     LocalUncachedObjinfo(const LocalUncachedObjinfo& others); // NOTE: we need to redefine copy constructor due to the same reason as follows (see comment of copy assignment operator)
+
+    //     void update(const uint32_t& given_edgeidx, const CollectedPopularity& collected_popularity);
+    //     bool remove(const uint32_t& given_edgeidx);
+    //     void getTopkLocalUncachedPopularities(const uint32_t& covered_topk_edgecnt, std::vector<std::pair<uint32_t, float>>& topk_local_uncached_popularities) const;
+
+    //     // NOTE: default copy assignment operator will copy others.sorted_popularity_map_t::iterator, which could point to sorted_popularity_map_t of temporary variable in the stack and incur segmentation fault -> we must rebuild lookup_map_t based on sorted_popularity_map_t of the current variable
+    //     const struct LocalUncachedObjinfo& operator=(const struct LocalUncachedObjinfo& others);
+
+    //     uint32_t objsize;
+    //     sorted_popularity_map_t sorted_local_uncached_popularity_edgeidx_map; // Local uncached popularity for each edge node not caching yet tracking the object (descending order of local uncached popularity)
+    //     lookup_map_t edgeidx_multimapiter_lookup_map; // Lookup map for per-edge local uncached popularity
+    // };
+
     // LocalUncachedObjinfo of local uncached objects (ONLY for COVERED)
     struct PerkeyLocalUncachedObjinfo
     {
@@ -155,7 +175,7 @@ namespace covered
     void contentDiscovery(const Key& cur_key, const uint32_t& clientidx, const std::string& cache_name, const uint32_t& edgecnt, bool& is_remote_hit, uint32_t& target_edge_idx, BandwidthUsage& curpkt_bandwidth_usage);
     void requestRedirection(const Key& cur_key, const uint32_t& clientidx, const uint32_t& target_edge_idx, const std::string& cache_name, Value& fetched_value, BandwidthUsage& curpkt_bandwidth_usage);
     void validateClosestEdgeForFetchedValue(const Key& cur_key, const Value& fetched_value, const uint32_t& clientidx, const std::string& cache_name, const Hitflag& curobj_hitflag, bool& is_evict, uint32_t& victim_cnt);
-    uint64_t calcReadLatencyBeforeCacheManagement(const Key& cur_key, const uint32_t& clientidx, const uint32_t& local_access_latency_us, const uint32_t& content_discovery_latency_us, const uint32_t& request_redirection_latency_us, const uint32_t& cloud_access_latency_us, const Hitflag& hitflag, const std::string& cache_name);
+    uint64_t calcReadLatencyBeforeCacheManagement(const Key& cur_key, const uint32_t& clientidx, const uint32_t &target_edge_idx,const uint32_t& local_access_latency_us, const uint32_t& content_discovery_latency_us, const uint32_t& request_redirection_latency_us, const uint32_t& cloud_access_latency_us, const Hitflag& hitflag, const std::string& cache_name);
     uint64_t calcWriteLatencyBeforeCacheManagement(const Key& cur_key, const uint32_t& clientidx, const uint32_t& local_access_latency_us, const uint32_t& acquire_writelock_latency_us, const uint32_t& release_writelock_latency_us, const uint32_t& cloud_access_latency_us, const std::string& cache_name);
     void triggerCacheManagement(const Key& cur_key, const Value& fetched_value, const uint32_t& clientidx, const Hitflag& curobj_hitflag, const std::string& cache_name, const uint64_t& total_latency_us, const uint32_t& covered_topk_edgecnt, bool& is_admit, bool& is_evict, uint32_t& victim_cnt);
     void updateTotalLatencyAfterCacheManagement(const Key& cur_key, const uint32_t& clientidx, const uint32_t& directory_admit_latency_us, const uint32_t& directory_evict_latency_us, const std::string& cache_name, uint64_t& total_latency_us);
@@ -927,10 +947,10 @@ namespace covered
 
             // Check if any other edge node caches the object
             Hitflag curobj_hitflag = Hitflag::kGlobalMiss;
+            uint32_t target_edge_idx = (uint32_t) -1;
             if (!is_local_cached_and_valid) // Local miss
             {
                 bool is_remote_hit = false;
-                uint32_t target_edge_idx = 0;
                 uint32_t beacon_edge_idx = getBeaconEdgeidx(cur_key);
                 // Simulate content discovery (refer to src/cooperation/directory_table.c::lookup())
                 contentDiscovery(cur_key, clientidx, cache_name, edgecnt, is_remote_hit, target_edge_idx, curpkt_bandwidth_usage);
@@ -966,11 +986,7 @@ namespace covered
 
                     curobj_hitflag = Hitflag::kGlobalMiss;
                 } // End of global miss
-                // std::cout<<"debug for latency array: "<<local_access_latency_us<<" "<<content_discovery_latency_us<<" "<<request_redirection_latency_us<<" "<<cloud_access_latency_us<<std::endl;
-                // if(is_remote_hit && !debug_p2p_latency_matrix.empty()&& debug_p2p_latency_matrix.size() > clientidx && debug_p2p_latency_matrix[clientidx].size() > target_edge_idx)
-                // {
-                //     std::cout<<"compare with latency matrix ["<<clientidx<<"]["<<target_edge_idx<<"]: "<< debug_p2p_latency_matrix[clientidx][target_edge_idx] << std::endl;
-                // }
+
             } // End of local miss
             else // Local hit
             {
@@ -996,7 +1012,9 @@ namespace covered
             }
 
             // Calculate cache miss latency for LA-Cache and update COVERED's parameters based on hitflag
-            total_latency_us = calcReadLatencyBeforeCacheManagement(cur_key, clientidx, local_access_latency_us, content_discovery_latency_us, request_redirection_latency_us, cloud_access_latency_us, curobj_hitflag, cache_name);
+            total_latency_us = calcReadLatencyBeforeCacheManagement(
+                cur_key, clientidx, target_edge_idx, local_access_latency_us, content_discovery_latency_us, 
+                request_redirection_latency_us, cloud_access_latency_us, curobj_hitflag, cache_name);
 
             // Trigger cache management
             triggerCacheManagement(cur_key, fetched_value, clientidx, curobj_hitflag, cache_name, total_latency_us, covered_topk_edgecnt, is_admit, is_evict, victim_cnt);
@@ -1255,13 +1273,31 @@ namespace covered
                 {
                     // TODO, select by latency compair
                     // Randomly select a valid edge node as the target edge node (refer to src/cooperation/directory_table.c::lookup())
-                    std::uniform_int_distribution<uint32_t> uniform_dist(0, curobj_edge_node_idxes.size() - 1); // Range of [0, # of directory info - 1]
-                    uint32_t random_number = uniform_dist(content_discovery_randgen);
-                    assert(random_number < curobj_edge_node_idxes.size());
-                    target_edge_idx = curobj_edge_node_idxes[random_number];
-                    assert(target_edge_idx < edgecnt);
+                    WeightTuner& tuner = beacon_edge_wrapper_ptr->getWeightTunerRef();
+                    if(tuner.getIsP2PEnable()){
+                        // check latency of node j in curobj_edge_node_idxes and select the idx with lowest latency
+                        uint32_t min_latency = std::numeric_limits<uint32_t>::max();
+                        target_edge_idx = curobj_edge_node_idxes[0];
+                        for (uint32_t i = 0; i < target_edge_idx.size(); i++)
+                        {
+                            uint32_t latency_ij = tuner.getEwmaCrossedgeLatency_of_j(curobj_edge_node_idxes[i]);
+                            if(latency_ij < min_latency){
+                                min_latency = latency_ij;
+                                target_edge_idx = curobj_edge_node_idxes[i];
+                            }
+                        }
+                        assert(target_edge_idx < edgecnt);
+                        is_remote_hit = true;
+                        
+                    }else{
+                        std::uniform_int_distribution<uint32_t> uniform_dist(0, curobj_edge_node_idxes.size() - 1); // Range of [0, # of directory info - 1]
+                        uint32_t random_number = uniform_dist(content_discovery_randgen);
+                        assert(random_number < curobj_edge_node_idxes.size());
+                        target_edge_idx = curobj_edge_node_idxes[random_number];
+                        assert(target_edge_idx < edgecnt);
 
-                    is_remote_hit = true;
+                        is_remote_hit = true;
+                    }
                 } // End of other baselines and COVERED
             }
 
@@ -1340,7 +1376,9 @@ namespace covered
         return;
     }
 
-    uint64_t calcReadLatencyBeforeCacheManagement(const Key& cur_key, const uint32_t& clientidx, const uint32_t& local_access_latency_us, const uint32_t& content_discovery_latency_us, const uint32_t& request_redirection_latency_us, const uint32_t& cloud_access_latency_us, const Hitflag& hitflag, const std::string& cache_name)
+    uint64_t calcReadLatencyBeforeCacheManagement(
+        const Key& cur_key, const uint32_t& clientidx, const uint32_t& target_edge_idx,const uint32_t& local_access_latency_us, const uint32_t& content_discovery_latency_us, 
+        const uint32_t& request_redirection_latency_us, const uint32_t& cloud_access_latency_us, const Hitflag& hitflag, const std::string& cache_name)
     {
         // Calculate total response latency based on hitflag
         uint64_t total_latency_us = 0;
@@ -1365,24 +1403,14 @@ namespace covered
             // Update probability p (ONLY for content discovery) (refer to src/edge/cache_server/covered_cache_server_worker.c::lookupLocalDirectory_() and getReqToLookupBeaconDirectory_())
             WeightTuner& weight_tuner_ref = closest_edge_wrapper_ptr->getWeightTunerRef();
             const bool is_local_beacon = isLocalBeacon(cur_key, clientidx);
-            // // print debug info
-            // std::cout << "DEBUG: calcReadLatencyBeforeCacheManagement() " 
-            //           << ", clientidx: " << clientidx 
-            //           << ", hitflag: " << static_cast<int>(hitflag) 
-            //           << ", total_latency_us: " << total_latency_us 
-            //           << ", local_access_latency_us: " << local_access_latency_us
-            //           << ", content_discovery_latency_us: " << content_discovery_latency_us
-            //           << ", request_redirection_latency_us: " << request_redirection_latency_us
-            //           << ", cloud_access_latency_us: " << cloud_access_latency_us
-            //           << ", is_local_beacon: " << (is_local_beacon ? "true" : "false")
-            //           << std::endl;
+            const uint32_t beacon_idx = getBeaconEdgeidx(cur_key);
             if (is_local_beacon)
             {
                 weight_tuner_ref.incrLocalBeaconAccessCnt();
             }
             else
             {
-                weight_tuner_ref.incrRemoteBeaconAccessCnt();
+                is_various_latency_distribution && target_edge_idx != (uint32_t) -1 ? weight_tuner_ref.incrRemoteBeaconAccessCntArray(target_edge_idx) : weight_tuner_ref.incrRemoteBeaconAccessCnt();
             }
 
             // Update WAN delays (refer to src/edge/cache_server/covered_cache_server_worker.c and src/edge/cache_server/covered_cache_server.c)
@@ -1394,15 +1422,21 @@ namespace covered
             {
                 if (!is_local_beacon)
                 {
-                    weight_tuner_ref.updateEwmaCrossedgeLatency(content_discovery_latency_us);
+                    is_various_latency_distribution ? 
+                        weight_tuner_ref.updateEwmaCrossedgeLatency_of_j(beacon_idx, content_discovery_latency_us) :
+                        weight_tuner_ref.updateEwmaCrossedgeLatency(content_discovery_latency_us);
                 }
-                weight_tuner_ref.updateEwmaCrossedgeLatency(request_redirection_latency_us);
+                is_various_latency_distribution && target_edge_idx != (uint32_t) -1 ? 
+                    weight_tuner_ref.updateEwmaCrossedgeLatency_of_j(target_edge_idx, request_redirection_latency_us) : 
+                    weight_tuner_ref.updateEwmaCrossedgeLatency(request_redirection_latency_us);
             }
             else // Global miss
             {
                 if (!is_local_beacon)
                 {
-                    weight_tuner_ref.updateEwmaCrossedgeLatency(content_discovery_latency_us);
+                    is_various_latency_distribution ? 
+                        weight_tuner_ref.updateEwmaCrossedgeLatency_of_j(beacon_idx, content_discovery_latency_us) :
+                        weight_tuner_ref.updateEwmaCrossedgeLatency(content_discovery_latency_us);
                 }
                 weight_tuner_ref.updateEwmaEdgecloudLatency(cloud_access_latency_us);
             }
@@ -1444,6 +1478,7 @@ namespace covered
 
     void triggerCacheManagement(const Key& cur_key, const Value& fetched_value, const uint32_t& clientidx, const Hitflag& curobj_hitflag, const std::string& cache_name, const uint64_t& total_latency_us, const uint32_t& covered_topk_edgecnt, bool& is_admit, bool& is_evict, uint32_t& victim_cnt)
     {
+        // TODO : p2p score caculation
         is_admit = false;
         is_evict = false;
         victim_cnt = 0;
@@ -1513,19 +1548,23 @@ namespace covered
         {
             EdgeWrapperBase* closest_edge_wrapper_ptr = getClosestEdgeWrapperPtr(clientidx);
             const bool is_local_beacon = isLocalBeacon(cur_key, clientidx);
-
+            uint32_t beacon_idx = getBeaconEdgeidx(cur_key);
             // Update WAN delays (refer to src/edge/cache_server/covered_cache_server_worker.c and src/edge/cache_server/covered_cache_server.c)
             WeightTuner& weight_tuner_ref = closest_edge_wrapper_ptr->getWeightTunerRef();
             if (!is_local_beacon)
             {
                 if (directory_admit_latency_us > 0)
                 {
-                    weight_tuner_ref.updateEwmaCrossedgeLatency(directory_admit_latency_us);
+                    is_various_latency_distribution ? 
+                        weight_tuner_ref.updateEwmaCrossedgeLatency_of_j(beacon_idx, directory_admit_latency_us) :
+                        weight_tuner_ref.updateEwmaCrossedgeLatency(directory_admit_latency_us);
                 }
 
                 if (directory_evict_latency_us > 0)
                 {
-                    weight_tuner_ref.updateEwmaCrossedgeLatency(directory_evict_latency_us);
+                    is_various_latency_distribution ? 
+                       weight_tuner_ref.updateEwmaCrossedgeLatency_of_j(beacon_idx, directory_evict_latency_us) :
+                       weight_tuner_ref.updateEwmaCrossedgeLatency(directory_evict_latency_us);
                 }
             }
         }
@@ -1691,12 +1730,15 @@ namespace covered
         uint32_t directory_update_latency_us = 0;
 
         const bool is_local_beacon = isLocalBeacon(cur_key, clientidx);
+        uint32_t beacon_idx = getBeaconEdgeidx(cur_key);
         if (!is_local_beacon)
         {
             // NOTE: single-node caches do NOT need to update directory information; COVERED and BestGuess use non-blocking directory update due to beacon-triggered cache management (refer to src/edge/cache_server/cache_server_worker_base.c::admitObject_())
             if (!Util::isSingleNodeCache(cache_name) && cache_name != Util::COVERED_CACHE_NAME && cache_name != Util::BESTGUESS_CACHE_NAME)
             {
-                directory_update_latency_us = getClosestEdgeWrapperPtr(clientidx)->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency();
+                is_various_latency_distribution ?
+                    directory_update_latency_us = getClosestEdgeWrapperPtr(clientidx)->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency_of_j(beacon_idx) :
+                    directory_update_latency_us = getClosestEdgeWrapperPtr(clientidx)->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency();
             }
         }
 
