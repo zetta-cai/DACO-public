@@ -79,25 +79,6 @@ namespace covered
         lookup_map_t edgeidx_multimapiter_lookup_map; // Lookup map for per-edge local uncached popularity
     };
 
-    // struct LocalUncachedObjinfo
-    // {
-    //     typedef std::multimap<float, uint32_t, std::greater<float>> sorted_popularity_map_t;
-    //     typedef std::unordered_map<uint32_t, sorted_popularity_map_t::iterator> lookup_map_t;
-
-    //     LocalUncachedObjinfo();
-    //     LocalUncachedObjinfo(const LocalUncachedObjinfo& others); // NOTE: we need to redefine copy constructor due to the same reason as follows (see comment of copy assignment operator)
-
-    //     void update(const uint32_t& given_edgeidx, const CollectedPopularity& collected_popularity);
-    //     bool remove(const uint32_t& given_edgeidx);
-    //     void getTopkLocalUncachedPopularities(const uint32_t& covered_topk_edgecnt, std::vector<std::pair<uint32_t, float>>& topk_local_uncached_popularities) const;
-
-    //     // NOTE: default copy assignment operator will copy others.sorted_popularity_map_t::iterator, which could point to sorted_popularity_map_t of temporary variable in the stack and incur segmentation fault -> we must rebuild lookup_map_t based on sorted_popularity_map_t of the current variable
-    //     const struct LocalUncachedObjinfo& operator=(const struct LocalUncachedObjinfo& others);
-
-    //     uint32_t objsize;
-    //     sorted_popularity_map_t sorted_local_uncached_popularity_edgeidx_map; // Local uncached popularity for each edge node not caching yet tracking the object (descending order of local uncached popularity)
-    //     lookup_map_t edgeidx_multimapiter_lookup_map; // Lookup map for per-edge local uncached popularity
-    // };
 
     // LocalUncachedObjinfo of local uncached objects (ONLY for COVERED)
     struct PerkeyLocalUncachedObjinfo
@@ -188,7 +169,7 @@ namespace covered
     bool coveredTryPopularityAggregationForClosestEdge(const Key& cur_key, const uint32_t& clientidx); // Return is_tracked_after_fetch_value
     void coveredVictimSynchronizationForEdge(const uint32_t& given_edgeidx, const bool& only_update_cache_margin_bytes);
     float coveredCalcEvictionCost(const Key& cur_key, const uint32_t& object_size, const std::unordered_set<uint32_t>& placement_edgeset);
-    void coveredPlacementCalculation(const Key& cur_key, const uint32_t& covered_topk_edgecnt, bool& has_best_placement, std::unordered_set<uint32_t>& best_placement_edgeset);
+    void coveredPlacementCalculation(const Key& cur_key, const uint32_t& covered_topk_edgecnt, bool& has_best_placement, std::unordered_set<uint32_t>& best_placement_edgeset, const std::string& cache_name);
     void coveredPlacementDeployment(const Key& key, const Value& fetched_value, const std::unordered_set<uint32_t>& best_placement_edgeset, const Hitflag& hitflag, const std::string& cache_name, const uint64_t miss_latency_us, bool& is_evict, uint32_t& victim_cnt);
     void coveredMetadataUpdate(const Key& cur_key, const uint32_t& notify_edgeidx, const bool& is_neighbor_cached);
 
@@ -1273,9 +1254,14 @@ namespace covered
                 {
                     // TODO, select by latency compair
                     // Randomly select a valid edge node as the target edge node (refer to src/cooperation/directory_table.c::lookup())
-                    WeightTuner& tuner = beacon_edge_wrapper_ptr->getWeightTunerRef();
-                    if(tuner.getIsP2PEnable()){
+                    bool isP2Penabled = false;
+                    if(cache_name == Util::COVERED_CACHE_NAME){
+                        WeightTuner& tuner = beacon_edge_wrapper_ptr->getWeightTunerRef();
+                        isP2Penabled = tuner.getIsP2PEnable();
+                    }
+                    if(isP2Penabled){
                         // check latency of node j in curobj_edge_node_idxes and select the idx with lowest latency
+                        WeightTuner& tuner = beacon_edge_wrapper_ptr->getWeightTunerRef();
                         uint32_t min_latency = std::numeric_limits<uint32_t>::max();
                         target_edge_idx = curobj_edge_node_idxes[0];
                         for (uint32_t i = 0; i < curobj_edge_node_idxes.size(); i++)
@@ -1496,7 +1482,7 @@ namespace covered
                 // Simulate fast cache placement in the beacon node (refer to src/core/covered_cache_manager.c::placementCalculation_())
                 bool has_best_placement = false;
                 std::unordered_set<uint32_t> best_placement_edgeset;
-                coveredPlacementCalculation(cur_key, covered_topk_edgecnt, has_best_placement, best_placement_edgeset);
+                coveredPlacementCalculation(cur_key, covered_topk_edgecnt, has_best_placement, best_placement_edgeset, cache_name);
 
                 if (has_best_placement)
                 {
@@ -1757,11 +1743,20 @@ namespace covered
         curclient_closest_edge_cache_wrapper_ptr->constCustomFunc(GetCollectedPopularityParam::FUNCNAME, &tmp_param);
         const CollectedPopularity tmp_collected_popularity_after_fetch_value = tmp_param.getCollectedPopularityRef();
         const bool is_tracked_after_fetch_value = tmp_collected_popularity_after_fetch_value.isTracked();
+        // print popularity for debug
+        std::ostringstream oss;
+        // oss << "key " << cur_key.getKeyDebugstr() << " at edge " << curclient_closest_edge_idx << " is_tracked_after_fetch_value=" << (is_tracked_after_fetch_value ? "true" : "false") << ", ";
+        // oss << "popularity: " << tmp_collected_popularity_after_fetch_value.getLocalUncachedPopularity() << " Objsize: " << tmp_collected_popularity_after_fetch_value.getObjectSize();
+        // oss << GetCollectedPopularityParam::FUNCNAME << '\n';
+        // std::cout << oss.str() << std::endl;
 
+        
         if (is_tracked_after_fetch_value) // Local uncached yet tracked object
         {
             // Simulate popularity aggregation (refer to src/core/popularity_aggregator.c::updateAggregatedUncachedPopularity())
             perkey_local_uncached_objinfo.addLocalUncachedPopularityForEdge(cur_key, curclient_closest_edge_idx, tmp_collected_popularity_after_fetch_value);
+            // print key popularity info
+            
         } // End of local uncached yet tracked object
         else // Local cached, or local uncached and untracked object
         {
@@ -1958,7 +1953,7 @@ namespace covered
         return eviction_cost;
     }
 
-    void coveredPlacementCalculation(const Key& cur_key, const uint32_t& covered_topk_edgecnt, bool& has_best_placement, std::unordered_set<uint32_t>& best_placement_edgeset)
+    void coveredPlacementCalculation(const Key& cur_key, const uint32_t& covered_topk_edgecnt, bool& has_best_placement, std::unordered_set<uint32_t>& best_placement_edgeset, const std::string& cache_name) 
     {
         EdgeWrapperBase* beacon_edge_wrapper_ptr = getBeaconEdgeWrapperPtr(cur_key);
 
@@ -1987,6 +1982,7 @@ namespace covered
         for (uint32_t i = 0; i < tmp_topk_list_length; i++)
         {
             all_local_uncached_popularity_sum += topk_local_uncached_popularities[i].second;
+            // std::cout << "Local uncached popularity for edge " << topk_local_uncached_popularities[i].first << ": " << topk_local_uncached_popularities[i].second << std::endl;
         }
 
         // (2) Greedy-based placement calculation
@@ -2009,15 +2005,40 @@ namespace covered
             // Calculate admission benefit (refer to src/core/popularity/aggregated_uncached_popularity.c::calcAdmissionBenefit())
             Popularity sum_minus_topi = Util::popularityNonegMinus(all_local_uncached_popularity_sum, topi_local_uncached_popularity_sum);
             const bool is_global_cached = perkey_global_cached_objinfo.isGlobalCached(cur_key);
-            CalcLocalUncachedRewardFuncParam tmp_param(topi_local_uncached_popularity_sum, is_global_cached, sum_minus_topi);
-            beacon_edge_wrapper_ptr->constCustomFunc(CalcLocalUncachedRewardFuncParam::FUNCNAME, &tmp_param); // Simulate admission benefit calculation in beacon edge node
-            const float tmp_admission_benefit = tmp_param.getRewardConstRef();
+            bool isP2Penabled = false;
+            if(cache_name == Util::COVERED_CACHE_NAME){
+                WeightTuner& tuner = beacon_edge_wrapper_ptr->getWeightTunerRef();
+                isP2Penabled = tuner.getIsP2PEnable();
+            }
 
-            // Calculate eviction cost based on tmp_placement_edgeset (refer to src/core/victim_tracker.c::coveredCalcEvictionCost())
-            const float tmp_eviction_cost = coveredCalcEvictionCost(cur_key, tmp_object_size, tmp_placement_edgeset);
+            float tmp_admission_benefit, tmp_eviction_cost, tmp_placement_gain;
+            if(!isP2Penabled){
+                CalcLocalUncachedRewardFuncParam tmp_param(topi_local_uncached_popularity_sum, is_global_cached, sum_minus_topi);
+                beacon_edge_wrapper_ptr->constCustomFunc(CalcLocalUncachedRewardFuncParam::FUNCNAME, &tmp_param); // Simulate admission benefit calculation in beacon edge node
+                tmp_admission_benefit = tmp_param.getRewardConstRef();
 
-            // Calculate placement gain (admission benefit - eviction cost)
-            const float tmp_placement_gain = tmp_admission_benefit - tmp_eviction_cost;
+                // Calculate eviction cost based on tmp_placement_edgeset (refer to src/core/victim_tracker.c::coveredCalcEvictionCost())
+                tmp_eviction_cost = coveredCalcEvictionCost(cur_key, tmp_object_size, tmp_placement_edgeset);
+                
+                // Calculate placement gain (admission benefit - eviction cost)
+                tmp_placement_gain = tmp_admission_benefit - tmp_eviction_cost;
+            }else{
+                // caculate admission benefit with P2P manually
+                // getLocalHitWeights and getCooperativeHitWeights() can get the local and remote hit weights, its a vector, idx i is edge i
+                // std::vector<float> local_hit_weights;
+                // std::vector<std::vector<float>> cooperative_hit_weights;
+                // if is_global_cached
+                // i is topi_edgeidx
+                // N_min = edge node with the smallest latency to i and caches the object 
+                // \text{Priority}_i = \frac{f_{local, o, i}}{S_o} \times \left( \delta_{local, i} - \delta_{remote, i \to N_{\min}} \right)
+                // else
+                // \text{Priority}_i = \frac{\delta_{\text{local},i}\times  f_{\text{local},o,i}}{S_o} + \sum_{j \in \mathcal{N}, j \neq i} \frac{\delta_{\text{remote},j,i}\times  f_{\text{remote},o,j,i}}{S_o} 
+                
+                
+                // tmp_eviction_cost = coveredCalcEvictionCostP2P(cur_key, tmp_object_size, tmp_placement_edgeset);
+                
+            }
+
             if ((topicnt == 1) || (tmp_placement_gain > max_placement_gain))
             {
                 max_placement_gain = tmp_placement_gain;

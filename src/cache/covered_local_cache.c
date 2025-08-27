@@ -608,6 +608,7 @@ namespace covered
         }
 
         collected_popularity = CollectedPopularity(is_key_tracked, local_uncached_popularity, object_size);
+        // std::cout << "key: " << key.getKeyDebugstr() << ", collected popularity: " << collected_popularity.getLocalUncachedPopularity() << std::endl;
 
         return;
     }

@@ -62,11 +62,11 @@ bool DelayConfigReader::validateConfig(const DelayConfig& config) {
         return false;
     }
 
-    // 验证分布类型
-    if (config.distribution != "uniform" && config.distribution != "long_tail") {
-        cerr << "不支持的分布类型: " << config.distribution << endl;
-        return false;
-    }
+    // // 验证分布类型
+    // if (config.distribution != "uniform" && config.distribution != "long_tail") {
+    //     cerr << "不支持的分布类型: " << config.distribution << endl;
+    //     return false;
+    // }
 
     // 验证参数范围
     auto low = config.parameters.at("low");

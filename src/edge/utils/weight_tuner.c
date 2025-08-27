@@ -116,10 +116,12 @@ namespace covered
         
         if(p2p_latency_array.empty()){
             ewma_propagation_latency_crossedge_us_array_ = std::vector<uint32_t>(edgecnt, propagation_latency_crossedge_us);
-        }else{
+        } else {
             ewma_propagation_latency_crossedge_us_array_ = p2p_latency_array; // Use the provided p2p latency array
+            // avg of p2p_latency_array
+            ewma_propagation_latency_crossedge_us_ = std::accumulate(ewma_propagation_latency_crossedge_us_array_.begin(), ewma_propagation_latency_crossedge_us_array_.end(), 0) / edgecnt;
             assert(ewma_propagation_latency_crossedge_us_array_.size() == edgecnt); 
-            is_p2p_enable = true;
+            is_p2p_enable = false;
         }
         
         updateWeightInfo_(); // Update weight_info_ for heuristic weight calculation
@@ -127,7 +129,7 @@ namespace covered
         // Dump initial weight info
         oss.clear();
         oss.str("");
-        oss << "initial cross-edge latency (us): " << ewma_propagation_latency_crossedge_us_ << ", edge-cloud latency (us): " << ewma_propagation_latency_edgecloud_us_ << ", local hit weight: " << weight_info_.getLocalHitWeight() << ", cooperative hit weight: " << weight_info_.getCooperativeHitWeight() << ", remote beacon prob: " << ewma_remote_beacon_prob_;
+        oss << "is p2p latency? " << (is_p2p_enable ? "true" : "false") << ", initial cross-edge latency (us): " << ewma_propagation_latency_crossedge_us_ << ", edge-cloud latency (us): " << ewma_propagation_latency_edgecloud_us_ << ", local hit weight: " << weight_info_.getLocalHitWeight() << ", cooperative hit weight: " << weight_info_.getCooperativeHitWeight() << ", remote beacon prob: " << ewma_remote_beacon_prob_;
         Util::dumpNormalMsg(instance_name_, oss.str());
     }
 
@@ -434,23 +436,6 @@ namespace covered
         return;
     }
 
-    // void WeightTuner::updateEwmaRemoteBeaconProbArray_() {
-    //     float total_access = local_beacon_access_cnt_ + remote_beacon_access_cnt_;
-    //     assert(total_access >= BEACON_ACCESS_CNT_FOR_PROB_WINDOW_SIZE);
-    
-    //     for (size_t j = 0; j < remote_beacon_access_cnt_array_.size(); ++j) {
-    //         // 计算节点j的当前窗口概率
-    //         float curr_prob = remote_beacon_access_cnt_array_[j] / total_access;
-    //         // EWMA更新
-    //         // ewma_remote_beacon_prob_array_[j] = (1 - EWMA_ALPHA) * ewma_remote_beacon_prob_array_[j] + EWMA_ALPHA * curr_prob;
-    //     }
-    
-    //     // 重置窗口计数
-    //     local_beacon_access_cnt_ = 0.0f;
-    //     std::fill(remote_beacon_access_cnt_array_.begin(), remote_beacon_access_cnt_array_.end(), 0.0f);
-    //     remote_beacon_access_cnt_ = 0.0f;
-    // }
-
     void WeightTuner::updateWeightInfo_()
     {
         // NOTE: NO need to acquire a write lock, which is NO need in constructor, or has been done in tuneWeightInfo()
@@ -500,29 +485,6 @@ namespace covered
         return;
     }
 
-    // void WeightTuner::updateWeightInfoP2P_()
-    // {
-    //     // NOTE: NO need to acquire a write lock, which is NO need in constructor, or has been done in tuneWeightInfo()
-
-    //     // Calculate latency of different accesses
-    //     const Weight local_hit_latency = ewma_propagation_latency_clientedge_us_;
-    //     // const Weight cooperative_hit_latency = ewma_propagation_latency_clientedge_us_ + (ewma_remote_beacon_prob_ + 1) * ewma_propagation_latency_crossedge_us_;
-    //     // const Weight global_miss_latency = ewma_propagation_latency_clientedge_us_ + ewma_remote_beacon_prob_ * ewma_propagation_latency_crossedge_us_ + ewma_propagation_latency_edgecloud_us_;
-    //     std::vector<Weight> cooperative_hit_weights;
-    //     for(int i = 0; i < ewma_propagation_latency_crossedge_us_array_.size(); i++){
-    //         const Weight cooperative_hit_latency = ewma_propagation_latency_clientedge_us_ + (ewma_remote_beacon_prob_ + 1) * ewma_propagation_latency_crossedge_us_array_[i];
-    //         const Weight global_miss_latency = ewma_propagation_latency_clientedge_us_ + ewma_remote_beacon_prob_ * ewma_propagation_latency_crossedge_us_array_[i] + ewma_propagation_latency_edgecloud_us_;
-    //         const Weight cooperative_hit_weight = global_miss_latency - cooperative_hit_latency; // w2 = ewma_propagation_latency_edgecloud_us_ - ewma_propagation_latency_crossedge_us_
-           
-    //     }
-    //     Weight average_cooperative_hit_weight = std::accumulate(cooperative_hit_weights.begin(), cooperative_hit_weights.end(), 0.0) / cooperative_hit_weights.size();
-    //     weight_info_ = WeightInfo(local_hit_latency, average_cooperative_hit_weight, cooperative_hit_weights);
-
-    //     // 
-
-
-    //     return;
-    // }
     uint32_t WeightTuner::getEwmaCrossedgeLatency_of_j(int j){
         return ewma_propagation_latency_crossedge_us_array_[j];
     }
