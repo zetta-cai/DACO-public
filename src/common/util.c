@@ -182,6 +182,8 @@ namespace covered
     // Propagation latency simulation
     const std::string Util::PROPAGATION_SIMULATION_UNIFORM_DISTNAME("uniform");
     const std::string Util::PROPAGATION_SIMULATION_CONSTANT_DISTNAME("constant");
+    const std::string Util::PROPAGATION_SIMULATION_POISSON_DISTNAME("poisson");
+    const std::string Util::PROPAGATION_SIMULATION_PARETO_DISTNAME("pareto");
     const uint32_t Util::PROPAGATION_SIMULATION_CLIENT_SEED_BASE = 0;
     const uint32_t Util::PROPAGATION_SIMULATION_CLIENT_SEED_FACTOR = 10;
     const uint32_t Util::PROPAGATION_SIMULATION_EDGE_SEED_BASE = 10000;

@@ -257,7 +257,56 @@ namespace covered
             assert(propagation_latency >= propagation_latency_lbound_us_);
             assert(propagation_latency <= propagation_latency_rbound_us_);
         }
-        else
+        else if (propagation_latency_distname_.rfind(Util::PROPAGATION_SIMULATION_POISSON_DISTNAME, 0) == 0)
+        {
+            // 提取泊松分布参数λ（格式：POISSON_DISTNAME + "_" + lambda）
+            std::string lambda_str = propagation_latency_distname_.substr(Util::PROPAGATION_SIMULATION_POISSON_DISTNAME.length() + 1);
+            double lambda = std::stod(lambda_str);
+            assert(lambda > 0.0 && "Poisson distribution lambda must be positive");
+            assert(lambda >= propagation_latency_lbound_us_ && lambda <= propagation_latency_rbound_us_ && "Poisson distribution lambda must be within [lbound, rbound]");
+            // 生成泊松分布随机数（均值为lambda）
+            std::poisson_distribution<uint32_t> poisson_dist(lambda);
+            propagation_latency = poisson_dist(propagation_latency_randgen_);
+    
+            // 截断处理：超出范围时取边界值
+            if (propagation_latency < propagation_latency_lbound_us_)
+            {
+                propagation_latency = propagation_latency_lbound_us_;
+            }
+            else if (propagation_latency > propagation_latency_rbound_us_)
+            {
+                propagation_latency = propagation_latency_rbound_us_;
+            }
+        }
+        else if (propagation_latency_distname_.rfind(Util::PROPAGATION_SIMULATION_PARETO_DISTNAME, 0) == 0)
+        {
+            // 提取帕累托分布参数k（格式：PARETO_DISTNAME + "_" + k）
+            std::string k_str = propagation_latency_distname_.substr(Util::PROPAGATION_SIMULATION_PARETO_DISTNAME.length() + 1);
+            double k = std::stod(k_str);
+            assert(k > 0.0 && "Pareto distribution k must be positive");
+                
+            // 定义边界参数
+            const double L = propagation_latency_lbound_us_;  // 左边界
+            const double U = propagation_latency_rbound_us_;  // 右边界
+
+            // 生成(0,1)区间的均匀随机数（用于逆变换）
+            std::uniform_real_distribution<double> uniform_dist(0.0, 1.0);
+            double u = uniform_dist(propagation_latency_randgen_);  // 复用已有的随机数生成器
+            if (u >= 1.0) u = 1.0 - 1e-10;  // 避免分母为0
+            // 计算缩放因子和延迟值（对应Python公式）
+            const double factor = 1.0 - pow(L / U, k);
+            const double term = 1.0 - u * factor;
+            assert(term > 0.0 && "Invalid term in Pareto calculation (must be positive)");
+
+            // 计算最终延迟并转换为整数
+            const double raw_delay = L * pow(term, -1.0 / k);
+            propagation_latency = static_cast<uint32_t>(raw_delay);
+
+            // 验证结果在有效范围内
+            assert(propagation_latency >= L && propagation_latency <= U 
+                && "Pareto generated latency out of [left, right] range");
+        }
+        else 
         {
             std::ostringstream oss;
             oss << "propagation latency distribution " << propagation_latency_distname_ << " is not supported!" << std::endl;

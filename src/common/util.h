@@ -226,6 +226,8 @@ namespace covered
         // Propagation latency simulation
         static const std::string PROPAGATION_SIMULATION_UNIFORM_DISTNAME;
         static const std::string PROPAGATION_SIMULATION_CONSTANT_DISTNAME;
+        static const std::string PROPAGATION_SIMULATION_POISSON_DISTNAME;
+        static const std::string PROPAGATION_SIMULATION_PARETO_DISTNAME;
         // NOTE: just ensure each propagation simulator param uses a unique random seed; actually it is okay for different types of propagation latency to use the same random seed due to different distribution ranges, but we still ensure unique random seeds now
         static const uint32_t PROPAGATION_SIMULATION_CLIENT_SEED_BASE;
         static const uint32_t PROPAGATION_SIMULATION_CLIENT_SEED_FACTOR;

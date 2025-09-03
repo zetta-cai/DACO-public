@@ -70,6 +70,9 @@ namespace covered
         void updateEwmaEdgecloudLatency(const uint32_t& cur_propagation_latency_edgecloud_us); // NOTE: will invoke updateWeightInfo_ after update edge-cloud latency
         void updateEwmaCrossedgeLatency_of_j(int j, const uint32_t& cur_latency);
         uint32_t getEwmaCrossedgeLatency_of_j(int j);
+
+        float getEwmaRemoteBeaconProb() const;
+        // ewma_remote_beacon_prob_
         //void tuneWeightInfo();
 
         uint64_t getSizeForCapacity() const;

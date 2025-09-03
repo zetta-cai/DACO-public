@@ -169,6 +169,8 @@ namespace covered
     bool coveredTryPopularityAggregationForClosestEdge(const Key& cur_key, const uint32_t& clientidx); // Return is_tracked_after_fetch_value
     void coveredVictimSynchronizationForEdge(const uint32_t& given_edgeidx, const bool& only_update_cache_margin_bytes);
     float coveredCalcEvictionCost(const Key& cur_key, const uint32_t& object_size, const std::unordered_set<uint32_t>& placement_edgeset);
+    float coveredCalcEvictionCostP2P(const Key& cur_key, const uint32_t& object_size, const std::unordered_set<uint32_t>& placement_edgeset);
+    
     void coveredPlacementCalculation(const Key& cur_key, const uint32_t& covered_topk_edgecnt, bool& has_best_placement, std::unordered_set<uint32_t>& best_placement_edgeset, const std::string& cache_name);
     void coveredPlacementDeployment(const Key& key, const Value& fetched_value, const std::unordered_set<uint32_t>& best_placement_edgeset, const Hitflag& hitflag, const std::string& cache_name, const uint64_t miss_latency_us, bool& is_evict, uint32_t& victim_cnt);
     void coveredMetadataUpdate(const Key& cur_key, const uint32_t& notify_edgeidx, const bool& is_neighbor_cached);
@@ -1953,6 +1955,171 @@ namespace covered
         return eviction_cost;
     }
 
+    float coveredCalcEvictionCostP2P(const Key& cur_key, const uint32_t& object_size, const std::unordered_set<uint32_t>& placement_edgeset)
+    {
+        assert(placement_edgeset.size() > 0);
+
+        EdgeWrapperBase* beacon_edge_wrapper_ptr = getBeaconEdgeWrapperPtr(cur_key);
+
+        float eviction_cost = 0.0;
+        std::unordered_map<Key, std::unordered_set<uint32_t>, KeyHasher> pervictim_edgeset;
+        std::unordered_map<Key, std::list<VictimCacheinfo>, KeyHasher> pervictim_cacheinfos;
+
+        // (1) Find victims from placement edgeset (refer to src/core/victim_tracker.c::findVictimsForPlacement_())
+
+        for (std::unordered_set<uint32_t>::const_iterator placement_edgeset_const_iter = placement_edgeset.begin(); placement_edgeset_const_iter != placement_edgeset.end(); placement_edgeset_const_iter++)
+        {
+            uint32_t tmp_edge_idx = *placement_edgeset_const_iter;
+            EdgeWrapperBase* tmp_edge_wrapper_ptr = getEdgeWrapperPtr(tmp_edge_idx);
+
+            // NOTE: victim information of the current edge node MUST exist
+            EvictNodeinfo tmp_evictinfo;
+            bool is_exist_evictinfo = peredge_evictinfo.getEvictinfo(tmp_edge_idx, tmp_evictinfo);
+            if (!is_exist_evictinfo) // No eviction information -> treat the edge node as empty
+            {
+                continue;
+            }
+            const uint64_t tmp_cache_margin_bytes = tmp_evictinfo.cache_margin_bytes;
+            const std::list<VictimCacheinfo>& tmp_synced_victim_cacheinfos = tmp_evictinfo.victim_cacheinfos;
+
+            // Check if the current edge node needs more victims, and fetch more victims for the current edge node if necessary
+            uint64_t tmp_required_bytes = (object_size > tmp_cache_margin_bytes) ? (object_size - tmp_cache_margin_bytes) : 0;
+            uint32_t tmp_synced_victim_bytes = 0; // Total bytes of victims synced by the current edge node
+            bool need_extra_victims = false;
+            std::list<VictimCacheinfo> tmp_extra_victim_cacheinfos;
+            if (tmp_required_bytes > 0) // Without sufficient cache space
+            {
+                // Sum up object sizes of synced victims in the current edge node
+                for (std::list<VictimCacheinfo>::const_iterator cacheinfo_list_const_iter = tmp_synced_victim_cacheinfos.begin(); cacheinfo_list_const_iter != tmp_synced_victim_cacheinfos.end(); cacheinfo_list_const_iter++) // Note that victim_cacheinfos_ follows the ascending order of local rewards
+                {
+                    uint32_t tmp_victim_object_size = 0;
+                    cacheinfo_list_const_iter->getObjectSize(tmp_victim_object_size);
+                    tmp_synced_victim_bytes += tmp_victim_object_size;
+                }
+
+                if (tmp_synced_victim_bytes < tmp_required_bytes)
+                {
+                    // Fetch more victims for the current edge node (refer to src/edge/cache_server/cache_server_victim_fetch_processor.c::processVictimFetchRequest_())
+                    bool has_victim_key = tmp_edge_wrapper_ptr->getEdgeCachePtr()->fetchVictimCacheinfosForRequiredSize(tmp_extra_victim_cacheinfos, object_size); // NOTE: victim cacheinfos from local edge cache MUST be complete
+                    assert(has_victim_key == true);
+
+                    need_extra_victims = true;
+                }
+            }
+
+            // Final victims of the current edge node
+            const std::list<VictimCacheinfo>* tmp_final_victim_cacheinfos_ptr = NULL;
+            if (need_extra_victims)
+            {
+                tmp_final_victim_cacheinfos_ptr = &tmp_extra_victim_cacheinfos;
+            }
+            else
+            {
+                tmp_final_victim_cacheinfos_ptr = &tmp_synced_victim_cacheinfos;
+            }
+            assert(tmp_final_victim_cacheinfos_ptr != NULL);
+
+            // Find victims in the current edge node if without sufficient cache space
+            uint64_t tmp_saved_bytes = 0;
+            if (tmp_required_bytes > 0) // Without sufficient cache space
+            {
+                assert(tmp_final_victim_cacheinfos_ptr->size() > 0);
+
+                for (std::list<VictimCacheinfo>::const_iterator cacheinfo_list_const_iter = tmp_final_victim_cacheinfos_ptr->begin(); cacheinfo_list_const_iter != tmp_final_victim_cacheinfos_ptr->end(); cacheinfo_list_const_iter++) // Note that victim_cacheinfos_ follows the ascending order of local rewards
+                {
+                    const VictimCacheinfo& tmp_victim_cacheinfo = *cacheinfo_list_const_iter;
+                    assert(tmp_victim_cacheinfo.isComplete()); // NOTE: victim cacheinfos in edge-level victim metadata of victim tracker MUST be complete
+                    const Key& tmp_victim_key = tmp_victim_cacheinfo.getKey();
+
+                    // Update per-victim edgeset
+                    if (pervictim_edgeset.find(tmp_victim_key) == pervictim_edgeset.end())
+                    {
+                        pervictim_edgeset.insert(std::pair<Key, std::unordered_set<uint32_t>>(tmp_victim_key, std::unordered_set<uint32_t>()));
+                    }
+                    pervictim_edgeset[tmp_victim_key].insert(tmp_edge_idx);
+
+                    // Update per-victim cacheinfos
+                    if (pervictim_cacheinfos.find(tmp_victim_key) == pervictim_cacheinfos.end())
+                    {
+                        pervictim_cacheinfos.insert(std::pair<Key, std::list<VictimCacheinfo>>(tmp_victim_key, std::list<VictimCacheinfo>()));
+                    }
+                    pervictim_cacheinfos[tmp_victim_key].push_back(tmp_victim_cacheinfo);
+
+                    // Check if we have found sufficient victims for the required bytes
+                    ObjectSize tmp_victim_object_size = 0;
+                    bool with_complete_victim_object_size = tmp_victim_cacheinfo.getObjectSize(tmp_victim_object_size);
+                    assert(with_complete_victim_object_size == true); // NOTE: victim cacheinfo in victim_cacheinfos_ MUST be complete
+                    tmp_saved_bytes += tmp_victim_object_size;
+
+                    if (tmp_saved_bytes >= tmp_required_bytes) // With sufficient victims for the required bytes
+                    {
+                        break;
+                    }
+                } // End of tmp_victim_cacheinfos_ref in the tmp_edge_idx
+            } // End of (object_size > tmp_cache_margin_bytes)
+
+            assert(tmp_saved_bytes >= tmp_required_bytes);
+        } // End of involved edge nodes
+
+        // (2) Calculate eviction cost (refer to src/core/victim_tracker.c::coveredCalcEvictionCost())
+
+        // Enumerate found victims to calculate eviction cost
+        for (std::unordered_map<Key, std::unordered_set<uint32_t>, KeyHasher>::const_iterator pervictim_edgeset_const_iter = pervictim_edgeset.begin(); pervictim_edgeset_const_iter != pervictim_edgeset.end(); pervictim_edgeset_const_iter++)
+        {
+            const Key& tmp_victim_key = pervictim_edgeset_const_iter->first;
+            const std::unordered_set<uint32_t>& tmp_victim_edgeset_ref = pervictim_edgeset_const_iter->second;
+
+            // Check if the victim edgeset is the last copies of the given key (refer to src/core/victim_tracker.c::isLastCopiesForVictimEdgeset_())
+            bool is_last_copies = true;
+            std::vector<uint32_t> tmp_victim_cached_edge_node_idxes;
+            bool is_exist_victim_global_cached_objinfo = perkey_global_cached_objinfo.getEdgeNodeIdxes(tmp_victim_key, tmp_victim_cached_edge_node_idxes);
+            assert(is_exist_victim_global_cached_objinfo);
+
+            for (uint32_t i = 0; i < tmp_victim_cached_edge_node_idxes.size(); i++)
+            {
+                uint32_t tmp_victim_cached_edge_idx = tmp_victim_cached_edge_node_idxes[i];
+                if (tmp_victim_edgeset_ref.find(tmp_victim_cached_edge_idx) == tmp_victim_edgeset_ref.end())
+                {
+                    is_last_copies = false;
+                    break;
+                }
+            }
+
+            // NOTE: we add each pair of edgeidx and cacheinfo of a victim simultaneously before -> tmp_victim_cacheinfos MUST exist and has the same size as tmp_victim_edgeset_ref
+            assert(pervictim_cacheinfos.find(tmp_victim_key) != pervictim_cacheinfos.end());
+            const std::list<VictimCacheinfo>& tmp_victim_cacheinfos = pervictim_cacheinfos[tmp_victim_key];
+            if (tmp_victim_cacheinfos.size() != tmp_victim_edgeset_ref.size())
+            {
+                std::ostringstream oss;
+                oss << "victim " << tmp_victim_key.getKeyDebugstr() << " has " << tmp_victim_cacheinfos.size() << " cacheinfos but " << tmp_victim_edgeset_ref.size() << " edges in edgeset";
+                Util::dumpErrorMsg("coveredCalcEvictionCostP2P()", oss.str());
+                exit(1);
+            }
+
+            // Calculate eviction cost based on is_last_copies and tmp_victim_cacheinfos
+            for (std::list<VictimCacheinfo>::const_iterator victim_cacheinfo_list_const_iter = tmp_victim_cacheinfos.begin(); victim_cacheinfo_list_const_iter != tmp_victim_cacheinfos.end(); victim_cacheinfo_list_const_iter++)
+            {
+                assert(victim_cacheinfo_list_const_iter->isComplete()); // NOTE: victim cacheinfo from edge-level victim metadata of victim tracker MUST be complete
+
+                // Get local cached and redirected cache popularity of the given victim at the given edge node
+                Popularity tmp_local_cached_popularity = 0.0;
+                Popularity tmp_redirected_cached_popularity = 0.0;
+                bool with_complete_local_cached_popularity = victim_cacheinfo_list_const_iter->getLocalCachedPopularity(tmp_local_cached_popularity);
+                assert(with_complete_local_cached_popularity); // NOTE: victim cacheinfo of pervictim_cacheinfos (from peredge_victim_metadata_ in victim tracker) MUST be complete
+                bool with_complete_redirected_cached_popularity = victim_cacheinfo_list_const_iter->getRedirectedCachedPopularity(tmp_redirected_cached_popularity);
+                assert(with_complete_redirected_cached_popularity); // NOTE: victim cacheinfo of pervictim_cacheinfos (from peredge_victim_metadata_ in victim tracker) MUST be complete
+
+                CalcLocalCachedRewardFuncParam tmp_param(tmp_local_cached_popularity, tmp_redirected_cached_popularity, is_last_copies);
+                beacon_edge_wrapper_ptr->constCustomFunc(CalcLocalCachedRewardFuncParam::FUNCNAME, &tmp_param); // Simulate eviction cost calculation in the beacon edge node
+                Reward tmp_eviction_cost = tmp_param.getRewardConstRef();
+                eviction_cost += tmp_eviction_cost;
+            } // End of victim cacheinfos of the current victim
+        } // End of involved victims
+
+        return eviction_cost;
+    }
+
+
     void coveredPlacementCalculation(const Key& cur_key, const uint32_t& covered_topk_edgecnt, bool& has_best_placement, std::unordered_set<uint32_t>& best_placement_edgeset, const std::string& cache_name) 
     {
         EdgeWrapperBase* beacon_edge_wrapper_ptr = getBeaconEdgeWrapperPtr(cur_key);
@@ -1991,6 +2158,10 @@ namespace covered
         const uint32_t tmp_object_size = local_uncached_objinfo.objsize;
         std::unordered_set<uint32_t> tmp_placement_edgeset;
         float topi_local_uncached_popularity_sum = 0.0;
+        float beacon_prob = beacon_edge_wrapper_ptr->getWeightTunerRef().getEwmaRemoteBeaconProb();
+        uint32_t beacon_idx = getBeaconEdgeidx(cur_key);
+        uint32_t cloud_access_latency_us = beacon_edge_wrapper_ptr->getEdgeTocloudPropagationSimulatorParamPtr()->genPropagationLatency();
+
         for (uint32_t topicnt = 1; topicnt <= tmp_topk_list_length; topicnt++)
         {
             // Consider topi edge nodes ordered by local uncached popularity in a descending order
@@ -2022,20 +2193,56 @@ namespace covered
                 
                 // Calculate placement gain (admission benefit - eviction cost)
                 tmp_placement_gain = tmp_admission_benefit - tmp_eviction_cost;
-            }else{
-                // caculate admission benefit with P2P manually
+            } else {
+                // (1-p) * (l_i,N * f_i - l_k,N * f_k) - SUM (l_i,j - l_k,j) * f_j
+                // 
+                // calculate admission benefit with P2P manually
                 // getLocalHitWeights and getCooperativeHitWeights() can get the local and remote hit weights, its a vector, idx i is edge i
                 // std::vector<float> local_hit_weights;
                 // std::vector<std::vector<float>> cooperative_hit_weights;
-                // if is_global_cached
-                // i is topi_edgeidx
-                // N_min = edge node with the smallest latency to i and caches the object 
-                // \text{Priority}_i = \frac{f_{local, o, i}}{S_o} \times \left( \delta_{local, i} - \delta_{remote, i \to N_{\min}} \right)
-                // else
-                // \text{Priority}_i = \frac{\delta_{\text{local},i}\times  f_{\text{local},o,i}}{S_o} + \sum_{j \in \mathcal{N}, j \neq i} \frac{\delta_{\text{remote},j,i}\times  f_{\text{remote},o,j,i}}{S_o} 
-                
-                
-                // tmp_eviction_cost = coveredCalcEvictionCostP2P(cur_key, tmp_object_size, tmp_placement_edgeset);
+
+                if(is_global_cached){
+                    // get cached nodes from global_cached_objinfo
+                    std::vector<uint32_t> cached_edge_nodes;
+                    bool is_exist_global_cached_objinfo = perkey_global_cached_objinfo.getEdgeNodeIdxes(cur_key, cached_edge_nodes);
+                    assert(is_exist_global_cached_objinfo);
+                    
+                    // if is_global_cached
+                    // i is topi_edgeidx
+                    // N_min = edge node with the smallest latency to i and caches the object 
+                    // you can get latency i j from debug_p2p_latency_matrix[i][j]
+                    // find N_min first
+                    //  N_min = edge node with the smallest latency to i and caches the object 
+                    // compare latency to i select the smallest one 
+                    uint32_t N_min = cached_edge_nodes[0];
+                    for(uint32_t idx = 1; idx < cached_edge_nodes.size(); idx++){
+                        uint32_t candidate = cached_edge_nodes[idx];
+                        if(debug_p2p_latency_matrix[topi_edgeidx][candidate] < debug_p2p_latency_matrix[topi_edgeidx][N_min]){
+                            N_min = candidate;
+                        }
+                    }
+                    // get \delta_{local,i} & = & L_{gm,i} - L_{lh,i}  & = & (1 - p) \ell_{cache,i,N_{beacon}} + \ell_{backend} 
+                    float delta_local_i = (1.0 - beacon_prob) * debug_p2p_latency_matrix[beacon_idx][topi_edgeidx] + 1.0 * cloud_access_latency_us;
+                    // \delta_{remote,i,j} & = & L_{gm,i} - L_{rh,i,j} = \ell_{backend} - \ell_{cache,i,j}
+                    float delta_remote_i_Nmin = cloud_access_latency_us - debug_p2p_latency_matrix[topi_edgeidx][N_min];
+                    // \text{Priority}_i = \frac{f_{local, o, i}}{S_o} \times \left( \delta_{local, i} - \delta_{remote, i \to N_{\min}} \right}
+                    tmp_admission_benefit = (topi_local_uncached_popularity) * (delta_local_i - delta_remote_i_Nmin);
+                } else {
+                    // i is topi_edgeidx
+                   
+                    // \text{Priority}_i = \frac{\delta_{\text{local},i}\times  f_{\text{local},o,i}}{S_o} + \sum_{j \in \mathcal{N}, j \neq i} \frac{\delta_{\text{remote},j,i}\times  f_{\text{remote},o,j,i}}{S_o} 
+                    float delta_local_i = (1.0 - beacon_prob) * debug_p2p_latency_matrix[beacon_idx][topi_edgeidx] + 1.0 * cloud_access_latency_us;
+                    float remote_addmission_benefit = 0.0;
+                    for (uint32_t j = topicnt; j <= tmp_topk_list_length; j++){
+                        uint32_t j_edgeidx = topk_local_uncached_popularities[j - 1].first;
+                        float delta_remote_i_j = cloud_access_latency_us - debug_p2p_latency_matrix[topi_edgeidx][j_edgeidx];
+                        remote_addmission_benefit += delta_remote_i_j * topk_local_uncached_popularities[j - 1].second;
+                    }
+                    tmp_admission_benefit = topi_local_uncached_popularity * delta_local_i + remote_addmission_benefit;
+                }
+                // Calculate eviction cost based on tmp_placement_edgeset (refer to src/core/victim_tracker.c::coveredCalcEvictionCostP2P())
+                tmp_eviction_cost = coveredCalcEvictionCostP2P(cur_key, tmp_object_size, tmp_placement_edgeset);
+                tmp_placement_gain = tmp_admission_benefit - tmp_eviction_cost;
                 
             }
 

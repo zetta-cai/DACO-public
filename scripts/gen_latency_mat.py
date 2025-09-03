@@ -72,8 +72,15 @@ def generate_symmetric_delay_matrix(n, dist, params, bounds):
     raw_delays = None
     if dist == "long_tail":
         raw_values = pareto.rvs(k, size=num_upper)
-        # Scale to bounds and convert to integer
-        raw_delays = np.round(left_bound + (raw_values - 1) * (right_bound - left_bound) / 10).astype(np.int64)
+        # raw_delays = raw_values.astype(np.int64)
+        
+        # u = F_X(x) = 1 - x^{-k}
+        u = 1.0 - np.power(raw_values, -k)
+
+        #    x = L * (1 - u * (1 - (L/U)**k))**(-1/k)
+        factor = 1.0 - (left_bound / right_bound)**k
+        raw_delays = left_bound * np.power(1.0 - u * factor, -1.0 / k)
+        raw_delays = raw_delays.astype(np.int64)
     elif dist == "poisson":
         # Poisson already generates integers, but cast to int64 for processing
         raw_delays = dist_func.rvs(size=num_upper).astype(np.int64)

@@ -485,10 +485,13 @@ namespace covered
         return;
     }
 
-    uint32_t WeightTuner::getEwmaCrossedgeLatency_of_j(int j){
+    uint32_t WeightTuner::getEwmaCrossedgeLatency_of_j(int j) {
         return ewma_propagation_latency_crossedge_us_array_[j];
     }
-    bool WeightTuner::getIsP2PEnable(){
+    bool WeightTuner::getIsP2PEnable() {
         return is_p2p_enable;
+    }
+    float WeightTuner::getEwmaRemoteBeaconProb() const {
+        return ewma_remote_beacon_prob_;
     }
 }
