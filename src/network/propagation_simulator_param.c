@@ -31,6 +31,8 @@ namespace covered
             propagation_latency_delta = propagation_latency_rbound_us - propagation_latency_lbound_us;
             assert(propagation_latency_delta > 0); // Ensure the range is valid
         }
+        // print latency bound
+        // std::cout << "Propagation latency distribution: " << propagation_latency_distname << " with range [" << propagation_latency_lbound_us << ", " << propagation_latency_rbound_us << "] us" << std::endl;
 
         realnet_option_ = realnet_option;
 
@@ -262,8 +264,9 @@ namespace covered
             // 提取泊松分布参数λ（格式：POISSON_DISTNAME + "_" + lambda）
             std::string lambda_str = propagation_latency_distname_.substr(Util::PROPAGATION_SIMULATION_POISSON_DISTNAME.length() + 1);
             double lambda = std::stod(lambda_str);
+            // std::cout<<"lambda: "<<lambda<<"lbound: "<<propagation_latency_lbound_us_<<" rbound: "<<propagation_latency_rbound_us_<<std::endl;
             assert(lambda > 0.0 && "Poisson distribution lambda must be positive");
-            assert(lambda >= propagation_latency_lbound_us_ && lambda <= propagation_latency_rbound_us_ && "Poisson distribution lambda must be within [lbound, rbound]");
+            assert(lambda >= (double)propagation_latency_lbound_us_ && lambda <= (double)propagation_latency_rbound_us_ && "Poisson distribution lambda must be within [lbound, rbound]");
             // 生成泊松分布随机数（均值为lambda）
             std::poisson_distribution<uint32_t> poisson_dist(lambda);
             propagation_latency = poisson_dist(propagation_latency_randgen_);

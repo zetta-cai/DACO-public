@@ -89,7 +89,17 @@ namespace covered
         // Allocate client-to-edge propagation simulator param
         uint32_t local_propagation_simulator_idx = 0;
         uint32_t client_toedge_propagation_simulation_random_seed = Util::getPropagationSimulationRandomSeedForClient(client_idx, local_propagation_simulator_idx);
-        client_toedge_propagation_simulator_param_ptr_ = new PropagationSimulatorParam((NodeWrapperBase*)this, cli_latency_info.getPropagationLatencyDistname(), cli_latency_info.getPropagationLatencyClientedgeLboundUs(), cli_latency_info.getPropagationLatencyClientedgeAvgUs(), cli_latency_info.getPropagationLatencyClientedgeRboundUs(), client_toedge_propagation_simulation_random_seed, Config::getPropagationItemBufferSizeClientToedge(), realnet_option);
+        std::string client_and_cloud_distname;
+        std::string crossedge_distname = cli_latency_info.getPropagationLatencyDistname();
+        if (cli_latency_info.getPropagationLatencyDistname() == Util::PROPAGATION_SIMULATION_UNIFORM_DISTNAME)
+        {
+            client_and_cloud_distname = Util::PROPAGATION_SIMULATION_UNIFORM_DISTNAME;
+        }
+        else
+        {
+            client_and_cloud_distname = Util::PROPAGATION_SIMULATION_CONSTANT_DISTNAME; // Use uniform distribution for client and cloud propagation latency
+        }
+        client_toedge_propagation_simulator_param_ptr_ = new PropagationSimulatorParam((NodeWrapperBase*)this, client_and_cloud_distname, cli_latency_info.getPropagationLatencyClientedgeLboundUs(), cli_latency_info.getPropagationLatencyClientedgeAvgUs(), cli_latency_info.getPropagationLatencyClientedgeRboundUs(), client_toedge_propagation_simulation_random_seed, Config::getPropagationItemBufferSizeClientToedge(), realnet_option);
         assert(client_toedge_propagation_simulator_param_ptr_ != NULL);
 
         // Prepare perclient_workercnt worker parameters

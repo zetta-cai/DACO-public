@@ -101,19 +101,29 @@ namespace covered
         // Allocate edge-to-client propagation simulator param
         uint32_t local_propagation_simulator_idx = 0;
         uint32_t edge_toclient_propagation_simulation_random_seed = Util::getPropagationSimulationRandomSeedForClient(edge_idx, local_propagation_simulator_idx);
-        edge_toclient_propagation_simulator_param_ptr_ = new PropagationSimulatorParam((NodeWrapperBase*)this, cli_latency_info.getPropagationLatencyDistname(), cli_latency_info.getPropagationLatencyClientedgeLboundUs(), cli_latency_info.getPropagationLatencyClientedgeAvgUs(), cli_latency_info.getPropagationLatencyClientedgeRboundUs(), edge_toclient_propagation_simulation_random_seed, Config::getPropagationItemBufferSizeEdgeToclient(), realnet_option);
+        std::string client_and_cloud_distname;
+        std::string crossedge_distname = cli_latency_info.getPropagationLatencyDistname();
+        if (cli_latency_info.getPropagationLatencyDistname() == Util::PROPAGATION_SIMULATION_UNIFORM_DISTNAME)
+        {
+            client_and_cloud_distname = Util::PROPAGATION_SIMULATION_UNIFORM_DISTNAME;
+        }
+        else
+        {
+            client_and_cloud_distname = Util::PROPAGATION_SIMULATION_CONSTANT_DISTNAME; // Use uniform distribution for client and cloud propagation latency
+        }
+        edge_toclient_propagation_simulator_param_ptr_ = new PropagationSimulatorParam((NodeWrapperBase*)this, client_and_cloud_distname, cli_latency_info.getPropagationLatencyClientedgeLboundUs(), cli_latency_info.getPropagationLatencyClientedgeAvgUs(), cli_latency_info.getPropagationLatencyClientedgeRboundUs(), edge_toclient_propagation_simulation_random_seed, Config::getPropagationItemBufferSizeEdgeToclient(), realnet_option);
         assert(edge_toclient_propagation_simulator_param_ptr_ != NULL);
 
         // Allocate edge-to-edge propagation simulator param
         local_propagation_simulator_idx += 1;
         uint32_t edge_toedge_propagation_simulation_random_seed = Util::getPropagationSimulationRandomSeedForClient(edge_idx, local_propagation_simulator_idx);
-        edge_toedge_propagation_simulator_param_ptr_ = new PropagationSimulatorParam((NodeWrapperBase*)this, cli_latency_info.getPropagationLatencyDistname(), cli_latency_info.getPropagationLatencyCrossedgeLboundUs(), cli_latency_info.getPropagationLatencyCrossedgeAvgUs(), cli_latency_info.getPropagationLatencyCrossedgeRboundUs(), edge_toedge_propagation_simulation_random_seed, Config::getPropagationItemBufferSizeEdgeToedge(), realnet_option, _p2p_latency_array);
+        edge_toedge_propagation_simulator_param_ptr_ = new PropagationSimulatorParam((NodeWrapperBase*)this, crossedge_distname, cli_latency_info.getPropagationLatencyCrossedgeLboundUs(), cli_latency_info.getPropagationLatencyCrossedgeAvgUs(), cli_latency_info.getPropagationLatencyCrossedgeRboundUs(), edge_toedge_propagation_simulation_random_seed, Config::getPropagationItemBufferSizeEdgeToedge(), realnet_option, _p2p_latency_array);
         assert(edge_toedge_propagation_simulator_param_ptr_ != NULL);
 
         // Allocate edge-to-cloud propagation simulator param
         local_propagation_simulator_idx += 1;
         uint32_t edge_tocloud_propagation_simulation_random_seed = Util::getPropagationSimulationRandomSeedForClient(edge_idx, local_propagation_simulator_idx);
-        edge_tocloud_propagation_simulator_param_ptr_ = new PropagationSimulatorParam((NodeWrapperBase*)this, cli_latency_info.getPropagationLatencyDistname(), cli_latency_info.getPropagationLatencyEdgecloudLboundUs(), cli_latency_info.getPropagationLatencyEdgecloudAvgUs(), cli_latency_info.getPropagationLatencyEdgecloudRboundUs(), edge_tocloud_propagation_simulation_random_seed, Config::getPropagationItemBufferSizeEdgeTocloud(), realnet_option);
+        edge_tocloud_propagation_simulator_param_ptr_ = new PropagationSimulatorParam((NodeWrapperBase*)this, client_and_cloud_distname, cli_latency_info.getPropagationLatencyEdgecloudLboundUs(), cli_latency_info.getPropagationLatencyEdgecloudAvgUs(), cli_latency_info.getPropagationLatencyEdgecloudRboundUs(), edge_tocloud_propagation_simulation_random_seed, Config::getPropagationItemBufferSizeEdgeTocloud(), realnet_option);
         assert(edge_tocloud_propagation_simulator_param_ptr_ != NULL);
 
         // Allocate edge beacon server param

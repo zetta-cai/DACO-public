@@ -197,8 +197,9 @@ int main(int argc, char **argv) {
     // (1) Parse and process different CLI parameters for client/edge/cloud/evaluator
 
     covered::SingleNodeCLI single_node_cli(argc, argv);
+    // std::cout << "load " << std::endl;
     const std::string main_class_name = covered::Config::getMainClassName();
-
+    // std::cout << "load " << std::endl;
     // Common configurations
     const uint64_t capacity_bytes = single_node_cli.getCapacityBytes();
     const uint32_t edgecnt = single_node_cli.getEdgecnt(); // Used by each client to calculate closest edge node
@@ -210,8 +211,7 @@ int main(int argc, char **argv) {
     const uint32_t percacheserver_workercnt = single_node_cli.getPercacheserverWorkercnt(); // NOT affect single-node simulation, as multiple edge cache server workers still share the same local cache structure
     const covered::CLILatencyInfo cli_latency_info = single_node_cli.getCLILatencyInfo();
     // print cli_latency_info for debugging
-    // const std::string p2p_latency_mat_path = single_node_cli.toCliString();
-    // std::cout << "P2P Latency Matrix Path: " << p2p_latency_mat_path << std::endl;
+    
     // getP2PLatencyMatrixPath()
     const std::vector<std::vector<uint32_t>> p2p_latency_matrix = cli_latency_info.getP2PLatencyMatrix();
     covered::debug_p2p_latency_matrix = p2p_latency_matrix; // Store for debugging
@@ -235,7 +235,7 @@ int main(int argc, char **argv) {
             }
         }
     }
-
+    
     const std::string realnet_option = single_node_cli.getRealnetOption();
     const std::string realnet_expname = single_node_cli.getRealnetExpname();
 
@@ -258,7 +258,7 @@ int main(int argc, char **argv) {
     const std::string workload_pattern_name = single_node_cli.getWorkloadPatternName();
     const uint32_t dynamic_change_period = single_node_cli.getDynamicChangePeriod();
     const uint32_t dynamic_change_keycnt = single_node_cli.getDynamicChangeKeycnt();
-
+    
     // Workload configurations
     uint32_t simulator_workloadcnt = single_node_cli.getSimulatorWorkloadcnt(); // physical workloadidx is in [0, simulator_workloadcnt - 1] (used to locate workload generator)
     if (simulator_workloadcnt > clientcnt) // Unnecessary to maintain more than clientcnt workload generators
@@ -282,7 +282,7 @@ int main(int argc, char **argv) {
     const uint32_t stresstest_duration_sec = single_node_cli.getStresstestDurationSec();
 
     // (2) Initialize global variables for single-node simulation
-
+    
     // Initialize for edge nodes (refer to src/edge/edge_wrapper_base.c::launchEdge())
     covered::edge_wrapper_ptrs.resize(edgecnt, NULL);
     for (uint32_t edgeidx = 0; edgeidx < edgecnt; edgeidx++)
@@ -290,11 +290,18 @@ int main(int argc, char **argv) {
         // NOTE: NOT use EdgeWrapperBase::launchEdge, which will invoke NodeWrapperBase::start() to launch multiple threads for absolute performance!
         if (cache_name == covered::Util::COVERED_CACHE_NAME)
         {
-            covered::edge_wrapper_ptrs[edgeidx] = new covered::CoveredEdgeWrapper(cache_name, capacity_bytes, edgeidx, edgecnt, hash_name, keycnt, covered_local_uncached_capacity_bytes, covered_local_uncached_lru_bytes, percacheserver_workercnt, covered_peredge_synced_victimcnt, covered_peredge_monitored_victimsetcnt, covered_popularity_aggregation_capacity_bytes, covered_popularity_collection_change_ratio, cli_latency_info, covered_topk_edgecnt, realnet_option, realnet_expname, p2p_latency_matrix[edgeidx]);
+            
+            covered::edge_wrapper_ptrs[edgeidx] = 
+                covered::is_various_latency_distribution ? 
+                new covered::CoveredEdgeWrapper(cache_name, capacity_bytes, edgeidx, edgecnt, hash_name, keycnt, covered_local_uncached_capacity_bytes, covered_local_uncached_lru_bytes, percacheserver_workercnt, covered_peredge_synced_victimcnt, covered_peredge_monitored_victimsetcnt, covered_popularity_aggregation_capacity_bytes, covered_popularity_collection_change_ratio, cli_latency_info, covered_topk_edgecnt, realnet_option, realnet_expname, p2p_latency_matrix[edgeidx]) :
+                new covered::CoveredEdgeWrapper(cache_name, capacity_bytes, edgeidx, edgecnt, hash_name, keycnt, covered_local_uncached_capacity_bytes, covered_local_uncached_lru_bytes, percacheserver_workercnt, covered_peredge_synced_victimcnt, covered_peredge_monitored_victimsetcnt, covered_popularity_aggregation_capacity_bytes, covered_popularity_collection_change_ratio, cli_latency_info, covered_topk_edgecnt, realnet_option, realnet_expname);
         }
         else
         {
-            covered::edge_wrapper_ptrs[edgeidx] = new covered::BasicEdgeWrapper(cache_name, capacity_bytes, edgeidx, edgecnt, hash_name, keycnt, covered_local_uncached_capacity_bytes, covered_local_uncached_lru_bytes, percacheserver_workercnt, covered_peredge_synced_victimcnt, covered_peredge_monitored_victimsetcnt, covered_popularity_aggregation_capacity_bytes, covered_popularity_collection_change_ratio, cli_latency_info, covered_topk_edgecnt, realnet_option, realnet_expname, p2p_latency_matrix[edgeidx]);
+            covered::edge_wrapper_ptrs[edgeidx] = 
+                covered::is_various_latency_distribution ? 
+                new covered::BasicEdgeWrapper(cache_name, capacity_bytes, edgeidx, edgecnt, hash_name, keycnt, covered_local_uncached_capacity_bytes, covered_local_uncached_lru_bytes, percacheserver_workercnt, covered_peredge_synced_victimcnt, covered_peredge_monitored_victimsetcnt, covered_popularity_aggregation_capacity_bytes, covered_popularity_collection_change_ratio, cli_latency_info, covered_topk_edgecnt, realnet_option, realnet_expname, p2p_latency_matrix[edgeidx]) :
+                new covered::BasicEdgeWrapper(cache_name, capacity_bytes, edgeidx, edgecnt, hash_name, keycnt, covered_local_uncached_capacity_bytes, covered_local_uncached_lru_bytes, percacheserver_workercnt, covered_peredge_synced_victimcnt, covered_peredge_monitored_victimsetcnt, covered_popularity_aggregation_capacity_bytes, covered_popularity_collection_change_ratio, cli_latency_info, covered_topk_edgecnt, realnet_option, realnet_expname);
         }
         
         // NOTE: NOT invoke NodeWrapperBase::start() to launch multiple threads for absolute performance!
@@ -302,6 +309,7 @@ int main(int argc, char **argv) {
     }
 
     // Initialize for workload generators (refer to src/benchmark/client_wrapper.c::launchClient())
+    // std::cout << "Initialize workload generators for single-node simulation..." << std::endl;
     // NOTE: if workloadcnt = clientcnt (i.e., perworkload_workercnt = perclient_workercnt), each client has an individual workload generator corresponding to the closest edge node -> here we just use a reasonable workloadcnt to fix the memory issue of large-scale exps (but each client worker ALWAYS has an individual workload worker corresponding to the closest edge node)
     // NOTE: this is acceptable as we only focus on hit ratios and calculated performance instead of absolute performance in single-node simulator, while we have verified that workloadcnt does NOT affect the simulator results (affect absolute performance yet NOT concerned by single-node simulator)
     covered::workload_wrapper_ptrs.resize(simulator_workloadcnt, NULL);
