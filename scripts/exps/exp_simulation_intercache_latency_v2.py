@@ -36,7 +36,10 @@ latency_mat_paths = ["/home/jzcai/covered-private/scripts/delay_128nodes_longtai
                     "/home/jzcai/covered-private/scripts/delay_128nodes_longtail_k1.0_2000-12000.json",
                     "/home/jzcai/covered-private/scripts/delay_128nodes_poisson_3000_2000-12000.json",
                     "/home/jzcai/covered-private/scripts/delay_128nodes_poisson_6000_2000-12000.json",
-                    "/home/jzcai/covered-private/scripts/delay_128nodes_poisson_9000_2000-12000.json"] # NOTE: just for fast evaluation -> you can add more methods if with time
+                    "/home/jzcai/covered-private/scripts/delay_128nodes_poisson_9000_2000-12000.json",
+                    "/home/jzcai/covered-private/scripts/delay_128nodes_uniform_2000-4000.json",
+                    "/home/jzcai/covered-private/scripts/delay_128nodes_uniform_2000-8000.json",
+                    "/home/jzcai/covered-private/scripts/delay_128nodes_uniform_2000-12000.json"] # NOTE: just for fast evaluation -> you can add more methods if with time
 # scripts/exps/
 # Run the experiments with multiple rounds
 for tmp_round_index in round_indexes:
@@ -57,7 +60,7 @@ for tmp_round_index in round_indexes:
             # tmp_avg_latency = intercache_avg_latency_list[i]
             # tmp_rbound_latency = intercache_rbound_latency_list[i]
 
-            tmp_log_filepath = "{}/tmp_evaluator_for_{}_avg{}.out".format(tmp_log_dirpath, tmp_cache_name, i)
+            tmp_log_filepath = "{}/tmp_evaluator_for_{}_config_{}.out".format(tmp_log_dirpath, tmp_cache_name, i)
             SubprocessUtil.tryToCreateDirectory(Common.scriptname, os.path.dirname(tmp_log_filepath))
 
             # Check log filepath
