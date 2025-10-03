@@ -54,6 +54,16 @@ namespace covered
         return is_local_cached;
     }
 
+    bool AdaptSizeLocalCache::getLocalCacheInternal_p2p_(const Key& key, const bool& is_redirected, Value& value, bool& affect_victim_tracker, const uint32_t redirected_reward) const
+    {
+        // this function should not be called by this method
+        std::ostringstream oss;
+        oss << "getLocalCacheInternal_p2p_() is NOT supported by " << kClassName << "!";
+        Util::dumpErrorMsg(instance_name_, oss.str());
+        exit(1);
+        return false;
+    }
+    
     bool AdaptSizeLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, const bool& is_getrsp, const bool& is_global_cached, bool& affect_victim_tracker, bool& is_successful)
     {
         const bool is_valid_objsize = isValidObjsize_(key, value); // Object size checking

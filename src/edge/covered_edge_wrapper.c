@@ -597,6 +597,7 @@ namespace covered
 
         // Calculte local reward or eviction cost (i.e., decreased reward)
         Reward tmp_reward = 0.0;
+        
         if (is_last_copies) // Key is the last cache copies
         {
             // Local cache hits become global cache misses for the victim edge node(s), while redirected cache hits become global cache misses for other edge nodes
@@ -608,6 +609,7 @@ namespace covered
             const Weight w1_minus_w2 = Util::popularityNonegMinus(local_hit_weight, cooperative_hit_weight);
             tmp_reward = static_cast<Reward>(Util::popularityMultiply(w1_minus_w2, local_cached_popularity)); // (w1 - w2) * local_cached_popularity
         }
+
 
         return tmp_reward;
     }

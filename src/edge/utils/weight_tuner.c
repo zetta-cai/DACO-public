@@ -121,7 +121,7 @@ namespace covered
             // avg of p2p_latency_array
             ewma_propagation_latency_crossedge_us_ = std::accumulate(ewma_propagation_latency_crossedge_us_array_.begin(), ewma_propagation_latency_crossedge_us_array_.end(), 0) / edgecnt;
             assert(ewma_propagation_latency_crossedge_us_array_.size() == edgecnt); 
-            is_p2p_enable = false;
+            // is_p2p_enable = false;
         }
         
         updateWeightInfo_(); // Update weight_info_ for heuristic weight calculation
@@ -491,7 +491,19 @@ namespace covered
     bool WeightTuner::getIsP2PEnable() {
         return is_p2p_enable;
     }
+    void WeightTuner::setP2PEnable(bool flag) {
+        is_p2p_enable = flag;
+    }
     float WeightTuner::getEwmaRemoteBeaconProb() const {
         return ewma_remote_beacon_prob_;
     }
+
+    uint32_t WeightTuner::getEwmaCrossedgeLatency() {
+        return ewma_propagation_latency_crossedge_us_;
+    }
+
+    uint32_t WeightTuner::getEwmaEdgecloudLatency() {
+        return ewma_propagation_latency_edgecloud_us_;
+    }
+    
 }

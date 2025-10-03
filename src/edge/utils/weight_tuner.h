@@ -69,6 +69,8 @@ namespace covered
         void updateEwmaCrossedgeLatency(const uint32_t& cur_propagation_latency_crossedge_us); // NOTE: will invoke updateWeightInfo_ after update cross-edge latency
         void updateEwmaEdgecloudLatency(const uint32_t& cur_propagation_latency_edgecloud_us); // NOTE: will invoke updateWeightInfo_ after update edge-cloud latency
         void updateEwmaCrossedgeLatency_of_j(int j, const uint32_t& cur_latency);
+        uint32_t getEwmaCrossedgeLatency(); // NOTE: will invoke updateWeightInfo_ after update cross-edge latency
+        uint32_t getEwmaEdgecloudLatency(); // NOTE: will invoke updateWeightInfo_ after update edge-cloud latency
         uint32_t getEwmaCrossedgeLatency_of_j(int j);
 
         float getEwmaRemoteBeaconProb() const;
@@ -82,6 +84,7 @@ namespace covered
         void loadWeightTunerSnapshot(std::fstream* fs_ptr);
 
         bool getIsP2PEnable();
+        void setP2PEnable(bool flag);
     private:
         static const std::string kClassName;
 

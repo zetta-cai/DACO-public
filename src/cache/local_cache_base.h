@@ -46,7 +46,8 @@ namespace covered
         // (2) Access local edge cache (KV data and local metadata)
 
         bool getLocalCache(const Key& key, const bool& is_redirected, Value& value, bool& affect_victim_tracker) const; // Return whether key is cached
-
+        bool getLocalCache_p2p(const Key& key, const bool& is_redirected, Value& value, bool& affect_victim_tracker, const uint32_t redirected_reward) const;
+        
         bool updateLocalCache(const Key& key, const Value& value, const bool& is_getrsp, const bool& is_global_cached, bool& affect_victim_tracker, bool& is_successful); // Return whether key is local cached for getrsp/put/delreq (is_getrsp indicates getrsp w/ invalid hit or cache miss; is_successful indicates whether value is updated successfully)
 
         // (3) Local edge cache management
@@ -103,6 +104,7 @@ namespace covered
         // (2) Access local edge cache (KV data and local metadata)
 
         virtual bool getLocalCacheInternal_(const Key& key, const bool& is_redirected, Value& value, bool& affect_victim_tracker) const = 0; // Return whether key is cached
+        virtual bool getLocalCacheInternal_p2p_(const Key& key, const bool& is_redirected, Value& value, bool& affect_victim_tracker, const uint32_t redirected_reward) const = 0; // Return whether key is cached
 
         virtual bool updateLocalCacheInternal_(const Key& key, const Value& value, const bool& is_getrsp, const bool& is_global_cached, bool& affect_victim_tracker, bool& is_successful) = 0; // Return whether key is local cached for getrsp/put/delreq (is_getrsp indicates getrsp w/ invalid hit or cache miss; is_successful indicates whether value is updated successfully)
 

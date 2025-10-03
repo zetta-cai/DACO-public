@@ -180,6 +180,28 @@ namespace covered
         return is_local_cached;
     }
 
+    bool LocalCacheBase::getLocalCache_p2p(const Key& key, const bool& is_redirected, Value& value, bool& affect_victim_tracker, const uint32_t redirected_reward) const
+    {
+        checkPointers_();
+        assert(is_redirected);
+        // Acquire a write lock to update local metadata atomically
+        std::string context_name = "LocalCacheBase::getLocalCache_p2p()";
+        rwlock_for_local_cache_ptr_->acquire_lock(context_name);
+
+        bool is_local_cached = getLocalCacheInternal_p2p_(key, is_redirected, value, affect_victim_tracker, redirected_reward);
+
+        // Object size checking
+        if (is_local_cached)
+        {
+            const bool is_valid_objsize = isValidObjsize_(key, value);
+            assert(is_valid_objsize);
+        }
+
+        rwlock_for_local_cache_ptr_->unlock(context_name);
+
+        return is_local_cached;
+    }
+
     bool LocalCacheBase::updateLocalCache(const Key& key, const Value& value, const bool& is_getrsp, const bool& is_global_cached, bool& affect_victim_tracker, bool& is_successful)
     {
         checkPointers_();

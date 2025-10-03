@@ -157,6 +157,30 @@ namespace covered
         return is_local_cached && is_valid;
     }
     
+    bool CacheWrapper::get_p2p(const Key& key, const bool& is_redirected, Value& value, bool& affect_victim_tracker, const uint32_t redirected_reward) const
+    {
+        checkPointers_();
+
+        // Acquire a read lock
+        std::string context_name = "CacheWrapper::get_p2p()";
+        assert(is_redirected);
+        
+        cache_wrapper_perkey_rwlock_ptr_->acquire_lock_shared(key, context_name);
+
+        bool is_local_cached = local_cache_ptr_->getLocalCache_p2p(key, is_redirected, value, affect_victim_tracker, redirected_reward); // Still need to update local metadata if key is cached yet invalid
+
+        bool is_valid = false;
+        if (is_local_cached)
+        {
+            is_valid = isValidKeyForLocalCachedObject_(key);
+        }
+
+        // Release a read lock
+        cache_wrapper_perkey_rwlock_ptr_->unlock_shared(key, context_name);
+
+        return is_local_cached && is_valid;
+    }
+
     bool CacheWrapper::update(const Key& key, const Value& value, const bool& is_global_cached, bool& affect_victim_tracker)
     {
         checkPointers_();

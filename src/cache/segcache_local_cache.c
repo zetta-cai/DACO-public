@@ -161,7 +161,14 @@ namespace covered
 
         return is_local_cached;
     }
-
+    bool SegcacheLocalCache::getLocalCacheInternal_p2p_(const Key& key, const bool& is_redirected, Value& value, bool& affect_victim_tracker, const uint32_t redirected_reward) const {
+        
+        std::ostringstream oss;
+        oss << "getLocalCacheInternal_p2p_() is NOT supported by " << kClassName << "!";
+        Util::dumpErrorMsg(instance_name_, oss.str());
+        exit(1);
+        return false;
+    }
     bool SegcacheLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, const bool& is_getrsp, const bool& is_global_cached, bool& affect_victim_tracker, bool& is_successful)
     {
         UNUSED(is_getrsp); // ONLY used by COVERED

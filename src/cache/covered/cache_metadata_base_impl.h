@@ -177,6 +177,41 @@ namespace covered
     }
 
     template<class T>
+    bool CacheMetadataBase<T>::updateNoValueStatsForExistingKey_p2p(const EdgeWrapperBase* edge_wrapper_ptr, const Key& key, const uint32_t& peredge_synced_victimcnt, const bool& is_redirected, const bool& is_global_cached, uint32_t redirected_reward)
+    {
+        assert(is_redirected);
+        // Get lookup iterator
+        perkey_lookup_table_iter_t perkey_lookup_iter = getLookup_(key);
+
+        bool affect_victim_tracker = beforeUpdateStatsForExistingKey_(perkey_lookup_iter, peredge_synced_victimcnt);
+
+        // Update object-level value-unrelated metadata for local requests (local hits/misses)
+        perkey_metadata_list_iter_t perkey_metadata_list_iter = updateNoValuePerkeyMetadata_p2p_(perkey_lookup_iter, is_redirected, is_global_cached,redirected_reward);
+        const T& key_level_metadata_ref = perkey_metadata_list_iter->second;
+
+        // Update group-level value-unrelated metadata for all requests (local/redirected hits; local misses)
+        const GroupLevelMetadata& group_level_metadata_ref = updateNoValuePergroupMetadata_(perkey_lookup_iter);
+
+        // Calculate and update popularity for newly-admited key
+        calculateAndUpdatePopularity_(perkey_metadata_list_iter, key_level_metadata_ref, group_level_metadata_ref);
+
+        // Update reward
+        Reward new_reward = calculateReward_(edge_wrapper_ptr, perkey_metadata_list_iter);
+        sorted_reward_multimap_t::iterator new_sorted_reward_iter = updateReward_(new_reward, perkey_lookup_iter);
+
+        // Update lookup table
+        updateLookup_(perkey_lookup_iter, new_sorted_reward_iter);
+
+        if (!affect_victim_tracker)
+        {
+            affect_victim_tracker = afterUpdateStatsForExistingKey_(perkey_lookup_iter, peredge_synced_victimcnt);
+        }
+
+        return affect_victim_tracker;
+    }
+
+
+    template<class T>
     bool CacheMetadataBase<T>::updateValueStatsForExistingKey(const EdgeWrapperBase* edge_wrapper_ptr, const Key& key, const Value& value, const Value& original_value, const uint32_t& peredge_synced_victimcnt)
     {
         // NOTE: NOT update object-/group-level value-unrelated metadata, which has been done in updateNoValueStatsForExistingKey()
@@ -594,7 +629,31 @@ namespace covered
 
         return perkey_metadata_list_iter;
     }
-    
+    template<class T>
+    typename CacheMetadataBase<T>::perkey_metadata_list_iter_t CacheMetadataBase<T>::updateNoValuePerkeyMetadata_p2p_(const typename CacheMetadataBase<T>::perkey_lookup_table_iter_t& perkey_lookup_iter, const bool& is_redirected, const bool& is_global_cached, const uint32_t redirected_reward)
+    {
+        assert(is_redirected);
+        // Verify that key must exist
+        const LookupMetadata<perkey_metadata_list_t>& lookup_metadata = perkey_lookup_iter->second;
+        perkey_metadata_list_iter_t perkey_metadata_list_iter = lookup_metadata.getPerkeyMetadataListIter();
+        assert(perkey_metadata_list_iter != perkey_metadata_list_.end()); // For existing key
+
+        // Update object-level value-unrelated metadata
+        perkey_metadata_list_iter->second.updateNoValueDynamicMetadata(is_redirected, is_global_cached, 0 , redirected_reward);
+
+        // Update LRU list order
+        if (perkey_metadata_list_iter != perkey_metadata_list_.begin())
+        {
+            // Move the list entry pointed by perkey_metadata_list_iter to the head of the list (NOT change the memory address of the list entry)
+            perkey_metadata_list_.splice(perkey_metadata_list_.begin(), perkey_metadata_list_, perkey_metadata_list_iter);
+        }
+
+        // NOTE: local popularity of the key-level metadata will be updated by updateNoValueStatsForExistingKey()
+
+        // NOTE: NO need to update size usage of key-level metadata
+
+        return perkey_metadata_list_iter;
+    }
     template<class T>
     typename CacheMetadataBase<T>::perkey_metadata_list_iter_t CacheMetadataBase<T>::updateValuePerkeyMetadata_(const typename CacheMetadataBase<T>::perkey_lookup_table_iter_t& perkey_lookup_iter, const Value& value, const Value& original_value)
     {

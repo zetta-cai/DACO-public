@@ -141,6 +141,26 @@ namespace covered
         return is_local_cached;
     }
 
+    bool CoveredLocalCache::getLocalCacheInternal_p2p_(const Key& key, const bool& is_redirected, Value& value, bool& affect_victim_tracker, const uint32_t redirected_reward) const
+    {
+        assert(is_redirected);
+        affect_victim_tracker = false;
+
+        tommyds_object_t* tmp_obj_ptr = (tommyds_object_t *) tommy_hashdyn_search(covered_cache_ptr_, tommyds_compare, &key, hashForTommyds_(key));
+
+        bool is_local_cached = (tmp_obj_ptr != NULL);
+        if (is_local_cached)
+        {
+            value = tmp_obj_ptr->val;
+
+            // Update local cached metadata for getreq with valid/invalid cache hit (ONLY value-unrelated metadata)
+            const bool is_global_cached = true; // Local cached objects MUST be global cached
+            affect_victim_tracker = local_cached_metadata_.updateNoValueStatsForExistingKey_p2p(edge_wrapper_ptr_, key, peredge_synced_victimcnt_, is_redirected, is_global_cached, redirected_reward);
+        }
+
+        return is_local_cached;
+    }
+
     bool CoveredLocalCache::updateLocalCacheInternal_(const Key& key, const Value& value, const bool& is_getrsp, const bool& is_global_cached, bool& affect_victim_tracker, bool& is_successful)
     {
         const bool is_valid_objsize = isValidObjsize_(key, value); // Object size checking
@@ -305,7 +325,7 @@ namespace covered
         // COVERED will NEVER invoke this function for independent admission
         return false;
     }
-
+    // admit 
     void CoveredLocalCache::admitLocalCacheInternal_(const Key& key, const Value& value, const bool& is_neighbor_cached, bool& affect_victim_tracker, bool& is_successful, const uint64_t& miss_latency_us)
     {
         UNUSED(miss_latency_us); // ONLY used by LA-Cache

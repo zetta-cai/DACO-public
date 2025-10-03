@@ -53,6 +53,7 @@ namespace covered
 
         // Return whether key is cached and valid (i.e., local cache hit) after get/update/remove
         bool get(const Key& key, const bool& is_redirected, Value& value, bool& affect_victim_tracker) const;
+        bool get_p2p(const Key& key, const bool& is_redirected, Value& value, bool& affect_victim_tracker, const uint32_t redirected_reward) const;
 
         // Return whether key is cached, while both update() and remove() will set validity as true
         // NOTE: update() only updates the object if cached, yet not admit a new one
