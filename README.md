@@ -192,6 +192,8 @@
     - NOTE: use `ulimit -a` to check max # of open files -> use `ulimit -n 1048576` if necessary (e.g., get an error of cannot create UDP socket with an errno of 24 when using single_node_simulator).
     - NOTE: the single machine should have large enough memory (e.g., 128GB memory in our testbed) to support large-scale simulation (e.g., 1024 nodes).
     - For Exp#10 (performance on cache scale (# of cache nodes)), run `python3 -m scripts.exps.exp_simulation_cachescale`
+- If you want to run daco (DACO-p2p in the paper) with precise latency, set covered::is_global_p2p_enabled to true on line 223 of src/single_node_simulator.c.
+- If you want to simulate with different end-to-end delay configurations, you can use scripts/gen_latency_mat.py to generate a latency matrix (in json format) and replace the latency path in scripts/exps/exp_simulation_intercache_latency_v2.py.
 
 ## 5. Evaluation in AliCloud
 
