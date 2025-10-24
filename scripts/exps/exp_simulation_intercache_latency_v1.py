@@ -9,9 +9,9 @@ from .utils.single_node_simulator import *
 log_dirpaths = []
 
 # Get round indexes for the current experiment
-round_indexes = range(1, Common.exp_round_number) # [0, ..., exp_round_number-1]
-# round_indexes = [0]
-# print(Common.exp_round_number)
+round_indexes = range(0, Common.exp_round_number) # [0, ..., exp_round_number-1]
+round_indexes = [0]
+
 # Prepare settings for current experiment
 exp_default_settings = {
     "clientcnt": 128, # TODO
@@ -28,15 +28,22 @@ exp_default_settings = {
     # "propagation_latency_crossedge_rbound_us": 4500,
 }
 
-propagation_latency_distnames = ["uniform_2000_12000_4000_8000", "poisson_2000_12000_3000_5000", "pareto_2000_12000_1.0_2.0"]
 largescale_keycnt = 10 * 1000000 # 10M (default 1M is too small for large-scale exps that all methods will achieve nearly full hit ratio)
 cache_names = ["covered", "shark+gdsf", "shark+lhd"] # NOTE: just for fast evaluation -> you can add more methods if with time
 # cache_names = ["covered", "shark", "bestguess", "magnet", "adaptsize", "arc", "cachelib", "fifo", "frozenhot", "gdsf", "lacache", "lfu", "lhd", "lru", "s3fifo", "sieve", "wtinylfu", "lrb", "glcache", "segcache", "shark+adaptsize", "shark+arc", "shark+cachelib", "shark+fifo", "shark+frozenhot", "shark+gdsf", "shark+lacache", "shark+lfu", "shark+lhd", "shark+s3fifo", "shark+sieve", "shark+wtinylfu", "shark+lrb", "shark+glcache", "shark+segcache"]
-latency_mat_paths = ["/home/jzcai/covered-private/scripts/empty.json"] # NOTE: just for fast evaluation -> you can add more methods if with time
+latency_mat_paths = ["/home/jzcai/covered-private/scripts/delay_128nodes_longtail_k2.0_2000-12000.json",
+                    "/home/jzcai/covered-private/scripts/delay_128nodes_longtail_k1.5_2000-12000.json",
+                    "/home/jzcai/covered-private/scripts/delay_128nodes_longtail_k1.0_2000-12000.json",
+                    "/home/jzcai/covered-private/scripts/delay_128nodes_poisson_3000_2000-12000.json",
+                    "/home/jzcai/covered-private/scripts/delay_128nodes_poisson_6000_2000-12000.json",
+                    "/home/jzcai/covered-private/scripts/delay_128nodes_poisson_9000_2000-12000.json",
+                    "/home/jzcai/covered-private/scripts/delay_128nodes_uniform_2000-4000.json",
+                    "/home/jzcai/covered-private/scripts/delay_128nodes_uniform_2000-8000.json",
+                    "/home/jzcai/covered-private/scripts/delay_128nodes_uniform_2000-12000.json"] # NOTE: just for fast evaluation -> you can add more methods if with time
 # scripts/exps/
 # Run the experiments with multiple rounds
 for tmp_round_index in round_indexes:
-    tmp_log_dirpath = "{}/exp_simulation_intercache_latency_v2/round{}".format(Common.output_log_dirpath, tmp_round_index)
+    tmp_log_dirpath = "{}/exp_simulation_intercache_latency_v1/round{}".format(Common.output_log_dirpath, tmp_round_index)
     log_dirpaths.append(tmp_log_dirpath)
 
     # Create log dirpath if necessary
@@ -48,12 +55,12 @@ for tmp_round_index in round_indexes:
     for tmp_cache_name in cache_names:
         # print(tmp_cache_name)
         # Run single-node simulator for each cache scale
-        for i in range(len(propagation_latency_distnames)):
+        for i in range(len(latency_mat_paths)):
             # tmp_lbound_latency = intercache_lbound_latency_list[i]
             # tmp_avg_latency = intercache_avg_latency_list[i]
             # tmp_rbound_latency = intercache_rbound_latency_list[i]
 
-            tmp_log_filepath = "{}/tmp_evaluator_for_{}_config_{}.out".format(tmp_log_dirpath, tmp_cache_name, propagation_latency_distnames[i])
+            tmp_log_filepath = "{}/tmp_evaluator_for_{}_config_{}.out".format(tmp_log_dirpath, tmp_cache_name, i)
             SubprocessUtil.tryToCreateDirectory(Common.scriptname, os.path.dirname(tmp_log_filepath))
 
             # Check log filepath
@@ -69,11 +76,11 @@ for tmp_round_index in round_indexes:
             # print(tmp_cache_name)
             tmp_exp_settings["cache_name"] = tmp_cache_name
             tmp_exp_settings["simulator_randomness"] = tmp_round_index
-            tmp_exp_settings["p2p_latency_mat_path"] = latency_mat_paths[0]
-            tmp_exp_settings["propagation_latency_distname"] = propagation_latency_distnames[i]
+            tmp_exp_settings["p2p_latency_mat_path"] = latency_mat_paths[i]
+
 
             # Launch single-node simulator
-            LogUtil.prompt(Common.scriptname, "Run single-node simulator of {} w/ {} inter-cache avg latency for the current round {}...".format(tmp_cache_name, propagation_latency_distnames[i], tmp_round_index))
+            LogUtil.prompt(Common.scriptname, "Run single-node simulator of {} w/ {} inter-cache avg latency for the current round {}...".format(tmp_cache_name, i, tmp_round_index))
             simulator_instance = SingleNodeSimulator(single_node_logfile = tmp_log_filepath, **tmp_exp_settings)
             simulator_instance.run()
 

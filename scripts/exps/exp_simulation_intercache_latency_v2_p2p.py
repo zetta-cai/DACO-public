@@ -9,7 +9,7 @@ from .utils.single_node_simulator import *
 log_dirpaths = []
 
 # Get round indexes for the current experiment
-round_indexes = range(1, Common.exp_round_number) # [0, ..., exp_round_number-1]
+round_indexes = range(0, Common.exp_round_number) # [0, ..., exp_round_number-1]
 # round_indexes = [0]
 # print(Common.exp_round_number)
 # Prepare settings for current experiment
@@ -27,16 +27,30 @@ exp_default_settings = {
     # "propagation_latency_crossedge_avg_us": 3000,
     # "propagation_latency_crossedge_rbound_us": 4500,
 }
-
 propagation_latency_distnames = ["uniform_2000_12000_4000_8000", "poisson_2000_12000_3000_5000", "pareto_2000_12000_1.0_2.0"]
 largescale_keycnt = 10 * 1000000 # 10M (default 1M is too small for large-scale exps that all methods will achieve nearly full hit ratio)
-cache_names = ["covered", "shark+gdsf", "shark+lhd"] # NOTE: just for fast evaluation -> you can add more methods if with time
+cache_names = ["covered"] # NOTE: just for fast evaluation -> you can add more methods if with time
 # cache_names = ["covered", "shark", "bestguess", "magnet", "adaptsize", "arc", "cachelib", "fifo", "frozenhot", "gdsf", "lacache", "lfu", "lhd", "lru", "s3fifo", "sieve", "wtinylfu", "lrb", "glcache", "segcache", "shark+adaptsize", "shark+arc", "shark+cachelib", "shark+fifo", "shark+frozenhot", "shark+gdsf", "shark+lacache", "shark+lfu", "shark+lhd", "shark+s3fifo", "shark+sieve", "shark+wtinylfu", "shark+lrb", "shark+glcache", "shark+segcache"]
 latency_mat_paths = ["/home/jzcai/covered-private/scripts/empty.json"] # NOTE: just for fast evaluation -> you can add more methods if with time
 # scripts/exps/
 # Run the experiments with multiple rounds
+
+# Check if the file /home/jzcai/covered-private/src/single_node_simulator.c contains 'is_p2p_global_mode_in_common = true;' and this line is not commented
+simulator_file_path = "/home/jzcai/covered-private/src/single_node_simulator.c"
+required_line = "is_p2p_global_mode_in_common = true;"
+
+if not os.path.exists(simulator_file_path):
+    raise FileNotFoundError(f"Required file {simulator_file_path} does not exist.")
+
+with open(simulator_file_path, "r") as file:
+    content = file.readlines()
+
+if not any(required_line in line and not line.strip().startswith("//") for line in content):
+    raise RuntimeError(f"The file {simulator_file_path} must contain the line '{required_line}' and it must not be commented.")
+
+
 for tmp_round_index in round_indexes:
-    tmp_log_dirpath = "{}/exp_simulation_intercache_latency_v2/round{}".format(Common.output_log_dirpath, tmp_round_index)
+    tmp_log_dirpath = "{}/exp_simulation_intercache_latency_v2_p2p/round{}".format(Common.output_log_dirpath, tmp_round_index)
     log_dirpaths.append(tmp_log_dirpath)
 
     # Create log dirpath if necessary
