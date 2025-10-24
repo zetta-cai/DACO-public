@@ -128,9 +128,11 @@ namespace covered
     // Unused variables (NOT really used for caching; just for simulation)
     NetworkAddr network_addr_for_debug("127.0.0.1", Util::UDP_MIN_PORT + 1);
 
-    bool is_various_latency_distribution = false; // Whether to use various latency distributions for different edge nodes (e.g., LA-Cache, COVERED, and BestGuess) in single-node simulator (default is false, i.e., all edge nodes have the same latency distribution)
+    bool is_various_latency_distribution_v1 = false; // Whether to use various latency distributions for different edge nodes (e.g., LA-Cache, COVERED, and BestGuess) in single-node simulator (default is false, i.e., all edge nodes have the same latency distribution)
+    bool is_various_latency_distribution_v2 = false;
     bool is_global_p2p_enabled = false; // Whether to use various latency distributions for different edge nodes (e.g., LA-Cache, COVERED, and BestGuess) in single-node simulator (default is false, i.e., all edge nodes have the same latency distribution)
-    
+
+
     std::vector<std::vector<uint32_t>> debug_p2p_latency_matrix;
 }
 
@@ -219,10 +221,21 @@ int main(int argc, char **argv) {
     covered::debug_p2p_latency_matrix = p2p_latency_matrix; // Store for debugging
     if (!p2p_latency_matrix.empty())
     {
-        covered::is_various_latency_distribution = true;
         covered::is_global_p2p_enabled = true;
+        is_p2p_global_mode_in_common = true;
     }
-    if(covered::is_various_latency_distribution){
+    if (!p2p_latency_matrix.empty())
+    {
+        // check the first value of the matrix
+        // if it is not UINT32_MAX covered::is_various_latency_distribution_v1 = true;
+        // else v2
+        if(p2p_latency_matrix[0][0] != UINT32_MAX){
+            covered::is_various_latency_distribution_v1 = true;
+        }else{
+            covered::is_various_latency_distribution_v2 = true;
+        }
+    }
+    if(covered::is_various_latency_distribution_v1){
         if (p2p_latency_matrix.size() != edgecnt || p2p_latency_matrix[0].size() != edgecnt)
         {
             std::cerr << "Error: P2P latency matrix size does not match edge count!" << std::endl;
@@ -293,30 +306,45 @@ int main(int argc, char **argv) {
         // NOTE: NOT use EdgeWrapperBase::launchEdge, which will invoke NodeWrapperBase::start() to launch multiple threads for absolute performance!
         if (cache_name == covered::Util::COVERED_CACHE_NAME)
         {
-            
-            covered::edge_wrapper_ptrs[edgeidx] = 
-                covered::is_various_latency_distribution ? 
-                new covered::CoveredEdgeWrapper(cache_name, capacity_bytes, edgeidx, edgecnt, hash_name, keycnt, covered_local_uncached_capacity_bytes, covered_local_uncached_lru_bytes, percacheserver_workercnt, covered_peredge_synced_victimcnt, covered_peredge_monitored_victimsetcnt, covered_popularity_aggregation_capacity_bytes, covered_popularity_collection_change_ratio, cli_latency_info, covered_topk_edgecnt, realnet_option, realnet_expname, p2p_latency_matrix[edgeidx]) :
-                new covered::CoveredEdgeWrapper(cache_name, capacity_bytes, edgeidx, edgecnt, hash_name, keycnt, covered_local_uncached_capacity_bytes, covered_local_uncached_lru_bytes, percacheserver_workercnt, covered_peredge_synced_victimcnt, covered_peredge_monitored_victimsetcnt, covered_popularity_aggregation_capacity_bytes, covered_popularity_collection_change_ratio, cli_latency_info, covered_topk_edgecnt, realnet_option, realnet_expname);
+            if(covered::is_various_latency_distribution_v1 || covered::is_various_latency_distribution_v2){
+                // if v1, tmp arrary is  p2p_latency_matrix[edgeidx]
+                // if v2 tmp array is uint32_MAX
+                std::vector<uint32_t> tmp_p2p_latency_array;
+                if(covered::is_various_latency_distribution_v1){
+                    tmp_p2p_latency_array = p2p_latency_matrix[edgeidx];
+                }else{
+                    tmp_p2p_latency_array = std::vector<uint32_t>(edgecnt, UINT32_MAX);
+                }
+                covered::edge_wrapper_ptrs[edgeidx] = new covered::CoveredEdgeWrapper(cache_name, capacity_bytes, edgeidx, edgecnt, hash_name, keycnt, covered_local_uncached_capacity_bytes, covered_local_uncached_lru_bytes, percacheserver_workercnt, covered_peredge_synced_victimcnt, covered_peredge_monitored_victimsetcnt, covered_popularity_aggregation_capacity_bytes, covered_popularity_collection_change_ratio, cli_latency_info, covered_topk_edgecnt, realnet_option, realnet_expname, tmp_p2p_latency_array);
+            }else{
+                covered::edge_wrapper_ptrs[edgeidx] = new covered::CoveredEdgeWrapper(cache_name, capacity_bytes, edgeidx, edgecnt, hash_name, keycnt, covered_local_uncached_capacity_bytes, covered_local_uncached_lru_bytes, percacheserver_workercnt, covered_peredge_synced_victimcnt, covered_peredge_monitored_victimsetcnt, covered_popularity_aggregation_capacity_bytes, covered_popularity_collection_change_ratio, cli_latency_info, covered_topk_edgecnt, realnet_option, realnet_expname);
+            }
         }
         else
         {
-            covered::edge_wrapper_ptrs[edgeidx] = 
-                covered::is_various_latency_distribution ? 
-                new covered::BasicEdgeWrapper(cache_name, capacity_bytes, edgeidx, edgecnt, hash_name, keycnt, covered_local_uncached_capacity_bytes, covered_local_uncached_lru_bytes, percacheserver_workercnt, covered_peredge_synced_victimcnt, covered_peredge_monitored_victimsetcnt, covered_popularity_aggregation_capacity_bytes, covered_popularity_collection_change_ratio, cli_latency_info, covered_topk_edgecnt, realnet_option, realnet_expname, p2p_latency_matrix[edgeidx]) :
-                new covered::BasicEdgeWrapper(cache_name, capacity_bytes, edgeidx, edgecnt, hash_name, keycnt, covered_local_uncached_capacity_bytes, covered_local_uncached_lru_bytes, percacheserver_workercnt, covered_peredge_synced_victimcnt, covered_peredge_monitored_victimsetcnt, covered_popularity_aggregation_capacity_bytes, covered_popularity_collection_change_ratio, cli_latency_info, covered_topk_edgecnt, realnet_option, realnet_expname);
+            if(covered::is_various_latency_distribution_v1 || covered::is_various_latency_distribution_v2){
+                std::vector<uint32_t> tmp_p2p_latency_array;
+                if(covered::is_various_latency_distribution_v1){
+                    tmp_p2p_latency_array = p2p_latency_matrix[edgeidx];
+                }else{
+                    tmp_p2p_latency_array = std::vector<uint32_t>(edgecnt, UINT32_MAX);
+                }
+                covered::edge_wrapper_ptrs[edgeidx] = new covered::BasicEdgeWrapper(cache_name, capacity_bytes, edgeidx, edgecnt, hash_name, keycnt, covered_local_uncached_capacity_bytes, covered_local_uncached_lru_bytes, percacheserver_workercnt, covered_peredge_synced_victimcnt, covered_peredge_monitored_victimsetcnt, covered_popularity_aggregation_capacity_bytes, covered_popularity_collection_change_ratio, cli_latency_info, covered_topk_edgecnt, realnet_option, realnet_expname, tmp_p2p_latency_array);
+            }else {
+                covered::edge_wrapper_ptrs[edgeidx] = new covered::BasicEdgeWrapper(cache_name, capacity_bytes, edgeidx, edgecnt, hash_name, keycnt, covered_local_uncached_capacity_bytes, covered_local_uncached_lru_bytes, percacheserver_workercnt, covered_peredge_synced_victimcnt, covered_peredge_monitored_victimsetcnt, covered_popularity_aggregation_capacity_bytes, covered_popularity_collection_change_ratio, cli_latency_info, covered_topk_edgecnt, realnet_option, realnet_expname);
+            }
         }
         
         // NOTE: NOT invoke NodeWrapperBase::start() to launch multiple threads for absolute performance!
         assert(covered::edge_wrapper_ptrs[edgeidx] != NULL);
     }
     // enable p2p latency
-    if(cache_name == covered::Util::COVERED_CACHE_NAME && covered::is_various_latency_distribution && covered::is_global_p2p_enabled){
+    if(cache_name == covered::Util::COVERED_CACHE_NAME && (covered::is_various_latency_distribution_v1 || covered::is_various_latency_distribution_v2) && covered::is_global_p2p_enabled){
         // std::cout << "Initialized " << edgecnt << " COVERED edge nodes for single-node simulation." << std::endl;
         for(uint32_t edgeidx = 0; edgeidx < edgecnt; edgeidx++){
             covered::CoveredEdgeWrapper* covered_edge_wrapper_ptr = dynamic_cast<covered::CoveredEdgeWrapper*>(covered::edge_wrapper_ptrs[edgeidx]);
             assert(covered_edge_wrapper_ptr != NULL);
-            covered_edge_wrapper_ptr->getWeightTunerRef().setP2PEnable(covered::is_various_latency_distribution);
+            covered_edge_wrapper_ptr->getWeightTunerRef().setP2PEnable((covered::is_various_latency_distribution_v1 || covered::is_various_latency_distribution_v2));
         }
     }
     // Initialize for workload generators (refer to src/benchmark/client_wrapper.c::launchClient())
@@ -465,8 +493,8 @@ int main(int argc, char **argv) {
             stresstest_prev_timestamp = stresstest_cur_timestamp;
 
             stresstest_interval_idx += 1;
-            // if (is_finish)
-            //     covered::perkey_global_cached_objinfo.dumpCacheInfointoFile("global_cache_info_for_covered.txt");
+            if (is_finish)
+                covered::perkey_global_cached_objinfo.dumpCacheInfointoFile("global_cache_info_for_covered.txt");
             if (is_finish)
             {
                 break;
@@ -989,7 +1017,8 @@ namespace covered
 
                 if (!isLocalBeacon(cur_key, clientidx))
                 {
-                    content_discovery_latency_us = is_various_latency_distribution ? 
+
+                    content_discovery_latency_us = (covered::is_various_latency_distribution_v1 || covered::is_various_latency_distribution_v2) ? 
                         curclient_closest_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency_of_j(beacon_edge_idx) : 
                         curclient_closest_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency();
                 }
@@ -998,7 +1027,7 @@ namespace covered
                 {
                     // Access local cache in the remote edge node to simulate request redirection for remote hit (update cache statistics in the remote edge node) (refer to src/edge/cache_server/basic_cache_server_redirection_processor.c::processReqForRedirectedGet_())
                     requestRedirection(cur_key, clientidx, target_edge_idx, cache_name, fetched_value, curpkt_bandwidth_usage);
-                    request_redirection_latency_us = is_various_latency_distribution ? 
+                    request_redirection_latency_us = (covered::is_various_latency_distribution_v1 || covered::is_various_latency_distribution_v2) ? 
                         curclient_closest_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency_of_j(target_edge_idx) :
                         curclient_closest_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency();
 
@@ -1088,10 +1117,10 @@ namespace covered
             if (is_neighbor_cached && !is_local_beacon)
             {
                 // TODO: find correspodind beacon edge node idx and add lock
-                acquire_writelock_latency_us = is_various_latency_distribution ? 
+                acquire_writelock_latency_us = (covered::is_various_latency_distribution_v1 || covered::is_various_latency_distribution_v2) ? 
                     curclient_closest_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency() : 
                     curclient_closest_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency();
-                release_writelock_latency_us = is_various_latency_distribution ? 
+                release_writelock_latency_us = (covered::is_various_latency_distribution_v1 || covered::is_various_latency_distribution_v2) ? 
                     curclient_closest_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency() :
                     curclient_closest_edge_wrapper_ptr->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency();
 
@@ -1310,6 +1339,7 @@ namespace covered
                         WeightTuner& tuner = beacon_edge_wrapper_ptr->getWeightTunerRef();
                         isP2Penabled = tuner.getIsP2PEnable();
                     }
+                    
                     if(isP2Penabled){
                         // check latency of node j in curobj_edge_node_idxes and select the idx with lowest latency
                         WeightTuner& tuner = beacon_edge_wrapper_ptr->getWeightTunerRef();
@@ -1360,7 +1390,20 @@ namespace covered
         bool is_cooperative_cached_and_valid;
         // l_backend - l_cache_i_j, i is itself, j is remote_idx
         if(covered::is_global_p2p_enabled && cache_name == Util::COVERED_CACHE_NAME){
-            uint32_t redirected_reward = curobj_target_edge_wrapper_ptr->getWeightTunerRef().getEwmaEdgecloudLatency() - debug_p2p_latency_matrix[target_edge_idx][getClosestEdgeidx(clientidx)];
+            uint32_t redirected_reward;
+            if(covered::is_various_latency_distribution_v1){
+                redirected_reward = curobj_target_edge_wrapper_ptr->getWeightTunerRef().getEwmaEdgecloudLatency() - debug_p2p_latency_matrix[target_edge_idx][getClosestEdgeidx(clientidx)];
+            }
+            else if(covered::is_various_latency_distribution_v2){
+                redirected_reward = curobj_target_edge_wrapper_ptr->getWeightTunerRef().getEwmaEdgecloudLatency() -
+                    curobj_target_edge_wrapper_ptr->getWeightTunerRef().getEwmaCrossedgeLatency_of_j(getClosestEdgeidx(clientidx));
+            }
+            // is_cooperative_cached_and_valid = curobj_target_edge_cache_wrapper_ptr->get_p2p(cur_key, target_edge_is_redirected, fetched_value, affect_victim_tracker, redirected_reward);
+            // if(target_edge_is_redirected){
+            //     is_cooperative_cached_and_valid = curobj_target_edge_cache_wrapper_ptr->get_p2p(cur_key, target_edge_is_redirected, fetched_value, affect_victim_tracker, redirected_reward);
+            // }else{
+            //     is_cooperative_cached_and_valid = curobj_target_edge_cache_wrapper_ptr->get(cur_key, target_edge_is_redirected, fetched_value, affect_victim_tracker);
+            // }
             is_cooperative_cached_and_valid = curobj_target_edge_cache_wrapper_ptr->get_p2p(cur_key, target_edge_is_redirected, fetched_value, affect_victim_tracker, redirected_reward);
         }else{
             is_cooperative_cached_and_valid = curobj_target_edge_cache_wrapper_ptr->get(cur_key, target_edge_is_redirected, fetched_value, affect_victim_tracker);
@@ -1453,7 +1496,7 @@ namespace covered
             }
             else
             {
-                is_various_latency_distribution && target_edge_idx != (uint32_t) -1 ? weight_tuner_ref.incrRemoteBeaconAccessCntArray(target_edge_idx) : weight_tuner_ref.incrRemoteBeaconAccessCnt();
+                (covered::is_various_latency_distribution_v1 || covered::is_various_latency_distribution_v2) && target_edge_idx != (uint32_t) -1 ? weight_tuner_ref.incrRemoteBeaconAccessCntArray(target_edge_idx) : weight_tuner_ref.incrRemoteBeaconAccessCnt();
             }
 
             // Update WAN delays (refer to src/edge/cache_server/covered_cache_server_worker.c and src/edge/cache_server/covered_cache_server.c)
@@ -1465,11 +1508,11 @@ namespace covered
             {
                 if (!is_local_beacon)
                 {
-                    is_various_latency_distribution ? 
+                    (covered::is_various_latency_distribution_v1 || covered::is_various_latency_distribution_v2) ? 
                         weight_tuner_ref.updateEwmaCrossedgeLatency_of_j(beacon_idx, content_discovery_latency_us) :
                         weight_tuner_ref.updateEwmaCrossedgeLatency(content_discovery_latency_us);
                 }
-                is_various_latency_distribution && target_edge_idx != (uint32_t) -1 ? 
+                ((covered::is_various_latency_distribution_v1 || covered::is_various_latency_distribution_v2) || covered::is_various_latency_distribution_v2) && target_edge_idx != (uint32_t) -1 ? 
                     weight_tuner_ref.updateEwmaCrossedgeLatency_of_j(target_edge_idx, request_redirection_latency_us) : 
                     weight_tuner_ref.updateEwmaCrossedgeLatency(request_redirection_latency_us);
             }
@@ -1477,7 +1520,7 @@ namespace covered
             {
                 if (!is_local_beacon)
                 {
-                    is_various_latency_distribution ? 
+                    (covered::is_various_latency_distribution_v1 || covered::is_various_latency_distribution_v2) ? 
                         weight_tuner_ref.updateEwmaCrossedgeLatency_of_j(beacon_idx, content_discovery_latency_us) :
                         weight_tuner_ref.updateEwmaCrossedgeLatency(content_discovery_latency_us);
                 }
@@ -1545,6 +1588,14 @@ namespace covered
                 {
                     is_admit = true;
                     coveredPlacementDeployment(cur_key, fetched_value, best_placement_edgeset, curobj_hitflag, cache_name, total_latency_us, is_evict, victim_cnt);
+                    // print admit key in which edge node
+                    
+                    // std::ostringstream oss;
+                    // oss << "Admitted key " << cur_key.getKeyDebugstr() << " into edge node(s): ";
+                    // for (const auto& edge : best_placement_edgeset) {
+                    //     oss << edge << " ";
+                    // }
+                    // std::cout<<oss.str()<<std::endl;
                 }
             }
         } // End of COVERED
@@ -1598,14 +1649,14 @@ namespace covered
             {
                 if (directory_admit_latency_us > 0)
                 {
-                    is_various_latency_distribution ? 
+                    (covered::is_various_latency_distribution_v1 || covered::is_various_latency_distribution_v2) ? 
                         weight_tuner_ref.updateEwmaCrossedgeLatency_of_j(beacon_idx, directory_admit_latency_us) :
                         weight_tuner_ref.updateEwmaCrossedgeLatency(directory_admit_latency_us);
                 }
 
                 if (directory_evict_latency_us > 0)
                 {
-                    is_various_latency_distribution ? 
+                    (covered::is_various_latency_distribution_v1 || covered::is_various_latency_distribution_v2) ? 
                        weight_tuner_ref.updateEwmaCrossedgeLatency_of_j(beacon_idx, directory_evict_latency_us) :
                        weight_tuner_ref.updateEwmaCrossedgeLatency(directory_evict_latency_us);
                 }
@@ -1779,7 +1830,7 @@ namespace covered
             // NOTE: single-node caches do NOT need to update directory information; COVERED and BestGuess use non-blocking directory update due to beacon-triggered cache management (refer to src/edge/cache_server/cache_server_worker_base.c::admitObject_())
             if (!Util::isSingleNodeCache(cache_name) && cache_name != Util::COVERED_CACHE_NAME && cache_name != Util::BESTGUESS_CACHE_NAME)
             {
-                is_various_latency_distribution ?
+                (covered::is_various_latency_distribution_v1 || covered::is_various_latency_distribution_v2) ?
                     directory_update_latency_us = getClosestEdgeWrapperPtr(clientidx)->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency_of_j(beacon_idx) :
                     directory_update_latency_us = getClosestEdgeWrapperPtr(clientidx)->getEdgeToedgePropagationSimulatorParamPtr()->genPropagationLatency();
             }
@@ -1802,9 +1853,8 @@ namespace covered
         const bool is_tracked_after_fetch_value = tmp_collected_popularity_after_fetch_value.isTracked();
         // print popularity for debug
         std::ostringstream oss;
-        // oss << "key " << cur_key.getKeyDebugstr() << " at edge " << curclient_closest_edge_idx << " is_tracked_after_fetch_value=" << (is_tracked_after_fetch_value ? "true" : "false") << ", ";
-        // oss << "popularity: " << tmp_collected_popularity_after_fetch_value.getLocalUncachedPopularity() << " Objsize: " << tmp_collected_popularity_after_fetch_value.getObjectSize();
-        // oss << GetCollectedPopularityParam::FUNCNAME << '\n';
+        // oss << "key " << cur_key.getKeyDebugstr() << " at edge " << curclient_closest_edge_idx << " is_tracked_after_fetch_value =" << (is_tracked_after_fetch_value ? "true" : "false") << ", ";
+        // oss << '\n';
         // std::cout << oss.str() << std::endl;
 
         
@@ -2165,10 +2215,17 @@ namespace covered
                 // Get local cached and redirected cache popularity of the given victim at the given edge node
                 Popularity tmp_local_cached_popularity = 0.0;
                 Popularity tmp_redirected_cached_popularity = 0.0;
+                Popularity tmp_redirected_cached_popularity_reward = 0.0;
                 bool with_complete_local_cached_popularity = std::get<0>(*victim_cacheinfo_list_const_iter).getLocalCachedPopularity(tmp_local_cached_popularity);
                 assert(with_complete_local_cached_popularity); // NOTE: victim cacheinfo of pervictim_cacheinfos (from peredge_victim_metadata_ in victim tracker) MUST be complete
                 bool with_complete_redirected_cached_popularity = std::get<0>(*victim_cacheinfo_list_const_iter).getRedirectedCachedPopularity(tmp_redirected_cached_popularity);
                 assert(with_complete_redirected_cached_popularity); // NOTE: victim cacheinfo of pervictim_cacheinfos (from peredge_victim_metadata_ in victim tracker) MUST be complete
+                bool with_complete_redirected_cached_popularity_reward = std::get<0>(*victim_cacheinfo_list_const_iter).getRedirectedCachedPopularityReward(tmp_redirected_cached_popularity_reward);
+                assert(with_complete_redirected_cached_popularity_reward); // NOTE: victim cacheinfo of pervictim_cacheinfos (from peredge_victim_metadata_ in victim tracker) MUST be complete
+                if(tmp_redirected_cached_popularity > 0){
+                    // print key , tmp_redirected_cached_popularity and tmp_redirected_cached_popularity_reward for debug
+                    // std::cout<<"Debug: key "<< std::get<0>(*victim_cacheinfo_list_const_iter).getKey().getKeyDebugstr() <<", tmp_redirected_cached_popularity="<< tmp_redirected_cached_popularity <<", tmp_redirected_cached_popularity_reward="<< tmp_redirected_cached_popularity_reward << std::endl;
+                }
                 uint32_t tmp_edge_idx = std::get<1>(*victim_cacheinfo_list_const_iter);
                 Weight local_hit_weight = beacon_edge_wrapper_ptr->getWeightTunerRef().getWeightInfo().getLocalHitWeights()[tmp_edge_idx];
                 Reward tmp_eviction_cost = 0.0;
@@ -2192,7 +2249,12 @@ namespace covered
                     {
                         if (tmp_victim_edgeset_ref.find(cached_node) == tmp_victim_edgeset_ref.end() && cached_node != tmp_edge_idx) // not in victim set and not itself
                         {
-                            uint32_t latency = debug_p2p_latency_matrix[tmp_edge_idx][cached_node];
+                            uint32_t latency;
+                            if(covered::is_various_latency_distribution_v1){
+                                latency = debug_p2p_latency_matrix[tmp_edge_idx][cached_node];
+                            } else if(covered::is_various_latency_distribution_v2){
+                                latency = getEdgeWrapperPtr(tmp_edge_idx)->getWeightTunerRef().getEwmaCrossedgeLatency_of_j(cached_node);
+                            }
                             if (latency < min_latency)
                             {
                                 min_latency = latency;
@@ -2202,8 +2264,13 @@ namespace covered
                     }
                     assert(closest_node != (uint32_t)-1);
                     // NOTE: here the latency is constant, so we use this to get l backend directly
-                    Weight redirected_hit_weight = 
-                        beacon_edge_wrapper_ptr->getWeightTunerRef().getEwmaEdgecloudLatency() - debug_p2p_latency_matrix[closest_node][tmp_edge_idx];
+                    Weight redirected_hit_weight;
+                    if(covered::is_various_latency_distribution_v1){
+                        redirected_hit_weight = beacon_edge_wrapper_ptr->getWeightTunerRef().getEwmaEdgecloudLatency() - debug_p2p_latency_matrix[closest_node][tmp_edge_idx];
+                    } else if(covered::is_various_latency_distribution_v2){
+                        redirected_hit_weight = beacon_edge_wrapper_ptr->getWeightTunerRef().getEwmaEdgecloudLatency() - getEdgeWrapperPtr(tmp_edge_idx)->getWeightTunerRef().getEwmaCrossedgeLatency_of_j(closest_node);
+                    }
+
                     tmp_eviction_cost = 
                         static_cast<Reward>(Util::popularityMultiply(redirected_hit_weight - local_hit_weight, tmp_local_cached_popularity)); // (w1 - w2) * local_cached_popularity
                 }
@@ -2257,7 +2324,7 @@ namespace covered
         const uint32_t tmp_object_size = local_uncached_objinfo.objsize;
         std::unordered_set<uint32_t> tmp_placement_edgeset;
         float topi_local_uncached_popularity_sum = 0.0;
-        float beacon_prob = beacon_edge_wrapper_ptr->getWeightTunerRef().getEwmaRemoteBeaconProb();
+        float beacon_prob = 0.0;//= beacon_edge_wrapper_ptr->getWeightTunerRef().getEwmaRemoteBeaconProb();
         uint32_t beacon_idx = getBeaconEdgeidx(cur_key);
         uint32_t cloud_access_latency_us = beacon_edge_wrapper_ptr->getEdgeTocloudPropagationSimulatorParamPtr()->genPropagationLatency();
 
@@ -2267,6 +2334,8 @@ namespace covered
 
             // Get top-i edge indexes and the sum of their local uncached popularities
             const uint32_t topi_edgeidx = topk_local_uncached_popularities[topicnt - 1].first;
+            EdgeWrapperBase* topi_edge_ptr = getEdgeWrapperPtr(topi_edgeidx);
+            beacon_prob = topi_edge_ptr->getWeightTunerRef().getEwmaRemoteBeaconProb();
             const float topi_local_uncached_popularity = topk_local_uncached_popularities[topicnt - 1].second;
             tmp_placement_edgeset.insert(topi_edgeidx);
             topi_local_uncached_popularity_sum += topi_local_uncached_popularity;
@@ -2293,11 +2362,14 @@ namespace covered
                 // Calculate placement gain (admission benefit - eviction cost)
                 tmp_placement_gain = tmp_admission_benefit - tmp_eviction_cost;
                 // debug print cur_key tmp_placement_edgeset.size()  tmp_admission_benefit tmp_eviction_cost
-                // if(tmp_eviction_cost>0){
-                //     std::cout << "Key: " << cur_key.getKeyDebugstr() 
+                // if(tmp_placement_gain > 0){
+                //     std::cout << "Key("<<is_global_cached<<"): " << cur_key.getKeyDebugstr() 
                 //             << ", Placement edgeset size: " << tmp_placement_edgeset.size() 
                 //             << ", Admission benefit: " << tmp_admission_benefit 
                 //             << ", Eviction cost: " << tmp_eviction_cost 
+                //             << ", topi_local_uncached_popularity: " << topi_local_uncached_popularity
+                //             << ", topi_local_uncached_popularity_sum: " << topi_local_uncached_popularity_sum
+                //             << ", sum_minus_topi: " << sum_minus_topi
                 //             << std::endl;
                 // }
             } else {
@@ -2307,56 +2379,132 @@ namespace covered
                 // getLocalHitWeights and getCooperativeHitWeights() can get the local and remote hit weights, its a vector, idx i is edge i
                 // std::vector<float> local_hit_weights;
                 // std::vector<std::vector<float>> cooperative_hit_weights;
-
-                if(is_global_cached){
-                    // get cached nodes from global_cached_objinfo
-                    std::vector<uint32_t> cached_edge_nodes;
-                    bool is_exist_global_cached_objinfo = perkey_global_cached_objinfo.getEdgeNodeIdxes(cur_key, cached_edge_nodes);
-                    assert(is_exist_global_cached_objinfo);
-                    
-                    // if is_global_cached
-                    // i is topi_edgeidx
-                    // N_min = edge node with the smallest latency to i and caches the object 
-                    // you can get latency i j from debug_p2p_latency_matrix[i][j]
-                    // find N_min first
-                    //  N_min = edge node with the smallest latency to i and caches the object 
-                    // compare latency to i select the smallest one 
-                    uint32_t N_min = cached_edge_nodes[0];
-                    for(uint32_t idx = 1; idx < cached_edge_nodes.size(); idx++){
-                        uint32_t candidate = cached_edge_nodes[idx];
-                        if(debug_p2p_latency_matrix[topi_edgeidx][candidate] < debug_p2p_latency_matrix[topi_edgeidx][N_min]){
-                            N_min = candidate;
+                Popularity debug_sum_minus_topi = 0.0;
+                Popularity debug_topi_local_uncached_popularity_sum = 0.0;
+                if(covered::is_various_latency_distribution_v1){
+                    if(is_global_cached){
+                        // get cached nodes from global_cached_objinfo
+                        std::vector<uint32_t> cached_edge_nodes;
+                        bool is_exist_global_cached_objinfo = perkey_global_cached_objinfo.getEdgeNodeIdxes(cur_key, cached_edge_nodes);
+                        assert(is_exist_global_cached_objinfo);
+                        
+                        // if is_global_cached
+                        // i is topi_edgeidx
+                        // N_min = edge node with the smallest latency to i and caches the object 
+                        // you can get latency i j from debug_p2p_latency_matrix[i][j]
+                        // find N_min first
+                        //  N_min = edge node with the smallest latency to i and caches the object 
+                        // compare latency to i select the smallest one 
+                        uint32_t N_min = UINT32_MAX;
+                        uint32_t cur_latency = UINT32_MAX;
+                        for(uint32_t idx = 0; idx < cached_edge_nodes.size(); idx++){
+                            
+                            uint32_t candidate = cached_edge_nodes[idx];
+                            if(candidate == topi_edgeidx) continue;
+                            if(debug_p2p_latency_matrix[topi_edgeidx][candidate] < cur_latency){
+                                N_min = candidate;
+                                cur_latency = debug_p2p_latency_matrix[topi_edgeidx][candidate];
+                            }
                         }
+                        assert(N_min != UINT32_MAX);
+                        // get \delta_{local,i} & = & L_{gm,i} - L_{lh,i}  & = & (1 - p) \ell_{cache,i,N_{beacon}} + \ell_{backend} 
+                        float delta_local_i = beacon_prob * debug_p2p_latency_matrix[beacon_idx][topi_edgeidx] + 1.0 * cloud_access_latency_us;
+                        // \delta_{remote,i,j} & = & L_{gm,i} - L_{rh,i,j} = \ell_{backend} - \ell_{cache,i,j}
+                        float delta_remote_i_Nmin = cloud_access_latency_us - debug_p2p_latency_matrix[topi_edgeidx][N_min];
+                        // \text{Priority}_i = \frac{f_{local, o, i}}{S_o} \times \left( \delta_{local, i} - \delta_{remote, i \to N_{\min}} \right}
+                        tmp_admission_benefit = (topi_local_uncached_popularity) * (delta_local_i - delta_remote_i_Nmin);
+                    } else {
+                        // i is topi_edgeidx
+                    
+                        // \text{Priority}_i = \frac{\delta_{\text{local},i}\times  f_{\text{local},o,i}}{S_o} + \sum_{j \in \mathcal{N}, j \neq i} \frac{\delta_{\text{remote},j,i}\times  f_{\text{remote},o,j,i}}{S_o} 
+                        float delta_local_i = beacon_prob * debug_p2p_latency_matrix[beacon_idx][topi_edgeidx] + 1.0 * cloud_access_latency_us;
+                        float remote_addmission_benefit = 0.0;
+                        for (uint32_t j = topicnt + 1; j <= tmp_topk_list_length; j++){
+                            uint32_t j_edgeidx = topk_local_uncached_popularities[j - 1].first;
+                            float delta_remote_i_j = cloud_access_latency_us - debug_p2p_latency_matrix[topi_edgeidx][j_edgeidx];
+                            remote_addmission_benefit += delta_remote_i_j * topk_local_uncached_popularities[j - 1].second;
+                        }
+                        tmp_admission_benefit = topi_local_uncached_popularity * delta_local_i + remote_addmission_benefit;
                     }
-                    // get \delta_{local,i} & = & L_{gm,i} - L_{lh,i}  & = & (1 - p) \ell_{cache,i,N_{beacon}} + \ell_{backend} 
-                    float delta_local_i = (1.0 - beacon_prob) * debug_p2p_latency_matrix[beacon_idx][topi_edgeidx] + 1.0 * cloud_access_latency_us;
-                    // \delta_{remote,i,j} & = & L_{gm,i} - L_{rh,i,j} = \ell_{backend} - \ell_{cache,i,j}
-                    float delta_remote_i_Nmin = cloud_access_latency_us - debug_p2p_latency_matrix[topi_edgeidx][N_min];
-                    // \text{Priority}_i = \frac{f_{local, o, i}}{S_o} \times \left( \delta_{local, i} - \delta_{remote, i \to N_{\min}} \right}
-                    tmp_admission_benefit = (topi_local_uncached_popularity) * (delta_local_i - delta_remote_i_Nmin);
-                } else {
-                    // i is topi_edgeidx
-                   
-                    // \text{Priority}_i = \frac{\delta_{\text{local},i}\times  f_{\text{local},o,i}}{S_o} + \sum_{j \in \mathcal{N}, j \neq i} \frac{\delta_{\text{remote},j,i}\times  f_{\text{remote},o,j,i}}{S_o} 
-                    float delta_local_i = (1.0 - beacon_prob) * debug_p2p_latency_matrix[beacon_idx][topi_edgeidx] + 1.0 * cloud_access_latency_us;
-                    float remote_addmission_benefit = 0.0;
-                    for (uint32_t j = topicnt; j <= tmp_topk_list_length; j++){
-                        uint32_t j_edgeidx = topk_local_uncached_popularities[j - 1].first;
-                        float delta_remote_i_j = cloud_access_latency_us - debug_p2p_latency_matrix[topi_edgeidx][j_edgeidx];
-                        remote_addmission_benefit += delta_remote_i_j * topk_local_uncached_popularities[j - 1].second;
+                } else if(covered::is_various_latency_distribution_v2){
+                    uint32_t topi_beacon_edge_latency = topi_edge_ptr->getWeightTunerRef().getEwmaCrossedgeLatency_of_j(beacon_idx);
+                    if(topi_beacon_edge_latency == 0){
+                        topi_beacon_edge_latency = topi_edge_ptr->getWeightTunerRef().getEwmaCrossedgeLatency();
                     }
-                    tmp_admission_benefit = topi_local_uncached_popularity * delta_local_i + remote_addmission_benefit;
+                    if(is_global_cached){
+                        // get cached nodes from global_cached_objinfo
+                        std::vector<uint32_t> cached_edge_nodes;
+                        bool is_exist_global_cached_objinfo = perkey_global_cached_objinfo.getEdgeNodeIdxes(cur_key, cached_edge_nodes);
+                        assert(is_exist_global_cached_objinfo);
+                        
+                        // if is_global_cached
+                        // i is topi_edgeidx
+                        // N_min = edge node with the smallest latency to i and caches the object 
+                        // you can get latency i j from debug_p2p_latency_matrix[i][j]
+                        // find N_min first
+                        //  N_min = edge node with the smallest latency to i and caches the object 
+                        // compare latency to i select the smallest one 
+                        uint32_t N_min = UINT32_MAX;
+                        uint32_t cur_latency = UINT32_MAX;
+                        for(uint32_t idx = 0; idx < cached_edge_nodes.size(); idx++){
+                            
+                            uint32_t candidate = cached_edge_nodes[idx];
+                            if(candidate == topi_edgeidx) continue;
+                            uint32_t candidate_latency = topi_edge_ptr->getWeightTunerRef().getEwmaCrossedgeLatency_of_j(candidate);
+                            if(candidate_latency < cur_latency){
+                                N_min = candidate;
+                                cur_latency = candidate_latency;
+                            }
+                        }
+                        assert(N_min != UINT32_MAX);
+                        // get \delta_{local,i} & = & L_{gm,i} - L_{lh,i}  & = & (1 - p) \ell_{cache,i,N_{beacon}} + \ell_{backend} 
+                        Popularity delta_local_i = beacon_prob * topi_beacon_edge_latency + 1.0 * cloud_access_latency_us;
+                        // assert( topi_edge_ptr->getWeightTunerRef().getEwmaCrossedgeLatency_of_j(beacon_idx) > 0);
+                        // \delta_{remote,i,j} & = & L_{gm,i} - L_{rh,i,j} = \ell_{backend} - \ell_{cache,i,j}
+                        Popularity delta_remote_i_Nmin = 1.0 * cloud_access_latency_us - 1.0 * cur_latency;
+                        // \text{Priority}_i = \frac{f_{local, o, i}}{S_o} \times \left( \delta_{local, i} - \delta_{remote, i \to N_{\min}} \right}
+                        tmp_admission_benefit = (topi_local_uncached_popularity) * (delta_local_i - delta_remote_i_Nmin);
+                    } else {
+                        // i is topi_edgeidx
+                        // EdgeWrapperBase* topi_edge_ptr = getEdgeWrapperPtr(topi_edgeidx);
+                        // \text{Priority}_i = \frac{\delta_{\text{local},i}\times  f_{\text{local},o,i}}{S_o} + \sum_{j \in \mathcal{N}, j \neq i} \frac{\delta_{\text{remote},j,i}\times  f_{\text{remote},o,j,i}}{S_o} 
+                        Popularity delta_local_i = beacon_prob * topi_beacon_edge_latency + 1.0 * cloud_access_latency_us;
+                        // assert( topi_edge_ptr->getWeightTunerRef().getEwmaCrossedgeLatency_of_j(beacon_idx) > 0);
+                        // if delta_local_i < cloud_access_latency_us + 100, report it
+                        Popularity remote_addmission_benefit = 0.0;
+                        for (uint32_t j = 1; j <= topicnt; j++){
+                            debug_topi_local_uncached_popularity_sum += topk_local_uncached_popularities[j - 1].second;
+                        }
+                        for (uint32_t j = topicnt + 1; j <= tmp_topk_list_length; j++){
+                            uint32_t j_edgeidx = topk_local_uncached_popularities[j - 1].first;
+                            Popularity delta_remote_i_j = 1.0 * cloud_access_latency_us - topi_edge_ptr->getWeightTunerRef().getEwmaCrossedgeLatency_of_j(j_edgeidx);
+                            remote_addmission_benefit += delta_remote_i_j * topk_local_uncached_popularities[j - 1].second;
+                            debug_sum_minus_topi += topk_local_uncached_popularities[j - 1].second;
+                        }
+                        tmp_admission_benefit = topi_local_uncached_popularity * delta_local_i + remote_addmission_benefit;
+                        // std::cout << "Debug Key ("<<is_global_cached<<"): " << cur_key.getKeyDebugstr() 
+                        //     << ", topi_local_uncached_popularity: " << topi_local_uncached_popularity
+                        //     << ", delta_local_i: " << delta_local_i
+                        //     << ", remote_addmission_benefit: " << remote_addmission_benefit
+                        //     << ", topi_local_uncached_popularity_sum: " << debug_topi_local_uncached_popularity_sum
+                        //     << ", sum_minus_topi: " << debug_sum_minus_topi
+                        //     << std::endl;
+                    }
                 }
                 // Calculate eviction cost based on tmp_placement_edgeset (refer to src/core/victim_tracker.c::coveredCalcEvictionCostP2P())
-                tmp_eviction_cost = coveredCalcEvictionCostP2P(cur_key, tmp_object_size, tmp_placement_edgeset);
+                tmp_eviction_cost = coveredCalcEvictionCostP2P(cur_key, tmp_object_size, tmp_placement_edgeset);//not p2p
                 
                 tmp_placement_gain = tmp_admission_benefit - tmp_eviction_cost;
                 // debug print cur_key tmp_placement_edgeset.size()  tmp_admission_benefit tmp_eviction_cost
-                // if(tmp_eviction_cost>0){
-                //     std::cout << "Key: " << cur_key.getKeyDebugstr() 
+                // if(tmp_placement_gain > 0){
+                //     std::cout << "Key("<<is_global_cached<<"): " << cur_key.getKeyDebugstr() 
                 //             << ", Placement edgeset size: " << tmp_placement_edgeset.size() 
                 //             << ", Admission benefit: " << tmp_admission_benefit 
                 //             << ", Eviction cost: " << tmp_eviction_cost 
+                //             << ", beacon_prob: " << beacon_prob
+                //             << ", topi_local_uncached_popularity: " << topi_local_uncached_popularity
+                //             << ", topi_local_uncached_popularity_sum: " << debug_topi_local_uncached_popularity_sum
+                //             << ", sum_minus_topi: " << debug_sum_minus_topi
                 //             << std::endl;
                 // }
             }

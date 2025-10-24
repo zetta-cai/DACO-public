@@ -1,6 +1,7 @@
 #include "cache/covered/local_cached_metadata.h"
 
 #include "common/util.h"
+#include "common/covered_common_header.h"
 #include "edge/covered_edge_custom_func_param.h"
 
 namespace covered
@@ -74,7 +75,15 @@ namespace covered
 
         return;
     }
+    void LocalCachedMetadata::getPopularity(const Key& key, Popularity& local_popularity, Popularity& redirected_popularity, Popularity& redirected_popularity_reward) const
+    {
+        const HeteroKeyLevelMetadata& key_level_metadata_ref = getkeyLevelMetadata(key);
+        local_popularity = key_level_metadata_ref.getLocalPopularity();
+        redirected_popularity = key_level_metadata_ref.getRedirectedPopularity();
+        redirected_popularity_reward = key_level_metadata_ref.getRedirectedPopularityReward();
 
+        return;
+    }
     void LocalCachedMetadata::calculateAndUpdatePopularity_(perkey_metadata_list_t::iterator& perkey_metadata_list_iter, const HeteroKeyLevelMetadata& key_level_metadata_ref, const GroupLevelMetadata& group_level_metadata_ref)
     {
         #ifdef ENABLE_TRACK_PERKEY_OBJSIZE
@@ -90,9 +99,24 @@ namespace covered
 
         // Calculate and update redirected cached popularity
         // NOTE: Redirected cached popularity is calculated based on static metadata (e.g., object size) from local requests, object-level metadata (e.g., frequency) for redirected requests, and group-level metadata for all requests
-        Frequency redirected_frequency = key_level_metadata_ref.getRedirectedFrequency();
-        Popularity redirected_cached_popularity = calculatePopularity(redirected_frequency, object_size);
+        Frequency redirected_frequency;
+        Popularity redirected_cached_popularity; 
+        Frequency redirected_frequency_reward;
+        Popularity redirected_cached_popularity_reward; 
+        redirected_frequency = key_level_metadata_ref.getRedirectedFrequency();
+        redirected_cached_popularity = calculatePopularity(redirected_frequency, object_size);
         perkey_metadata_list_iter->second.updateRedirectedPopularity(redirected_cached_popularity);
+        if(is_p2p_global_mode_in_common){
+            // p2p mode: use p2p_redirected_reward_freq_ to calculate redirected popularity
+            redirected_frequency_reward = key_level_metadata_ref.getRedirectedRewardFreq();
+            redirected_cached_popularity_reward  = calculatePopularity(redirected_frequency_reward, object_size);
+            perkey_metadata_list_iter->second.updateRedirectedPopularityReward(redirected_cached_popularity_reward);
+            // if(redirected_frequency>0){
+            //     // print redirected_frequency_reward for debug
+            //     std::cout<<"[Debug] redirected_frequency_reward: "<<redirected_frequency_reward<<", redirected_frequency: "<<redirected_frequency<<std::endl;
+            // }
+        }
+
 
         return;
     }

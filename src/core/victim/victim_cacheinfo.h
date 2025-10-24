@@ -32,6 +32,8 @@ namespace covered
 
         VictimCacheinfo();
         VictimCacheinfo(const Key& key, const ObjectSize& object_size, const Popularity& local_cached_popularity, const Popularity& redirected_cached_popularity, const Reward& local_reward);
+        VictimCacheinfo(const Key& key, const ObjectSize& object_size, const Popularity& local_cached_popularity, const Popularity& redirected_cached_popularity, const Reward& local_reward, const Reward redirected_cached_reward) ;
+    
         ~VictimCacheinfo();
 
         bool isInvalid() const;
@@ -48,6 +50,7 @@ namespace covered
         bool getObjectSize(ObjectSize& object_size) const; // Return if with complete object size
         bool getLocalCachedPopularity(Popularity& local_cached_popularity) const; // Return if with complete local cached popularity
         bool getRedirectedCachedPopularity(Popularity& redirected_cached_popularity) const; // Return if with complete redirected cached popularity
+        bool getRedirectedCachedPopularityReward(Popularity& redirected_cached_popularity) const; // Return if with complete redirected cached popularity
         bool getLocalReward(Reward& local_reward) const; // Return if with complete local reward
 
         // For compressed victim cacheinfo
@@ -88,6 +91,7 @@ namespace covered
         Popularity local_cached_popularity_; // Calculated by local edge cache based on local cache hits
         Popularity redirected_cached_popularity_; // Calculated by local edge cache based on redirected cache hits
         Reward local_reward_; // Calculated by local edge cache based on local/redirected cached popularity
+        Reward redirected_cached_reward_;
     };
 
     class VictimCacheinfoCompare

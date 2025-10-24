@@ -8,6 +8,78 @@ namespace covered
 {
     const std::string PropagationSimulatorParam::kClassName("PropagationSimulatorParam");
 
+    PropagationSimulatorParam::LinkDistParams::LinkDistParams()
+    : type(LinkDistType::UNIFORM), l(0), r(0), lambda(0), k(0.0) {}
+
+    // 带参构造：根据分布类型初始化对应参数
+    
+    PropagationSimulatorParam::LinkDistParams::LinkDistParams(LinkDistType t, uint32_t l_val, uint32_t r_val, uint32_t extra1 = 0, double extra2 = 0.0)
+        : type(t), l(l_val), r(r_val) {
+        switch (type) {
+            case LinkDistType::POISSON:
+                lambda = extra1;  // 泊松只需λ
+                break;
+            case LinkDistType::PARETO:
+                k = extra2;       // 帕累托只需k
+                break;
+            case LinkDistType::UNIFORM:
+                uniform_l = l;
+                uniform_r = r;
+                break;
+            default:  // UNIFORM无需额外参数
+                break;
+        }
+    }
+
+    PropagationSimulatorParam::LinkDistParams::LinkDistParams(std::string args, uint32_t seed){
+        // Parse the string
+        // Expected format: distname_l_r_x1_x2_U
+        std::istringstream iss(args);
+        std::string token;
+        std::vector<std::string> tokens;
+
+        while (std::getline(iss, token, '_')) {
+            tokens.push_back(token);
+        }
+
+        if (tokens.size() < 5) {
+            throw std::invalid_argument("Invalid argument format for LinkDistParams");
+        }
+
+        // Extract parameters
+        std::string distname = tokens[0];
+        l = std::stoul(tokens[1]);
+        r = std::stoul(tokens[2]);
+        if (distname == "uniform") {
+            type = LinkDistType::UNIFORM;
+            uint32_t x1 = std::stoul(tokens[3]); // Bug: Should be lambda
+            uint32_t x2 = std::stoul(tokens[4]);
+            if (x2 >= r) {
+                throw std::invalid_argument("x2 must be smaller than r for UNIFORM distribution");
+            }
+            std::uniform_int_distribution<uint32_t> uniform_dist(x1, x2);
+            std::mt19937_64 randgen(seed);
+            uniform_r = uniform_dist(randgen);
+            uniform_l = l;
+        } else if (distname == "poisson") {
+            type = LinkDistType::POISSON;
+            uint32_t x1 = std::stoul(tokens[3]);
+            uint32_t x2 = std::stoul(tokens[4]);
+            std::uniform_int_distribution<uint32_t> uniform_dist(x1, x2);
+            std::mt19937_64 randgen(seed);
+            lambda = uniform_dist(randgen);
+        } else if (distname == "pareto") {
+            type = LinkDistType::PARETO;
+            double x1 = std::stod(tokens[3]);
+            double x2 = std::stod(tokens[4]);
+            std::uniform_real_distribution<double> uniform_dist(x1, x2);
+            std::mt19937_64 randgen(seed);
+            k = uniform_dist(randgen);
+        } else {
+            throw std::invalid_argument("Unsupported distribution type: " + distname);
+        }
+
+    }
 
     PropagationSimulatorParam::PropagationSimulatorParam() : SubthreadParamBase(), node_wrapper_ptr_(NULL), propagation_latency_distname_(""), propagation_latency_lbound_us_(0), propagation_latency_avg_us_(0), propagation_latency_rbound_us_(0), propagation_latency_random_seed_(0), rwlock_for_propagation_item_buffer_("rwlock_for_propagation_item_buffer_"), is_first_item_(true), prev_timespec_(), propagation_latency_randgen_(0)
     {
@@ -47,6 +119,82 @@ namespace covered
 
         propagation_latency_dist_ptr_ = new std::uniform_int_distribution<uint32_t>(propagation_latency_lbound_us, propagation_latency_rbound_us);
         assert(propagation_latency_dist_ptr_ != NULL);
+
+        // check _p2p_latency_array
+        // 1. if empty set link_size to -1, this simulate for a node, all links are the same
+        if (_p2p_latency_array.empty()) {
+            link_size = 0;
+        } else {
+            link_size = _p2p_latency_array.size();
+        }
+        is_rnd_link = false;
+        // check contents in _p2p_latency_array, if all value is INT_MAX, set is_rnd_link to true
+        if(link_size != 0){
+            bool is_all_int_max = true;
+            for (uint32_t i = 0; i < link_size; i++) {
+                if (_p2p_latency_array[i] != UINT32_MAX) {
+                    is_all_int_max = false;
+                    break;
+                }
+            }
+            if (is_all_int_max) {
+                is_rnd_link = true;
+            } else {
+                is_rnd_link = false;
+            }
+        } 
+        // print link_size is_rnd_link
+        // std::cout << "Link size: " << link_size << ", is_rnd_link: " << (is_rnd_link ? "true" : "false") << std::endl;
+
+        // 2. if is_rnd_link is true, generate random seeds for each link
+        //   (seed_base + node_idx * node_factor) * link_factor + link_idx, (seed_base + node_idx * node_factor) is propagation_latency_random_seed
+        if(is_rnd_link){
+            link_seeds.resize(link_size);
+            for (uint32_t i = 0; i < link_size; i++) {
+                link_seeds[i] = propagation_latency_random_seed * PROPAGATION_SIMULATION_LINK_FACTOR + i;
+                link_randgens.push_back(std::mt19937_64(link_seeds[i]));
+            }
+        }
+        // 3. initialize std::vector<LinkDistParams> link_dist_params_;  use LinkDistParams(args, seed)
+        // args is propagation_latency_distname
+
+        if(is_rnd_link){
+            link_dist_params_.resize(link_size);
+            for (uint32_t i = 0; i < link_size; i++) {
+                link_dist_params_[i] = LinkDistParams(propagation_latency_distname, link_seeds[i]);
+            }
+        }
+        // if is is_rnd_link info print all links parameters in a list
+        // if uniform, print uniform_r
+        // if poisson print lamba
+        // if pareto print k
+        if(is_rnd_link){
+            // std::cout << "Link size: " << link_size << ", is_rnd_link: " << (is_rnd_link ? "true" : "false") << std::endl;
+
+            // std::ostringstream oss;
+            oss << "Link distribution parameters: [";
+            for (uint32_t i = 0; i < link_size; i++) {
+                switch (link_dist_params_[i].type) {
+                    case LinkDistType::UNIFORM:
+                        oss << link_dist_params_[i].uniform_r;
+                        break;
+                    case LinkDistType::POISSON:
+                        oss << link_dist_params_[i].lambda;
+                        break;
+                    case LinkDistType::PARETO:
+                        oss << link_dist_params_[i].k;
+                        break;
+                    default:
+                        oss << "UNKNOWN distribution type";
+                        break;
+                }
+                if (i != link_size - 1) {
+                    oss << ", ";
+                }
+            }
+            oss << "]";
+            Util::dumpNormalMsg(instance_name_, oss.str());
+        }
     }
 
 
@@ -323,6 +471,17 @@ namespace covered
     uint32_t PropagationSimulatorParam::genPropagationLatency_of_j(int j)
     {
         // NOTE: NO need to acquire write lock here, which has been done in PropagationSimulatorParam::push() and PropagationSimulatorParam::genPropagationLatency()
+        if(is_rnd_link){//using constant latency matrix
+            return genPropagationLatency_of_j_rnd_(j);
+        }
+        else {
+            return genPropagationLatency_of_j_(j);
+        }
+    }
+
+    uint32_t PropagationSimulatorParam::genPropagationLatency_of_j_(int j)
+    {
+        // NOTE: NO need to acquire write lock here, which has been done in PropagationSimulatorParam::push() and PropagationSimulatorParam::genPropagationLatency()
 
         assert(j >= 0 && j < (int)p2p_latency_array.size());
         uint32_t propagation_latency_base = p2p_latency_array[j];
@@ -349,6 +508,68 @@ namespace covered
             Util::dumpErrorMsg(instance_name_, oss.str());
             exit(1);
         }
+
+        return propagation_latency;
+    }
+    
+    uint32_t PropagationSimulatorParam::genPropagationLatency_of_j_rnd_(int j)
+    {
+        // NOTE: NO need to acquire write lock here, which has been done in PropagationSimulatorParam::push() and PropagationSimulatorParam::genPropagationLatency()
+
+        assert(j >= 0 && j < (int)p2p_latency_array.size());
+        uint32_t propagation_latency = 0;
+        // get seed and link dist params for j
+        LinkDistParams link_dist_param = link_dist_params_[j];
+        std::mt19937_64 link_randgen = link_randgens[j];
+        if(link_dist_param.type == LinkDistType::UNIFORM){
+            std::uniform_int_distribution<uint32_t> uniform_dist(link_dist_param.uniform_l, link_dist_param.uniform_r);
+            propagation_latency = uniform_dist(link_randgen);
+
+            assert(propagation_latency >= link_dist_param.uniform_l);
+            assert(propagation_latency <= link_dist_param.uniform_r);
+
+        } else if(link_dist_param.type == LinkDistType::POISSON){
+            std::poisson_distribution<uint32_t> poisson_dist(link_dist_param.lambda);
+            propagation_latency = poisson_dist(link_randgen);
+    
+            // 截断处理：超出范围时取边界值
+            if (propagation_latency < link_dist_param.l) {
+                propagation_latency = link_dist_param.l;
+            } else if (propagation_latency > link_dist_param.r) {
+                propagation_latency = link_dist_param.r;
+            }
+        } else if(link_dist_param.type == LinkDistType::PARETO){
+
+            double k = link_dist_param.k;
+            assert(k > 0.0 && "Pareto distribution k must be positive");
+
+            const double L = link_dist_param.l;
+            const double U = link_dist_param.r;
+
+            std::uniform_real_distribution<double> uniform_dist(0.0, 1.0);
+            double u = uniform_dist(link_randgen);
+            if (u >= 1.0) u = 1.0 - 1e-10;
+
+            const double factor = 1.0 - pow(L / U, k);
+            const double term = 1.0 - u * factor;
+            assert(term > 0.0 && "Invalid term in Pareto calculation (must be positive)");
+
+            const double raw_delay = L * pow(term, -1.0 / k);
+            propagation_latency = static_cast<uint32_t>(raw_delay);
+
+
+            assert(propagation_latency >= L && propagation_latency <= U 
+                && "Pareto generated latency out of [left, right] range");
+        } else{
+            // error
+            std::ostringstream oss;
+            oss << "propagation latency distribution link_dist_param.type " << " is not supported!" << std::endl;
+            Util::dumpErrorMsg(instance_name_, oss.str());
+            exit(1);
+        }
+        
+
+        assert(propagation_latency > 0 && "Generated propagation latency must be positive");
 
         return propagation_latency;
     }

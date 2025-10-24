@@ -28,7 +28,8 @@ namespace covered
 
         // For popularity information
         virtual void getPopularity(const Key& key, Popularity& local_popularity, Popularity& redirected_popularity) const override;
-
+        virtual void getPopularity(const Key& key, Popularity& local_popularity, Popularity& redirected_popularity, Popularity& redirected_popularity_reward) const override;
+   
         virtual uint64_t getSizeForCapacity() const override; // Get size for capacity constraint of local cached objects
     private:
         static const std::string kClassName;

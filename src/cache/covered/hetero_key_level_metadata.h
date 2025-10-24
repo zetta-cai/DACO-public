@@ -29,10 +29,11 @@ namespace covered
         virtual void updateNoValueDynamicMetadata(const bool& is_redirected, const bool& is_global_cached, const Frequency& added_local_frequency = 1, const Frequency& added_redirected_frequency = 1) override; // For getreq with redirected hits, update object-level value-unrelated metadata (is_global_cached MUST be true and will NOT be used)
         
         void updateRedirectedPopularity(const Popularity& redirected_popularity);
-
+        void updateRedirectedPopularityReward(const Popularity& redirected_popularity);
+        Frequency getRedirectedRewardFreq() const;
         Frequency getRedirectedFrequency() const;
         Popularity getRedirectedPopularity() const; // Get redirected popularity for redirected hits of local cached objectds
-
+        Popularity getRedirectedPopularityReward() const;
         void enableIsNeighborCached();
         void disableIsNeighborCached();
         bool isNeighborCached() const;
@@ -47,8 +48,9 @@ namespace covered
 
         // For redirected hits of local cached objects
         Frequency redirected_frequency_;
+        Frequency p2p_redirected_reward_freq_;
         Popularity redirected_popularity_;
-
+        Popularity redirected_reward_popularity_;
         // For beacon-based cached metadata update
         // NOTE: is_neighbor_cached is different from is_global_cached in local uncached metadata -> is_neighbor_cached is ONLY updated when perform admission of normal/fast-path placement or beacon notification of last/not-last cache copy after directory eviction/admission
         bool is_neighbor_cached_;

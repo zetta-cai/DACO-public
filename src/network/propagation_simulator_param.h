@@ -26,6 +26,31 @@ namespace covered
     class PropagationSimulatorParam : public SubthreadParamBase
     {
     public:
+        enum class LinkDistType {
+            UNIFORM,   // 均匀分布
+            POISSON,   // 泊松分布
+            PARETO     // 帕累托分布
+        };
+        // 嵌套类：存储单个链路的分布参数
+        class LinkDistParams {
+        public:
+            LinkDistType type;         // 分布类型
+            uint32_t l;            // 下界（所有分布共用）
+            uint32_t r;            // 上界（所有分布共用）
+            uint32_t lambda;         // 泊松分布的λ参数（仅Poisson使用）
+            double k;              // 帕累托分布的形状参数k（仅Pareto使用）
+            uint32_t uniform_l;
+            uint32_t uniform_r;
+            // 构造函数：默认初始化（避免未定义行为）
+            LinkDistParams();
+            
+            // 带参构造：根据分布类型初始化对应参数
+            LinkDistParams(LinkDistType t, uint32_t l_val, uint32_t r_val, uint32_t extra1, double extra2);
+
+            LinkDistParams(std::string args, uint32_t seed);
+
+        };
+        const uint32_t PROPAGATION_SIMULATION_LINK_FACTOR = 1000;
         PropagationSimulatorParam();
         PropagationSimulatorParam(NodeWrapperBase* node_wrapper_ptr, const std::string& propagation_latency_distname, const uint32_t& propagation_latency_lbound_us, const uint32_t& propagation_latency_avg_us, const uint32_t& propagation_latency_rbound_us, const uint32_t& propagation_latency_random_seed, const uint32_t& propagation_item_buffer_size, const std::string& realnet_option, const std::vector<uint32_t> _p2p_latency_array = std::vector<uint32_t>()); 
         ~PropagationSimulatorParam();
@@ -39,14 +64,14 @@ namespace covered
 
         uint32_t genPropagationLatency(); // Atomic function
         uint32_t genPropagationLatency_of_j(int j);
-        // uint32_t genPropagationLatency_of_j_rnd(int j);
         
         const PropagationSimulatorParam& operator=(const PropagationSimulatorParam& other);
     private:
         static const std::string kClassName;
 
         uint32_t genPropagationLatency_();
-
+        uint32_t genPropagationLatency_of_j_(int j);
+        uint32_t genPropagationLatency_of_j_rnd_(int j);
         // Const shared variables
         NodeWrapperBase* node_wrapper_ptr_;
         std::string propagation_latency_distname_;
@@ -68,7 +93,11 @@ namespace covered
         RingBuffer<PropagationItem>* propagation_item_buffer_ptr_;
         bool is_first_item_;
         struct timespec prev_timespec_;
-
+        bool is_rnd_link;
+        std::vector<uint32_t> link_seeds;
+        std::vector<LinkDistParams> link_dist_params_;  // 索引对应链路ID
+        std::vector<std::mt19937_64> link_randgens;
+        uint32_t link_size;
         // Used to generate random latency distribution
         std::mt19937_64 propagation_latency_randgen_;
         std::uniform_int_distribution<uint32_t>* propagation_latency_dist_ptr_;

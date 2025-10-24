@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <iostream>
 #include <cstdint>
+#include <climits>
 
 using json = nlohmann::json;
 using namespace std;
@@ -88,20 +89,25 @@ bool DelayConfigReader::validateConfig(const DelayConfig& config) {
         }
     }
 
-    // 验证矩阵对称性和对角线（uint32_t特性）
-    for (int i = 0; i < config.node_count; ++i) {
-        if (config.delay_matrix[i][i] != 0) {  // 自身延迟为0
-            cerr << "对角线不为0（节点" << i << "）" << endl;
-            return false;
-        }
-        for (int j = i + 1; j < config.node_count; ++j) {
-            if (config.delay_matrix[i][j] != config.delay_matrix[j][i]) {  // 对称性
-                cerr << "矩阵不对称（节点" << i << "与" << j << "）" << endl;
+    if(config.delay_matrix[0][0] == UINT32_MAX){
+        cout << "test matrix is INF, is various latency is v2" << endl;
+    }else{
+        cout << "test matrix is not INF, is various latency is v1" << endl;
+        // 验证矩阵对称性和对角线（uint32_t特性）
+        for (int i = 0; i < config.node_count; ++i) {
+            if (config.delay_matrix[i][i] != 0) {  // 自身延迟为0
+                cerr << "对角线不为0（节点" << i << "） value is" << config.delay_matrix[0][0] << endl;
                 return false;
             }
-            if (config.delay_matrix[i][j] < low || config.delay_matrix[i][j] > high) {  // 范围验证
-                cerr << "延迟值超出范围（节点" << i << "与" << j << "：" << config.delay_matrix[i][j] << "）" << endl;
-                return false;
+            for (int j = i + 1; j < config.node_count; ++j) {
+                if (config.delay_matrix[i][j] != config.delay_matrix[j][i]) {  // 对称性
+                    cerr << "矩阵不对称（节点" << i << "与" << j << "）" << endl;
+                    return false;
+                }
+                if (config.delay_matrix[i][j] < low || config.delay_matrix[i][j] > high) {  // 范围验证
+                    cerr << "延迟值超出范围（节点" << i << "与" << j << "：" << config.delay_matrix[i][j] << "）" << endl;
+                    return false;
+                }
             }
         }
     }

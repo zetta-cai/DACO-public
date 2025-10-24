@@ -114,9 +114,11 @@ namespace covered
         ewma_propagation_latency_crossedge_us_ = propagation_latency_crossedge_us;
         ewma_propagation_latency_edgecloud_us_ = propagation_latency_edgecloud_us;
         
-        if(p2p_latency_array.empty()){
+        if( p2p_latency_array.empty() || p2p_latency_array[0] == UINT32_MAX){
             ewma_propagation_latency_crossedge_us_array_ = std::vector<uint32_t>(edgecnt, propagation_latency_crossedge_us);
+            ewma_propagation_latency_crossedge_us_array_[edge_idx] = 0; // latency to self is 0
         } else {
+            
             ewma_propagation_latency_crossedge_us_array_ = p2p_latency_array; // Use the provided p2p latency array
             // avg of p2p_latency_array
             ewma_propagation_latency_crossedge_us_ = std::accumulate(ewma_propagation_latency_crossedge_us_array_.begin(), ewma_propagation_latency_crossedge_us_array_.end(), 0) / edgecnt;
@@ -129,7 +131,7 @@ namespace covered
         // Dump initial weight info
         oss.clear();
         oss.str("");
-        oss << "is p2p latency? " << (is_p2p_enable ? "true" : "false") << ", initial cross-edge latency (us): " << ewma_propagation_latency_crossedge_us_ << ", edge-cloud latency (us): " << ewma_propagation_latency_edgecloud_us_ << ", local hit weight: " << weight_info_.getLocalHitWeight() << ", cooperative hit weight: " << weight_info_.getCooperativeHitWeight() << ", remote beacon prob: " << ewma_remote_beacon_prob_;
+        oss << "initial cross-edge latency (us): " << ewma_propagation_latency_crossedge_us_ << ", edge-cloud latency (us): " << ewma_propagation_latency_edgecloud_us_ << ", local hit weight: " << weight_info_.getLocalHitWeight() << ", cooperative hit weight: " << weight_info_.getCooperativeHitWeight() << ", remote beacon prob: " << ewma_remote_beacon_prob_;
         Util::dumpNormalMsg(instance_name_, oss.str());
     }
 
@@ -138,6 +140,17 @@ namespace covered
         // Dump eventual weight info
         std::ostringstream oss;
         oss << "eventual cross-edge latency (us): " << ewma_propagation_latency_crossedge_us_ << ", edge-cloud latency (us): " << ewma_propagation_latency_edgecloud_us_ << ", local hit weight: " << weight_info_.getLocalHitWeight() << ", cooperative hit weight: " << weight_info_.getCooperativeHitWeight() << ", remote beacon prob: " << ewma_remote_beacon_prob_;
+        // print p2p latency array
+        if(is_p2p_enable){
+            oss << ", p2p latency array (us): [";
+            for(size_t i = 0; i < ewma_propagation_latency_crossedge_us_array_.size(); i++){
+                oss << ewma_propagation_latency_crossedge_us_array_[i];
+                if(i != ewma_propagation_latency_crossedge_us_array_.size() - 1){
+                    oss << ", ";
+                }
+            }
+            oss << "]";
+        }
         Util::dumpNormalMsg(instance_name_, oss.str());
     }
 

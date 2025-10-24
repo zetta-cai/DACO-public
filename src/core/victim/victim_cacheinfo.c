@@ -104,11 +104,13 @@ namespace covered
         }
 
         // (3) Recover redirected cached popularity
-        Popularity current_redirected_cached_popularity = 0.0;
+        Popularity current_redirected_cached_popularity = 0.0, redirected_cached_reward_ = 0.0;
         bool with_complete_redirected_cached_popularity = compressed_victim_cacheinfo.getRedirectedCachedPopularity(current_redirected_cached_popularity);
+        compressed_victim_cacheinfo.getRedirectedCachedPopularityReward(redirected_cached_reward_);
         if (with_complete_redirected_cached_popularity)
         {
             complete_victim_cacheinfo.redirected_cached_popularity_ = current_redirected_cached_popularity;
+            complete_victim_cacheinfo.redirected_cached_reward_ = redirected_cached_reward_;
         }
 
         // (4) Recover local reward
@@ -158,7 +160,7 @@ namespace covered
         return const_iter;
     }
 
-    VictimCacheinfo::VictimCacheinfo() : dedup_bitmap_(INVALID_BITMAP), key_(), beacon_edgeidx_(-1), object_size_(0), local_cached_popularity_(0.0), redirected_cached_popularity_(0.0), local_reward_(0.0)
+    VictimCacheinfo::VictimCacheinfo() : dedup_bitmap_(INVALID_BITMAP), key_(), beacon_edgeidx_(-1), object_size_(0), local_cached_popularity_(0.0), redirected_cached_popularity_(0.0), local_reward_(0.0), redirected_cached_reward_(0.0)
     {
     }
 
@@ -171,7 +173,16 @@ namespace covered
         redirected_cached_popularity_ = redirected_cached_popularity;
         local_reward_ = local_reward;
     }
-
+    VictimCacheinfo::VictimCacheinfo(const Key& key, const ObjectSize& object_size, const Popularity& local_cached_popularity, const Popularity& redirected_cached_popularity, const Reward& local_reward, const Reward redirected_cached_reward) : beacon_edgeidx_(-1)
+    {
+        dedup_bitmap_ = COMPLETE_BITMAP;
+        key_ = key;
+        object_size_ = object_size;
+        local_cached_popularity_ = local_cached_popularity;
+        redirected_cached_popularity_ = redirected_cached_popularity;
+        redirected_cached_reward_ = redirected_cached_reward;
+        local_reward_ = local_reward;
+    }
     VictimCacheinfo::~VictimCacheinfo() {}
 
     bool VictimCacheinfo::isInvalid() const
@@ -274,6 +285,17 @@ namespace covered
         return with_complete_redirected_cached_popularity;
     }
 
+    bool VictimCacheinfo::getRedirectedCachedPopularityReward(Popularity& redirected_cached_reward) const
+    {
+        assert(dedup_bitmap_ != INVALID_BITMAP);
+
+        bool with_complete_redirected_cached_popularity = ((dedup_bitmap_ & REDIRECTED_CACHED_POPULARITY_DEDUP_MASK) != REDIRECTED_CACHED_POPULARITY_DEDUP_MASK);
+        if (with_complete_redirected_cached_popularity) // NOT deduped
+        {
+            redirected_cached_reward = redirected_cached_reward_;
+        }
+        return with_complete_redirected_cached_popularity;
+    }
     bool VictimCacheinfo::getLocalReward(Reward& local_reward) const
     {
         assert(dedup_bitmap_ != INVALID_BITMAP);
@@ -320,6 +342,7 @@ namespace covered
 
         dedup_bitmap_ |= REDIRECTED_CACHED_POPULARITY_DEDUP_MASK;
         redirected_cached_popularity_ = 0.0;
+        redirected_cached_reward_ = 0.0;
         return;
     }
 
@@ -577,7 +600,7 @@ namespace covered
         local_cached_popularity_ = other.local_cached_popularity_;
         redirected_cached_popularity_ = other.redirected_cached_popularity_;
         local_reward_ = other.local_reward_;
-        
+        redirected_cached_reward_ = other.redirected_cached_reward_;
         return *this;
     }
 

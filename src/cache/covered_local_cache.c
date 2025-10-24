@@ -401,13 +401,14 @@ namespace covered
             Popularity tmp_local_cached_popularity = 0.0;
             Popularity tmp_redirected_cached_popularity = 0.0;
             Reward tmp_local_reward = 0.0;
+            Reward tmp_redirected_cached_reward_ = 0.0;
 
             bool is_least_popular_key_exist = local_cached_metadata_.getLeastRewardKeyAndReward(least_popular_rank, tmp_victim_key, tmp_local_reward);
 
             if (is_least_popular_key_exist)
             {
                 tmp_victim_object_size = local_cached_metadata_.getObjectSize(tmp_victim_key);
-                local_cached_metadata_.getPopularity(tmp_victim_key, tmp_local_cached_popularity, tmp_redirected_cached_popularity);
+                local_cached_metadata_.getPopularity(tmp_victim_key, tmp_local_cached_popularity, tmp_redirected_cached_popularity, tmp_redirected_cached_reward_);
 
                 if (keys.find(tmp_victim_key) == keys.end())
                 {
@@ -425,7 +426,7 @@ namespace covered
                     #endif
 
                     // Push victim cacheinfo
-                    VictimCacheinfo tmp_victim_info(tmp_victim_key, tmp_victim_object_size, tmp_local_cached_popularity, tmp_redirected_cached_popularity, tmp_local_reward);
+                    VictimCacheinfo tmp_victim_info(tmp_victim_key, tmp_victim_object_size, tmp_local_cached_popularity, tmp_redirected_cached_popularity, tmp_local_reward, tmp_redirected_cached_reward_);
                     assert(tmp_victim_info.isComplete()); // NOTE: victim cacheinfos from local edge cache MUST be complete
                     victim_cacheinfos.push_back(tmp_victim_info); // Add to the tail of the list
 
@@ -578,13 +579,14 @@ namespace covered
             Popularity tmp_local_cached_popularity = 0.0;
             Popularity tmp_redirected_cached_popularity = 0.0;
             Reward tmp_local_reward = 0.0;
-
+            Reward tmp_redirected_reward = 0.0;
             bool is_least_popular_key_exist = local_cached_metadata_.getLeastRewardKeyAndReward(least_popular_rank, tmp_victim_key, tmp_local_reward);
 
             if (is_least_popular_key_exist)
             {
                 tmp_victim_object_size = local_cached_metadata_.getObjectSize(tmp_victim_key);
-                local_cached_metadata_.getPopularity(tmp_victim_key, tmp_local_cached_popularity, tmp_redirected_cached_popularity);
+                // if(is_p2p_global_mode_in_common)
+                local_cached_metadata_.getPopularity(tmp_victim_key, tmp_local_cached_popularity, tmp_redirected_cached_popularity, tmp_redirected_reward);
 
                 uint32_t tmp_victim_value_size = 0;
                 tommyds_object_t* tmp_victim_ptr = (tommyds_object_t *) tommy_hashdyn_search(covered_cache_ptr_, tommyds_compare, &tmp_victim_key, hashForTommyds_(tmp_victim_key));
@@ -598,7 +600,7 @@ namespace covered
                 tmp_victim_object_size = tmp_victim_key.getKeyLength() + tmp_victim_value_size;
                 #endif
 
-                VictimCacheinfo tmp_victim_info(tmp_victim_key, tmp_victim_object_size, tmp_local_cached_popularity, tmp_redirected_cached_popularity, tmp_local_reward);
+                VictimCacheinfo tmp_victim_info(tmp_victim_key, tmp_victim_object_size, tmp_local_cached_popularity, tmp_redirected_cached_popularity, tmp_local_reward, tmp_redirected_reward);
                 assert(tmp_victim_info.isComplete()); // NOTE: victim cacheinfos from local edge cache MUST be complete
                 victim_cacheinfos.push_back(tmp_victim_info); // Add to the tail of the list
             }

@@ -199,8 +199,8 @@ namespace covered
     void PropagationCLI::verifyPropagationLatencyDistname_() const
     {
         const std::string distname = cli_latency_info_.getPropagationLatencyDistname();
-        if ((distname != Util::PROPAGATION_SIMULATION_UNIFORM_DISTNAME 
-            && distname != Util::PROPAGATION_SIMULATION_CONSTANT_DISTNAME)
+        if ( distname != Util::PROPAGATION_SIMULATION_CONSTANT_DISTNAME
+            && !(distname.rfind(Util::PROPAGATION_SIMULATION_UNIFORM_DISTNAME , 0) == 0)
             && !(distname.rfind(Util::PROPAGATION_SIMULATION_POISSON_DISTNAME, 0) == 0)
             && !(distname.rfind(Util::PROPAGATION_SIMULATION_PARETO_DISTNAME, 0) == 0))
         {

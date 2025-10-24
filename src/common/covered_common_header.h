@@ -49,7 +49,7 @@
 #include <cmath> // isnan, isinf
 #include <cstdint> // uint32_t, uint64_t
 #include <assert.h>
-
+inline bool is_p2p_global_mode_in_common = false;
 namespace covered
 {
     // TODO: Tune per-variable size later

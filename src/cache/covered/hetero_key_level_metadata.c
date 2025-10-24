@@ -12,7 +12,7 @@ namespace covered
     {
         redirected_frequency_ = 0;
         redirected_popularity_ = 0.0;
-
+        p2p_redirected_reward_freq_ = 0;
         is_neighbor_cached_ = false;
 
         // NOTE: base class will set is_valid_ as false
@@ -22,7 +22,7 @@ namespace covered
     {
         redirected_frequency_ = 0;
         redirected_popularity_ = 0.0;
-
+        p2p_redirected_reward_freq_ = 0;
         is_neighbor_cached_ = is_neighbor_cached;
 
         is_valid_ = true;
@@ -33,7 +33,7 @@ namespace covered
         redirected_frequency_ = other.redirected_frequency_;
         redirected_popularity_ = other.redirected_popularity_;
         is_neighbor_cached_ = other.is_neighbor_cached_;
-
+        p2p_redirected_reward_freq_ = other.p2p_redirected_reward_freq_;
         // NOTE: base class will set is_valid_ as other.is_valid_
     }
 
@@ -46,7 +46,8 @@ namespace covered
         
         if (is_redirected)
         {
-            redirected_frequency_ += added_redirected_frequency; // By default +1
+            redirected_frequency_ += 1; // By default +1
+            p2p_redirected_reward_freq_ += added_redirected_frequency;
         }
         else
         {
@@ -64,10 +65,24 @@ namespace covered
         return;
     }
 
+    void HeteroKeyLevelMetadata::updateRedirectedPopularityReward(const Popularity& redirected_popularity)
+    {
+        checkValidity_();
+        redirected_reward_popularity_ = redirected_popularity;
+
+        return;
+    }
+
     Frequency HeteroKeyLevelMetadata::getRedirectedFrequency() const
     {
         checkValidity_();
         return redirected_frequency_;
+    }
+
+    Frequency HeteroKeyLevelMetadata::getRedirectedRewardFreq() const
+    {
+        checkValidity_();
+        return p2p_redirected_reward_freq_;
     }
 
     Popularity HeteroKeyLevelMetadata::getRedirectedPopularity() const
@@ -75,7 +90,11 @@ namespace covered
         checkValidity_();
         return redirected_popularity_;
     }
-
+    Popularity HeteroKeyLevelMetadata::getRedirectedPopularityReward() const
+    {
+        checkValidity_();
+        return redirected_reward_popularity_;
+    }
     void HeteroKeyLevelMetadata::enableIsNeighborCached()
     {
         checkValidity_();

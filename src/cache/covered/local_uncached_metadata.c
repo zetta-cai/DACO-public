@@ -100,6 +100,14 @@ namespace covered
         redirected_popularity = 0.0; // Local uncached metadata does NOT have redirected popularity
         return;
     }
+    void LocalUncachedMetadata::getPopularity(const Key& key, Popularity& local_popularity, Popularity& redirected_popularity, Popularity& redirected_popularity_reward) const
+    {
+        const HomoKeyLevelMetadata& key_level_metadata_ref = getkeyLevelMetadata(key);
+        local_popularity = key_level_metadata_ref.getLocalPopularity();
+        redirected_popularity = 0.0; // Local uncached metadata does NOT have redirected popularity
+        redirected_popularity_reward = 0.0; // Local uncached metadata does NOT have redirected popularity reward
+        return;
+    }
 
     void LocalUncachedMetadata::calculateAndUpdatePopularity_(perkey_metadata_list_t::iterator& perkey_metadata_list_iter, const HomoKeyLevelMetadata& key_level_metadata_ref, const GroupLevelMetadata& group_level_metadata_ref)
     {
